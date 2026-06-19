@@ -15,7 +15,6 @@ import UIKit
 
 struct GoogleJourneyMapView: UIViewRepresentable {
     let data: JourneyMapData
-    @Environment(\.colorScheme) private var colorScheme
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -42,7 +41,7 @@ struct GoogleJourneyMapView: UIViewRepresentable {
     }
 
     func updateUIView(_ map: GMSMapView, context: Context) {
-        context.coordinator.apply(style: colorScheme, to: map)
+        context.coordinator.apply(displayStyle: data.style, to: map)
         context.coordinator.configureIfNeeded(map: map, data: data)
         context.coordinator.update(map: map, data: data)
     }
@@ -51,7 +50,7 @@ struct GoogleJourneyMapView: UIViewRepresentable {
 
     final class Coordinator {
         private var didConfigure = false
-        private var isDarkApplied: Bool?
+        private var lastStyle: MapDisplayStyle?
 
         private var originMarker: GMSMarker?
         private var destinationMarker: GMSMarker?
@@ -62,11 +61,24 @@ struct GoogleJourneyMapView: UIViewRepresentable {
 
         private var movedCameraOnce = false
 
-        func apply(style colorScheme: ColorScheme, to map: GMSMapView) {
-            let dark = (colorScheme == .dark)
-            guard isDarkApplied != dark else { return }
-            isDarkApplied = dark
-            map.mapStyle = try? GMSMapStyle(jsonString: dark ? MapStyles.dark : MapStyles.light)
+        /// Applies the chosen presentation: map type + custom style JSON.
+        func apply(displayStyle: MapDisplayStyle, to map: GMSMapView) {
+            guard lastStyle != displayStyle else { return }
+            lastStyle = displayStyle
+            switch displayStyle {
+            case .night:
+                map.mapType = .normal
+                map.mapStyle = try? GMSMapStyle(jsonString: MapStyles.dark)
+            case .standard:
+                map.mapType = .normal
+                map.mapStyle = try? GMSMapStyle(jsonString: MapStyles.light)
+            case .satellite:
+                map.mapType = .satellite
+                map.mapStyle = nil
+            case .hybrid:
+                map.mapType = .hybrid
+                map.mapStyle = nil
+            }
         }
 
         func configureIfNeeded(map: GMSMapView, data: JourneyMapData) {

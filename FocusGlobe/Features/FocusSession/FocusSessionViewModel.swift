@@ -13,6 +13,7 @@ final class FocusSessionViewModel: ObservableObject {
     let timer: SessionTimerService
 
     @Published var pureMode: Bool = false
+    @Published var mapStyle: MapDisplayStyle = .night
     @Published private(set) var isPaused = false
     @Published var showCancelConfirm = false
     @Published private(set) var didLand = false
@@ -37,6 +38,12 @@ final class FocusSessionViewModel: ObservableObject {
         guard self.appModel == nil else { return }
         self.appModel = appModel
         pureMode = appModel.settings.pureModeDefault
+        mapStyle = appModel.settings.mapStyle
+    }
+
+    func setMapStyle(_ style: MapDisplayStyle) {
+        mapStyle = style
+        appModel?.haptics.tap()
     }
 
     func startIfNeeded() {
@@ -98,7 +105,8 @@ final class FocusSessionViewModel: ObservableObject {
             mood: route.mood,
             theme: route.colorTheme,
             followsVehicle: true,
-            isMoving: !isPaused && timer.isRunning
+            isMoving: !isPaused && timer.isRunning,
+            style: mapStyle
         )
     }
 

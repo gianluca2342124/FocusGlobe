@@ -108,20 +108,36 @@ struct FocusSessionView: View {
 
     private var topControls: some View {
         VStack {
-            HStack {
+            HStack(alignment: .top) {
                 AppIconButton(systemImage: "xmark", size: 46, tint: AppColors.textPrimary,
                               accessibilityLabel: "End journey") { vm.requestCancel() }
                 Spacer()
                 statusPill
                 Spacer()
-                AppIconButton(systemImage: "moon.stars", size: 46, tint: AppColors.textPrimary,
-                              accessibilityLabel: "Pure mode") { vm.togglePureMode() }
+                VStack(spacing: AppSpacing.xs) {
+                    mapStyleMenu
+                    AppIconButton(systemImage: "eye.slash", size: 46, tint: AppColors.textPrimary,
+                                  accessibilityLabel: "Pure mode") { vm.togglePureMode() }
+                }
             }
             Spacer()
         }
         .padding(.horizontal, AppSpacing.screen)
         .padding(.top, AppSpacing.xs)
         .transition(.opacity)
+    }
+
+    private var mapStyleMenu: some View {
+        Menu {
+            ForEach(MapDisplayStyle.allCases) { style in
+                Button { vm.setMapStyle(style) } label: {
+                    Label(style.displayName, systemImage: style.systemImage)
+                }
+            }
+        } label: {
+            GlassCircle(systemImage: vm.mapStyle.systemImage)
+        }
+        .accessibilityLabel("Map style")
     }
 
     private var statusPill: some View {

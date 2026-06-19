@@ -29,7 +29,6 @@ struct HomeView: View {
             .allowsHitTesting(false)
 
             VStack {
-                topBar
                 Spacer()
                 bottomCluster
             }
@@ -38,15 +37,6 @@ struct HomeView: View {
             .padding(.bottom, AppSpacing.lg)
         }
         .focusScreenChrome()
-    }
-
-    private var topBar: some View {
-        HStack {
-            AppLogo(size: 28)
-            Spacer()
-            AppIconButton(systemImage: "gearshape", size: 44, tint: .white,
-                          accessibilityLabel: "Settings") { router.openSettings() }
-        }
     }
 
     private var bottomCluster: some View {
@@ -72,6 +62,7 @@ struct HomeView: View {
             VStack(spacing: AppSpacing.xs) {
                 homeRow(title: "Passport", systemImage: "globe.europe.africa") { router.openPassport() }
                 homeRow(title: "History", systemImage: "clock.arrow.circlepath") { router.openHistory() }
+                homeRow(title: "Settings", systemImage: "gearshape") { router.openSettings() }
             }
         }
     }

@@ -74,6 +74,27 @@ struct AppSecondaryButton: View {
     }
 }
 
+/// A non-interactive glass circle matching `AppIconButton` — used as a label
+/// for `Menu`s (e.g. the map-style picker).
+struct GlassCircle: View {
+    let systemImage: String
+    var size: CGFloat = 46
+    var tint: Color = AppColors.textPrimary
+
+    var body: some View {
+        Image(systemName: systemImage)
+            .font(.system(size: size * 0.4, weight: .semibold))
+            .foregroundStyle(tint)
+            .frame(width: size, height: size)
+            .background {
+                Circle().fill(.regularMaterial)
+                    .overlay(Circle().fill(AppColors.islandTint.opacity(0.28)))
+                    .overlay(Circle().strokeBorder(AppColors.glassStroke, lineWidth: 1))
+                    .shadow(color: AppColors.shadow, radius: 12, y: 6)
+            }
+    }
+}
+
 /// A circular glass icon button — used for map and navigation controls.
 struct AppIconButton: View {
     let systemImage: String

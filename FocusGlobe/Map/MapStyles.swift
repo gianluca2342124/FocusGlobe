@@ -1,5 +1,34 @@
 import Foundation
 
+/// User-selectable map presentation, surfaced as floating controls in the
+/// session and in Settings. Maps to Google Maps `mapType` + custom style JSON.
+enum MapDisplayStyle: String, CaseIterable, Codable, Identifiable {
+    case night
+    case standard
+    case satellite
+    case hybrid
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .night:     return "Night"
+        case .standard:  return "Standard"
+        case .satellite: return "Satellite"
+        case .hybrid:    return "Hybrid"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .night:     return "moon.stars.fill"
+        case .standard:  return "map.fill"
+        case .satellite: return "globe.americas.fill"
+        case .hybrid:    return "square.stack.3d.up.fill"
+        }
+    }
+}
+
 /// Calm, minimal Google Maps style JSON for Light and Dark mode.
 ///
 /// These hide busy POIs, businesses and transit so the map stays serene and

@@ -9,6 +9,8 @@ struct AppSettings: Codable, Equatable {
     var soundEnabled: Bool = true
     var hapticsEnabled: Bool = true
     var pureModeDefault: Bool = false
+    /// Default map presentation for journeys (overridable live in-session).
+    var mapStyle: MapDisplayStyle = .night
 
     static let `default` = AppSettings()
 }

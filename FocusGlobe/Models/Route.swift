@@ -46,4 +46,12 @@ struct Route: Identifiable, Codable, Hashable {
 
     var durationLabel: String { Formatters.durationLabel(minutes: durationMinutes) }
     var distanceLabel: String { Formatters.distance(km: approximateDistanceKm) }
+
+    /// Airport-style 3-letter codes derived from the place names (e.g. "KYO").
+    var originCode: String { Route.code(originName) }
+    var destinationCode: String { Route.code(destinationName) }
+
+    static func code(_ name: String) -> String {
+        String(name.uppercased().filter { $0.isLetter }.prefix(3))
+    }
 }

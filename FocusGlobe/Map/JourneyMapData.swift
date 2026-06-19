@@ -18,6 +18,8 @@ struct JourneyMapData: Equatable {
     var followsVehicle: Bool
     /// `true` while the journey is actively moving (not paused).
     var isMoving: Bool
+    /// Map presentation (Night / Standard / Satellite / Hybrid).
+    var style: MapDisplayStyle = .night
 
     /// The straight-line span of the route, used to pick a sensible zoom.
     var routeDistanceKm: Double {

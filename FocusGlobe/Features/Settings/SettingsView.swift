@@ -14,6 +14,7 @@ struct SettingsView: View {
                     ScreenHeader(title: "Settings")
 
                     appearanceSection
+                    mapSection
                     experienceSection
                     proSection
                     privacySection
@@ -58,6 +59,38 @@ struct SettingsView: View {
             VStack(spacing: 5) {
                 Image(systemName: mode.systemImage).font(.system(size: 16, weight: .semibold))
                 Text(mode.displayName).font(AppTypography.caption)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, AppSpacing.sm)
+            .foregroundStyle(selected ? Color.white : AppColors.textSecondary)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(selected ? AnyShapeStyle(AppGradients.brandButton) : AnyShapeStyle(Color.clear))
+            )
+        }
+        .buttonStyle(SoftPressStyle())
+    }
+
+    private var mapSection: some View {
+        SettingsCard(title: "Map style") {
+            HStack(spacing: 6) {
+                ForEach(MapDisplayStyle.allCases) { mapStyleOption($0) }
+            }
+        }
+    }
+
+    private func mapStyleOption(_ style: MapDisplayStyle) -> some View {
+        let selected = appModel.settings.mapStyle == style
+        return Button {
+            appModel.haptics.tap()
+            appModel.settings.mapStyle = style
+        } label: {
+            VStack(spacing: 5) {
+                Image(systemName: style.systemImage).font(.system(size: 15, weight: .semibold))
+                Text(style.displayName)
+                    .font(AppTypography.micro)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, AppSpacing.sm)
