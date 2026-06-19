@@ -3,11 +3,11 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		AA00000000000000000000A3 /* GoogleMaps in Frameworks */ = {isa = PBXBuildFile; productRef = AA00000000000000000000A2 /* GoogleMaps */; };
+		7AAFA3F02FE59EC3002F4953 /* GoogleMaps in Frameworks */ = {isa = PBXBuildFile; productRef = 7AAFA3EF2FE59EC3002F4953 /* GoogleMaps */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -23,27 +23,27 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AA00000000000000000000A3 /* GoogleMaps in Frameworks */,
+				7AAFA3F02FE59EC3002F4953 /* GoogleMaps in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		AA0000000000000000000006 = {
-			isa = PBXGroup;
-			children = (
-				AA0000000000000000000005 /* FocusGlobe */,
-				AA0000000000000000000004 /* Products */,
-			);
-			sourceTree = "<group>";
-		};
 		AA0000000000000000000004 /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				AA0000000000000000000003 /* FocusGlobe.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000006 = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000005 /* FocusGlobe */,
+				AA0000000000000000000004 /* Products */,
+			);
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -66,7 +66,7 @@
 			);
 			name = FocusGlobe;
 			packageProductDependencies = (
-				AA00000000000000000000A2 /* GoogleMaps */,
+				7AAFA3EF2FE59EC3002F4953 /* GoogleMaps */,
 			);
 			productName = FocusGlobe;
 			productReference = AA0000000000000000000003 /* FocusGlobe.app */;
@@ -98,9 +98,8 @@
 			mainGroup = AA0000000000000000000006;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				AA00000000000000000000A1 /* XCRemoteSwiftPackageReference "ios-maps-sdk" */,
+				7AAFA3EE2FE59EC3002F4953 /* XCRemoteSwiftPackageReference "ios-maps-sdk" */,
 			);
-			preferredProjectObjectVersion = 77;
 			productRefGroup = AA0000000000000000000004 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -329,20 +328,20 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		AA00000000000000000000A1 /* XCRemoteSwiftPackageReference "ios-maps-sdk" */ = {
+		7AAFA3EE2FE59EC3002F4953 /* XCRemoteSwiftPackageReference "ios-maps-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/googlemaps/ios-maps-sdk";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 8.4.0;
+				kind = exactVersion;
+				version = 10.14.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		AA00000000000000000000A2 /* GoogleMaps */ = {
+		7AAFA3EF2FE59EC3002F4953 /* GoogleMaps */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = AA00000000000000000000A1 /* XCRemoteSwiftPackageReference "ios-maps-sdk" */;
+			package = 7AAFA3EE2FE59EC3002F4953 /* XCRemoteSwiftPackageReference "ios-maps-sdk" */;
 			productName = GoogleMaps;
 		};
 /* End XCSwiftPackageProductDependency section */
