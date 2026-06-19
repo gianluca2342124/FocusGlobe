@@ -128,6 +128,34 @@ regardless, but you should still:
 
 ---
 
+## Brand assets (logo & balloon PNGs)
+
+The app ships with crafted **vector** brand art (the in-code balloon + wordmark),
+so it looks premium with no external files. To use the official PNGs, drop them
+into the prepared (currently empty) imagesets — the app picks them up
+automatically, no code changes:
+
+| Asset | Imageset | Used for |
+|------|----------|----------|
+| Front-view balloon PNG | `FocusGlobe/Assets.xcassets/BalloonFront.imageset` | Hero balloon (Home, Boarding, Landing, Paywall) via `BalloonView` |
+| FocusGlobe logo / wordmark PNG | `FocusGlobe/Assets.xcassets/BrandLogo.imageset` | App wordmark via `AppLogo` |
+
+To add one: in Xcode's Asset catalog, select the imageset and drag your PNG onto
+the **1x/2x/3x** wells (or just the universal well). `BrandAssets.hasBalloonFront`
+/ `hasBrandLogo` detect them at runtime and switch from vector to PNG.
+
+> Use the **front-view** balloon (with basket + burner glow). The top-down
+> balloon render is intentionally not used; the live map marker is derived from
+> the front-view identity in code.
+
+The map marker and small chips always use the crisp in-code vector balloon
+(`BalloonMark`) so they stay sharp at any zoom and theme correctly.
+
+## Appearance
+
+FocusGlobe is **dark-first**: the first launch starts in Dark Mode. Users can
+switch to Light or System in **Settings ▸ Appearance**, and the choice persists.
+
 ## Notes
 
 - **No location permission** is requested in v1 (routes are curated locally).

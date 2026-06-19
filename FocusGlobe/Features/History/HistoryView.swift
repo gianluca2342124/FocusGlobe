@@ -31,7 +31,8 @@ struct HistoryView: View {
 
     private var emptyState: some View {
         VStack(spacing: AppSpacing.sm) {
-            BalloonMark(size: 60, glow: AppColors.brand.opacity(0.6))
+            BalloonMark(size: 60, glow: AppColors.brand.opacity(0.7),
+                        showGlow: true, showBurner: true)
                 .padding(.bottom, AppSpacing.xs)
             Text("No journeys yet")
                 .font(AppTypography.headline)

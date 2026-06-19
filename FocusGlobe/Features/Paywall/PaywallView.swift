@@ -39,7 +39,9 @@ struct PaywallView: View {
                 Spacer()
                 AppIconButton(systemImage: "xmark", size: 38, accessibilityLabel: "Close") { dismiss() }
             }
-            BrandGlyph(size: 68)
+            BalloonView(height: 132, showBurner: true, showGlow: true,
+                        glow: AppColors.brand.opacity(0.85))
+                .padding(.bottom, AppSpacing.xs)
             Text("FocusGlobe Pro")
                 .font(AppTypography.title)
                 .foregroundStyle(AppColors.textPrimary)
