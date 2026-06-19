@@ -26,6 +26,12 @@ enum AppColors {
     static let brandDeep = Color.dynamic(light: 0x2E49C4, dark: 0x6C82F2)
     static let brandSoft = Color.dynamic(light: 0xCBD8FF, dark: 0x2A3868)
 
+    // MARK: Primary CTA (FocusFlight-style restraint)
+    /// Solid, high-contrast button surface: near-black in Light, white in Dark.
+    static let ctaFill = Color.dynamic(light: 0x14181F, dark: 0xFFFFFF)
+    /// The label colour on `ctaFill` (the inverse).
+    static let ctaText = Color.dynamic(light: 0xFFFFFF, dark: 0x14181F)
+
     // MARK: Accents / status
     static let gold    = Color.dynamic(light: 0xE0A23E, dark: 0xF2C879)
     static let success = Color.dynamic(light: 0x2FA66A, dark: 0x57D49A)

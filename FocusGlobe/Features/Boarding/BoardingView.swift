@@ -138,8 +138,7 @@ private struct JourneyPassCard: View {
                     endpoint(code: code(route.originName), name: route.originName)
                     Spacer()
                     VStack(spacing: 2) {
-                        BalloonMark(size: 30, glow: route.colorTheme.soft,
-                                    showGlow: false, showBurner: true)
+                        BalloonView(height: 46, showBurner: false, showGlow: false)
                         Image(systemName: "ellipsis")
                             .font(.system(size: 12, weight: .bold))
                             .foregroundStyle(route.mood.preferredForeground.opacity(0.7))
@@ -160,14 +159,20 @@ private struct JourneyPassCard: View {
     private var details: some View {
         let columns = [GridItem(.flexible(), spacing: AppSpacing.sm),
                        GridItem(.flexible(), spacing: AppSpacing.sm)]
-        return LazyVGrid(columns: columns, alignment: .leading, spacing: AppSpacing.md) {
-            PassDetail(label: "Duration", value: route.durationLabel, systemImage: "clock")
-            PassDetail(label: "Distance", value: route.distanceLabel, systemImage: "ruler")
-            PassDetail(label: "Mood", value: route.mood.displayName, systemImage: route.mood.systemImage)
-            PassDetail(label: "Vehicle", value: Vehicle.default.name, systemImage: "balloon")
-            PassDetail(label: "Reward", value: route.rewardName, systemImage: "gift")
-            PassDetail(label: "Theme", value: route.colorTheme.rawValue.capitalized,
-                       systemImage: "paintpalette", accent: route.colorTheme.accent)
+        return VStack(spacing: AppSpacing.md) {
+            LazyVGrid(columns: columns, alignment: .leading, spacing: AppSpacing.md) {
+                PassDetail(label: "Duration", value: route.durationLabel, systemImage: "clock")
+                PassDetail(label: "Distance", value: route.distanceLabel, systemImage: "ruler")
+                PassDetail(label: "Mood", value: route.mood.displayName, systemImage: route.mood.systemImage)
+                PassDetail(label: "Vehicle", value: Vehicle.default.name, systemImage: "balloon")
+                PassDetail(label: "Boarding", value: "Now", systemImage: "clock.badge.checkmark")
+                PassDetail(label: "Reward", value: route.rewardName, systemImage: "gift",
+                           accent: route.colorTheme.accent)
+            }
+
+            BarcodeStrip(seed: route.id + route.shortName)
+                .frame(height: 40)
+                .padding(.top, 2)
         }
         .padding(AppSpacing.md)
         .padding(.top, AppSpacing.xs)
@@ -223,5 +228,31 @@ private struct DashLine: Shape {
         p.move(to: CGPoint(x: rect.minX, y: rect.midY))
         p.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
         return p
+    }
+}
+
+/// A deterministic boarding-pass barcode (decorative). Same seed → same bars.
+private struct BarcodeStrip: View {
+    let seed: String
+
+    var body: some View {
+        Canvas { ctx, size in
+            let scalars = Array(seed.unicodeScalars.map { Int($0.value) })
+            guard !scalars.isEmpty else { return }
+            var x: CGFloat = 0
+            var i = 0
+            while x < size.width {
+                let v = abs(scalars[i % scalars.count] &+ i &* 7)
+                let barW = CGFloat(1 + (v % 3))
+                let gapW = CGFloat(1 + ((v / 3) % 3))
+                if v % 5 != 0 {
+                    ctx.fill(Path(CGRect(x: x, y: 0, width: barW, height: size.height)),
+                             with: .color(AppColors.textPrimary.opacity(0.82)))
+                }
+                x += barW + gapW
+                i += 1
+            }
+        }
+        .accessibilityHidden(true)
     }
 }

@@ -141,8 +141,11 @@ Landing, Paywall) and Xcode shows **no asset warnings**.
 | Logo / wordmark | *(optional)* add an image named `BrandLogo` to the catalog | App wordmark via `AppLogo` |
 
 - **To use your official balloon render:** replace `BalloonFront.png` with your
-  PNG (keep the same filename), or drag it onto the imageset in Xcode. To
-  regenerate the placeholder: `python3 Tools/make_balloon.py`.
+  PNG (keep the **exact** name `BalloonFront.png`, lowercase `.png`, one file).
+  Don't add a second file or a different extension — a stray `.PNG`/`.jpeg` or a
+  duplicate is what triggers the "unassigned / invalid" asset warning. Or just
+  drag your PNG onto the imageset in Xcode. To regenerate the placeholder:
+  `python3 Tools/make_balloon.py`.
 - **Logo:** the wordmark renders in code (crisp, no asset needed). To use a
   custom logo image, add one named `BrandLogo` to the asset catalog —
   `AppLogo` switches to it automatically.

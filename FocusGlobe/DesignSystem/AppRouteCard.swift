@@ -64,8 +64,8 @@ struct AppRouteCard: View {
                         .font(AppTypography.title2)
                         .foregroundStyle(route.mood.preferredForeground)
                     Spacer()
-                    BalloonMark(size: 30, glow: route.colorTheme.soft, showGlow: false)
-                        .opacity(0.95)
+                    BalloonView(height: 46, showBurner: false, showGlow: false)
+                        .opacity(0.97)
                 }
             }
             .padding(AppSpacing.sm + 2)

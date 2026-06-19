@@ -122,7 +122,7 @@ struct GoogleJourneyMapView: UIViewRepresentable {
 
             // Vehicle (the balloon).
             let vehicle = GMSMarker(position: CLLocationCoordinate2D(latitude: data.vehicle.latitude, longitude: data.vehicle.longitude))
-            vehicle.icon = VehicleMarkerRenderer.balloonImage(envelopeWidth: 46, glow: data.theme.soft)
+            vehicle.icon = VehicleMarkerRenderer.balloonImage(targetHeight: 72, glow: data.theme.soft)
             vehicle.groundAnchor = CGPoint(x: 0.5, y: 0.84) // basket sits on the point
             vehicle.isTappable = false
             vehicle.zIndex = 6

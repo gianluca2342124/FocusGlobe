@@ -148,9 +148,10 @@ private struct VehicleTile: View {
 
     var body: some View {
         VStack(spacing: AppSpacing.xs) {
-            BalloonMark(size: 38, glow: AppColors.brand.opacity(0.6), showGlow: owned)
+            BalloonView(height: 54, showBurner: owned, showGlow: false)
                 .frame(height: 56)
-                .opacity(owned ? 1 : 0.45)
+                .opacity(owned ? 1 : 0.4)
+                .grayscale(owned ? 0 : 0.6)
                 .overlay(alignment: .topTrailing) {
                     if !owned {
                         Image(systemName: "lock.fill")

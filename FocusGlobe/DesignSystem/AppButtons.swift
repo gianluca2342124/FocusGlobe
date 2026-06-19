@@ -34,18 +34,14 @@ struct AppPrimaryButton: View {
                         .font(AppTypography.headline)
                 }
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(AppColors.ctaText)
             .frame(maxWidth: .infinity)
             .frame(height: 56)
             .background {
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(AppGradients.brandButton)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(AppColors.ctaFill)
             }
-            .overlay {
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.18), lineWidth: 1)
-            }
-            .shadow(color: AppColors.brand.opacity(0.45), radius: 18, x: 0, y: 10)
+            .shadow(color: Color.black.opacity(0.22), radius: 18, x: 0, y: 10)
             .opacity(isEnabled ? 1 : 0.5)
         }
         .buttonStyle(SoftPressStyle())
@@ -91,12 +87,12 @@ struct AppIconButton: View {
         Button(action: action) {
             Image(systemName: systemImage)
                 .font(.system(size: size * 0.4, weight: .semibold))
-                .foregroundStyle(prominent ? Color.white : tint)
+                .foregroundStyle(prominent ? AppColors.ctaText : tint)
                 .frame(width: size, height: size)
                 .background {
                     if prominent {
-                        Circle().fill(AppGradients.brandButton)
-                            .shadow(color: AppColors.brand.opacity(0.45), radius: 12, y: 6)
+                        Circle().fill(AppColors.ctaFill)
+                            .shadow(color: Color.black.opacity(0.28), radius: 12, y: 6)
                     } else {
                         Circle().fill(.regularMaterial)
                             .overlay(Circle().fill(AppColors.islandTint.opacity(0.28)))

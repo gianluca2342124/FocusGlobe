@@ -79,10 +79,10 @@ struct RouteSelectionView: View {
                         Spacer()
                         Image(systemName: "arrow.right")
                             .font(.system(size: 15, weight: .bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Color(hex: 0x14181F))
                             .frame(width: 40, height: 40)
-                            .background(Circle().fill(AppGradients.brandButton))
-                            .shadow(color: AppColors.brand.opacity(0.5), radius: 8, y: 4)
+                            .background(Circle().fill(.white))
+                            .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
                     }
                 }
                 .padding(AppSpacing.md)

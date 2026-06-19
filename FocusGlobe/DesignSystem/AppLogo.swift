@@ -20,9 +20,8 @@ struct BrandGlyph: View {
                             y: size * (0.2 - Double(i) * 0.04))
             }
 
-            BalloonMark(size: size * 0.4, glow: .white, showGlow: false, showBurner: true,
-                        burnerAnimated: false)
-                .offset(x: -size * 0.06, y: -size * 0.04)
+            BalloonView(height: size * 0.54, showBurner: false, showGlow: false)
+                .offset(x: -size * 0.06, y: -size * 0.02)
         }
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: size * 0.28, style: .continuous))

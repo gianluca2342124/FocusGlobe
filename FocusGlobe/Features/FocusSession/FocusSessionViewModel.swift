@@ -73,6 +73,12 @@ final class FocusSessionViewModel: ObservableObject {
     var remainingSeconds: Int { max(0, Int(timer.remaining.rounded(.up))) }
     var remainingTimeText: String { Formatters.countdown(remainingSeconds) }
 
+    /// Coarse minutes label for the big "Time Remaining" readout (e.g. "25 min").
+    var remainingMinutesText: String {
+        let m = Int((Double(remainingSeconds) / 60).rounded(.up))
+        return "\(max(0, m)) min"
+    }
+
     var remainingDistanceKm: Double { route.approximateDistanceKm * (1 - progress) }
     var remainingDistanceText: String { Formatters.distance(km: remainingDistanceKm) }
 

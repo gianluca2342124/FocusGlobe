@@ -35,36 +35,39 @@ struct FocusSessionContainerView: View {
     }
 }
 
+/// The flagship screen. The real map dominates; the balloon is the moving
+/// vehicle; the UI is sparse, floating and high-end (FocusFlight-style):
+/// minimal corner controls, and large floating readouts at the bottom with no
+/// card — just the map, the journey, and restraint.
 struct FocusSessionView: View {
     @ObservedObject var vm: FocusSessionViewModel
     @EnvironmentObject private var router: AppRouter
     @Environment(\.scenePhase) private var scenePhase
-
-    private var accent: Color { vm.route.colorTheme.accent }
 
     var body: some View {
         ZStack {
             JourneyMapView(data: vm.mapData)
                 .ignoresSafeArea()
 
-            // Cinematic edge vignette over the map (subtle, always on).
-            RadialGradient(colors: [.clear, .black.opacity(0.22)],
-                           center: .center, startRadius: 230, endRadius: 560)
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
+            // Edge vignette + strong bottom scrim so white readouts stay legible
+            // over any map (dark or light).
+            vignette
 
-            if !vm.pureMode { scrims }
-
-            VStack(spacing: 0) {
-                topArea
-                Spacer(minLength: AppSpacing.md)
-                bottomArea
+            #if DEBUG
+            if MapProvider.active != .google {
+                fallbackHint
             }
-            .padding(.horizontal, AppSpacing.screen)
-            .padding(.vertical, AppSpacing.xs)
-            .animation(.spring(response: 0.45, dampingFraction: 0.85), value: vm.pureMode)
+            #endif
+
+            if vm.pureMode {
+                pureControls
+            } else {
+                topControls
+                bottomReadouts
+            }
         }
         .statusBarHidden(vm.pureMode)
+        .animation(.spring(response: 0.45, dampingFraction: 0.85), value: vm.pureMode)
         .confirmationDialog("Leave this journey?",
                             isPresented: $vm.showCancelConfirm,
                             titleVisibility: .visible) {
@@ -81,137 +84,172 @@ struct FocusSessionView: View {
         }
     }
 
-    // Cinematic top/bottom scrims for legibility + depth.
-    private var scrims: some View {
-        VStack(spacing: 0) {
-            LinearGradient(colors: [.black.opacity(0.28), .clear], startPoint: .top, endPoint: .bottom)
-                .frame(height: 150)
-            Spacer()
-            LinearGradient(colors: [.clear, .black.opacity(0.34)], startPoint: .top, endPoint: .bottom)
-                .frame(height: 240)
+    // MARK: - Backdrop
+
+    private var vignette: some View {
+        ZStack {
+            RadialGradient(colors: [.clear, .black.opacity(0.28)],
+                           center: .center, startRadius: 220, endRadius: 580)
+            VStack(spacing: 0) {
+                LinearGradient(colors: [.black.opacity(vm.pureMode ? 0.18 : 0.30), .clear],
+                               startPoint: .top, endPoint: .bottom)
+                    .frame(height: 170)
+                Spacer()
+                LinearGradient(colors: [.clear, .black.opacity(vm.pureMode ? 0.34 : 0.62)],
+                               startPoint: .top, endPoint: .bottom)
+                    .frame(height: 300)
+            }
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
     }
 
-    // MARK: - Top
+    // MARK: - Top controls
 
-    @ViewBuilder private var topArea: some View {
-        if vm.pureMode {
+    private var topControls: some View {
+        VStack {
             HStack {
+                AppIconButton(systemImage: "xmark", size: 46, tint: AppColors.textPrimary,
+                              accessibilityLabel: "End journey") { vm.requestCancel() }
                 Spacer()
-                AppTimePill(value: vm.remainingTimeText)
+                statusPill
                 Spacer()
+                AppIconButton(systemImage: "moon.stars", size: 46, tint: AppColors.textPrimary,
+                              accessibilityLabel: "Pure mode") { vm.togglePureMode() }
             }
-            .transition(.move(edge: .top).combined(with: .opacity))
-        } else {
-            AppFloatingIsland {
-                HStack(spacing: AppSpacing.sm) {
-                    Image(systemName: vm.phase.systemImage)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(accent)
-                        .frame(width: 34, height: 34)
-                        .background(Circle().fill(accent.opacity(0.16)))
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(vm.route.name)
-                            .font(AppTypography.caption)
-                            .foregroundStyle(AppColors.textSecondary)
-                            .lineLimit(1)
-                        Text(vm.phase.title)
-                            .font(AppTypography.headline)
-                            .foregroundStyle(AppColors.textPrimary)
-                    }
-                    Spacer()
-                    Text(vm.progressPercentText)
-                        .font(AppTypography.headline)
-                        .monospacedDigit()
-                        .foregroundStyle(AppColors.textSecondary)
-                }
+            Spacer()
+        }
+        .padding(.horizontal, AppSpacing.screen)
+        .padding(.top, AppSpacing.xs)
+        .transition(.opacity)
+    }
+
+    private var statusPill: some View {
+        HStack(spacing: 6) {
+            Image(systemName: vm.phase.systemImage).font(.system(size: 12, weight: .semibold))
+            Text(vm.phase.title).font(AppTypography.caption)
+        }
+        .foregroundStyle(AppColors.textPrimary)
+        .padding(.horizontal, AppSpacing.sm)
+        .padding(.vertical, 8)
+        .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.22, shadowRadius: 8, shadowY: 4)
+    }
+
+    // MARK: - Bottom readouts (no card — floating typography on the map)
+
+    private var bottomReadouts: some View {
+        VStack {
+            Spacer()
+            HStack(alignment: .bottom) {
+                readout(label: "Time Remaining", value: vm.remainingMinutesText, alignment: .leading)
+                Spacer(minLength: AppSpacing.sm)
+                centerCluster
+                Spacer(minLength: AppSpacing.sm)
+                readout(label: "Distance Remaining", value: vm.remainingDistanceText, alignment: .trailing)
             }
-            .transition(.move(edge: .top).combined(with: .opacity))
+            .padding(.horizontal, AppSpacing.lg)
+            .padding(.bottom, AppSpacing.md)
+        }
+        .transition(.opacity)
+    }
+
+    private func readout(label: String, value: String, alignment: HorizontalAlignment) -> some View {
+        VStack(alignment: alignment, spacing: 1) {
+            Text(label)
+                .font(AppTypography.caption)
+                .foregroundStyle(.white.opacity(0.7))
+            Text(value)
+                .font(.system(size: 36, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(.white)
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: alignment == .leading ? .leading : .trailing)
+        .shadow(color: .black.opacity(0.35), radius: 8, y: 2)
+    }
+
+    private var centerCluster: some View {
+        VStack(spacing: AppSpacing.xs) {
+            Text(vm.remainingTimeText)
+                .font(.system(size: 17, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(.white.opacity(0.9))
+                .shadow(color: .black.opacity(0.35), radius: 6, y: 2)
+            WhitePauseButton(isPaused: vm.isPaused, size: 56) { vm.togglePause() }
         }
     }
 
-    // MARK: - Bottom
+    // MARK: - Pure mode
 
-    @ViewBuilder private var bottomArea: some View {
-        if vm.pureMode {
+    private var pureControls: some View {
+        VStack {
+            HStack {
+                Spacer()
+                Text(vm.remainingTimeText)
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, AppSpacing.md)
+                    .padding(.vertical, AppSpacing.xs + 2)
+                    .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.22,
+                                     shadowRadius: 10, shadowY: 5)
+                Spacer()
+            }
+            .padding(.top, AppSpacing.xs)
+
+            Spacer()
+
             VStack(spacing: AppSpacing.sm) {
-                AppIconButton(systemImage: vm.isPaused ? "play.fill" : "pause.fill",
-                              size: 66, prominent: true,
-                              accessibilityLabel: vm.isPaused ? "Resume" : "Pause") {
-                    vm.togglePause()
-                }
+                WhitePauseButton(isPaused: vm.isPaused, size: 60) { vm.togglePause() }
                 Button { vm.togglePureMode() } label: {
                     Text("Show controls")
                         .font(AppTypography.caption)
-                        .foregroundStyle(AppColors.textSecondary)
+                        .foregroundStyle(.white.opacity(0.85))
                         .padding(.horizontal, AppSpacing.sm)
                         .padding(.vertical, 6)
-                        .glassBackground(cornerRadius: AppSpacing.pillRadius,
-                                         tintOpacity: 0.25, shadowRadius: 6, shadowY: 3)
                 }
                 .buttonStyle(SoftPressStyle())
             }
-            .frame(maxWidth: .infinity)
-            .transition(.move(edge: .bottom).combined(with: .opacity))
-        } else {
-            AppFloatingIsland(verticalPadding: AppSpacing.md) {
-                VStack(spacing: AppSpacing.md) {
-                    HStack(alignment: .firstTextBaseline) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Remaining")
-                                .font(AppTypography.micro)
-                                .foregroundStyle(AppColors.textTertiary)
-                            Text(vm.remainingTimeText)
-                                .font(.system(size: 40, weight: .semibold, design: .rounded))
-                                .monospacedDigit()
-                                .foregroundStyle(AppColors.textPrimary)
-                        }
-                        Spacer()
-                        VStack(alignment: .trailing, spacing: 2) {
-                            Text("To landing")
-                                .font(AppTypography.micro)
-                                .foregroundStyle(AppColors.textTertiary)
-                            Text(vm.remainingDistanceText)
-                                .font(AppTypography.headline)
-                                .foregroundStyle(AppColors.textPrimary)
-                        }
-                    }
-                    ProgressTrack(progress: vm.progress, color: accent)
-                    HStack {
-                        AppIconButton(systemImage: "xmark", size: 52, tint: AppColors.danger,
-                                      accessibilityLabel: "Cancel journey") { vm.requestCancel() }
-                        Spacer()
-                        AppIconButton(systemImage: vm.isPaused ? "play.fill" : "pause.fill",
-                                      size: 70, prominent: true,
-                                      accessibilityLabel: vm.isPaused ? "Resume" : "Pause") {
-                            vm.togglePause()
-                        }
-                        Spacer()
-                        AppIconButton(systemImage: "eye.slash", size: 52,
-                                      accessibilityLabel: "Pure mode") { vm.togglePureMode() }
-                    }
-                }
-            }
-            .transition(.move(edge: .bottom).combined(with: .opacity))
+            .padding(.bottom, AppSpacing.lg)
         }
+        .padding(.horizontal, AppSpacing.screen)
+        .transition(.opacity)
     }
+
+    #if DEBUG
+    private var fallbackHint: some View {
+        VStack {
+            Spacer()
+            Text("Stylised map — add the Google Maps SDK package for the live map (see SETUP.md)")
+                .font(AppTypography.micro)
+                .foregroundStyle(.white.opacity(0.6))
+                .multilineTextAlignment(.center)
+                .padding(.bottom, 150)
+                .padding(.horizontal, AppSpacing.xl)
+        }
+        .allowsHitTesting(false)
+    }
+    #endif
 }
 
-struct ProgressTrack: View {
-    let progress: Double
-    var color: Color
+/// A white circular pause/resume button — always white (it sits on the dark
+/// scrim), matching the FocusFlight session control.
+struct WhitePauseButton: View {
+    let isPaused: Bool
+    var size: CGFloat = 56
+    let action: () -> Void
 
     var body: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                Capsule().fill(AppColors.hairline)
-                Capsule()
-                    .fill(color)
-                    .frame(width: max(6, geo.size.width * min(1, max(0, progress))))
-            }
+        Button(action: action) {
+            Image(systemName: isPaused ? "play.fill" : "pause.fill")
+                .font(.system(size: size * 0.38, weight: .bold))
+                .foregroundStyle(Color(hex: 0x14181F))
+                .frame(width: size, height: size)
+                .background(Circle().fill(.white))
+                .shadow(color: .black.opacity(0.3), radius: 12, y: 5)
         }
-        .frame(height: 6)
+        .buttonStyle(SoftPressStyle())
+        .accessibilityLabel(isPaused ? "Resume" : "Pause")
     }
 }
