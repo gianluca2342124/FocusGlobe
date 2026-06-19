@@ -43,8 +43,9 @@ struct FallbackJourneyMapView: View {
 
                 routeCanvas(full: full, traveled: traveled, origin: originPt, destination: destPt)
 
-                BalloonMark(size: 42, glow: data.theme.soft)
-                    .position(x: vehiclePt.x, y: vehiclePt.y - 16 + bob)
+                BalloonMark(size: 46, glow: data.theme.soft, showGlow: true,
+                            showBurner: true, burnerAnimated: data.isMoving)
+                    .position(x: vehiclePt.x, y: vehiclePt.y - 20 + bob)
                     .animation(.easeInOut(duration: 1.0), value: vehiclePt)
 
                 // Gentle depth vignette.

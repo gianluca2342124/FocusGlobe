@@ -57,6 +57,7 @@ struct GoogleJourneyMapView: UIViewRepresentable {
         private var destinationMarker: GMSMarker?
         private var vehicleMarker: GMSMarker?
         private var fullPolyline: GMSPolyline?
+        private var glowPolyline: GMSPolyline?
         private var traveledPolyline: GMSPolyline?
 
         private var movedCameraOnce = false
@@ -72,22 +73,31 @@ struct GoogleJourneyMapView: UIViewRepresentable {
             guard !didConfigure else { return }
             didConfigure = true
 
-            // Full route (faint).
             let fullPath = GMSMutablePath()
             MapRouteRenderer.routePoints(from: data.origin, to: data.destination)
                 .forEach { fullPath.add(CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)) }
+
+            // Soft halo beneath the whole route for a premium, glowing line.
+            let glow = GMSPolyline(path: fullPath)
+            glow.strokeWidth = 13
+            glow.strokeColor = UIColor(data.theme.soft).withAlphaComponent(0.20)
+            glow.zIndex = 1
+            glow.map = map
+            glowPolyline = glow
+
+            // Full route (faint, the "remaining" track).
             let full = GMSPolyline(path: fullPath)
-            full.strokeWidth = 4
-            full.strokeColor = UIColor(data.theme.soft).withAlphaComponent(0.5)
-            full.zIndex = 1
+            full.strokeWidth = 5
+            full.strokeColor = UIColor(data.theme.soft).withAlphaComponent(0.55)
+            full.zIndex = 2
             full.map = map
             fullPolyline = full
 
-            // Travelled portion (bright).
+            // Travelled portion (bright accent).
             let traveled = GMSPolyline()
-            traveled.strokeWidth = 6
+            traveled.strokeWidth = 7
             traveled.strokeColor = UIColor(data.theme.accent)
-            traveled.zIndex = 2
+            traveled.zIndex = 3
             traveled.map = map
             traveledPolyline = traveled
 
@@ -97,7 +107,7 @@ struct GoogleJourneyMapView: UIViewRepresentable {
                                                          ring: UIColor(data.theme.accent), ringWidth: 3)
             origin.groundAnchor = CGPoint(x: 0.5, y: 0.5)
             origin.isTappable = false
-            origin.zIndex = 3
+            origin.zIndex = 4
             origin.map = map
             originMarker = origin
 
@@ -106,16 +116,16 @@ struct GoogleJourneyMapView: UIViewRepresentable {
                                                              ring: .white, ringWidth: 3)
             destination.groundAnchor = CGPoint(x: 0.5, y: 0.5)
             destination.isTappable = false
-            destination.zIndex = 3
+            destination.zIndex = 4
             destination.map = map
             destinationMarker = destination
 
             // Vehicle (the balloon).
             let vehicle = GMSMarker(position: CLLocationCoordinate2D(latitude: data.vehicle.latitude, longitude: data.vehicle.longitude))
-            vehicle.icon = VehicleMarkerRenderer.balloonImage(envelopeWidth: 40, glow: data.theme.soft)
-            vehicle.groundAnchor = CGPoint(x: 0.5, y: 0.82) // basket sits on the point
+            vehicle.icon = VehicleMarkerRenderer.balloonImage(envelopeWidth: 46, glow: data.theme.soft)
+            vehicle.groundAnchor = CGPoint(x: 0.5, y: 0.84) // basket sits on the point
             vehicle.isTappable = false
-            vehicle.zIndex = 5
+            vehicle.zIndex = 6
             vehicle.map = map
             vehicleMarker = vehicle
         }

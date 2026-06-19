@@ -133,7 +133,8 @@ private struct JourneyPassCard: View {
                     endpoint(code: code(route.originName), name: route.originName)
                     Spacer()
                     VStack(spacing: 2) {
-                        BalloonMark(size: 26, glow: route.colorTheme.soft, showGlow: false)
+                        BalloonMark(size: 30, glow: route.colorTheme.soft,
+                                    showGlow: false, showBurner: true)
                         Image(systemName: "ellipsis")
                             .font(.system(size: 12, weight: .bold))
                             .foregroundStyle(route.mood.preferredForeground.opacity(0.7))

@@ -24,17 +24,19 @@ enum MapStyles {
 
     static let dark = """
     [
-      {"elementType":"geometry","stylers":[{"color":"#0f1830"}]},
-      {"elementType":"labels.text.fill","stylers":[{"color":"#8893b0"}]},
-      {"elementType":"labels.text.stroke","stylers":[{"color":"#0b1124"}]},
+      {"elementType":"geometry","stylers":[{"color":"#0c1326"}]},
+      {"elementType":"labels.text.fill","stylers":[{"color":"#7b87a6"}]},
+      {"elementType":"labels.text.stroke","stylers":[{"color":"#070b18"}]},
       {"featureType":"poi","stylers":[{"visibility":"off"}]},
       {"featureType":"transit","stylers":[{"visibility":"off"}]},
       {"featureType":"road","elementType":"labels","stylers":[{"visibility":"off"}]},
-      {"featureType":"road","elementType":"geometry","stylers":[{"color":"#17223f"}]},
+      {"featureType":"road","elementType":"geometry","stylers":[{"color":"#141d38"}]},
       {"featureType":"administrative","elementType":"geometry","stylers":[{"visibility":"off"}]},
+      {"featureType":"administrative.locality","elementType":"labels.text.fill","stylers":[{"color":"#8a96b6"}]},
       {"featureType":"administrative.country","elementType":"labels.text.fill","stylers":[{"color":"#9aa6c4"}]},
-      {"featureType":"landscape","elementType":"geometry","stylers":[{"color":"#101a34"}]},
-      {"featureType":"water","elementType":"geometry","stylers":[{"color":"#0a1226"}]},
+      {"featureType":"landscape","elementType":"geometry","stylers":[{"color":"#0f1730"}]},
+      {"featureType":"landscape.natural","elementType":"geometry","stylers":[{"color":"#101a36"}]},
+      {"featureType":"water","elementType":"geometry","stylers":[{"color":"#070d1e"}]},
       {"featureType":"water","elementType":"labels","stylers":[{"visibility":"off"}]}
     ]
     """

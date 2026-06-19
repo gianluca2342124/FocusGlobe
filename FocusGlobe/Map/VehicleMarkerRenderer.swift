@@ -11,11 +11,14 @@ import UIKit
 /// async hop (and without forcing the coordinator to be an actor).
 enum VehicleMarkerRenderer {
 
-    /// The balloon, rendered with room around it for the glow.
-    static func balloonImage(envelopeWidth: CGFloat = 40, glow: Color) -> UIImage? {
+    /// The balloon, rendered with room around it for the glow and burner.
+    /// The burner is baked in statically (the sense of life comes from the
+    /// balloon's movement along the route).
+    static func balloonImage(envelopeWidth: CGFloat = 46, glow: Color) -> UIImage? {
         MainActor.assumeIsolated {
-            let padded = BalloonMark(size: envelopeWidth, glow: glow, showGlow: true)
-                .padding(envelopeWidth * 0.55)
+            let padded = BalloonMark(size: envelopeWidth, glow: glow, showGlow: true,
+                                     showBurner: true, burnerAnimated: false)
+                .padding(envelopeWidth * 0.6)
             let renderer = ImageRenderer(content: padded)
             renderer.scale = UIScreen.main.scale
             renderer.isOpaque = false

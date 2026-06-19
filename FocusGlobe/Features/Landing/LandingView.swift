@@ -47,8 +47,9 @@ struct LandingView: View {
 
     private var header: some View {
         VStack(spacing: AppSpacing.sm) {
-            BalloonMark(size: 84, glow: summary.route.colorTheme.soft)
-                .offset(y: balloonRise ? 0 : 24)
+            BalloonView(height: 150, showBurner: true, showGlow: true,
+                        glow: summary.route.colorTheme.soft)
+                .offset(y: balloonRise ? 0 : 28)
                 .opacity(balloonRise ? 1 : 0)
             Text("You landed.")
                 .font(AppTypography.hero)

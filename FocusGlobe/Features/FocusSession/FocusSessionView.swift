@@ -35,10 +35,14 @@ struct FocusSessionView: View {
     @EnvironmentObject private var router: AppRouter
     @Environment(\.scenePhase) private var scenePhase
 
+    private var accent: Color { vm.route.colorTheme.accent }
+
     var body: some View {
         ZStack {
             JourneyMapView(data: vm.mapData)
                 .ignoresSafeArea()
+
+            if !vm.pureMode { scrims }
 
             VStack(spacing: 0) {
                 topArea
@@ -47,7 +51,7 @@ struct FocusSessionView: View {
             }
             .padding(.horizontal, AppSpacing.screen)
             .padding(.vertical, AppSpacing.xs)
-            .animation(.spring(response: 0.4, dampingFraction: 0.85), value: vm.pureMode)
+            .animation(.spring(response: 0.45, dampingFraction: 0.85), value: vm.pureMode)
         }
         .statusBarHidden(vm.pureMode)
         .confirmationDialog("Leave this journey?",
@@ -66,6 +70,19 @@ struct FocusSessionView: View {
         }
     }
 
+    // Cinematic top/bottom scrims for legibility + depth.
+    private var scrims: some View {
+        VStack(spacing: 0) {
+            LinearGradient(colors: [.black.opacity(0.28), .clear], startPoint: .top, endPoint: .bottom)
+                .frame(height: 150)
+            Spacer()
+            LinearGradient(colors: [.clear, .black.opacity(0.34)], startPoint: .top, endPoint: .bottom)
+                .frame(height: 240)
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+
     // MARK: - Top
 
     @ViewBuilder private var topArea: some View {
@@ -78,32 +95,26 @@ struct FocusSessionView: View {
             .transition(.move(edge: .top).combined(with: .opacity))
         } else {
             AppFloatingIsland {
-                VStack(spacing: AppSpacing.sm) {
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(vm.route.name)
-                                .font(AppTypography.caption)
-                                .foregroundStyle(AppColors.textSecondary)
-                            HStack(spacing: 6) {
-                                Image(systemName: vm.phase.systemImage)
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundStyle(vm.route.colorTheme.accent)
-                                Text(vm.phase.title)
-                                    .font(AppTypography.headline)
-                                    .foregroundStyle(AppColors.textPrimary)
-                            }
-                        }
-                        Spacer()
-                        Text(vm.progressPercentText)
-                            .font(AppTypography.title2)
+                HStack(spacing: AppSpacing.sm) {
+                    Image(systemName: vm.phase.systemImage)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(accent)
+                        .frame(width: 34, height: 34)
+                        .background(Circle().fill(accent.opacity(0.16)))
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(vm.route.name)
+                            .font(AppTypography.caption)
+                            .foregroundStyle(AppColors.textSecondary)
+                            .lineLimit(1)
+                        Text(vm.phase.title)
+                            .font(AppTypography.headline)
                             .foregroundStyle(AppColors.textPrimary)
-                            .monospacedDigit()
                     }
-                    ProgressTrack(progress: vm.progress, color: vm.route.colorTheme.accent)
-                    Text(vm.phase.caption)
-                        .font(AppTypography.caption)
-                        .foregroundStyle(AppColors.textTertiary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Spacer()
+                    Text(vm.progressPercentText)
+                        .font(AppTypography.headline)
+                        .monospacedDigit()
+                        .foregroundStyle(AppColors.textSecondary)
                 }
             }
             .transition(.move(edge: .top).combined(with: .opacity))
@@ -120,9 +131,7 @@ struct FocusSessionView: View {
                               accessibilityLabel: vm.isPaused ? "Resume" : "Pause") {
                     vm.togglePause()
                 }
-                Button {
-                    vm.togglePureMode()
-                } label: {
+                Button { vm.togglePureMode() } label: {
                     Text("Show controls")
                         .font(AppTypography.caption)
                         .foregroundStyle(AppColors.textSecondary)
@@ -138,20 +147,33 @@ struct FocusSessionView: View {
         } else {
             AppFloatingIsland(verticalPadding: AppSpacing.md) {
                 VStack(spacing: AppSpacing.md) {
-                    HStack {
-                        InlineMetric(systemImage: "timer", value: vm.remainingTimeText,
-                                     label: "remaining", monospaced: true)
+                    HStack(alignment: .firstTextBaseline) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Remaining")
+                                .font(AppTypography.micro)
+                                .foregroundStyle(AppColors.textTertiary)
+                            Text(vm.remainingTimeText)
+                                .font(.system(size: 40, weight: .semibold, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundStyle(AppColors.textPrimary)
+                        }
                         Spacer()
-                        InlineMetric(systemImage: "location.north.line.fill",
-                                     value: vm.remainingDistanceText, label: "to landing",
-                                     alignment: .trailing)
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("To landing")
+                                .font(AppTypography.micro)
+                                .foregroundStyle(AppColors.textTertiary)
+                            Text(vm.remainingDistanceText)
+                                .font(AppTypography.headline)
+                                .foregroundStyle(AppColors.textPrimary)
+                        }
                     }
+                    ProgressTrack(progress: vm.progress, color: accent)
                     HStack {
                         AppIconButton(systemImage: "xmark", size: 52, tint: AppColors.danger,
                                       accessibilityLabel: "Cancel journey") { vm.requestCancel() }
                         Spacer()
                         AppIconButton(systemImage: vm.isPaused ? "play.fill" : "pause.fill",
-                                      size: 68, prominent: true,
+                                      size: 70, prominent: true,
                                       accessibilityLabel: vm.isPaused ? "Resume" : "Pause") {
                             vm.togglePause()
                         }
@@ -163,39 +185,6 @@ struct FocusSessionView: View {
             }
             .transition(.move(edge: .bottom).combined(with: .opacity))
         }
-    }
-}
-
-// MARK: - Small pieces
-
-private struct InlineMetric: View {
-    let systemImage: String
-    let value: String
-    let label: String
-    var monospaced: Bool = false
-    var alignment: HorizontalAlignment = .leading
-
-    var body: some View {
-        VStack(alignment: alignment, spacing: 1) {
-            HStack(spacing: 5) {
-                Image(systemName: systemImage).font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(AppColors.textSecondary)
-                Text(value)
-                    .font(AppTypography.headline)
-                    .foregroundStyle(AppColors.textPrimary)
-                    .modifier(MaybeMonospaced(on: monospaced))
-            }
-            Text(label)
-                .font(AppTypography.micro)
-                .foregroundStyle(AppColors.textTertiary)
-        }
-    }
-}
-
-private struct MaybeMonospaced: ViewModifier {
-    let on: Bool
-    func body(content: Content) -> some View {
-        if on { content.monospacedDigit() } else { content }
     }
 }
 

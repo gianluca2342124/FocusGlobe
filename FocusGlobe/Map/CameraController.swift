@@ -15,14 +15,14 @@ enum CameraController {
     /// A comfortable zoom level (Google-style 1–21) for a route of this span.
     static func zoom(forDistanceKm km: Double) -> Double {
         switch km {
-        case ..<30:    return 10.0
-        case ..<80:    return 9.0
-        case ..<200:   return 8.0
-        case ..<600:   return 6.8
-        case ..<1500:  return 5.6
-        case ..<4000:  return 4.6
-        case ..<8000:  return 3.7
-        default:       return 3.0
+        case ..<30:    return 10.6
+        case ..<80:    return 9.6
+        case ..<200:   return 8.3
+        case ..<600:   return 7.1
+        case ..<1500:  return 6.0
+        case ..<4000:  return 5.0
+        case ..<8000:  return 4.1
+        default:       return 3.3
         }
     }
 
