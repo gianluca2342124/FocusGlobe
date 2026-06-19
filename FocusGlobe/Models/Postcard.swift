@@ -3,12 +3,14 @@ import Foundation
 /// A collectible postcard / stamp earned by completing a route. Shown in the
 /// Globe Passport.
 struct Postcard: Identifiable, Codable, Hashable {
-    /// Matches the route id that unlocked it.
+    /// Matches the destination/route id that unlocked it.
     let id: String
     let title: String
     let place: String
     let mood: RouteMood
     let theme: RouteTheme
+    /// Visual identity for the procedural postcard (optional for old data).
+    let landmark: Landmark?
     let unlockedDate: Date
 
     init(route: Route, unlockedDate: Date = Date()) {
@@ -17,6 +19,7 @@ struct Postcard: Identifiable, Codable, Hashable {
         self.place = route.destinationName
         self.mood = route.mood
         self.theme = route.colorTheme
+        self.landmark = DestinationCatalog.destination(id: route.id)?.landmark ?? .generic
         self.unlockedDate = unlockedDate
     }
 }

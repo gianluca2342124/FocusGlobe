@@ -145,7 +145,7 @@ struct FocusSessionView: View {
     private var statusPill: some View {
         HStack(spacing: 6) {
             Image(systemName: vm.phase.systemImage).font(.system(size: 12, weight: .semibold))
-            Text(vm.phase.title).font(AppTypography.caption)
+            Text(vm.statusLabel).font(AppTypography.caption)
         }
         .foregroundStyle(AppColors.textPrimary)
         .padding(.horizontal, AppSpacing.sm)
@@ -188,14 +188,8 @@ struct FocusSessionView: View {
     }
 
     private var centerCluster: some View {
-        VStack(spacing: AppSpacing.xs) {
-            Text(vm.remainingTimeText)
-                .font(.system(size: 17, weight: .semibold, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(.white.opacity(0.9))
-                .shadow(color: .black.opacity(0.35), radius: 6, y: 2)
-            WhitePauseButton(isPaused: vm.isPaused, size: 56) { vm.togglePause() }
-        }
+        // No seconds countdown — calm and timeless. Just the pause control.
+        WhitePauseButton(isPaused: vm.isPaused, size: 60) { vm.togglePause() }
     }
 
     // MARK: - Pure mode
@@ -204,9 +198,8 @@ struct FocusSessionView: View {
         VStack {
             HStack {
                 Spacer()
-                Text(vm.remainingTimeText)
+                Text(vm.remainingMinutesText)
                     .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .monospacedDigit()
                     .foregroundStyle(.white)
                     .padding(.horizontal, AppSpacing.md)
                     .padding(.vertical, AppSpacing.xs + 2)

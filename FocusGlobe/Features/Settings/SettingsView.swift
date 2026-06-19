@@ -5,6 +5,7 @@ struct SettingsView: View {
     @EnvironmentObject private var router: AppRouter
     @State private var showResetConfirm = false
     @State private var restoreMessage: String?
+    @State private var showCityPicker = false
 
     var body: some View {
         ZStack {
@@ -14,6 +15,7 @@ struct SettingsView: View {
                     ScreenHeader(title: "Settings")
 
                     appearanceSection
+                    locationSection
                     mapSection
                     experienceSection
                     proSection
@@ -30,6 +32,7 @@ struct SettingsView: View {
         }
         .focusScreenChrome()
         .onAppear { appModel.analytics.log(.settingsOpened) }
+        .sheet(isPresented: $showCityPicker) { LocationPickerView() }
         .confirmationDialog("Reset all local data?", isPresented: $showResetConfirm, titleVisibility: .visible) {
             Button("Reset everything", role: .destructive) { appModel.resetAllData() }
             Button("Cancel", role: .cancel) {}
@@ -69,6 +72,30 @@ struct SettingsView: View {
             )
         }
         .buttonStyle(SoftPressStyle())
+    }
+
+    private var locationSection: some View {
+        SettingsCard(title: "Starting location") {
+            Button { showCityPicker = true } label: {
+                SettingsRow(systemImage: "location.fill",
+                            title: appModel.currentOrigin?.city ?? "Choose starting city",
+                            subtitle: locationSubtitle, tint: AppColors.brand,
+                            trailing: AnyView(Image(systemName: "chevron.right")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(AppColors.textTertiary)))
+            }
+            .buttonStyle(SoftPressStyle())
+        }
+    }
+
+    private var locationSubtitle: String {
+        if appModel.isUsingManualOrigin { return "Chosen manually · tap to change" }
+        switch appModel.locationState {
+        case .resolved:           return "Detected automatically"
+        case .resolving:          return "Locating…"
+        case .denied:             return "Location off — pick a city"
+        case .unavailable, .idle: return "Tap to detect or choose"
+        }
     }
 
     private var mapSection: some View {
@@ -162,7 +189,7 @@ struct SettingsView: View {
                 Image(systemName: "lock.shield")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(AppColors.success)
-                Text("Your focus history stays on device. No account, no location, no tracking.")
+                Text("Your focus history stays on device. Location is used only to set your starting city and never leaves your device. No account, no tracking.")
                     .font(AppTypography.callout)
                     .foregroundStyle(AppColors.textSecondary)
                 Spacer(minLength: 0)

@@ -1,23 +1,34 @@
 import SwiftUI
 
-/// Route discovery, recomposed in the FocusFlight grammar: a full-screen map
-/// shows the selected journey (origin → destination code tags + balloon),
-/// floating category chips sit on top, and a horizontal destination strip with
-/// a single white CTA sits at the bottom. Map-first, not list-first.
+/// Destination selection, in the FocusFlight grammar: a full-screen real Google
+/// map shows the journey from the user's current location to the selected
+/// destination (origin halo + route + amber destination tag, no balloon yet).
+/// Floating category chips sit on top; a horizontal destination strip with a
+/// white CTA sits at the bottom. Map-first, not list-first.
 struct RouteSelectionView: View {
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = RouteSelectionViewModel()
-    @State private var selected: Route?
+    @State private var selectedID: String?
 
-    private var current: Route { selected ?? appModel.recommendedRoute }
+    private var origin: JourneyOrigin { appModel.originForJourney }
+    private var journeys: [PlannedJourney] { viewModel.journeys(for: origin) }
+
+    private var current: PlannedJourney? {
+        journeys.first { $0.id == selectedID } ?? journeys.first
+    }
 
     var body: some View {
         ZStack {
-            JourneyDiscoveryMap(origin: appModel.origin, route: current)
-                .ignoresSafeArea()
-                .animation(.easeInOut(duration: 0.5), value: current.id)
+            if let current {
+                JourneyDiscoveryMap(origin: origin, route: current.route)
+                    .ignoresSafeArea()
+                    .animation(.easeInOut(duration: 0.5), value: current.id)
+            } else {
+                JourneyBackdropMap(origin: origin, mode: .origin, showsBalloon: false)
+                    .ignoresSafeArea()
+            }
 
             scrims
 
@@ -25,15 +36,18 @@ struct RouteSelectionView: View {
                 topBar
                 categoryChips
                 Spacer()
-                bottomCluster
+                if let current {
+                    bottomCluster(current)
+                } else {
+                    emptyState
+                }
             }
             .padding(.top, AppSpacing.xs)
             .padding(.bottom, AppSpacing.lg)
         }
         .focusScreenChrome()
-        .onAppear { if selected == nil { selected = appModel.recommendedRoute } }
         .onChange(of: viewModel.selectedCategory) { _, _ in
-            if let first = viewModel.filteredRoutes.first { selected = first }
+            if let first = journeys.first { selectedID = first.id }
         }
     }
 
@@ -42,8 +56,8 @@ struct RouteSelectionView: View {
             LinearGradient(colors: [.black.opacity(0.4), .clear], startPoint: .top, endPoint: .bottom)
                 .frame(height: 160)
             Spacer()
-            LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .top, endPoint: .bottom)
-                .frame(height: 360)
+            LinearGradient(colors: [.clear, .black.opacity(0.72)], startPoint: .top, endPoint: .bottom)
+                .frame(height: 380)
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
@@ -54,9 +68,10 @@ struct RouteSelectionView: View {
             AppIconButton(systemImage: "chevron.left", size: 44, tint: .white,
                           accessibilityLabel: "Back") { dismiss() }
             Spacer()
-            Text("Choose a journey")
-                .font(AppTypography.headline)
-                .foregroundStyle(.white)
+            VStack(spacing: 1) {
+                Text("Choose a journey").font(AppTypography.headline).foregroundStyle(.white)
+                Text("from \(origin.city)").font(AppTypography.caption).foregroundStyle(.white.opacity(0.7))
+            }
             Spacer()
             Color.clear.frame(width: 44, height: 44)
         }
@@ -87,18 +102,18 @@ struct RouteSelectionView: View {
         .buttonStyle(SoftPressStyle())
     }
 
-    private var bottomCluster: some View {
+    private func bottomCluster(_ journey: PlannedJourney) -> some View {
         VStack(spacing: AppSpacing.md) {
             VStack(spacing: 3) {
-                Text(current.name)
+                Text(journey.destination.city)
                     .font(AppTypography.title2)
                     .foregroundStyle(.white)
                 HStack(spacing: 8) {
-                    Label(current.durationLabel, systemImage: "clock")
+                    Label(Formatters.durationLabel(minutes: journey.durationMinutes), systemImage: "clock")
                     Text("·")
-                    Label(dynamicDistanceLabel, systemImage: "ruler")
+                    Label(Formatters.distance(km: journey.distanceKm), systemImage: "ruler")
                     Text("·")
-                    Label(current.mood.displayName, systemImage: current.mood.systemImage)
+                    Label(journey.destination.mood.displayName, systemImage: journey.destination.mood.systemImage)
                 }
                 .font(AppTypography.caption)
                 .foregroundStyle(.white.opacity(0.85))
@@ -108,28 +123,35 @@ struct RouteSelectionView: View {
 
             destinationStrip
 
-            AppPrimaryButton(title: lockedSelection ? "Unlock with Pro" : "Book Journey",
-                             systemImage: lockedSelection ? "lock.fill" : "paperplane.fill") {
-                select(current)
+            AppPrimaryButton(title: locked(journey) ? "Unlock with Pro" : "Book Journey",
+                             systemImage: locked(journey) ? "lock.fill" : "paperplane.fill") {
+                select(journey)
             }
             .padding(.horizontal, AppSpacing.screen)
         }
     }
 
-    private var dynamicDistanceLabel: String {
-        Formatters.distance(km: GeoMath.distanceKm(from: appModel.origin.coordinate,
-                                                   to: current.destination))
+    private var emptyState: some View {
+        VStack(spacing: AppSpacing.xs) {
+            Text("No destinations in this range")
+                .font(AppTypography.headline).foregroundStyle(.white)
+            Text("Try another category — closer cities appear under Short.")
+                .font(AppTypography.caption).foregroundStyle(.white.opacity(0.8))
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, AppSpacing.screen)
+        .padding(.bottom, AppSpacing.md)
     }
 
     private var destinationStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: AppSpacing.sm) {
-                ForEach(viewModel.filteredRoutes) { route in
-                    DestinationCard(route: route,
-                                    isSelected: route.id == current.id,
-                                    isLocked: !appModel.isUnlocked(route)) {
+                ForEach(journeys) { journey in
+                    DestinationCard(journey: journey,
+                                    isSelected: journey.id == current?.id,
+                                    isLocked: locked(journey)) {
                         appModel.haptics.tap()
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { selected = route }
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { selectedID = journey.id }
                     }
                 }
             }
@@ -138,12 +160,12 @@ struct RouteSelectionView: View {
         }
     }
 
-    private var lockedSelection: Bool { !appModel.isUnlocked(current) }
+    private func locked(_ journey: PlannedJourney) -> Bool { !appModel.isUnlocked(journey.route) }
 
-    private func select(_ route: Route) {
-        if appModel.isUnlocked(route) {
-            appModel.analytics.log(.routeSelected, ["route": route.id, "source": "discovery"])
-            router.openBoarding(route)
+    private func select(_ journey: PlannedJourney) {
+        if appModel.isUnlocked(journey.route) {
+            appModel.analytics.log(.routeSelected, ["route": journey.id, "source": "discovery"])
+            router.openBoarding(journey.route)
         } else {
             appModel.haptics.tap()
             router.presentPaywall()
@@ -154,7 +176,7 @@ struct RouteSelectionView: View {
 /// A compact destination card for the horizontal strip. Selected = white card;
 /// otherwise dark glass. Mirrors the FocusFlight destination cards.
 private struct DestinationCard: View {
-    let route: Route
+    let journey: PlannedJourney
     let isSelected: Bool
     let isLocked: Bool
     let action: () -> Void
@@ -165,7 +187,7 @@ private struct DestinationCard: View {
                 HStack(spacing: 5) {
                     HStack(spacing: 3) {
                         Image(systemName: "location.fill").font(.system(size: 8, weight: .bold))
-                        Text(route.destinationCode)
+                        Text(journey.destination.code)
                             .font(.system(size: 13, weight: .heavy, design: .rounded))
                     }
                     .foregroundStyle(isSelected ? Color(hex: 0x14181F) : .white)
@@ -181,17 +203,17 @@ private struct DestinationCard: View {
                 }
 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(route.shortName)
+                    Text(journey.destination.city)
                         .font(AppTypography.callout)
                         .foregroundStyle(isSelected ? Color(hex: 0x14181F) : .white)
                         .lineLimit(1)
-                    Text(route.durationLabel)
+                    Text(Formatters.durationLabel(minutes: journey.durationMinutes))
                         .font(AppTypography.caption)
                         .foregroundStyle(isSelected ? Color(hex: 0x14181F).opacity(0.65) : .white.opacity(0.7))
                 }
             }
             .padding(AppSpacing.sm + 2)
-            .frame(width: 138, alignment: .leading)
+            .frame(width: 140, alignment: .leading)
             .background {
                 if isSelected {
                     RoundedRectangle(cornerRadius: 18, style: .continuous).fill(.white)

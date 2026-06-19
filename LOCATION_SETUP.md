@@ -30,12 +30,23 @@ INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "FocusGlobe begins each jour
 
 ## How it behaves
 
+The app never silently presents a fake city as if it were the user's real
+location.
+
 | State | Result |
 | --- | --- |
-| Key present, permission **granted** | Real location → reverse-geocoded city (e.g. “Barcelona”). *(normal path)* |
-| Key present, permission **denied / restricted** | Graceful fallback to the default city. |
-| Key **missing** | No prompt is shown; default city is used. App still runs. |
+| Key present, permission **granted** | Real location → reverse-geocoded city + country (e.g. “Barcelona”). *(normal path)* |
+| Key present, permission **denied / restricted** | Home shows a clean “Choose your city” state with a **Choose starting city** CTA (no fake origin). |
+| Key **missing** | Same clean “choose a city” state; the app still runs fully. |
+| User picks a city manually | That city becomes the origin (persisted) until they tap **Use my current location**. |
 
 `requestWhenInUseAuthorization()` is triggered calmly from the Home screen on
-first appearance (`HomeView.onAppear → appModel.requestLocation()`), not at a
-jarring cold-launch moment.
+first appearance (`HomeView.onAppear → appModel.requestLocation()`).
+
+### Testing in the Simulator
+
+The iOS Simulator reports Apple HQ (San Francisco) as its location by default.
+To test other origins without changing the simulator, open **Settings →
+Starting location** (or tap the location pill on Home) and pick a preset city
+(Barcelona, Paris, London, New York, Tokyo, …). Choosing **Use my current
+location** clears the override.

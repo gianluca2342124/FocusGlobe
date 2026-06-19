@@ -12,14 +12,13 @@ import UIKit
 /// the aurora/galaxy surface is reserved as an atmospheric *overlay/scrim* on
 /// top (applied by the screens), never as a replacement here. Only when the SDK
 /// is absent (no-dependency / preview builds) does it fall back to the stylised
-/// aurora map so the app is always beautiful and runnable.
+/// aurora map.
 ///
-/// Two modes:
-///  • `.origin` — frame the user's current location (a soft halo + the balloon,
-///    "ready to depart"). Used on Home.
+/// Modes:
+///  • `.origin` — frame the user's current location (soft halo, optionally a
+///    small balloon "ready to depart"). Used on Home.
 ///  • `.route`  — frame the journey from the user's location to the destination
-///    (route line, endpoints, optional airport-style code tags, balloon at
-///    `progress`). Used on Journey Selection and Boarding.
+///    (route line, endpoints, optional code tags). Used on Selection & Boarding.
 struct JourneyBackdropMap: View {
     enum Mode: Equatable { case origin, route }
 
@@ -29,6 +28,11 @@ struct JourneyBackdropMap: View {
     /// Balloon position along the route preview (0…1). Ignored in `.origin`.
     var progress: Double = 0.5
     var showsCodeTags: Bool = false
+    /// Show the balloon marker. Off on Choose Journey (the user is selecting a
+    /// destination, not watching the balloon yet).
+    var showsBalloon: Bool = true
+    /// Show the origin halo/dot. Off when there's no real origin yet.
+    var showsOrigin: Bool = true
 
     private var theme: RouteTheme { destination?.colorTheme ?? .teal }
     private var mood: RouteMood { destination?.mood ?? .calm }
@@ -37,7 +41,8 @@ struct JourneyBackdropMap: View {
         #if canImport(GoogleMaps)
         GoogleBackdropMapView(origin: origin, destination: destination,
                               mode: mode, progress: progress,
-                              showsCodeTags: showsCodeTags, theme: theme)
+                              showsCodeTags: showsCodeTags, showsBalloon: showsBalloon,
+                              showsOrigin: showsOrigin, theme: theme)
             .allowsHitTesting(false)
         #else
         fallback.allowsHitTesting(false)
@@ -48,7 +53,6 @@ struct JourneyBackdropMap: View {
 
     private var destinationCoordinate: GeoCoordinate {
         if let destination { return destination.destination }
-        // A gentle "dream" point so the fallback still has a pleasant arc.
         return GeoCoordinate(latitude: origin.coordinate.latitude + 6,
                              longitude: origin.coordinate.longitude + 8)
     }
@@ -72,7 +76,6 @@ struct JourneyBackdropMap: View {
         if showsCodeTags, mode == .route {
             GeometryReader { geo in
                 let size = geo.size
-                // Inset must match FallbackJourneyMapView's internal inset (64).
                 let proj = GeoProjection(coords: [origin.coordinate, destinationCoordinate],
                                          size: size, inset: 64)
                 let o = proj.point(for: origin.coordinate)
@@ -119,14 +122,15 @@ struct MapCodeTag: View {
 
 #if canImport(GoogleMaps)
 /// The real Google night map used as a backdrop on the primary screens.
-/// Non-interactive and static (no take-off animation, no following) — that
-/// cinematic behaviour belongs to `GoogleJourneyMapView` in the live session.
+/// Non-interactive and static (no take-off animation, no following).
 struct GoogleBackdropMapView: UIViewRepresentable {
     let origin: JourneyOrigin
     let destination: Route?
     let mode: JourneyBackdropMap.Mode
     let progress: Double
     let showsCodeTags: Bool
+    let showsBalloon: Bool
+    let showsOrigin: Bool
     let theme: RouteTheme
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -160,15 +164,13 @@ struct GoogleBackdropMapView: UIViewRepresentable {
             let dest = view.destination
             let key = [
                 view.mode == .origin ? "origin" : "route",
-                view.origin.code,
                 String(format: "%.3f,%.3f", view.origin.coordinate.latitude, view.origin.coordinate.longitude),
                 dest?.id ?? "-",
-                view.showsCodeTags ? "tags" : "plain"
+                view.showsCodeTags ? "t" : "_", view.showsBalloon ? "b" : "_", view.showsOrigin ? "o" : "_"
             ].joined(separator: "|")
             guard key != lastKey else { return }
             lastKey = key
 
-            // Clear previous geometry.
             markers.forEach { $0.map = nil }; markers.removeAll()
             polylines.forEach { $0.map = nil }; polylines.removeAll()
             circle?.map = nil; circle = nil
@@ -178,39 +180,42 @@ struct GoogleBackdropMapView: UIViewRepresentable {
             let originCoord = CLLocationCoordinate2D(latitude: view.origin.coordinate.latitude,
                                                      longitude: view.origin.coordinate.longitude)
 
-            // Soft current-location halo + crisp dot.
-            let halo = GMSCircle(position: originCoord, radius: view.mode == .origin ? 2600 : 1400)
-            halo.fillColor = soft.withAlphaComponent(0.18)
-            halo.strokeColor = accent.withAlphaComponent(0.55)
-            halo.strokeWidth = 2
-            halo.map = map
-            circle = halo
+            if view.showsOrigin {
+                let halo = GMSCircle(position: originCoord, radius: view.mode == .origin ? 2600 : 1400)
+                halo.fillColor = soft.withAlphaComponent(0.18)
+                halo.strokeColor = accent.withAlphaComponent(0.55)
+                halo.strokeWidth = 2
+                halo.map = map
+                circle = halo
 
-            let originDot = GMSMarker(position: originCoord)
-            originDot.icon = VehicleMarkerRenderer.dotImage(diameter: 12, fill: .white, ring: accent, ringWidth: 3)
-            originDot.groundAnchor = CGPoint(x: 0.5, y: 0.5)
-            originDot.isTappable = false
-            originDot.zIndex = 4
-            originDot.map = map
-            markers.append(originDot)
+                let originDot = GMSMarker(position: originCoord)
+                originDot.icon = VehicleMarkerRenderer.dotImage(diameter: 12, fill: .white, ring: accent, ringWidth: 3)
+                originDot.groundAnchor = CGPoint(x: 0.5, y: 0.5)
+                originDot.isTappable = false
+                originDot.zIndex = 4
+                originDot.map = map
+                markers.append(originDot)
+            }
 
             guard view.mode == .route, let dest else {
-                // Origin-only: balloon hovering over "you are here".
-                let balloon = GMSMarker(position: originCoord)
-                balloon.icon = VehicleMarkerRenderer.balloonImage(targetHeight: 86, glow: view.theme.soft)
-                balloon.groundAnchor = CGPoint(x: 0.5, y: 0.9)
-                balloon.isTappable = false
-                balloon.zIndex = 6
-                balloon.map = map
-                markers.append(balloon)
-
-                if view.showsCodeTags {
+                // Origin-only (Home): optional small balloon over "you are here".
+                if view.showsBalloon {
+                    let balloon = GMSMarker(position: originCoord)
+                    balloon.icon = VehicleMarkerRenderer.balloonImage(targetHeight: 58, glow: view.theme.soft)
+                    balloon.groundAnchor = CGPoint(x: 0.5, y: 0.9)
+                    balloon.isTappable = false
+                    balloon.zIndex = 6
+                    balloon.map = map
+                    markers.append(balloon)
+                }
+                if view.showsCodeTags && view.showsOrigin {
                     addTag(code: view.origin.code, highlighted: false, at: originCoord, accent: accent, on: map)
                 }
+                let zoom: Float = view.showsOrigin ? 10.6 : 4.4
                 CATransaction.begin()
                 CATransaction.setDisableActions(true)
                 map.moveCamera(GMSCameraUpdate.setCamera(
-                    GMSCameraPosition.camera(withTarget: originCoord, zoom: 10.6)))
+                    GMSCameraPosition.camera(withTarget: originCoord, zoom: zoom)))
                 CATransaction.commit()
                 return
             }
@@ -235,7 +240,7 @@ struct GoogleBackdropMapView: UIViewRepresentable {
             line.map = map
             polylines.append(line)
 
-            // Destination dot.
+            // Destination dot + soft glow.
             let destDot = GMSMarker(position: destCoord)
             destDot.icon = VehicleMarkerRenderer.dotImage(diameter: 13, fill: accent, ring: .white, ringWidth: 3)
             destDot.groundAnchor = CGPoint(x: 0.5, y: 0.5)
@@ -244,18 +249,21 @@ struct GoogleBackdropMapView: UIViewRepresentable {
             destDot.map = map
             markers.append(destDot)
 
-            // Balloon at the preview position.
-            let vehicle = GeoMath.interpolate(from: view.origin.coordinate, to: dest.destination, fraction: view.progress)
-            let balloon = GMSMarker(position: CLLocationCoordinate2D(latitude: vehicle.latitude, longitude: vehicle.longitude))
-            balloon.icon = VehicleMarkerRenderer.balloonImage(targetHeight: 88, glow: view.theme.soft)
-            balloon.groundAnchor = CGPoint(x: 0.5, y: 0.88)
-            balloon.isTappable = false
-            balloon.zIndex = 6
-            balloon.map = map
-            markers.append(balloon)
+            if view.showsBalloon {
+                let vehicle = GeoMath.interpolate(from: view.origin.coordinate, to: dest.destination, fraction: view.progress)
+                let balloon = GMSMarker(position: CLLocationCoordinate2D(latitude: vehicle.latitude, longitude: vehicle.longitude))
+                balloon.icon = VehicleMarkerRenderer.balloonImage(targetHeight: 84, glow: view.theme.soft)
+                balloon.groundAnchor = CGPoint(x: 0.5, y: 0.88)
+                balloon.isTappable = false
+                balloon.zIndex = 6
+                balloon.map = map
+                markers.append(balloon)
+            }
 
             if view.showsCodeTags {
-                addTag(code: view.origin.code, highlighted: false, at: originCoord, accent: accent, on: map)
+                if view.showsOrigin {
+                    addTag(code: view.origin.code, highlighted: false, at: originCoord, accent: accent, on: map)
+                }
                 addTag(code: dest.destinationCode, highlighted: true, at: destCoord, accent: UIColor(AppColors.gold), on: map)
             }
 

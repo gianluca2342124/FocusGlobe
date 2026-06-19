@@ -12,7 +12,13 @@ struct CameraPose: Equatable {
 /// keeps the vehicle centred.
 enum CameraController {
 
+    /// Close follow zoom so the balloon feels like it's drifting over real
+    /// neighbourhoods/roads (independent of total route length — the whole
+    /// route is reachable via the "Full route" control instead).
+    static let followZoom: Double = 12.0
+
     /// A comfortable zoom level (Google-style 1–21) for a route of this span.
+    /// Used to *frame the whole route* (overview / previews).
     static func zoom(forDistanceKm km: Double) -> Double {
         switch km {
         case ..<30:    return 10.6

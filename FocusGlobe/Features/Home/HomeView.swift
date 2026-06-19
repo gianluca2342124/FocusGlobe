@@ -2,37 +2,50 @@ import SwiftUI
 
 /// Map-first home, in the FocusFlight grammar: a full-screen real Google map
 /// centred on the user's current location, a large greeting + city name, a
-/// single confident white CTA, and a couple of quiet glass rows. No dashboard,
-/// no stat boxes, no logo (those live elsewhere / nowhere).
+/// single white CTA, and a couple of quiet glass rows. No logo, no stat boxes.
+///
+/// Honesty rule: when location is denied/unavailable we never present a fake
+/// city as "real" — Home shows a clean "choose your starting city" state.
 struct HomeView: View {
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
     @StateObject private var viewModel = HomeViewModel()
+    @State private var showCityPicker = false
+
+    private var origin: JourneyOrigin? { appModel.currentOrigin }
 
     var body: some View {
         ZStack {
-            JourneyBackdropMap(origin: appModel.origin, mode: .origin)
-                .ignoresSafeArea()
-
-            // Atmospheric aurora overlay + legibility scrims (over the map).
+            map
             atmosphere
-
+            topBar
             VStack {
                 Spacer()
                 bottomCluster
             }
             .padding(.horizontal, AppSpacing.screen)
-            .padding(.top, AppSpacing.xs)
             .padding(.bottom, AppSpacing.lg)
         }
         .focusScreenChrome()
         .onAppear { appModel.requestLocation() }
+        .sheet(isPresented: $showCityPicker) { LocationPickerView() }
+    }
+
+    @ViewBuilder private var map: some View {
+        if let origin {
+            JourneyBackdropMap(origin: origin, mode: .origin, showsBalloon: true)
+                .ignoresSafeArea()
+        } else {
+            // No real/chosen origin yet — a calm high-altitude map with no
+            // "you are here" halo, so we never imply a fake location.
+            JourneyBackdropMap(origin: .default, mode: .origin,
+                               showsBalloon: false, showsOrigin: false)
+                .ignoresSafeArea()
+        }
     }
 
     private var atmosphere: some View {
         ZStack {
-            // Faint aurora wash so the night map still feels like FocusGlobe —
-            // an overlay, never a replacement for the real map.
             LinearGradient(colors: [AppColors.brand.opacity(0.10), .clear, AppColors.gold.opacity(0.06)],
                            startPoint: .topLeading, endPoint: .bottomTrailing)
             VStack(spacing: 0) {
@@ -42,11 +55,34 @@ struct HomeView: View {
                 Spacer()
                 LinearGradient(colors: [.clear, .black.opacity(0.78)],
                                startPoint: .top, endPoint: .bottom)
-                    .frame(height: 440)
+                    .frame(height: 460)
             }
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
+    }
+
+    private var topBar: some View {
+        VStack {
+            HStack {
+                Spacer()
+                Button { showCityPicker = true } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "location.fill").font(.system(size: 12, weight: .bold))
+                        Text(origin?.code ?? "SET")
+                            .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, AppSpacing.sm)
+                    .padding(.vertical, 9)
+                    .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.22, shadowRadius: 8, shadowY: 4)
+                }
+                .buttonStyle(SoftPressStyle())
+            }
+            Spacer()
+        }
+        .padding(.horizontal, AppSpacing.screen)
+        .padding(.top, AppSpacing.xs)
     }
 
     private var bottomCluster: some View {
@@ -55,22 +91,27 @@ struct HomeView: View {
                 Text(viewModel.greeting)
                     .font(AppTypography.headline)
                     .foregroundStyle(.white.opacity(0.82))
-                Text(appModel.origin.cityName)
+                Text(bigTitle)
                     .font(.system(size: 46, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                Text(appModel.location.hasResolvedRealLocation
-                     ? "Your balloon is ready to drift."
-                     : "Choose a destination and drift there.")
+                    .minimumScaleFactor(0.55)
+                Text(subtitle)
                     .font(AppTypography.subhead)
                     .foregroundStyle(.white.opacity(0.8))
             }
             .shadow(color: .black.opacity(0.45), radius: 12, y: 3)
 
-            AppPrimaryButton(title: "Start Journey", systemImage: "paperplane.fill") {
-                appModel.haptics.tap()
-                router.openRouteSelection()
+            if origin != nil {
+                AppPrimaryButton(title: "Start Journey", systemImage: "paperplane.fill") {
+                    appModel.haptics.tap()
+                    router.openRouteSelection()
+                }
+            } else {
+                AppPrimaryButton(title: "Choose starting city", systemImage: "mappin.and.ellipse") {
+                    appModel.haptics.tap()
+                    showCityPicker = true
+                }
             }
 
             VStack(spacing: AppSpacing.xs) {
@@ -79,6 +120,16 @@ struct HomeView: View {
                 homeRow(title: "Settings", systemImage: "gearshape") { router.openSettings() }
             }
         }
+    }
+
+    private var bigTitle: String {
+        if let origin { return origin.city }
+        return appModel.isLocating ? "Locating…" : "Choose your city"
+    }
+
+    private var subtitle: String {
+        if origin != nil { return "Your balloon is ready to drift." }
+        return appModel.isLocating ? "Finding where you are…" : "Pick a starting city to begin."
     }
 
     private func homeRow(title: String, systemImage: String, action: @escaping () -> Void) -> some View {

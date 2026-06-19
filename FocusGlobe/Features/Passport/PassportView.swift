@@ -79,17 +79,18 @@ struct PassportView: View {
     private var routesSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
             HStack {
-                SectionLabel(text: "Routes")
+                SectionLabel(text: "Destinations")
                 Spacer()
-                Text("\(progress.completedRouteIDs.count)/\(RouteCatalog.all.count)")
+                Text("\(progress.completedRouteIDs.count)/\(DestinationCatalog.all.count)")
                     .font(AppTypography.caption)
                     .foregroundStyle(AppColors.textTertiary)
             }
             LazyVGrid(columns: stampColumns, spacing: AppSpacing.sm) {
-                ForEach(RouteCatalog.all) { route in
-                    RouteStampTile(route: route,
-                                   completed: appModel.hasCompleted(route),
-                                   locked: !appModel.isUnlocked(route))
+                ForEach(DestinationCatalog.all) { dest in
+                    DestinationStampTile(
+                        destination: dest,
+                        completed: progress.completedRouteIDs.contains(dest.id),
+                        locked: !appModel.isUnlocked(JourneyPlanner.route(from: appModel.originForJourney, to: dest)))
                 }
             }
         }
@@ -111,22 +112,22 @@ struct PassportView: View {
     }
 }
 
-private struct RouteStampTile: View {
-    let route: Route
+private struct DestinationStampTile: View {
+    let destination: Destination
     let completed: Bool
     let locked: Bool
 
     var body: some View {
         if completed {
             ZStack {
-                route.mood.gradient
+                destination.mood.gradient
                 VStack(spacing: 4) {
                     Image(systemName: "checkmark.seal.fill")
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(route.mood.preferredForeground)
-                    Text(route.shortName)
+                        .foregroundStyle(destination.mood.preferredForeground)
+                    Text(destination.city)
                         .font(AppTypography.caption)
-                        .foregroundStyle(route.mood.preferredForeground)
+                        .foregroundStyle(destination.mood.preferredForeground)
                         .lineLimit(1)
                 }
                 .padding(4)
@@ -137,7 +138,24 @@ private struct RouteStampTile: View {
                 .strokeBorder(Color.white.opacity(0.15), lineWidth: 1))
             .shadow(color: AppColors.shadow, radius: 8, y: 4)
         } else {
-            LockedStampTile(route: route, requiresPro: locked)
+            VStack(spacing: 6) {
+                Image(systemName: locked ? "lock.fill" : destination.mood.systemImage)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(AppColors.textTertiary)
+                Text(destination.city)
+                    .font(AppTypography.caption)
+                    .foregroundStyle(AppColors.textTertiary)
+                    .lineLimit(1)
+                Text(destination.code)
+                    .font(AppTypography.micro)
+                    .foregroundStyle(AppColors.textTertiary.opacity(0.7))
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 116)
+            .background(RoundedRectangle(cornerRadius: AppSpacing.pillRadius, style: .continuous)
+                .fill(AppColors.hairline))
+            .overlay(RoundedRectangle(cornerRadius: AppSpacing.pillRadius, style: .continuous)
+                .strokeBorder(AppColors.hairline, style: StrokeStyle(lineWidth: 1, dash: [4, 4])))
         }
     }
 }

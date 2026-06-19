@@ -5,10 +5,11 @@ import Foundation
 final class RouteSelectionViewModel: ObservableObject {
     @Published var selectedCategory: RouteCategory?
 
-    var filteredRoutes: [Route] {
-        guard let selectedCategory else { return RouteCatalog.all }
-        return RouteCatalog.routes(in: selectedCategory)
-    }
-
     let categories = RouteCategory.allCases.sorted { $0.order < $1.order }
+
+    /// Destinations reachable from the current origin, nearest first, filtered
+    /// by the selected category chip.
+    func journeys(for origin: JourneyOrigin) -> [PlannedJourney] {
+        JourneyPlanner.plan(from: origin, category: selectedCategory)
+    }
 }

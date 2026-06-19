@@ -10,7 +10,8 @@ struct JourneyDiscoveryMap: View {
     let route: Route
 
     var body: some View {
+        // No balloon here — the user is choosing a destination, not yet flying.
         JourneyBackdropMap(origin: origin, destination: route, mode: .route,
-                           progress: 0.5, showsCodeTags: true)
+                           progress: 0.5, showsCodeTags: true, showsBalloon: false)
     }
 }

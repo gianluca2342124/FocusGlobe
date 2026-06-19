@@ -29,6 +29,10 @@ struct Route: Identifiable, Codable, Hashable {
     let colorTheme: RouteTheme
     let ambientSoundName: String
 
+    /// Curated airport-style code from the destination catalog (e.g. "KYO").
+    /// Falls back to a code derived from `shortName` when empty.
+    var displayCode: String = ""
+
     // MARK: - Derived, provider-independent helpers
 
     var origin: GeoCoordinate {
@@ -49,10 +53,9 @@ struct Route: Identifiable, Codable, Hashable {
     var durationLabel: String { Formatters.durationLabel(minutes: durationMinutes) }
     var distanceLabel: String { Formatters.distance(km: approximateDistanceKm) }
 
-    /// Airport-style 3-letter code for the destination, derived from the
-    /// headline `shortName` so codes stay short and distinct (e.g. "KYO",
-    /// "AUR", "FJO"). The origin code now comes from `JourneyOrigin`.
-    var destinationCode: String { Route.code(shortName) }
+    /// Airport-style 3-letter destination code (curated when available). The
+    /// origin code now comes from `JourneyOrigin`.
+    var destinationCode: String { displayCode.isEmpty ? Route.code(shortName) : displayCode }
 
     static func code(_ name: String) -> String {
         let letters = name.uppercased().filter { $0.isLetter }

@@ -12,5 +12,10 @@ struct AppSettings: Codable, Equatable {
     /// Default map presentation for journeys (overridable live in-session).
     var mapStyle: MapDisplayStyle = .night
 
+    /// A manually chosen starting city. When set, it overrides real location
+    /// (used by the "Choose starting city" picker and the DEBUG override).
+    /// `nil` means "use my current location".
+    var startingCity: JourneyOrigin? = nil
+
     static let `default` = AppSettings()
 }

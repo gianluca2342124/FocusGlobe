@@ -18,14 +18,15 @@ struct BoardingView: View {
     @State private var barcodeIn = false
     @State private var torn = false
 
-    private var origin: JourneyOrigin { appModel.origin }
+    private var origin: JourneyOrigin { appModel.originForJourney }
     private var distanceKm: Double {
         GeoMath.distanceKm(from: origin.coordinate, to: route.destination)
     }
 
     var body: some View {
         ZStack {
-            JourneyBackdropMap(origin: origin, destination: route, mode: .route, progress: 0.32)
+            JourneyBackdropMap(origin: origin, destination: route, mode: .route,
+                               progress: 0.32, showsBalloon: false)
                 .ignoresSafeArea()
 
             scrims
@@ -142,11 +143,12 @@ private struct BoardingPassCard: View {
     var body: some View {
         VStack(spacing: 0) {
             stub
-                .offset(y: torn ? -26 : 0)
-                .rotationEffect(.degrees(torn ? -1.4 : 0), anchor: .bottom)
-                .opacity(torn ? 0 : 1)
+                .offset(y: torn ? -10 : 0)
+                .opacity(torn ? 0.0 : 1)
+            // The lower strip (with the barcode) tears away at the perforation.
             details
-                .offset(y: torn ? 24 : 0)
+                .offset(y: torn ? 80 : 0)
+                .rotationEffect(.degrees(torn ? 1.5 : 0), anchor: .top)
                 .opacity(torn ? 0 : 1)
         }
         .background {
@@ -206,7 +208,7 @@ private struct BoardingPassCard: View {
                 Spacer()
 
                 HStack(alignment: .center) {
-                    endpoint(code: origin.code, name: origin.cityName)
+                    endpoint(code: origin.code, name: origin.city)
                     Spacer()
                     VStack(spacing: 2) {
                         BalloonView(height: 44, showBurner: false, showGlow: false)
@@ -234,8 +236,16 @@ private struct BoardingPassCard: View {
                 PassDetail(label: "Date", value: Self.dateText, systemImage: "calendar")
                 PassDetail(label: "Boarding", value: "Now", systemImage: "clock.badge.checkmark")
                 PassDetail(label: "Seat", value: "1A · Focus", systemImage: "chair.lounge")
-                PassDetail(label: "Reward", value: route.rewardName, systemImage: "gift",
-                           accent: route.colorTheme.accent)
+                PassDetail(label: "Vehicle", value: "Sky Balloon", systemImage: "balloon")
+            }
+
+            HStack(spacing: AppSpacing.xs) {
+                Image(systemName: "gift").font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(route.colorTheme.accent)
+                Text("REWARD").font(.system(size: 9, weight: .semibold, design: .rounded))
+                    .tracking(0.5).foregroundStyle(.white.opacity(0.55))
+                Text(route.rewardName).font(AppTypography.caption).foregroundStyle(.white)
+                Spacer()
             }
 
             BarcodeStrip(seed: origin.code + route.id + route.destinationCode)

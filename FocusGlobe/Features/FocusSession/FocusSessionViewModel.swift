@@ -128,6 +128,16 @@ final class FocusSessionViewModel: ObservableObject {
 
     var phase: JourneyPhase { JourneyPhase(progress: progress) }
 
+    /// A calm, FocusGlobe-flavoured status for the top pill.
+    var statusLabel: String {
+        switch phase {
+        case .boarding, .takingOff: return "Taking off"
+        case .cruising:             return "Drifting"
+        case .approaching:          return "Landing soon"
+        case .landing:              return "Landing"
+        }
+    }
+
     var remainingSeconds: Int { max(0, Int(timer.remaining.rounded(.up))) }
     var remainingTimeText: String { Formatters.countdown(remainingSeconds) }
 

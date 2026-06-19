@@ -162,8 +162,8 @@ struct GoogleJourneyMapView: UIViewRepresentable {
 
             // Vehicle (the balloon) — large, premium presence (the protagonist).
             let vehicle = GMSMarker(position: CLLocationCoordinate2D(latitude: data.vehicle.latitude, longitude: data.vehicle.longitude))
-            vehicle.icon = VehicleMarkerRenderer.balloonImage(targetHeight: 112, glow: data.theme.soft)
-            vehicle.groundAnchor = CGPoint(x: 0.5, y: 0.88) // basket sits near the point; envelope above
+            vehicle.icon = VehicleMarkerRenderer.balloonImage(targetHeight: 84, glow: data.theme.soft)
+            vehicle.groundAnchor = CGPoint(x: 0.5, y: 0.86) // basket sits near the point; envelope above
             vehicle.isTappable = false
             vehicle.zIndex = 6
             vehicle.map = map
@@ -250,9 +250,10 @@ struct GoogleJourneyMapView: UIViewRepresentable {
         }
 
         private func followCamera(for data: JourneyMapData, vehicle: GeoCoordinate) -> GMSCameraPosition {
+            // Close zoom so the balloon drifts over real neighbourhoods/roads.
             GMSCameraPosition(
                 target: CLLocationCoordinate2D(latitude: vehicle.latitude, longitude: vehicle.longitude),
-                zoom: Float(CameraController.zoom(forDistanceKm: data.routeDistanceKm)),
+                zoom: Float(CameraController.followZoom),
                 bearing: 0,
                 viewingAngle: data.tilted ? 55 : 0
             )

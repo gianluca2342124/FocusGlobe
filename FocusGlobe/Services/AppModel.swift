@@ -23,9 +23,8 @@ final class AppModel: ObservableObject {
     @Published private(set) var history: [FocusSessionRecord]
     @Published private(set) var isPro: Bool
 
-    /// The user's live departure point. Every journey starts here. Mirrors
-    /// `LocationService.origin` so views observe a single source of truth.
-    @Published private(set) var origin: JourneyOrigin = .default
+    /// Mirrors the location service's resolution state so views can observe it.
+    @Published private(set) var locationState: LocationService.State = .idle
 
     // MARK: Services
     let analytics = AnalyticsService()
@@ -53,20 +52,67 @@ final class AppModel: ObservableObject {
         haptics.isEnabled = loadedSettings.hapticsEnabled
         sound.isEnabled = loadedSettings.soundEnabled
 
-        // Mirror the resolved location so views observe `appModel.origin`.
-        origin = location.origin
-        location.$origin
+        // Mirror the location state so views observe `appModel.locationState`.
+        locationState = location.state
+        location.$state
             .receive(on: RunLoop.main)
-            .sink { [weak self] in self?.origin = $0 }
+            .sink { [weak self] in self?.locationState = $0 }
             .store(in: &cancellables)
     }
 
-    // MARK: - Location
+    // MARK: - Location & origin
+
+    /// The effective starting point: a manually chosen city if set, otherwise
+    /// the real resolved location. `nil` when neither is available yet — the UI
+    /// then asks the user to choose a starting city (it never fakes one).
+    var currentOrigin: JourneyOrigin? {
+        if let manual = settings.startingCity { return manual }
+        if case .resolved(let resolved) = locationState { return resolved }
+        return nil
+    }
+
+    /// A non-optional origin for journey math. Falls back to the default only
+    /// as a last resort; the UI prevents starting a journey without an origin.
+    var originForJourney: JourneyOrigin { currentOrigin ?? .default }
+
+    var isUsingManualOrigin: Bool { settings.startingCity != nil }
+
+    var isLocating: Bool {
+        if case .resolving = locationState { return true }
+        return false
+    }
+
+    /// `true` when location was denied/unavailable and no manual city is set.
+    var needsStartingCity: Bool {
+        guard currentOrigin == nil else { return false }
+        switch locationState {
+        case .denied, .unavailable, .idle: return true
+        case .resolving, .resolved: return false
+        }
+    }
 
     /// Begins the calm location flow (permission prompt on first launch, then a
     /// single fix that's reverse-geocoded to a city). Safe to call repeatedly.
     func requestLocation() {
         location.requestLocation()
+    }
+
+    /// Pick a starting city manually (overrides real location until cleared).
+    func setManualOrigin(_ origin: JourneyOrigin) {
+        settings.startingCity = origin
+        haptics.tap()
+    }
+
+    /// Clear the manual override and use the real current location.
+    func useCurrentLocation() {
+        settings.startingCity = nil
+        location.requestLocation()
+        haptics.tap()
+    }
+
+    /// A calm default recommendation for the current origin.
+    func recommendedJourney() -> PlannedJourney? {
+        JourneyPlanner.recommended(for: originForJourney)
     }
 
     // MARK: - Access helpers
@@ -75,8 +121,6 @@ final class AppModel: ObservableObject {
     func isUnlocked(_ route: Route) -> Bool {
         !route.isPremium || isPro
     }
-
-    var recommendedRoute: Route { RouteCatalog.recommended }
 
     func hasCompleted(_ route: Route) -> Bool {
         progress.completedRouteIDs.contains(route.id)
@@ -106,7 +150,7 @@ final class AppModel: ObservableObject {
         let record = FocusSessionRecord(
             routeID: route.id,
             routeName: route.name,
-            originName: origin.cityName,
+            originName: origin.city,
             destinationName: route.destinationName,
             mood: route.mood,
             theme: route.colorTheme,
@@ -141,7 +185,7 @@ final class AppModel: ObservableObject {
         return LandingSummary(
             id: record.id,
             route: route,
-            originName: origin.cityName,
+            originName: origin.city,
             intention: finalIntention,
             focusedSeconds: focusedSeconds,
             distanceKm: distanceKm,
@@ -163,7 +207,7 @@ final class AppModel: ObservableObject {
         let record = FocusSessionRecord(
             routeID: route.id,
             routeName: route.name,
-            originName: origin.cityName,
+            originName: origin.city,
             destinationName: route.destinationName,
             mood: route.mood,
             theme: route.colorTheme,
