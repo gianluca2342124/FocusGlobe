@@ -15,10 +15,12 @@ import UIKit
 /// runs on the main thread, so this is safe.
 enum VehicleMarkerRenderer {
 
-    /// The balloon marker, sized for the map. Uses the official PNG when present.
-    static func balloonImage(targetHeight: CGFloat = 70, glow: Color) -> UIImage? {
-        if let asset = UIImage(named: BrandAssets.balloonFrontName) {
-            return resized(asset, targetHeight: targetHeight)
+    /// The balloon marker, sized for the map. Uses the official (trimmed) PNG
+    /// when present — trimmed so the full balloon fills the marker rather than
+    /// appearing tiny inside the asset's transparent padding.
+    static func balloonImage(targetHeight: CGFloat = 110, glow: Color) -> UIImage? {
+        if let balloon = BrandBalloon.image {
+            return resized(balloon, targetHeight: targetHeight)
         }
         // Fallback: the crafted vector (only when the asset is unavailable).
         // ImageRenderer / UIScreen are main-actor-isolated.

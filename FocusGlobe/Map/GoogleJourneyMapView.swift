@@ -59,7 +59,9 @@ struct GoogleJourneyMapView: UIViewRepresentable {
         private var glowPolyline: GMSPolyline?
         private var traveledPolyline: GMSPolyline?
 
-        private var movedCameraOnce = false
+        /// Becomes true once the take-off camera has zoomed to the balloon;
+        /// thereafter the camera gently follows it.
+        private var following = false
 
         /// Applies the chosen presentation: map type + custom style JSON.
         func apply(displayStyle: MapDisplayStyle, to map: GMSMapView) {
@@ -132,14 +134,32 @@ struct GoogleJourneyMapView: UIViewRepresentable {
             destination.map = map
             destinationMarker = destination
 
-            // Vehicle (the balloon).
+            // Vehicle (the balloon) — large, premium presence (the protagonist).
             let vehicle = GMSMarker(position: CLLocationCoordinate2D(latitude: data.vehicle.latitude, longitude: data.vehicle.longitude))
-            vehicle.icon = VehicleMarkerRenderer.balloonImage(targetHeight: 72, glow: data.theme.soft)
-            vehicle.groundAnchor = CGPoint(x: 0.5, y: 0.84) // basket sits on the point
+            vehicle.icon = VehicleMarkerRenderer.balloonImage(targetHeight: 112, glow: data.theme.soft)
+            vehicle.groundAnchor = CGPoint(x: 0.5, y: 0.88) // basket sits near the point; envelope above
             vehicle.isTappable = false
             vehicle.zIndex = 6
             vehicle.map = map
             vehicleMarker = vehicle
+
+            // --- Cinematic take-off camera: full route → zoom to balloon → follow.
+            let vehicleCoord = CLLocationCoordinate2D(latitude: data.vehicle.latitude, longitude: data.vehicle.longitude)
+            let bounds = GMSCoordinateBounds(
+                coordinate: CLLocationCoordinate2D(latitude: data.origin.latitude, longitude: data.origin.longitude),
+                coordinate: CLLocationCoordinate2D(latitude: data.destination.latitude, longitude: data.destination.longitude))
+            map.moveCamera(GMSCameraUpdate.fit(bounds, withPadding: 64))
+
+            let followZoom = Float(CameraController.zoom(forDistanceKm: data.routeDistanceKm))
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self, weak map] in
+                guard let self, let map else { return }
+                CATransaction.begin()
+                CATransaction.setAnimationDuration(2.0)
+                CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .easeInEaseOut))
+                map.animate(to: GMSCameraPosition.camera(withTarget: vehicleCoord, zoom: followZoom))
+                CATransaction.commit()
+                self.following = true
+            }
         }
 
         func update(map: GMSMapView, data: JourneyMapData) {
@@ -158,12 +178,11 @@ struct GoogleJourneyMapView: UIViewRepresentable {
                 .forEach { traveledPath.add(CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)) }
             traveledPolyline?.path = traveledPath
 
-            // Gently follow.
-            if data.followsVehicle && (data.isMoving || !movedCameraOnce) {
-                movedCameraOnce = true
+            // Gently follow once the take-off camera sequence has finished.
+            if following && data.followsVehicle && data.isMoving {
                 let zoom = Float(CameraController.zoom(forDistanceKm: data.routeDistanceKm))
                 CATransaction.begin()
-                CATransaction.setAnimationDuration(1.2)
+                CATransaction.setAnimationDuration(1.4)
                 CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .linear))
                 map.animate(to: GMSCameraPosition.camera(withTarget: vehicleCoord, zoom: zoom))
                 CATransaction.commit()

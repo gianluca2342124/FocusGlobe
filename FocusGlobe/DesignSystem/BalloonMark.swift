@@ -4,20 +4,64 @@ import UIKit
 // MARK: - Brand assets
 
 /// Resolves bundled brand art (see SETUP.md):
-///   • `BalloonFront` imageset → ships a generated front-view balloon so the
-///     hero is a real raster asset. Replace `BalloonFront.png` with the
-///     official render (same filename) anytime.
-///   • `BrandLogo` → optional. The wordmark renders crisply in code by default;
-///     add an image named "BrandLogo" to the asset catalog to override it.
-///
-/// Anything missing falls back to crafted vector art, so the app always looks
-/// premium with zero external files.
+///   • `BalloonFront` imageset → the official front-view balloon render.
+///   • `BrandLogo` → optional wordmark override.
 enum BrandAssets {
     static let balloonFrontName = "BalloonFront"
     static let brandLogoName = "BrandLogo"
 
     static var hasBalloonFront: Bool { UIImage(named: balloonFrontName) != nil }
     static var hasBrandLogo: Bool { UIImage(named: brandLogoName) != nil }
+}
+
+/// The single source of truth for the balloon image.
+///
+/// The official `BalloonFront.png` is a 1024×1024 render with large transparent
+/// margins, so used raw it appears tiny (a "dot") at marker size. We trim it to
+/// its opaque bounds **once** (cached) so every consumer — SwiftUI hero views
+/// and the Google Maps marker — shows the full, properly-sized balloon.
+enum BrandBalloon {
+    /// The official balloon, cropped to its opaque content. `nil` only if the
+    /// asset is genuinely missing (then callers use the vector fallback).
+    static let image: UIImage? = {
+        guard let raw = UIImage(named: BrandAssets.balloonFrontName) else { return nil }
+        return raw.trimmingTransparentPixels() ?? raw
+    }()
+
+    static var isAvailable: Bool { image != nil }
+}
+
+extension UIImage {
+    /// Returns a copy cropped to the bounding box of non-transparent pixels.
+    func trimmingTransparentPixels(alphaThreshold: UInt8 = 12) -> UIImage? {
+        guard let cg = cgImage else { return nil }
+        let w = cg.width, h = cg.height
+        guard w > 0, h > 0 else { return nil }
+
+        let bytesPerRow = w * 4
+        var data = [UInt8](repeating: 0, count: bytesPerRow * h)
+        guard let ctx = CGContext(
+            data: &data, width: w, height: h, bitsPerComponent: 8,
+            bytesPerRow: bytesPerRow, space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
+
+        var minX = w, minY = h, maxX = -1, maxY = -1
+        for y in 0..<h {
+            let row = y * bytesPerRow
+            for x in 0..<w where data[row + x * 4 + 3] > alphaThreshold {
+                if x < minX { minX = x }
+                if x > maxX { maxX = x }
+                if y < minY { minY = y }
+                if y > maxY { maxY = y }
+            }
+        }
+        guard maxX >= minX, maxY >= minY else { return nil }
+        let rect = CGRect(x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1)
+        guard let cropped = cg.cropping(to: rect) else { return nil }
+        return UIImage(cgImage: cropped, scale: scale, orientation: imageOrientation)
+    }
 }
 
 // MARK: - Burner glow (premium micro-detail)
@@ -266,19 +310,11 @@ struct BalloonView: View {
     var burnerAnimated: Bool = true
 
     var body: some View {
-        if BrandAssets.hasBalloonFront {
-            Image(BrandAssets.balloonFrontName)
+        if let balloon = BrandBalloon.image {
+            Image(uiImage: balloon)
                 .resizable()
                 .scaledToFit()
                 .frame(height: height)
-                .overlay(alignment: .bottom) {
-                    if showBurner {
-                        // A gentle live pulse aligned to the PNG's burner mouth.
-                        BurnerGlow(diameter: height * 0.26, animated: burnerAnimated)
-                            .offset(y: -height * 0.30)
-                            .blendMode(.plusLighter)
-                    }
-                }
                 .background(ambientGlow)
         } else {
             BalloonMark(size: height * 0.62, glow: glow, showGlow: showGlow,
