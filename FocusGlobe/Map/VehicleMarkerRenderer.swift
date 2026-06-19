@@ -6,7 +6,13 @@ import UIKit
 /// The moving vehicle on the live map is the **official balloon asset**
 /// (`BalloonFront`) so the protagonist is identical everywhere. Only if the
 /// asset is genuinely missing do we fall back to the crafted vector balloon.
-@MainActor
+///
+/// These methods are deliberately **nonisolated** so the Google Maps coordinator
+/// can call them synchronously from `updateUIView`. Asset lookup and
+/// `UIGraphicsImageRenderer` resizing are thread-safe; the rare vector fallback
+/// uses main-actor-only APIs (`ImageRenderer` / `UIScreen`), so that branch hops
+/// onto the main actor via `MainActor.assumeIsolated` — the coordinator always
+/// runs on the main thread, so this is safe.
 enum VehicleMarkerRenderer {
 
     /// The balloon marker, sized for the map. Uses the official PNG when present.
@@ -15,13 +21,16 @@ enum VehicleMarkerRenderer {
             return resized(asset, targetHeight: targetHeight)
         }
         // Fallback: the crafted vector (only when the asset is unavailable).
-        let padded = BalloonMark(size: targetHeight * 0.62, glow: glow, showGlow: true,
-                                 showBurner: true, burnerAnimated: false)
-            .padding(targetHeight * 0.4)
-        let renderer = ImageRenderer(content: padded)
-        renderer.scale = UIScreen.main.scale
-        renderer.isOpaque = false
-        return renderer.uiImage
+        // ImageRenderer / UIScreen are main-actor-isolated.
+        return MainActor.assumeIsolated {
+            let padded = BalloonMark(size: targetHeight * 0.62, glow: glow, showGlow: true,
+                                     showBurner: true, burnerAnimated: false)
+                .padding(targetHeight * 0.4)
+            let renderer = ImageRenderer(content: padded)
+            renderer.scale = UIScreen.main.scale
+            renderer.isOpaque = false
+            return renderer.uiImage
+        }
     }
 
     private static func resized(_ image: UIImage, targetHeight: CGFloat) -> UIImage {
