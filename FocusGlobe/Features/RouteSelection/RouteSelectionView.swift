@@ -15,7 +15,7 @@ struct RouteSelectionView: View {
 
     var body: some View {
         ZStack {
-            JourneyDiscoveryMap(route: current)
+            JourneyDiscoveryMap(origin: appModel.origin, route: current)
                 .ignoresSafeArea()
                 .animation(.easeInOut(duration: 0.5), value: current.id)
 
@@ -96,7 +96,7 @@ struct RouteSelectionView: View {
                 HStack(spacing: 8) {
                     Label(current.durationLabel, systemImage: "clock")
                     Text("·")
-                    Label(current.distanceLabel, systemImage: "ruler")
+                    Label(dynamicDistanceLabel, systemImage: "ruler")
                     Text("·")
                     Label(current.mood.displayName, systemImage: current.mood.systemImage)
                 }
@@ -108,12 +108,17 @@ struct RouteSelectionView: View {
 
             destinationStrip
 
-            AppPrimaryButton(title: lockedSelection ? "Unlock with Pro" : "Start Journey",
+            AppPrimaryButton(title: lockedSelection ? "Unlock with Pro" : "Book Journey",
                              systemImage: lockedSelection ? "lock.fill" : "paperplane.fill") {
                 select(current)
             }
             .padding(.horizontal, AppSpacing.screen)
         }
+    }
+
+    private var dynamicDistanceLabel: String {
+        Formatters.distance(km: GeoMath.distanceKm(from: appModel.origin.coordinate,
+                                                   to: current.destination))
     }
 
     private var destinationStrip: some View {

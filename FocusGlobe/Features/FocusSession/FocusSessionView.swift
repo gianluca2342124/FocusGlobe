@@ -46,7 +46,7 @@ struct FocusSessionView: View {
 
     var body: some View {
         ZStack {
-            JourneyMapView(data: vm.mapData)
+            JourneyMapView(data: vm.mapData, onUserPan: { vm.userInteractedWithMap() })
                 .ignoresSafeArea()
 
             // Edge vignette + strong bottom scrim so white readouts stay legible
@@ -110,6 +110,14 @@ struct FocusSessionView: View {
                 Spacer()
                 VStack(spacing: AppSpacing.xs) {
                     mapStyleMenu
+                    AppIconButton(systemImage: vm.showsRecenter ? "location.fill" : "arrow.up.left.and.arrow.down.right",
+                                  size: 46, tint: AppColors.textPrimary,
+                                  accessibilityLabel: vm.showsRecenter ? "Recenter on balloon" : "View full route") {
+                        vm.showsRecenter ? vm.recenter() : vm.showFullRoute()
+                    }
+                    AppIconButton(systemImage: "view.3d", size: 46,
+                                  tint: vm.tilted ? AppColors.gold : AppColors.textPrimary,
+                                  accessibilityLabel: "Toggle 3D tilt") { vm.toggleTilt() }
                     AppIconButton(systemImage: "eye.slash", size: 46, tint: AppColors.textPrimary,
                                   accessibilityLabel: "Pure mode") { vm.togglePureMode() }
                 }

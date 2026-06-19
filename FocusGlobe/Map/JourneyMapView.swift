@@ -10,10 +10,12 @@ import SwiftUI
 /// business logic changes. See MAP_PROVIDER_MIGRATION.md.
 struct JourneyMapView: View {
     let data: JourneyMapData
+    /// Called when the user pans the live map by hand (Google provider only).
+    var onUserPan: () -> Void = {}
 
     var body: some View {
         #if canImport(GoogleMaps)
-        GoogleJourneyMapView(data: data)
+        GoogleJourneyMapView(data: data, onUserPan: onUserPan)
         #else
         FallbackJourneyMapView(data: data)
         #endif

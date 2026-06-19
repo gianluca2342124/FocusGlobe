@@ -47,6 +47,50 @@ enum VehicleMarkerRenderer {
         }
     }
 
+    /// An airport-style code tag (à la FocusFlight), rendered as a marker icon
+    /// so it stays perfectly pinned to its coordinate on the Google map.
+    /// `highlighted` = the amber destination tag; otherwise a dark glass origin
+    /// tag. Use `groundAnchor` (0.5, 1.0) so the capsule floats above the dot.
+    static func tagImage(code: String, highlighted: Bool, accent: UIColor) -> UIImage {
+        let font = UIFont.systemFont(ofSize: 13, weight: .heavy)
+        let text = code as NSString
+        let textSize = text.size(withAttributes: [.font: font])
+
+        let padH: CGFloat = 11, padV: CGFloat = 6
+        let inset: CGFloat = 6          // room for the drop shadow
+        let pointer: CGFloat = 5        // small downward nub
+        let capW = ceil(textSize.width) + padH * 2
+        let capH = ceil(textSize.height) + padV * 2
+        let size = CGSize(width: capW + inset * 2, height: capH + pointer + inset * 2)
+
+        let format = UIGraphicsImageRendererFormat.default()
+        format.opaque = false
+        return UIGraphicsImageRenderer(size: size, format: format).image { ctx in
+            let c = ctx.cgContext
+            let capRect = CGRect(x: inset, y: inset, width: capW, height: capH)
+            let bg = highlighted ? accent : UIColor.black.withAlphaComponent(0.62)
+
+            c.setShadow(offset: CGSize(width: 0, height: 2), blur: 6,
+                        color: UIColor.black.withAlphaComponent(0.38).cgColor)
+            bg.setFill()
+            UIBezierPath(roundedRect: capRect, cornerRadius: capH / 2).fill()
+
+            // Small pointer nub beneath the capsule.
+            let nub = UIBezierPath()
+            nub.move(to: CGPoint(x: capRect.midX - pointer, y: capRect.maxY - 1))
+            nub.addLine(to: CGPoint(x: capRect.midX + pointer, y: capRect.maxY - 1))
+            nub.addLine(to: CGPoint(x: capRect.midX, y: capRect.maxY + pointer))
+            nub.close()
+            nub.fill()
+
+            c.setShadow(offset: .zero, blur: 0, color: nil)
+            let fg = highlighted ? UIColor(red: 0x14/255, green: 0x18/255, blue: 0x1F/255, alpha: 1) : UIColor.white
+            text.draw(at: CGPoint(x: capRect.midX - textSize.width / 2,
+                                  y: capRect.midY - textSize.height / 2),
+                      withAttributes: [.font: font, .foregroundColor: fg])
+        }
+    }
+
     /// A simple origin/destination dot.
     static func dotImage(diameter: CGFloat, fill: UIColor, ring: UIColor, ringWidth: CGFloat) -> UIImage {
         let totalSize = diameter + ringWidth * 2 + 6

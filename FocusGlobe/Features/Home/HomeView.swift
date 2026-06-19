@@ -1,32 +1,21 @@
 import SwiftUI
 
-/// Map-first home, in the FocusFlight grammar: a full-screen living map, a large
-/// place name, a single confident CTA, and a couple of quiet rows. No
-/// dashboard, no stat boxes (those live in the Passport).
+/// Map-first home, in the FocusFlight grammar: a full-screen real Google map
+/// centred on the user's current location, a large greeting + city name, a
+/// single confident white CTA, and a couple of quiet glass rows. No dashboard,
+/// no stat boxes, no logo (those live elsewhere / nowhere).
 struct HomeView: View {
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
     @StateObject private var viewModel = HomeViewModel()
 
-    private var featured: Route { appModel.recommendedRoute }
-
     var body: some View {
         ZStack {
-            RoutePreviewMap(route: featured, progress: 0.5)
+            JourneyBackdropMap(origin: appModel.origin, mode: .origin)
                 .ignoresSafeArea()
 
-            // Scrims for legibility over the map.
-            VStack(spacing: 0) {
-                LinearGradient(colors: [.black.opacity(0.45), .clear],
-                               startPoint: .top, endPoint: .bottom)
-                    .frame(height: 180)
-                Spacer()
-                LinearGradient(colors: [.clear, .black.opacity(0.72)],
-                               startPoint: .top, endPoint: .bottom)
-                    .frame(height: 420)
-            }
-            .ignoresSafeArea()
-            .allowsHitTesting(false)
+            // Atmospheric aurora overlay + legibility scrims (over the map).
+            atmosphere
 
             VStack {
                 Spacer()
@@ -37,22 +26,47 @@ struct HomeView: View {
             .padding(.bottom, AppSpacing.lg)
         }
         .focusScreenChrome()
+        .onAppear { appModel.requestLocation() }
+    }
+
+    private var atmosphere: some View {
+        ZStack {
+            // Faint aurora wash so the night map still feels like FocusGlobe —
+            // an overlay, never a replacement for the real map.
+            LinearGradient(colors: [AppColors.brand.opacity(0.10), .clear, AppColors.gold.opacity(0.06)],
+                           startPoint: .topLeading, endPoint: .bottomTrailing)
+            VStack(spacing: 0) {
+                LinearGradient(colors: [.black.opacity(0.45), .clear],
+                               startPoint: .top, endPoint: .bottom)
+                    .frame(height: 200)
+                Spacer()
+                LinearGradient(colors: [.clear, .black.opacity(0.78)],
+                               startPoint: .top, endPoint: .bottom)
+                    .frame(height: 440)
+            }
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
     }
 
     private var bottomCluster: some View {
         VStack(alignment: .leading, spacing: AppSpacing.lg) {
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(viewModel.greeting)
-                    .font(AppTypography.callout)
-                    .foregroundStyle(.white.opacity(0.8))
-                Text(featured.shortName)
-                    .font(.system(size: 44, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
-                Text("\(featured.name) · \(featured.durationLabel)")
-                    .font(AppTypography.subhead)
+                    .font(AppTypography.headline)
                     .foregroundStyle(.white.opacity(0.82))
+                Text(appModel.origin.cityName)
+                    .font(.system(size: 46, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                Text(appModel.location.hasResolvedRealLocation
+                     ? "Your balloon is ready to drift."
+                     : "Choose a destination and drift there.")
+                    .font(AppTypography.subhead)
+                    .foregroundStyle(.white.opacity(0.8))
             }
-            .shadow(color: .black.opacity(0.4), radius: 10, y: 3)
+            .shadow(color: .black.opacity(0.45), radius: 12, y: 3)
 
             AppPrimaryButton(title: "Start Journey", systemImage: "paperplane.fill") {
                 appModel.haptics.tap()

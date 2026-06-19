@@ -1,11 +1,11 @@
 // Google Maps is the temporary MVP provider. Keep all business logic
 // provider-independent so we can migrate to Apple Maps / MapKit later.
 //
-// This file is the ONLY place that touches the Google Maps SDK for journeys.
-// It is fully guarded by `#if canImport(GoogleMaps)` so the project compiles
-// and runs even before the SDK package is added (the native fallback map is
-// used until then). When migrating to Apple Maps, this file is replaced by
-// AppleJourneyMapView — nothing else changes.
+// This file is the ONLY place that touches the Google Maps SDK for the live
+// journey. It is fully guarded by `#if canImport(GoogleMaps)` so the project
+// compiles and runs even before the SDK package is added (the native fallback
+// map is used until then). When migrating to Apple Maps, this file is replaced
+// by AppleJourneyMapView — nothing else changes.
 
 #if canImport(GoogleMaps)
 import CoreLocation
@@ -15,6 +15,9 @@ import UIKit
 
 struct GoogleJourneyMapView: UIViewRepresentable {
     let data: JourneyMapData
+    /// Called when the user pans the map by hand (so the session can pause
+    /// following until they tap Recenter).
+    var onUserPan: () -> Void = {}
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -26,13 +29,15 @@ struct GoogleJourneyMapView: UIViewRepresentable {
             zoom: Float(zoom)
         )
         let map = GMSMapView(frame: .zero, camera: camera)
+        map.delegate = context.coordinator
         map.isMyLocationEnabled = false
         map.settings.compassButton = false
         map.settings.myLocationButton = false
         map.settings.indoorPicker = false
-        // Calm, distraction-free: the user focuses, not pans.
-        map.settings.scrollGestures = false
-        map.settings.zoomGestures = false
+        // Calm, focus-oriented: the user can pan/zoom to explore, but we never
+        // rotate or tilt by hand (tilt is a deliberate control instead).
+        map.settings.scrollGestures = true
+        map.settings.zoomGestures = true
         map.settings.tiltGestures = false
         map.settings.rotateGestures = false
         map.isBuildingsEnabled = false
@@ -41,6 +46,7 @@ struct GoogleJourneyMapView: UIViewRepresentable {
     }
 
     func updateUIView(_ map: GMSMapView, context: Context) {
+        context.coordinator.onUserPan = onUserPan
         context.coordinator.apply(displayStyle: data.style, to: map)
         context.coordinator.configureIfNeeded(map: map, data: data)
         context.coordinator.update(map: map, data: data)
@@ -48,7 +54,9 @@ struct GoogleJourneyMapView: UIViewRepresentable {
 
     // MARK: - Coordinator
 
-    final class Coordinator {
+    final class Coordinator: NSObject, GMSMapViewDelegate {
+        var onUserPan: () -> Void = {}
+
         private var didConfigure = false
         private var lastStyle: MapDisplayStyle?
 
@@ -60,8 +68,23 @@ struct GoogleJourneyMapView: UIViewRepresentable {
         private var traveledPolyline: GMSPolyline?
 
         /// Becomes true once the take-off camera has zoomed to the balloon;
-        /// thereafter the camera gently follows it.
+        /// thereafter the camera gently follows it (unless the user pans).
         private var following = false
+        private var takeoffDone = false
+
+        private var lastCameraMode: JourneyCameraMode = .follow
+        private var lastCameraToken = Int.min
+        private var lastTilted = false
+
+        // MARK: Delegate — detect manual panning
+
+        func mapView(_ mapView: GMSMapView, willMove gesture: Bool) {
+            guard gesture else { return } // ignore our own programmatic moves
+            following = false
+            onUserPan()
+        }
+
+        // MARK: Style
 
         /// Applies the chosen presentation: map type + custom style JSON.
         func apply(displayStyle: MapDisplayStyle, to map: GMSMapView) {
@@ -86,6 +109,9 @@ struct GoogleJourneyMapView: UIViewRepresentable {
         func configureIfNeeded(map: GMSMapView, data: JourneyMapData) {
             guard !didConfigure else { return }
             didConfigure = true
+            lastCameraMode = data.cameraMode
+            lastCameraToken = data.cameraToken
+            lastTilted = data.tilted
 
             let fullPath = GMSMutablePath()
             MapRouteRenderer.routePoints(from: data.origin, to: data.destination)
@@ -144,21 +170,20 @@ struct GoogleJourneyMapView: UIViewRepresentable {
             vehicleMarker = vehicle
 
             // --- Cinematic take-off camera: full route → zoom to balloon → follow.
-            let vehicleCoord = CLLocationCoordinate2D(latitude: data.vehicle.latitude, longitude: data.vehicle.longitude)
             let bounds = GMSCoordinateBounds(
                 coordinate: CLLocationCoordinate2D(latitude: data.origin.latitude, longitude: data.origin.longitude),
                 coordinate: CLLocationCoordinate2D(latitude: data.destination.latitude, longitude: data.destination.longitude))
             map.moveCamera(GMSCameraUpdate.fit(bounds, withPadding: 64))
 
-            let followZoom = Float(CameraController.zoom(forDistanceKm: data.routeDistanceKm))
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self, weak map] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) { [weak self, weak map] in
                 guard let self, let map else { return }
                 CATransaction.begin()
                 CATransaction.setAnimationDuration(2.0)
                 CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .easeInEaseOut))
-                map.animate(to: GMSCameraPosition.camera(withTarget: vehicleCoord, zoom: followZoom))
+                map.animate(to: self.followCamera(for: data, vehicle: data.vehicle))
                 CATransaction.commit()
                 self.following = true
+                self.takeoffDone = true
             }
         }
 
@@ -178,15 +203,59 @@ struct GoogleJourneyMapView: UIViewRepresentable {
                 .forEach { traveledPath.add(CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)) }
             traveledPolyline?.path = traveledPath
 
-            // Gently follow once the take-off camera sequence has finished.
-            if following && data.followsVehicle && data.isMoving {
-                let zoom = Float(CameraController.zoom(forDistanceKm: data.routeDistanceKm))
+            // Respond to explicit camera commands (Recenter / Full Route / Tilt).
+            let commandChanged = data.cameraToken != lastCameraToken
+                || data.cameraMode != lastCameraMode
+                || data.tilted != lastTilted
+            if commandChanged && takeoffDone {
+                lastCameraToken = data.cameraToken
+                lastCameraMode = data.cameraMode
+                lastTilted = data.tilted
+                applyCamera(map: map, data: data)
+            }
+
+            // Gently follow once the take-off sequence has finished and the user
+            // hasn't taken manual control.
+            if following && data.cameraMode == .follow && data.isMoving {
                 CATransaction.begin()
                 CATransaction.setAnimationDuration(1.4)
                 CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .linear))
-                map.animate(to: GMSCameraPosition.camera(withTarget: vehicleCoord, zoom: zoom))
+                map.animate(to: followCamera(for: data, vehicle: data.vehicle))
                 CATransaction.commit()
             }
+        }
+
+        // MARK: Camera helpers
+
+        private func applyCamera(map: GMSMapView, data: JourneyMapData) {
+            switch data.cameraMode {
+            case .overview:
+                following = false
+                let bounds = GMSCoordinateBounds(
+                    coordinate: CLLocationCoordinate2D(latitude: data.origin.latitude, longitude: data.origin.longitude),
+                    coordinate: CLLocationCoordinate2D(latitude: data.destination.latitude, longitude: data.destination.longitude))
+                CATransaction.begin()
+                CATransaction.setAnimationDuration(1.0)
+                CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .easeInEaseOut))
+                map.animate(with: GMSCameraUpdate.fit(bounds, withPadding: 70))
+                CATransaction.commit()
+            case .follow:
+                following = true
+                CATransaction.begin()
+                CATransaction.setAnimationDuration(1.0)
+                CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .easeInEaseOut))
+                map.animate(to: followCamera(for: data, vehicle: data.vehicle))
+                CATransaction.commit()
+            }
+        }
+
+        private func followCamera(for data: JourneyMapData, vehicle: GeoCoordinate) -> GMSCameraPosition {
+            GMSCameraPosition(
+                target: CLLocationCoordinate2D(latitude: vehicle.latitude, longitude: vehicle.longitude),
+                zoom: Float(CameraController.zoom(forDistanceKm: data.routeDistanceKm)),
+                bearing: 0,
+                viewingAngle: data.tilted ? 55 : 0
+            )
         }
     }
 }

@@ -20,9 +20,24 @@ struct JourneyMapData: Equatable {
     var isMoving: Bool
     /// Map presentation (Night / Standard / Satellite / Hybrid).
     var style: MapDisplayStyle = .night
+    /// How the camera frames the journey (follow the balloon vs. full route).
+    var cameraMode: JourneyCameraMode = .follow
+    /// A gentle 3D tilt of the follow camera (where supported).
+    var tilted: Bool = false
+    /// Bumped by the session to ask the renderer to (re)apply the camera now —
+    /// e.g. after Recenter / Full Route / Tilt taps.
+    var cameraToken: Int = 0
 
     /// The straight-line span of the route, used to pick a sensible zoom.
     var routeDistanceKm: Double {
         GeoMath.distanceKm(from: origin, to: destination)
     }
+}
+
+/// How the live camera frames the journey.
+enum JourneyCameraMode: Equatable {
+    /// Gently track the balloon (Google-Maps-navigation feel, but calm).
+    case follow
+    /// Pull back to frame the whole route (origin → destination).
+    case overview
 }

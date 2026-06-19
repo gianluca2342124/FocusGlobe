@@ -54,7 +54,7 @@ struct LandingView: View {
             Text("You landed.")
                 .font(AppTypography.hero)
                 .foregroundStyle(AppColors.textPrimary)
-            Text("\(summary.route.name) · \(summary.route.originName) → \(summary.route.destinationName)")
+            Text("\(summary.originName) → \(summary.route.destinationName)")
                 .font(AppTypography.subhead)
                 .foregroundStyle(AppColors.textSecondary)
                 .multilineTextAlignment(.center)

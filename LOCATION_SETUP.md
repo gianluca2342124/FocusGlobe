@@ -1,0 +1,41 @@
+# Location setup (one manual step)
+
+FocusGlobe now starts every journey from the user's **real current location**
+(`LocationService` → reverse-geocoded city → `JourneyOrigin`). For iOS to show
+the permission prompt, the app needs a *When In Use* usage string.
+
+This project generates its `Info.plist` from build settings
+(`GENERATE_INFOPLIST_FILE = YES`) and the Xcode project file is managed
+manually, so this key must be added **once** in Xcode. The app builds and runs
+without it — it simply keeps the calm default city (`JourneyOrigin.default`,
+Barcelona) until the key is present and permission is granted.
+
+## Add the usage string
+
+In Xcode, select the **FocusGlobe** target → **Build Settings** → search for
+“Info.plist”, and add a custom key (or use the **Info** tab):
+
+```
+Key:   Privacy - Location When In Use Usage Description
+       (INFOPLIST_KEY_NSLocationWhenInUseUsageDescription)
+Value: FocusGlobe begins each journey from where you are, so it can
+       show your city and drift you toward your chosen destination.
+```
+
+Equivalent build-setting line (Debug **and** Release):
+
+```
+INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "FocusGlobe begins each journey from where you are, so it can show your city and drift you toward your chosen destination.";
+```
+
+## How it behaves
+
+| State | Result |
+| --- | --- |
+| Key present, permission **granted** | Real location → reverse-geocoded city (e.g. “Barcelona”). *(normal path)* |
+| Key present, permission **denied / restricted** | Graceful fallback to the default city. |
+| Key **missing** | No prompt is shown; default city is used. App still runs. |
+
+`requestWhenInUseAuthorization()` is triggered calmly from the Home screen on
+first appearance (`HomeView.onAppear → appModel.requestLocation()`), not at a
+jarring cold-launch moment.

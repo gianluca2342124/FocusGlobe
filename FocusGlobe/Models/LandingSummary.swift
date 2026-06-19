@@ -4,6 +4,8 @@ import Foundation
 struct LandingSummary: Equatable, Identifiable {
     let id: UUID            // matches the saved FocusSessionRecord
     let route: Route
+    /// The city the journey departed from (the user's live location).
+    let originName: String
     let intention: String?
     let focusedSeconds: Int
     let distanceKm: Double

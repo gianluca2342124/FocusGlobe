@@ -1,9 +1,11 @@
 import Foundation
 
-/// A curated, local focus route — an aerial balloon journey between two real
-/// coordinates. Routes are fully local and never fetched from a network or a
-/// paid routing API; the path is a simulated geodesic line between the two
-/// points.
+/// A curated focus **destination** — an aspirational, recognizable place the
+/// user drifts to by balloon. The journey always begins at the user's real
+/// current location (`JourneyOrigin`), so the `origin*` fields below are no
+/// longer the journey's start; they're kept only as authored metadata and for
+/// backward-compatible decoding. Nothing here is fetched from a network or a
+/// paid routing API; the path is a simulated geodesic line.
 struct Route: Identifiable, Codable, Hashable {
     let id: String
     let name: String
@@ -47,11 +49,13 @@ struct Route: Identifiable, Codable, Hashable {
     var durationLabel: String { Formatters.durationLabel(minutes: durationMinutes) }
     var distanceLabel: String { Formatters.distance(km: approximateDistanceKm) }
 
-    /// Airport-style 3-letter codes derived from the place names (e.g. "KYO").
-    var originCode: String { Route.code(originName) }
-    var destinationCode: String { Route.code(destinationName) }
+    /// Airport-style 3-letter code for the destination, derived from the
+    /// headline `shortName` so codes stay short and distinct (e.g. "KYO",
+    /// "AUR", "FJO"). The origin code now comes from `JourneyOrigin`.
+    var destinationCode: String { Route.code(shortName) }
 
     static func code(_ name: String) -> String {
-        String(name.uppercased().filter { $0.isLetter }.prefix(3))
+        let letters = name.uppercased().filter { $0.isLetter }
+        return letters.isEmpty ? "FLY" : String(letters.prefix(3))
     }
 }

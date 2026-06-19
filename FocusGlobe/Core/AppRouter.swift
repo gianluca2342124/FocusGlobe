@@ -1,9 +1,11 @@
 import Combine
 import Foundation
 
-/// A journey the user is about to take or is currently on.
+/// A journey the user is about to take or is currently on. Always departs from
+/// the user's real current location (`origin`) toward the chosen destination.
 struct Journey: Identifiable, Hashable {
     let id = UUID()
+    let origin: JourneyOrigin
     let route: Route
     let intention: String?
 }
@@ -43,8 +45,8 @@ final class AppRouter: ObservableObject {
 
     // MARK: Journey lifecycle
 
-    func startJourney(route: Route, intention: String?) {
-        activeJourney = Journey(route: route, intention: intention)
+    func startJourney(origin: JourneyOrigin, route: Route, intention: String?) {
+        activeJourney = Journey(origin: origin, route: route, intention: intention)
     }
 
     /// Dismiss the journey cover and return to the Home root.

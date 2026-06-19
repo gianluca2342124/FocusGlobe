@@ -23,14 +23,20 @@ final class AppModel: ObservableObject {
     @Published private(set) var history: [FocusSessionRecord]
     @Published private(set) var isPro: Bool
 
+    /// The user's live departure point. Every journey starts here. Mirrors
+    /// `LocationService.origin` so views observe a single source of truth.
+    @Published private(set) var origin: JourneyOrigin = .default
+
     // MARK: Services
     let analytics = AnalyticsService()
     let haptics = HapticsService()
     let sound = SoundService()
     let ads = AdService()
     let purchases: PurchaseService
+    let location = LocationService()
 
     private let persistence: PersistenceService
+    private var cancellables: Set<AnyCancellable> = []
 
     // MARK: Init
 
@@ -46,6 +52,21 @@ final class AppModel: ObservableObject {
 
         haptics.isEnabled = loadedSettings.hapticsEnabled
         sound.isEnabled = loadedSettings.soundEnabled
+
+        // Mirror the resolved location so views observe `appModel.origin`.
+        origin = location.origin
+        location.$origin
+            .receive(on: RunLoop.main)
+            .sink { [weak self] in self?.origin = $0 }
+            .store(in: &cancellables)
+    }
+
+    // MARK: - Location
+
+    /// Begins the calm location flow (permission prompt on first launch, then a
+    /// single fix that's reverse-geocoded to a city). Safe to call repeatedly.
+    func requestLocation() {
+        location.requestLocation()
     }
 
     // MARK: - Access helpers
@@ -70,8 +91,12 @@ final class AppModel: ObservableObject {
     /// Banks a completed journey: miles, streak, landing count, best duration,
     /// completed routes and the unlocked postcard. Returns a summary for the
     /// Landing screen.
-    func completeJourney(route: Route, focusedSeconds: Int, intention: String?) -> LandingSummary {
-        let baseMiles = route.focusMilesReward
+    func completeJourney(origin: JourneyOrigin, route: Route,
+                         focusedSeconds: Int, intention: String?) -> LandingSummary {
+        // Distance (and miles) reflect the *real* journey: the user's live
+        // location → the chosen destination.
+        let distanceKm = GeoMath.distanceKm(from: origin.coordinate, to: route.destination)
+        let baseMiles = max(1, Int(distanceKm.rounded()))
         let isNewRoute = !progress.completedRouteIDs.contains(route.id)
         let isNewBest = focusedSeconds > progress.bestFocusSeconds
 
@@ -81,13 +106,13 @@ final class AppModel: ObservableObject {
         let record = FocusSessionRecord(
             routeID: route.id,
             routeName: route.name,
-            originName: route.originName,
+            originName: origin.cityName,
             destinationName: route.destinationName,
             mood: route.mood,
             theme: route.colorTheme,
             plannedMinutes: route.durationMinutes,
             focusedSeconds: focusedSeconds,
-            distanceKm: route.approximateDistanceKm,
+            distanceKm: distanceKm,
             focusMiles: baseMiles,
             intention: finalIntention,
             completed: true
@@ -116,9 +141,10 @@ final class AppModel: ObservableObject {
         return LandingSummary(
             id: record.id,
             route: route,
+            originName: origin.cityName,
             intention: finalIntention,
             focusedSeconds: focusedSeconds,
-            distanceKm: route.approximateDistanceKm,
+            distanceKm: distanceKm,
             baseMiles: baseMiles,
             postcard: postcard,
             streak: p.currentStreak,
@@ -128,21 +154,22 @@ final class AppModel: ObservableObject {
     }
 
     /// Records a cancelled journey for history. Does not award miles or streak.
-    func cancelJourney(route: Route, focusedSeconds: Int, intention: String?) {
+    func cancelJourney(origin: JourneyOrigin, route: Route, focusedSeconds: Int, intention: String?) {
         let trimmed = intention?.trimmingCharacters(in: .whitespacesAndNewlines)
         let finalIntention = (trimmed?.isEmpty == false) ? trimmed : nil
         let progressFraction = min(1, Double(focusedSeconds) / route.duration)
+        let distanceKm = GeoMath.distanceKm(from: origin.coordinate, to: route.destination)
 
         let record = FocusSessionRecord(
             routeID: route.id,
             routeName: route.name,
-            originName: route.originName,
+            originName: origin.cityName,
             destinationName: route.destinationName,
             mood: route.mood,
             theme: route.colorTheme,
             plannedMinutes: route.durationMinutes,
             focusedSeconds: focusedSeconds,
-            distanceKm: route.approximateDistanceKm * progressFraction,
+            distanceKm: distanceKm * progressFraction,
             focusMiles: 0,
             intention: finalIntention,
             completed: false
