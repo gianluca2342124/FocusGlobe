@@ -1,8 +1,8 @@
 {
   "images" : [
     {
-      "idiom" : "universal",
-      "filename" : "BalloonFront.png"
+      "filename" : "BalloonFront.png",
+      "idiom" : "universal"
     }
   ],
   "info" : {
