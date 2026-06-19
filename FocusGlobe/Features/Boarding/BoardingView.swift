@@ -17,6 +17,11 @@ struct BoardingView: View {
                 VStack(spacing: AppSpacing.lg) {
                     ScreenHeader(title: "Prepare journey")
 
+                    BalloonView(height: 132, showBurner: true, showGlow: true,
+                                glow: route.colorTheme.soft)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, AppSpacing.xs)
+
                     JourneyPassCard(route: route)
 
                     intentionField

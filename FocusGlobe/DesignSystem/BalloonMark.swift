@@ -3,13 +3,15 @@ import UIKit
 
 // MARK: - Brand assets
 
-/// Resolves optional bundled brand art. The app looks premium with zero
-/// external files (it falls back to crafted vector art); when the real PNGs are
-/// dropped into the asset catalog, hero moments use them automatically.
+/// Resolves bundled brand art (see SETUP.md):
+///   • `BalloonFront` imageset → ships a generated front-view balloon so the
+///     hero is a real raster asset. Replace `BalloonFront.png` with the
+///     official render (same filename) anytime.
+///   • `BrandLogo` → optional. The wordmark renders crisply in code by default;
+///     add an image named "BrandLogo" to the asset catalog to override it.
 ///
-/// Drop-in locations (see SETUP.md):
-///   • `BalloonFront`  imageset → the front-view balloon PNG (protagonist)
-///   • `BrandLogo`     imageset → the FocusGlobe wordmark/logo PNG
+/// Anything missing falls back to crafted vector art, so the app always looks
+/// premium with zero external files.
 enum BrandAssets {
     static let balloonFrontName = "BalloonFront"
     static let brandLogoName = "BrandLogo"
@@ -271,9 +273,9 @@ struct BalloonView: View {
                 .frame(height: height)
                 .overlay(alignment: .bottom) {
                     if showBurner {
-                        // Adds a gentle live pulse over the static PNG glow.
-                        BurnerGlow(diameter: height * 0.22, animated: burnerAnimated)
-                            .offset(y: -height * 0.16)
+                        // A gentle live pulse aligned to the PNG's burner mouth.
+                        BurnerGlow(diameter: height * 0.26, animated: burnerAnimated)
+                            .offset(y: -height * 0.30)
                             .blendMode(.plusLighter)
                     }
                 }

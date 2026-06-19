@@ -5,37 +5,100 @@ struct RouteSelectionView: View {
     @EnvironmentObject private var router: AppRouter
     @StateObject private var viewModel = RouteSelectionViewModel()
 
+    private var featured: Route { appModel.recommendedRoute }
+
     var body: some View {
         ZStack {
             AppBackground()
 
-            VStack(spacing: AppSpacing.md) {
-                ScreenHeader(title: "Choose a route",
-                             subtitle: "From 5 minutes to 12 hours")
+            VStack(spacing: 0) {
+                ScreenHeader(title: "Choose a journey",
+                             subtitle: "From a 5-minute drift to a 12-hour crossing")
                     .padding(.horizontal, AppSpacing.screen)
                     .padding(.top, AppSpacing.xs)
-
-                categoryChips
+                    .padding(.bottom, AppSpacing.md)
 
                 ScrollView {
-                    LazyVStack(spacing: AppSpacing.md) {
-                        ForEach(viewModel.filteredRoutes) { route in
-                            AppRouteCard(
-                                route: route,
-                                isLocked: !appModel.isUnlocked(route),
-                                highlighted: route.id == appModel.recommendedRoute.id
-                            ) {
-                                select(route)
+                    VStack(spacing: AppSpacing.md) {
+                        featuredHero
+                            .padding(.horizontal, AppSpacing.screen)
+
+                        categoryChips
+
+                        LazyVStack(spacing: AppSpacing.md) {
+                            ForEach(viewModel.filteredRoutes) { route in
+                                AppRouteCard(
+                                    route: route,
+                                    isLocked: !appModel.isUnlocked(route),
+                                    highlighted: route.id == featured.id
+                                ) {
+                                    select(route)
+                                }
                             }
                         }
+                        .padding(.horizontal, AppSpacing.screen)
                     }
-                    .padding(.horizontal, AppSpacing.screen)
                     .padding(.bottom, AppSpacing.xxl)
                 }
             }
         }
         .focusScreenChrome()
     }
+
+    // MARK: - Featured hero
+
+    private var featuredHero: some View {
+        Button {
+            select(featured)
+        } label: {
+            ZStack(alignment: .bottom) {
+                RoutePreviewMap(route: featured, progress: 0.42)
+                    .frame(height: 208)
+
+                LinearGradient(colors: [.black.opacity(0.3), .clear],
+                               startPoint: .top, endPoint: .center)
+                LinearGradient(colors: [.clear, .black.opacity(0.6)],
+                               startPoint: .center, endPoint: .bottom)
+
+                VStack {
+                    HStack {
+                        AppTagChip(title: "Featured", systemImage: "sparkles")
+                        Spacer()
+                        AppTagChip(title: featured.durationLabel, systemImage: "clock")
+                    }
+                    Spacer()
+                    HStack(alignment: .bottom) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(featured.name)
+                                .font(AppTypography.title2)
+                                .foregroundStyle(.white)
+                            Text("\(featured.originName) → \(featured.destinationName)")
+                                .font(AppTypography.caption)
+                                .foregroundStyle(.white.opacity(0.85))
+                        }
+                        Spacer()
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 40, height: 40)
+                            .background(Circle().fill(AppGradients.brandButton))
+                            .shadow(color: AppColors.brand.opacity(0.5), radius: 8, y: 4)
+                    }
+                }
+                .padding(AppSpacing.md)
+            }
+            .frame(height: 208)
+            .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
+                    .strokeBorder(AppColors.glassStroke, lineWidth: 1)
+            )
+            .shadow(color: AppColors.shadow, radius: 18, x: 0, y: 10)
+        }
+        .buttonStyle(SoftPressStyle(scale: 0.985))
+    }
+
+    // MARK: - Categories
 
     private var categoryChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {

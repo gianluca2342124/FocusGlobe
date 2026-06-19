@@ -1,11 +1,13 @@
 import SwiftUI
 
-/// Hosts the live focus session and, on completion, the Landing screen — both
-/// inside the same full-screen cover so take-off → land stays seamless.
+/// Hosts the take-off ritual, the live focus session and, on completion, the
+/// Landing screen — all inside the same full-screen cover so the journey stays
+/// seamless from take-off to landing.
 struct FocusSessionContainerView: View {
     let journey: Journey
     @EnvironmentObject private var appModel: AppModel
     @StateObject private var vm: FocusSessionViewModel
+    @State private var showTakeoff = true
 
     init(journey: Journey) {
         self.journey = journey
@@ -17,15 +19,18 @@ struct FocusSessionContainerView: View {
             if vm.didLand, let summary = vm.landingSummary {
                 LandingView(summary: summary)
                     .transition(.opacity)
+            } else if showTakeoff {
+                TakeoffView(route: journey.route) {
+                    withAnimation(.easeInOut(duration: 0.55)) { showTakeoff = false }
+                    vm.startIfNeeded()
+                }
+                .transition(.opacity)
             } else {
                 FocusSessionView(vm: vm)
                     .transition(.opacity)
             }
         }
-        .onAppear {
-            vm.attach(appModel: appModel)
-            vm.startIfNeeded()
-        }
+        .onAppear { vm.attach(appModel: appModel) }
         .onDisappear { vm.tearDown() }
     }
 }
@@ -41,6 +46,12 @@ struct FocusSessionView: View {
         ZStack {
             JourneyMapView(data: vm.mapData)
                 .ignoresSafeArea()
+
+            // Cinematic edge vignette over the map (subtle, always on).
+            RadialGradient(colors: [.clear, .black.opacity(0.22)],
+                           center: .center, startRadius: 230, endRadius: 560)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
 
             if !vm.pureMode { scrims }
 

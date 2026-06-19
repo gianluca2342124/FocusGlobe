@@ -62,7 +62,8 @@ struct HomeView: View {
         .padding(.top, 2)
     }
 
-    /// The map-first centerpiece: a live preview of the recommended route.
+    /// The map-first centerpiece: a large, living preview of the recommended
+    /// route — tap to step straight into boarding.
     private var heroMapCard: some View {
         Button {
             appModel.analytics.log(.routeSelected, ["route": recommended.id, "source": "home_hero"])
@@ -70,54 +71,62 @@ struct HomeView: View {
         } label: {
             ZStack(alignment: .bottom) {
                 RoutePreviewMap(route: recommended)
-                    .frame(height: 312)
+                    .frame(height: 400)
 
-                // Legibility scrims.
-                LinearGradient(colors: [.black.opacity(0.35), .clear],
+                LinearGradient(colors: [.black.opacity(0.42), .clear],
                                startPoint: .top, endPoint: .center)
-                LinearGradient(colors: [.clear, .black.opacity(0.55)],
+                LinearGradient(colors: [.clear, .black.opacity(0.62)],
                                startPoint: .center, endPoint: .bottom)
 
-                VStack {
+                VStack(spacing: 0) {
                     HStack(alignment: .top) {
                         AppTagChip(title: "Recommended", systemImage: "sparkles")
                         Spacer()
                         AppTagChip(title: recommended.durationLabel, systemImage: "clock")
                     }
                     Spacer()
-                    HStack(alignment: .bottom) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(recommended.name)
-                                .font(AppTypography.title2)
-                                .foregroundStyle(.white)
+                    VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                        Text("FOCUS JOURNEY")
+                            .font(AppTypography.micro)
+                            .tracking(1.8)
+                            .foregroundStyle(.white.opacity(0.7))
+                        Text(recommended.name)
+                            .font(AppTypography.title)
+                            .foregroundStyle(.white)
+                        HStack(spacing: 6) {
+                            Text(recommended.originName)
+                            Image(systemName: "arrow.right").font(.system(size: 10, weight: .bold))
+                            Text(recommended.destinationName)
+                        }
+                        .font(AppTypography.subhead)
+                        .foregroundStyle(.white.opacity(0.85))
+
+                        HStack(spacing: AppSpacing.xs) {
+                            AppTagChip(title: recommended.mood.displayName, systemImage: recommended.mood.systemImage)
+                            AppTagChip(title: recommended.distanceLabel, systemImage: "ruler")
+                            Spacer()
                             HStack(spacing: 6) {
-                                Text(recommended.originName)
-                                Image(systemName: "arrow.right").font(.system(size: 10, weight: .bold))
-                                Text(recommended.destinationName)
+                                Text("Begin").font(AppTypography.callout)
+                                Image(systemName: "arrow.right").font(.system(size: 13, weight: .bold))
                             }
-                            .font(AppTypography.subhead)
-                            .foregroundStyle(.white.opacity(0.85))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, AppSpacing.md)
+                            .padding(.vertical, 9)
+                            .background(Capsule().fill(AppGradients.brandButton))
+                            .shadow(color: AppColors.brand.opacity(0.5), radius: 10, y: 5)
                         }
-                        Spacer()
-                        ZStack {
-                            Circle().fill(AppGradients.brandButton)
-                                .frame(width: 46, height: 46)
-                                .shadow(color: AppColors.brand.opacity(0.5), radius: 10, y: 5)
-                            Image(systemName: "arrow.right")
-                                .font(.system(size: 17, weight: .bold))
-                                .foregroundStyle(.white)
-                        }
+                        .padding(.top, 2)
                     }
                 }
                 .padding(AppSpacing.md)
             }
-            .frame(height: 312)
+            .frame(height: 400)
             .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
                     .strokeBorder(AppColors.glassStroke, lineWidth: 1)
             )
-            .shadow(color: AppColors.shadow, radius: 22, x: 0, y: 12)
+            .shadow(color: AppColors.shadow, radius: 24, x: 0, y: 14)
         }
         .buttonStyle(SoftPressStyle(scale: 0.985))
     }

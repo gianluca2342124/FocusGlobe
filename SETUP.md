@@ -130,19 +130,22 @@ regardless, but you should still:
 
 ## Brand assets (logo & balloon PNGs)
 
-The app ships with crafted **vector** brand art (the in-code balloon + wordmark),
-so it looks premium with no external files. To use the official PNGs, drop them
-into the prepared (currently empty) imagesets — the app picks them up
-automatically, no code changes:
+**The balloon hero ships as a real asset.** `BalloonFront.imageset` contains a
+generated front-view balloon (`BalloonFront.png`, transparent, with the warm
+burner glow), so `BalloonView` uses a raster hero everywhere (Takeoff, Boarding,
+Landing, Paywall) and Xcode shows **no asset warnings**.
 
-| Asset | Imageset | Used for |
+| Asset | Location | Used for |
 |------|----------|----------|
-| Front-view balloon PNG | `FocusGlobe/Assets.xcassets/BalloonFront.imageset` | Hero balloon (Home, Boarding, Landing, Paywall) via `BalloonView` |
-| FocusGlobe logo / wordmark PNG | `FocusGlobe/Assets.xcassets/BrandLogo.imageset` | App wordmark via `AppLogo` |
+| Front-view balloon | `FocusGlobe/Assets.xcassets/BalloonFront.imageset/BalloonFront.png` | Hero balloon via `BalloonView` |
+| Logo / wordmark | *(optional)* add an image named `BrandLogo` to the catalog | App wordmark via `AppLogo` |
 
-To add one: in Xcode's Asset catalog, select the imageset and drag your PNG onto
-the **1x/2x/3x** wells (or just the universal well). `BrandAssets.hasBalloonFront`
-/ `hasBrandLogo` detect them at runtime and switch from vector to PNG.
+- **To use your official balloon render:** replace `BalloonFront.png` with your
+  PNG (keep the same filename), or drag it onto the imageset in Xcode. To
+  regenerate the placeholder: `python3 Tools/make_balloon.py`.
+- **Logo:** the wordmark renders in code (crisp, no asset needed). To use a
+  custom logo image, add one named `BrandLogo` to the asset catalog —
+  `AppLogo` switches to it automatically.
 
 > Use the **front-view** balloon (with basket + burner glow). The top-down
 > balloon render is intentionally not used; the live map marker is derived from
