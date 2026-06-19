@@ -32,51 +32,20 @@ settings all work. This is so you can experience the whole product instantly.
 
 ---
 
-## 2. Enable live Google Maps
+## 2. Live Google Maps (pre-wired)
 
-### a) Add the Swift Package
+The **GoogleMaps Swift Package is already declared in the project** (`ios-maps-sdk`,
+linked to the FocusGlobe target). On first open, Xcode resolves it automatically
+(File ▸ Packages ▸ Resolve if needed). Once resolved, `#if canImport(GoogleMaps)`
+is true and the **live session renders the real Google map** — no manual steps.
 
-In Xcode:
-
-1. **File ▸ Add Package Dependencies…**
-2. Enter the package URL:
-   ```
-   https://github.com/googlemaps/ios-maps-sdk
-   ```
-3. Choose the latest version and click **Add Package**.
-4. When prompted, add the **`GoogleMaps`** library product to the **FocusGlobe**
-   app target. Click **Add Package**.
-
-That's it — no other build settings to change. The code already contains:
-
-```swift
-#if canImport(GoogleMaps)
-    GoogleJourneyMapView(data: data)   // live Google map
-#else
-    FallbackJourneyMapView(data: data) // native fallback
-#endif
-```
-
-### b) The API key
-
-The Google Maps API key is already wired in:
-
-```
-FocusGlobe/Map/MapConfiguration.swift  →  MapConfiguration.googleMapsAPIKey
-```
-
-It is provided to the SDK on launch (guarded so the app still builds without the
-SDK):
-
-```
-FocusGlobe/App/FocusGlobeApp.swift  →  GMSServices.provideAPIKey(...)
-```
-
-### c) Build & run
-
-Run again (⌘R). The journey screen now renders real Google Maps tiles with a
-calm custom style (light & dark), your curated route polyline, origin/destination
-markers and the balloon gliding along it.
+- The API key is in `FocusGlobe/Map/MapConfiguration.swift` and is provided to
+  the SDK in `FocusGlobeApp.swift`.
+- If package resolution fails (e.g. offline), the app still **builds and runs on
+  the aurora fallback** because the Google code is guarded by `#if canImport`.
+  Resolve the package (with network) to get the live map.
+- To change the SDK version, use the package UI in Xcode (it's pinned to
+  `upToNextMajor 8.4.0`).
 
 ---
 

@@ -53,12 +53,6 @@ struct FocusSessionView: View {
             // over any map (dark or light).
             vignette
 
-            #if DEBUG
-            if MapProvider.active != .google {
-                fallbackHint
-            }
-            #endif
-
             if vm.pureMode {
                 pureControls
             } else {
@@ -232,21 +226,6 @@ struct FocusSessionView: View {
         .padding(.horizontal, AppSpacing.screen)
         .transition(.opacity)
     }
-
-    #if DEBUG
-    private var fallbackHint: some View {
-        VStack {
-            Spacer()
-            Text("Stylised map — add the Google Maps SDK package for the live map (see SETUP.md)")
-                .font(AppTypography.micro)
-                .foregroundStyle(.white.opacity(0.6))
-                .multilineTextAlignment(.center)
-                .padding(.bottom, 150)
-                .padding(.horizontal, AppSpacing.xl)
-        }
-        .allowsHitTesting(false)
-    }
-    #endif
 }
 
 /// A white circular pause/resume button — always white (it sits on the dark

@@ -1,8 +1,8 @@
 import Foundation
 
 /// Duration buckets used for filtering and grouping routes.
+/// Journeys start at 30 minutes — there is no ultra-short category.
 enum RouteCategory: String, Codable, CaseIterable, Identifiable, Hashable {
-    case micro
     case short
     case deep
     case long
@@ -12,7 +12,6 @@ enum RouteCategory: String, Codable, CaseIterable, Identifiable, Hashable {
 
     var displayName: String {
         switch self {
-        case .micro: return "Micro"
         case .short: return "Short"
         case .deep:  return "Deep"
         case .long:  return "Long"
@@ -23,8 +22,7 @@ enum RouteCategory: String, Codable, CaseIterable, Identifiable, Hashable {
     /// Short helper shown under the title in the picker.
     var subtitle: String {
         switch self {
-        case .micro: return "5–15 min"
-        case .short: return "20–30 min"
+        case .short: return "30 min"
         case .deep:  return "45–90 min"
         case .long:  return "2–4 hours"
         case .ultra: return "6–12 hours"
@@ -33,7 +31,6 @@ enum RouteCategory: String, Codable, CaseIterable, Identifiable, Hashable {
 
     var systemImage: String {
         switch self {
-        case .micro: return "sparkle"
         case .short: return "leaf"
         case .deep:  return "mountain.2"
         case .long:  return "moon.stars"
@@ -44,11 +41,10 @@ enum RouteCategory: String, Codable, CaseIterable, Identifiable, Hashable {
     /// Sort order for display.
     var order: Int {
         switch self {
-        case .micro: return 0
-        case .short: return 1
-        case .deep:  return 2
-        case .long:  return 3
-        case .ultra: return 4
+        case .short: return 0
+        case .deep:  return 1
+        case .long:  return 2
+        case .ultra: return 3
         }
     }
 }
