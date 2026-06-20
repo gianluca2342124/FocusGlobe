@@ -181,10 +181,12 @@ struct GoogleJourneyMapView: UIViewRepresentable {
                 coordinate: CLLocationCoordinate2D(latitude: data.destination.latitude, longitude: data.destination.longitude))
             map.moveCamera(GMSCameraUpdate.fit(bounds, withPadding: 64))
 
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) { [weak self, weak map] in
+            // Hold the whole-route overview briefly, then dive in close to the
+            // balloon and follow it.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self, weak map] in
                 guard let self, let map else { return }
                 CATransaction.begin()
-                CATransaction.setAnimationDuration(2.0)
+                CATransaction.setAnimationDuration(2.3)
                 CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .easeInEaseOut))
                 map.animate(to: self.followCamera(for: data, vehicle: data.vehicle))
                 CATransaction.commit()
@@ -259,7 +261,7 @@ struct GoogleJourneyMapView: UIViewRepresentable {
             // Close zoom so the balloon drifts over real neighbourhoods/roads.
             GMSCameraPosition(
                 target: CLLocationCoordinate2D(latitude: vehicle.latitude, longitude: vehicle.longitude),
-                zoom: Float(CameraController.followZoom),
+                zoom: Float(CameraController.followZoom(forDistanceKm: data.routeDistanceKm)),
                 bearing: 0,
                 viewingAngle: data.tilted ? 55 : 0
             )

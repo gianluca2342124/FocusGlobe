@@ -13,9 +13,16 @@ struct CameraPose: Equatable {
 enum CameraController {
 
     /// Close follow zoom so the balloon feels like it's drifting over real
-    /// neighbourhoods/roads (independent of total route length — the whole
-    /// route is reachable via the "Full route" control instead).
-    static let followZoom: Double = 12.0
+    /// neighbourhoods, streets and coastlines — a premium GPS-flight feel
+    /// (independent of total route length; the whole route is reachable via the
+    /// "Full route" control instead).
+    static func followZoom(forDistanceKm km: Double) -> Double {
+        switch km {
+        case ..<120:  return 15.5   // nearby: streets, beaches, hills
+        case ..<600:  return 15.0
+        default:      return 14.5   // far: still close, still flying low
+        }
+    }
 
     /// A comfortable zoom level (Google-style 1–21) for a route of this span.
     /// Used to *frame the whole route* (overview / previews).

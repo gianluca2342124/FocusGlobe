@@ -76,21 +76,24 @@ struct PassportView: View {
         }
     }
 
-    private var routesSection: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            HStack {
-                SectionLabel(text: "Destinations")
-                Spacer()
-                Text("\(progress.completedRouteIDs.count)/\(DestinationCatalog.all.count)")
-                    .font(AppTypography.caption)
-                    .foregroundStyle(AppColors.textTertiary)
-            }
-            LazyVGrid(columns: stampColumns, spacing: AppSpacing.sm) {
-                ForEach(DestinationCatalog.all) { dest in
-                    DestinationStampTile(
-                        destination: dest,
-                        completed: progress.completedRouteIDs.contains(dest.id),
-                        locked: !appModel.isUnlocked(JourneyPlanner.route(from: appModel.originForJourney, to: dest)))
+    @ViewBuilder private var routesSection: some View {
+        if let hub = appModel.currentHub {
+            let destinations = hub.allDestinations
+            VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                HStack {
+                    SectionLabel(text: "Destinations near \(hub.cityName)")
+                    Spacer()
+                    Text("\(destinations.filter { progress.completedRouteIDs.contains($0.id) }.count)/\(destinations.count)")
+                        .font(AppTypography.caption)
+                        .foregroundStyle(AppColors.textTertiary)
+                }
+                LazyVGrid(columns: stampColumns, spacing: AppSpacing.sm) {
+                    ForEach(destinations) { dest in
+                        DestinationStampTile(
+                            destination: dest,
+                            completed: progress.completedRouteIDs.contains(dest.id),
+                            locked: !appModel.isUnlocked(JourneyPlanner.route(from: appModel.originForJourney, to: dest)))
+                    }
                 }
             }
         }
@@ -113,19 +116,20 @@ struct PassportView: View {
 }
 
 private struct DestinationStampTile: View {
-    let destination: Destination
+    let destination: JourneyDestination
     let completed: Bool
     let locked: Bool
 
     var body: some View {
         if completed {
             ZStack {
-                destination.mood.gradient
+                DestinationScene(mood: destination.mood, theme: destination.theme,
+                                 landmark: destination.landmark, compact: true)
                 VStack(spacing: 4) {
                     Image(systemName: "checkmark.seal.fill")
                         .font(.system(size: 18, weight: .bold))
                         .foregroundStyle(destination.mood.preferredForeground)
-                    Text(destination.city)
+                    Text(destination.name)
                         .font(AppTypography.caption)
                         .foregroundStyle(destination.mood.preferredForeground)
                         .lineLimit(1)
@@ -142,11 +146,11 @@ private struct DestinationStampTile: View {
                 Image(systemName: locked ? "lock.fill" : destination.mood.systemImage)
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(AppColors.textTertiary)
-                Text(destination.city)
+                Text(destination.name)
                     .font(AppTypography.caption)
                     .foregroundStyle(AppColors.textTertiary)
                     .lineLimit(1)
-                Text(destination.code)
+                Text(destination.displayCode)
                     .font(AppTypography.micro)
                     .foregroundStyle(AppColors.textTertiary.opacity(0.7))
             }

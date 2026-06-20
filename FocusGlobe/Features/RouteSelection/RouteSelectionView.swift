@@ -1,42 +1,40 @@
 import SwiftUI
 
-/// Destination selection, in the FocusFlight grammar: a full-screen real Google
-/// map shows the journey from the user's current location to the selected
-/// destination (origin halo + route + amber destination tag, no balloon yet).
-/// Floating category chips sit on top; a horizontal destination strip with a
-/// white CTA sits at the bottom. Map-first, not list-first.
+/// Destination selection, FocusFlight-style: a full-screen real Google map shows
+/// the journey from the user's current location to the selected real destination
+/// (origin halo + route + amber destination tag, no balloon yet). Floating
+/// category chips on top; a horizontal destination strip + white CTA at the
+/// bottom. If no supported hub is near, a clean "preparing journeys" state shows.
 struct RouteSelectionView: View {
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = RouteSelectionViewModel()
     @State private var selectedID: String?
+    @State private var showCityPicker = false
 
     private var origin: JourneyOrigin { appModel.originForJourney }
-    private var journeys: [PlannedJourney] { viewModel.journeys(for: origin) }
-
+    private var hub: OriginHub? { appModel.currentHub }
+    private var journeys: [PlannedJourney] {
+        guard let hub else { return [] }
+        return viewModel.journeys(hub: hub, origin: origin)
+    }
     private var current: PlannedJourney? {
         journeys.first { $0.id == selectedID } ?? journeys.first
     }
 
     var body: some View {
         ZStack {
-            if let current {
-                JourneyDiscoveryMap(origin: origin, route: current.route)
-                    .ignoresSafeArea()
-                    .animation(.easeInOut(duration: 0.5), value: current.id)
-            } else {
-                JourneyBackdropMap(origin: origin, mode: .origin, showsBalloon: false)
-                    .ignoresSafeArea()
-            }
-
+            mapLayer
             scrims
 
             VStack(spacing: AppSpacing.sm) {
                 topBar
-                categoryChips
+                if hub != nil { categoryChips }
                 Spacer()
-                if let current {
+                if hub == nil {
+                    preparingState
+                } else if let current {
                     bottomCluster(current)
                 } else {
                     emptyState
@@ -46,8 +44,20 @@ struct RouteSelectionView: View {
             .padding(.bottom, AppSpacing.lg)
         }
         .focusScreenChrome()
+        .sheet(isPresented: $showCityPicker) { LocationPickerView() }
         .onChange(of: viewModel.selectedCategory) { _, _ in
             if let first = journeys.first { selectedID = first.id }
+        }
+    }
+
+    @ViewBuilder private var mapLayer: some View {
+        if let current {
+            JourneyDiscoveryMap(origin: origin, route: current.route)
+                .ignoresSafeArea()
+                .animation(.easeInOut(duration: 0.5), value: current.id)
+        } else {
+            JourneyBackdropMap(origin: origin, mode: .origin, showsBalloon: false)
+                .ignoresSafeArea()
         }
     }
 
@@ -105,9 +115,11 @@ struct RouteSelectionView: View {
     private func bottomCluster(_ journey: PlannedJourney) -> some View {
         VStack(spacing: AppSpacing.md) {
             VStack(spacing: 3) {
-                Text(journey.destination.city)
-                    .font(AppTypography.title2)
-                    .foregroundStyle(.white)
+                Text(journey.destination.name)
+                    .font(AppTypography.title2).foregroundStyle(.white)
+                Text(journey.destination.subtitle)
+                    .font(AppTypography.caption).foregroundStyle(.white.opacity(0.78))
+                    .lineLimit(1)
                 HStack(spacing: 8) {
                     Label(Formatters.durationLabel(minutes: journey.durationMinutes), systemImage: "clock")
                     Text("·")
@@ -135,9 +147,30 @@ struct RouteSelectionView: View {
         VStack(spacing: AppSpacing.xs) {
             Text("No destinations in this range")
                 .font(AppTypography.headline).foregroundStyle(.white)
-            Text("Try another category — closer cities appear under Short.")
+            Text("Try another category — nearby places appear under Short.")
                 .font(AppTypography.caption).foregroundStyle(.white.opacity(0.8))
                 .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, AppSpacing.screen)
+        .padding(.bottom, AppSpacing.md)
+    }
+
+    private var preparingState: some View {
+        VStack(spacing: AppSpacing.sm) {
+            Image(systemName: "map")
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.85))
+            Text("Journeys are being prepared for your area")
+                .font(AppTypography.headline).foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+            Text("We add new launch cities often. In the meantime, choose a starting city.")
+                .font(AppTypography.caption).foregroundStyle(.white.opacity(0.8))
+                .multilineTextAlignment(.center)
+            AppPrimaryButton(title: "Choose starting city", systemImage: "mappin.and.ellipse") {
+                appModel.haptics.tap()
+                showCityPicker = true
+            }
+            .padding(.top, AppSpacing.xs)
         }
         .padding(.horizontal, AppSpacing.screen)
         .padding(.bottom, AppSpacing.md)
@@ -187,7 +220,7 @@ private struct DestinationCard: View {
                 HStack(spacing: 5) {
                     HStack(spacing: 3) {
                         Image(systemName: "location.fill").font(.system(size: 8, weight: .bold))
-                        Text(journey.destination.code)
+                        Text(journey.destination.displayCode)
                             .font(.system(size: 13, weight: .heavy, design: .rounded))
                     }
                     .foregroundStyle(isSelected ? Color(hex: 0x14181F) : .white)
@@ -203,7 +236,7 @@ private struct DestinationCard: View {
                 }
 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(journey.destination.city)
+                    Text(journey.destination.name)
                         .font(AppTypography.callout)
                         .foregroundStyle(isSelected ? Color(hex: 0x14181F) : .white)
                         .lineLimit(1)
@@ -213,7 +246,7 @@ private struct DestinationCard: View {
                 }
             }
             .padding(AppSpacing.sm + 2)
-            .frame(width: 140, alignment: .leading)
+            .frame(width: 144, alignment: .leading)
             .background {
                 if isSelected {
                     RoundedRectangle(cornerRadius: 18, style: .continuous).fill(.white)
