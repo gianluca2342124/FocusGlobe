@@ -73,15 +73,17 @@ final class AppModel: ObservableObject {
 
     // MARK: - Location & origin
 
-    /// The effective starting point. **Real location always wins** when
-    /// available; a manually chosen city is only a fallback used while real
-    /// location is unavailable. `nil` when neither exists yet — the UI then asks
-    /// the user to choose a starting city (it never fakes one). The previously
-    /// completed destination is never reused as an origin.
+    /// The effective starting point, in precedence order:
+    ///   1. the virtual location from a completed journey (travel the world),
+    ///   2. real current location (when available),
+    ///   3. a manually chosen starting city,
+    ///   4. `nil` → ask the user to choose a starting city (never faked).
+    /// GPS never overwrites the virtual origin.
     ///
-    /// In DEBUG the manual city takes precedence so the Simulator (which always
+    /// In DEBUG the manual city outranks GPS so the Simulator (which always
     /// reports San Francisco) can be overridden for testing.
     var currentOrigin: JourneyOrigin? {
+        if let virtual = settings.virtualOrigin { return virtual }
         #if DEBUG
         if let manual = settings.startingCity { return manual }
         if case .resolved(let resolved) = locationState { return resolved }
@@ -90,6 +92,12 @@ final class AppModel: ObservableObject {
         if case .resolved(let resolved) = locationState { return resolved }
         return settings.startingCity
         #endif
+    }
+
+    /// `true` once the user has travelled away from their real location (virtual
+    /// origin or manual city set) — used to offer "Return to my real location".
+    var canReturnToRealLocation: Bool {
+        settings.virtualOrigin != nil || settings.startingCity != nil
     }
 
     /// Whether the manual starting-city picker should be offered. In production
@@ -143,17 +151,25 @@ final class AppModel: ObservableObject {
         location.requestLocation()
     }
 
-    /// Pick a starting city manually (overrides real location until cleared).
+    /// Pick a starting city manually. Starts a fresh trip from there.
     func setManualOrigin(_ origin: JourneyOrigin) {
+        settings.virtualOrigin = nil
         settings.startingCity = origin
         haptics.tap()
     }
 
-    /// Clear the manual override and use the real current location.
+    /// "Return to my real location": clear any virtual/manual origin and use GPS.
     func useCurrentLocation() {
+        settings.virtualOrigin = nil
         settings.startingCity = nil
         location.requestLocation()
         haptics.tap()
+    }
+
+    /// Arrive at a destination — it becomes the virtual origin for the next
+    /// journey (persisted across launches; not overwritten by GPS).
+    func arrive(at origin: JourneyOrigin) {
+        settings.virtualOrigin = origin
     }
 
     /// A calm default recommendation for the current origin's hub.
@@ -223,6 +239,10 @@ final class AppModel: ObservableObject {
         }
         applyStreak(to: &p, landingDate: record.date)
         progress = p
+
+        // Travelling the world: the destination becomes the next origin.
+        arrive(at: JourneyOrigin(city: route.destinationName, country: "",
+                                 coordinate: route.destination, code: route.destinationCode))
 
         persistAll()
         analytics.log(.journeyCompleted, [

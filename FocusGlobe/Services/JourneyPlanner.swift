@@ -54,10 +54,13 @@ enum JourneyPlanner {
     }
 
     /// Journeys from `origin` using the matched `hub`, free Short set first.
+    /// Destinations within ~5 km of the origin are skipped (you're already there
+    /// — e.g. after landing in Castelldefels, it won't offer Castelldefels).
     static func plan(hub: OriginHub, origin: JourneyOrigin, category: RouteCategory?) -> [PlannedJourney] {
         hub.allDestinations
             .filter { category == nil || $0.category == category }
             .map { PlannedJourney(destination: $0, route: route(from: origin, to: $0)) }
+            .filter { $0.distanceKm >= 5 }
             .sorted { lhs, rhs in
                 if lhs.isPremium != rhs.isPremium { return !lhs.isPremium } // free first
                 return lhs.durationMinutes < rhs.durationMinutes

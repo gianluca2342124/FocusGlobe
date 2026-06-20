@@ -33,7 +33,9 @@ struct HomeView: View {
 
     @ViewBuilder private var map: some View {
         if let origin {
-            JourneyBackdropMap(origin: origin, mode: .origin, showsBalloon: true)
+            // Zoomed-out, region-from-above framing with the origin lifted into
+            // the upper half so it never collides with the text block.
+            JourneyBackdropMap(origin: origin, mode: .origin, showsBalloon: true, bottomInset: 320)
                 .ignoresSafeArea()
         } else {
             // No real/chosen origin yet — a calm high-altitude map with no
@@ -62,29 +64,31 @@ struct HomeView: View {
         .allowsHitTesting(false)
     }
 
+    // DEBUG-only Simulator override pill. In production there is no prominent
+    // "change city" affordance on Home — travel happens by completing journeys.
     @ViewBuilder private var topBar: some View {
-        if appModel.allowsManualOrigin {
-            VStack {
-                HStack {
-                    Spacer()
-                    Button { showCityPicker = true } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "location.fill").font(.system(size: 12, weight: .bold))
-                            Text(origin?.code ?? "SET")
-                                .font(.system(size: 13, weight: .heavy, design: .rounded))
-                        }
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, AppSpacing.sm)
-                        .padding(.vertical, 9)
-                        .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.22, shadowRadius: 8, shadowY: 4)
-                    }
-                    .buttonStyle(SoftPressStyle())
-                }
+        #if DEBUG
+        VStack {
+            HStack {
                 Spacer()
+                Button { showCityPicker = true } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "location.fill").font(.system(size: 12, weight: .bold))
+                        Text(origin?.code ?? "SET")
+                            .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, AppSpacing.sm)
+                    .padding(.vertical, 9)
+                    .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.22, shadowRadius: 8, shadowY: 4)
+                }
+                .buttonStyle(SoftPressStyle())
             }
-            .padding(.horizontal, AppSpacing.screen)
-            .padding(.top, AppSpacing.xs)
+            Spacer()
         }
+        .padding(.horizontal, AppSpacing.screen)
+        .padding(.top, AppSpacing.xs)
+        #endif
     }
 
     private var bottomCluster: some View {

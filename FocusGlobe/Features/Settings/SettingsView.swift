@@ -76,25 +76,44 @@ struct SettingsView: View {
 
     private var locationSection: some View {
         SettingsCard(title: "Starting location") {
-            Button { showCityPicker = true } label: {
+            VStack(spacing: 0) {
                 SettingsRow(systemImage: "location.fill",
-                            title: appModel.currentOrigin?.city ?? "Choose starting city",
+                            title: appModel.currentOrigin?.city ?? "Not set",
                             subtitle: locationSubtitle, tint: AppColors.brand,
-                            trailing: AnyView(Image(systemName: "chevron.right")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(AppColors.textTertiary)))
+                            trailing: AnyView(EmptyView()))
+                if appModel.canReturnToRealLocation {
+                    RowDivider()
+                    Button { appModel.useCurrentLocation() } label: {
+                        SettingsRow(systemImage: "arrow.counterclockwise",
+                                    title: "Return to my real location",
+                                    subtitle: "Use GPS and clear travel progress", tint: AppColors.brand,
+                                    trailing: AnyView(EmptyView()))
+                    }
+                    .buttonStyle(SoftPressStyle())
+                }
+                if appModel.allowsManualOrigin {
+                    RowDivider()
+                    Button { showCityPicker = true } label: {
+                        SettingsRow(systemImage: "mappin.and.ellipse", title: "Choose starting city",
+                                    subtitle: "Browse and search world cities", tint: AppColors.gold,
+                                    trailing: AnyView(Image(systemName: "chevron.right")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(AppColors.textTertiary)))
+                    }
+                    .buttonStyle(SoftPressStyle())
+                }
             }
-            .buttonStyle(SoftPressStyle())
         }
     }
 
     private var locationSubtitle: String {
-        if appModel.isUsingManualOrigin { return "Chosen manually · tap to change" }
+        if appModel.settings.virtualOrigin != nil { return "Travelling — you landed here" }
+        if appModel.isUsingManualOrigin { return "Chosen manually" }
         switch appModel.locationState {
         case .resolved:           return "Detected automatically"
         case .resolving:          return "Locating…"
         case .denied:             return "Location off — pick a city"
-        case .unavailable, .idle: return "Tap to detect or choose"
+        case .unavailable, .idle: return "Detect or choose a city"
         }
     }
 

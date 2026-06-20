@@ -72,8 +72,15 @@ enum Formatters {
         mediumDate.string(from: date)
     }
 
-    /// A contextual greeting based on the time of day.
-    static func greeting(for date: Date = Date(), calendar: Calendar = .current) -> String {
+    /// A contextual greeting based on the local time of day.
+    ///
+    /// Uses the device's time zone by default; pass a `timeZone` to greet by the
+    /// origin city's local time once city time-zones are available. Ranges:
+    /// 05:00–11:59 morning · 12:00–16:59 afternoon · 17:00–21:59 evening ·
+    /// 22:00–04:59 night.
+    static func greeting(at date: Date = Date(), timeZone: TimeZone = .current) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
         let hour = calendar.component(.hour, from: date)
         switch hour {
         case 5..<12:  return "Good morning"

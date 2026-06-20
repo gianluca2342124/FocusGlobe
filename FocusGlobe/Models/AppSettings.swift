@@ -13,10 +13,15 @@ struct AppSettings: Codable, Equatable {
     /// Standard 2D by default — satellite is opt-in.
     var mapStyle: MapDisplayStyle = .standard
 
-    /// A manually chosen starting city. When set, it overrides real location
-    /// (used by the "Choose starting city" picker and the DEBUG override).
-    /// `nil` means "use my current location".
+    /// A manually chosen starting city. Used only when real location is
+    /// unavailable (and, in DEBUG, as a Simulator override). `nil` means "use my
+    /// current location".
     var startingCity: JourneyOrigin? = nil
+
+    /// The virtual location reached by completing journeys — "travelling the
+    /// world." Once set it becomes the origin for the next journey (it is NOT
+    /// overwritten by GPS). Cleared by "Return to my real location".
+    var virtualOrigin: JourneyOrigin? = nil
 
     static let `default` = AppSettings()
 }

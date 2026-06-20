@@ -33,6 +33,9 @@ struct JourneyBackdropMap: View {
     var showsBalloon: Bool = true
     /// Show the origin halo/dot. Off when there's no real origin yet.
     var showsOrigin: Bool = true
+    /// Bottom inset (points) so the origin sits in the upper half of the screen,
+    /// above the text block. Used on Home; 0 elsewhere.
+    var bottomInset: CGFloat = 0
 
     private var theme: RouteTheme { destination?.colorTheme ?? .teal }
     private var mood: RouteMood { destination?.mood ?? .calm }
@@ -42,7 +45,7 @@ struct JourneyBackdropMap: View {
         GoogleBackdropMapView(origin: origin, destination: destination,
                               mode: mode, progress: progress,
                               showsCodeTags: showsCodeTags, showsBalloon: showsBalloon,
-                              showsOrigin: showsOrigin, theme: theme)
+                              showsOrigin: showsOrigin, bottomInset: bottomInset, theme: theme)
             .allowsHitTesting(false)
         #else
         fallback.allowsHitTesting(false)
@@ -131,6 +134,7 @@ struct GoogleBackdropMapView: UIViewRepresentable {
     let showsCodeTags: Bool
     let showsBalloon: Bool
     let showsOrigin: Bool
+    let bottomInset: CGFloat
     let theme: RouteTheme
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -151,6 +155,9 @@ struct GoogleBackdropMapView: UIViewRepresentable {
     }
 
     func updateUIView(_ map: GMSMapView, context: Context) {
+        // Bottom inset lifts the origin into the upper half (Home), clearing the
+        // text block below.
+        map.padding = UIEdgeInsets(top: 0, left: 0, bottom: bottomInset, right: 0)
         context.coordinator.configure(map: map, view: self)
     }
 
@@ -166,7 +173,8 @@ struct GoogleBackdropMapView: UIViewRepresentable {
                 view.mode == .origin ? "origin" : "route",
                 String(format: "%.3f,%.3f", view.origin.coordinate.latitude, view.origin.coordinate.longitude),
                 dest?.id ?? "-",
-                view.showsCodeTags ? "t" : "_", view.showsBalloon ? "b" : "_", view.showsOrigin ? "o" : "_"
+                view.showsCodeTags ? "t" : "_", view.showsBalloon ? "b" : "_", view.showsOrigin ? "o" : "_",
+                String(format: "%.0f", view.bottomInset)
             ].joined(separator: "|")
             guard key != lastKey else { return }
             lastKey = key
@@ -211,7 +219,8 @@ struct GoogleBackdropMapView: UIViewRepresentable {
                 if view.showsCodeTags && view.showsOrigin {
                     addTag(code: view.origin.code, highlighted: false, at: originCoord, accent: accent, on: map)
                 }
-                let zoom: Float = view.showsOrigin ? 10.6 : 4.4
+                // Zoomed out so you see the city/region from above, not the street.
+                let zoom: Float = view.showsOrigin ? 9.3 : 4.0
                 CATransaction.begin()
                 CATransaction.setDisableActions(true)
                 map.moveCamera(GMSCameraUpdate.setCamera(

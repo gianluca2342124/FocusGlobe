@@ -1,39 +1,53 @@
 import SwiftUI
 
-/// A calm picker for the journey's starting city. Used as the clean fallback
-/// when real location is unavailable, and (in DEBUG) as an easy simulator
-/// override. Choosing "Use my current location" clears any manual override.
+/// A scalable starting-city picker: "Use my current location", a Popular
+/// section, then all countries — with global search by city, country, or code.
+/// Backed by `WorldCityCatalog` (WorldCities.json), so it supports hundreds of
+/// real cities without Swift changes.
 struct LocationPickerView: View {
     @EnvironmentObject private var appModel: AppModel
     @Environment(\.dismiss) private var dismiss
+    @State private var query = ""
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                AppBackground()
-                ScrollView {
-                    VStack(spacing: AppSpacing.sm) {
-                        currentLocationRow
-                        Text("OR CHOOSE A CITY")
-                            .font(AppTypography.micro)
-                            .tracking(0.8)
-                            .foregroundStyle(AppColors.textTertiary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.top, AppSpacing.sm)
-                        ForEach(OriginPresets.all, id: \.self) { preset in
-                            cityRow(preset)
+            List {
+                if query.isEmpty {
+                    Section { currentLocationRow }
+                    Section("Popular") {
+                        ForEach(OriginPresets.all, id: \.self) { o in
+                            cityRow(name: o.city, country: o.country, code: o.code, origin: o)
                         }
                     }
-                    .padding(AppSpacing.screen)
+                    ForEach(WorldCityCatalog.countries) { country in
+                        Section(country.country) {
+                            ForEach(country.cities) { city in
+                                cityRow(name: city.name, country: country.country, code: city.code,
+                                        origin: JourneyOrigin(city: city.name, country: country.country,
+                                                              coordinate: city.coordinate, code: city.code))
+                            }
+                        }
+                    }
+                } else {
+                    let results = WorldCityCatalog.search(query)
+                    if results.isEmpty {
+                        Text("No cities found").foregroundStyle(AppColors.textTertiary)
+                    } else {
+                        ForEach(results) { entry in
+                            cityRow(name: entry.city.name, country: entry.country,
+                                    code: entry.city.code, origin: entry.origin)
+                        }
+                    }
                 }
             }
+            .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
+            .background(AppBackground())
+            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always),
+                        prompt: "Search city, country, or code")
             .navigationTitle("Starting city")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                }
-            }
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
         }
     }
 
@@ -43,68 +57,60 @@ struct LocationPickerView: View {
             dismiss()
         } label: {
             HStack(spacing: AppSpacing.sm) {
-                iconBadge("location.fill", tint: AppColors.brand)
+                Image(systemName: "location.fill")
+                    .font(.system(size: 15, weight: .semibold)).foregroundStyle(AppColors.brand)
+                    .frame(width: 42, height: 30)
+                    .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(AppColors.brand.opacity(0.14)))
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Use my current location")
-                        .font(AppTypography.callout).foregroundStyle(AppColors.textPrimary)
-                    Text(currentLocationSubtitle)
-                        .font(AppTypography.caption).foregroundStyle(AppColors.textTertiary)
+                    Text("Use my current location").foregroundStyle(AppColors.textPrimary)
+                    Text(currentLocationSubtitle).font(AppTypography.caption).foregroundStyle(AppColors.textTertiary)
                 }
                 Spacer()
-                if !appModel.isUsingManualOrigin { selectedCheck }
+                if !appModel.canReturnToRealLocation { selectedCheck }
             }
-            .padding(AppSpacing.md)
-            .glassBackground(cornerRadius: 16, tintOpacity: 0.2, shadowRadius: 8, shadowY: 4)
         }
-        .buttonStyle(SoftPressStyle())
+        .buttonStyle(.plain)
     }
 
     private var currentLocationSubtitle: String {
         switch appModel.locationState {
         case .resolved(let o): return "\(o.city)\(o.country.isEmpty ? "" : ", \(o.country)")"
         case .resolving:       return "Locating…"
-        case .denied:          return "Location access is off — enable it in Settings"
+        case .denied:          return "Location access is off"
         case .unavailable, .idle: return "Detect where you are"
         }
     }
 
-    private func cityRow(_ preset: JourneyOrigin) -> some View {
-        let isSelected = appModel.isUsingManualOrigin && appModel.currentOrigin?.city == preset.city
-        return Button {
-            appModel.setManualOrigin(preset)
+    private func cityRow(name: String, country: String, code: String, origin: JourneyOrigin) -> some View {
+        Button {
+            appModel.setManualOrigin(origin)
             dismiss()
         } label: {
             HStack(spacing: AppSpacing.sm) {
-                Text(preset.code)
-                    .font(.system(size: 13, weight: .heavy, design: .rounded))
+                Text(code)
+                    .font(.system(size: 12, weight: .heavy, design: .rounded))
                     .foregroundStyle(AppColors.textPrimary)
-                    .frame(width: 44, height: 32)
-                    .background(RoundedRectangle(cornerRadius: 9, style: .continuous)
-                        .fill(AppColors.brand.opacity(0.14)))
+                    .frame(width: 42, height: 30)
+                    .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(AppColors.brand.opacity(0.12)))
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(preset.city).font(AppTypography.callout).foregroundStyle(AppColors.textPrimary)
-                    Text(preset.country).font(AppTypography.caption).foregroundStyle(AppColors.textTertiary)
+                    Text(name).foregroundStyle(AppColors.textPrimary)
+                    Text(country).font(AppTypography.caption).foregroundStyle(AppColors.textTertiary)
                 }
                 Spacer()
-                if isSelected { selectedCheck }
+                if isSelected(origin) { selectedCheck }
             }
-            .padding(AppSpacing.md)
-            .glassBackground(cornerRadius: 16, tintOpacity: 0.16, shadowRadius: 6, shadowY: 3)
         }
-        .buttonStyle(SoftPressStyle())
+        .buttonStyle(.plain)
+    }
+
+    private func isSelected(_ origin: JourneyOrigin) -> Bool {
+        guard let current = appModel.currentOrigin else { return false }
+        return current.city == origin.city && current.code == origin.code
     }
 
     private var selectedCheck: some View {
         Image(systemName: "checkmark.circle.fill")
             .font(.system(size: 18, weight: .semibold))
             .foregroundStyle(AppColors.success)
-    }
-
-    private func iconBadge(_ systemImage: String, tint: Color) -> some View {
-        Image(systemName: systemImage)
-            .font(.system(size: 15, weight: .semibold))
-            .foregroundStyle(tint)
-            .frame(width: 36, height: 36)
-            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(tint.opacity(0.14)))
     }
 }
