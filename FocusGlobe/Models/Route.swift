@@ -33,6 +33,9 @@ struct Route: Identifiable, Codable, Hashable {
     /// Falls back to a code derived from `shortName` when empty.
     var displayCode: String = ""
 
+    /// Visual identity for the destination's signature scene / postcard.
+    var landmark: Landmark = .generic
+
     // MARK: - Derived, provider-independent helpers
 
     var origin: GeoCoordinate {

@@ -62,27 +62,29 @@ struct HomeView: View {
         .allowsHitTesting(false)
     }
 
-    private var topBar: some View {
-        VStack {
-            HStack {
-                Spacer()
-                Button { showCityPicker = true } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "location.fill").font(.system(size: 12, weight: .bold))
-                        Text(origin?.code ?? "SET")
-                            .font(.system(size: 13, weight: .heavy, design: .rounded))
+    @ViewBuilder private var topBar: some View {
+        if appModel.allowsManualOrigin {
+            VStack {
+                HStack {
+                    Spacer()
+                    Button { showCityPicker = true } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "location.fill").font(.system(size: 12, weight: .bold))
+                            Text(origin?.code ?? "SET")
+                                .font(.system(size: 13, weight: .heavy, design: .rounded))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, AppSpacing.sm)
+                        .padding(.vertical, 9)
+                        .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.22, shadowRadius: 8, shadowY: 4)
                     }
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, AppSpacing.sm)
-                    .padding(.vertical, 9)
-                    .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.22, shadowRadius: 8, shadowY: 4)
+                    .buttonStyle(SoftPressStyle())
                 }
-                .buttonStyle(SoftPressStyle())
+                Spacer()
             }
-            Spacer()
+            .padding(.horizontal, AppSpacing.screen)
+            .padding(.top, AppSpacing.xs)
         }
-        .padding(.horizontal, AppSpacing.screen)
-        .padding(.top, AppSpacing.xs)
     }
 
     private var bottomCluster: some View {

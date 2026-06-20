@@ -3,28 +3,34 @@ import Foundation
 /// User-selectable map presentation, surfaced as floating controls in the
 /// session and in Settings. Maps to Google Maps `mapType` + custom style JSON.
 enum MapDisplayStyle: String, CaseIterable, Codable, Identifiable {
-    case night
     case standard
+    case terrain
     case satellite
     case hybrid
+    case night
+    case monochrome
 
     var id: String { rawValue }
 
     var displayName: String {
         switch self {
-        case .night:     return "Night"
-        case .standard:  return "Standard"
-        case .satellite: return "Satellite"
-        case .hybrid:    return "Hybrid"
+        case .standard:   return "Standard"
+        case .terrain:    return "Terrain"
+        case .satellite:  return "Satellite"
+        case .hybrid:     return "Hybrid"
+        case .night:      return "Night"
+        case .monochrome: return "Mono"
         }
     }
 
     var systemImage: String {
         switch self {
-        case .night:     return "moon.stars.fill"
-        case .standard:  return "map.fill"
-        case .satellite: return "globe.americas.fill"
-        case .hybrid:    return "square.stack.3d.up.fill"
+        case .standard:   return "map.fill"
+        case .terrain:    return "mountain.2.fill"
+        case .satellite:  return "globe.americas.fill"
+        case .hybrid:     return "square.stack.3d.up.fill"
+        case .night:      return "moon.stars.fill"
+        case .monochrome: return "circle.lefthalf.filled"
         }
     }
 }
@@ -66,6 +72,23 @@ enum MapStyles {
       {"featureType":"landscape","elementType":"geometry","stylers":[{"color":"#0f1730"}]},
       {"featureType":"landscape.natural","elementType":"geometry","stylers":[{"color":"#101a36"}]},
       {"featureType":"water","elementType":"geometry","stylers":[{"color":"#070d1e"}]},
+      {"featureType":"water","elementType":"labels","stylers":[{"visibility":"off"}]}
+    ]
+    """
+
+    /// A calm grayscale ("Mono") style — desaturated land/water, soft labels.
+    static let monochrome = """
+    [
+      {"elementType":"geometry","stylers":[{"color":"#e9eaec"}]},
+      {"elementType":"labels.text.fill","stylers":[{"color":"#6b6f76"}]},
+      {"elementType":"labels.text.stroke","stylers":[{"color":"#ffffff"}]},
+      {"featureType":"poi","stylers":[{"visibility":"off"}]},
+      {"featureType":"transit","stylers":[{"visibility":"off"}]},
+      {"featureType":"road","elementType":"labels","stylers":[{"visibility":"off"}]},
+      {"featureType":"road","elementType":"geometry","stylers":[{"color":"#dcdee1"}]},
+      {"featureType":"administrative.land_parcel","stylers":[{"visibility":"off"}]},
+      {"featureType":"landscape","elementType":"geometry","stylers":[{"color":"#dfe1e4"}]},
+      {"featureType":"water","elementType":"geometry","stylers":[{"color":"#c7cacf"}]},
       {"featureType":"water","elementType":"labels","stylers":[{"visibility":"off"}]}
     ]
     """

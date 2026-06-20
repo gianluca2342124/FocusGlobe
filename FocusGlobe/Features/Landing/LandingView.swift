@@ -1,5 +1,9 @@
 import SwiftUI
+import UIKit
 
+/// The arrival screen — a "destination postcard unlocked" reward moment. The
+/// hero is the premium postcard with a passport-style LANDED stamp; stats are
+/// quiet; the ad action is demoted to a subtle secondary option.
 struct LandingView: View {
     let summary: LandingSummary
 
@@ -8,7 +12,9 @@ struct LandingView: View {
 
     @State private var earnedMiles: Int
     @State private var adState: AdState = .available
-    @State private var balloonRise = false
+    @State private var appeared = false
+    @State private var shareImage: UIImage?
+    @State private var showShare = false
 
     private enum AdState { case available, loading, doubled }
 
@@ -17,71 +23,102 @@ struct LandingView: View {
         _earnedMiles = State(initialValue: summary.baseMiles)
     }
 
+    private var theme: RouteTheme { summary.route.colorTheme }
+
     var body: some View {
         ZStack {
             AppBackground()
-            RadialGradient(colors: [summary.route.colorTheme.soft.opacity(0.35), .clear],
-                           center: .top, startRadius: 8, endRadius: 360)
+            RadialGradient(colors: [theme.soft.opacity(0.32), .clear],
+                           center: .top, startRadius: 8, endRadius: 380)
                 .ignoresSafeArea()
 
             ScrollView {
                 VStack(spacing: AppSpacing.lg) {
-                    header
-                    PostcardTile(postcard: summary.postcard, isNew: summary.isNewRoute)
-                    statsGrid
+                    title
+                    heroPostcard
+                    statsStrip
                     if let intention = summary.intention { intentionCard(intention) }
-                    if !appModel.isPro { doubleMilesButton }
                     actions
+                    if !appModel.isPro { doubleReward }
                 }
                 .padding(AppSpacing.screen)
                 .padding(.top, AppSpacing.xl)
+                .padding(.bottom, AppSpacing.xxl)
             }
         }
         .focusScreenChrome()
         .onAppear {
-            withAnimation(.spring(response: 0.7, dampingFraction: 0.6).delay(0.1)) {
-                balloonRise = true
-            }
+            withAnimation(.spring(response: 0.7, dampingFraction: 0.7).delay(0.05)) { appeared = true }
+        }
+        .sheet(isPresented: $showShare) {
+            if let shareImage { ActivityView(items: [shareImage, shareText]) }
         }
     }
 
-    private var header: some View {
-        VStack(spacing: AppSpacing.sm) {
-            BalloonView(height: 150, showBurner: true, showGlow: true,
-                        glow: summary.route.colorTheme.soft)
-                .offset(y: balloonRise ? 0 : 28)
-                .opacity(balloonRise ? 1 : 0)
+    private var title: some View {
+        VStack(spacing: 4) {
             Text("You landed.")
                 .font(AppTypography.hero)
                 .foregroundStyle(AppColors.textPrimary)
-            Text("\(summary.originName) → \(summary.route.destinationName)")
+            Text("\(summary.originName)  →  \(summary.route.destinationName)")
                 .font(AppTypography.subhead)
                 .foregroundStyle(AppColors.textSecondary)
-                .multilineTextAlignment(.center)
-            if summary.isNewBest {
-                AppChip(title: "New personal best", systemImage: "trophy.fill",
-                        isSelected: true, accent: AppColors.gold)
-                    .padding(.top, 2)
-            }
+                .lineLimit(1).minimumScaleFactor(0.7)
         }
         .frame(maxWidth: .infinity)
     }
 
-    private var statsGrid: some View {
-        let columns = [GridItem(.flexible(), spacing: AppSpacing.sm),
-                       GridItem(.flexible(), spacing: AppSpacing.sm)]
-        return LazyVGrid(columns: columns, spacing: AppSpacing.sm) {
-            LandingStat(value: "\(summary.focusedMinutes)", unit: "min",
-                        label: "Focused", systemImage: "hourglass", accent: AppColors.brand)
-            LandingStat(value: Formatters.distance(km: summary.distanceKm), unit: "",
-                        label: "Distance", systemImage: "ruler", accent: summary.route.colorTheme.accent)
-            LandingStat(value: Formatters.miles(earnedMiles), unit: "",
-                        label: adState == .doubled ? "Focus miles ×2" : "Focus miles",
-                        systemImage: "point.topleft.down.to.point.bottomright.curvepath",
-                        accent: AppColors.gold)
-            LandingStat(value: "\(summary.streak)", unit: summary.streak == 1 ? "day" : "days",
-                        label: "Streak", systemImage: "flame.fill", accent: AppColors.danger)
+    private var heroPostcard: some View {
+        DestinationPostcard(title: summary.postcard.title, place: summary.postcard.place,
+                            mood: summary.postcard.mood, theme: theme,
+                            landmark: summary.postcard.landmark ?? .generic)
+            .overlay(alignment: .topLeading) { landedStamp.padding(AppSpacing.md) }
+            .scaleEffect(appeared ? 1 : 0.94)
+            .opacity(appeared ? 1 : 0)
+    }
+
+    private var landedStamp: some View {
+        Text("LANDED")
+            .font(.system(size: 13, weight: .heavy, design: .rounded))
+            .tracking(1.5)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 10).padding(.vertical, 5)
+            .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(.white.opacity(0.85), lineWidth: 2))
+            .rotationEffect(.degrees(-8))
+            .opacity(0.9)
+    }
+
+    private var statsStrip: some View {
+        HStack(spacing: 0) {
+            stat(value: "\(summary.focusedMinutes)", unit: "min", label: "Focused")
+            divider
+            stat(value: Formatters.distance(km: summary.distanceKm), unit: "", label: "Distance")
+            divider
+            stat(value: Formatters.miles(earnedMiles), unit: "", label: adState == .doubled ? "Miles ×2" : "Miles")
+            divider
+            stat(value: "\(summary.streak)", unit: summary.streak == 1 ? "day" : "days", label: "Streak")
         }
+        .padding(.vertical, AppSpacing.md)
+        .frame(maxWidth: .infinity)
+        .glassBackground(cornerRadius: AppSpacing.cardRadius, tintOpacity: 0.18, shadowRadius: 10, shadowY: 5)
+    }
+
+    private func stat(value: String, unit: String, label: String) -> some View {
+        VStack(spacing: 3) {
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                Text(value).font(.system(size: 19, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppColors.textPrimary)
+                if !unit.isEmpty {
+                    Text(unit).font(AppTypography.micro).foregroundStyle(AppColors.textSecondary)
+                }
+            }
+            Text(label).font(AppTypography.micro).foregroundStyle(AppColors.textTertiary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var divider: some View {
+        Rectangle().fill(AppColors.hairline).frame(width: 1, height: 28)
     }
 
     private func intentionCard(_ intention: String) -> some View {
@@ -89,44 +126,14 @@ struct LandingView: View {
             HStack(spacing: AppSpacing.sm) {
                 Image(systemName: "target")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(summary.route.colorTheme.accent)
+                    .foregroundStyle(theme.accent)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("You focused on")
-                        .font(AppTypography.micro)
-                        .foregroundStyle(AppColors.textTertiary)
-                    Text(intention)
-                        .font(AppTypography.callout)
-                        .foregroundStyle(AppColors.textPrimary)
+                    Text("You focused on").font(AppTypography.micro).foregroundStyle(AppColors.textTertiary)
+                    Text(intention).font(AppTypography.callout).foregroundStyle(AppColors.textPrimary)
                 }
                 Spacer()
             }
         }
-    }
-
-    private var doubleMilesButton: some View {
-        Button {
-            Task { await watchAdToDouble() }
-        } label: {
-            HStack(spacing: AppSpacing.xs) {
-                if adState == .loading {
-                    ProgressView().tint(AppColors.textPrimary)
-                    Text("Playing ad…")
-                } else if adState == .doubled {
-                    Image(systemName: "checkmark.circle.fill")
-                    Text("Miles doubled")
-                } else {
-                    Image(systemName: "play.rectangle.fill")
-                    Text("Watch a short ad to double your miles")
-                }
-            }
-            .font(AppTypography.callout)
-            .foregroundStyle(adState == .doubled ? AppColors.success : AppColors.textPrimary)
-            .frame(maxWidth: .infinity)
-            .frame(height: 50)
-            .glassBackground(cornerRadius: 18, tintOpacity: 0.25, shadowRadius: 8, shadowY: 4)
-        }
-        .buttonStyle(SoftPressStyle())
-        .disabled(adState != .available)
     }
 
     private var actions: some View {
@@ -137,13 +144,56 @@ struct LandingView: View {
                 router.finishToHome()
             }
             HStack(spacing: AppSpacing.sm) {
-                AppSecondaryButton(title: "Another", systemImage: "paperplane") {
-                    router.startAnotherJourney()
+                AppSecondaryButton(title: "Share Postcard", systemImage: "square.and.arrow.up") {
+                    sharePostcard()
                 }
                 AppSecondaryButton(title: "Passport", systemImage: "globe.europe.africa") {
                     router.finishToPassport()
                 }
             }
+        }
+    }
+
+    // The ad action, demoted to a quiet secondary option.
+    private var doubleReward: some View {
+        Button {
+            Task { await watchAdToDouble() }
+        } label: {
+            HStack(spacing: 6) {
+                if adState == .loading {
+                    ProgressView().controlSize(.small).tint(AppColors.textSecondary)
+                    Text("Playing…")
+                } else if adState == .doubled {
+                    Image(systemName: "checkmark.circle.fill")
+                    Text("Miles doubled")
+                } else {
+                    Image(systemName: "play.circle")
+                    Text("Watch a short ad to double miles")
+                }
+            }
+            .font(AppTypography.caption)
+            .foregroundStyle(adState == .doubled ? AppColors.success : AppColors.textTertiary)
+        }
+        .buttonStyle(SoftPressStyle())
+        .disabled(adState != .available)
+        .padding(.top, 2)
+    }
+
+    private var shareText: String {
+        "I just drifted to \(summary.route.destinationName) on FocusGlobe — \(summary.focusedMinutes) min focused."
+    }
+
+    @MainActor private func sharePostcard() {
+        appModel.haptics.tap()
+        let card = DestinationPostcard(title: summary.postcard.title, place: summary.postcard.place,
+                                       mood: summary.postcard.mood, theme: theme,
+                                       landmark: summary.postcard.landmark ?? .generic)
+            .frame(width: 360, height: 172)
+        let renderer = ImageRenderer(content: card)
+        renderer.scale = UIScreen.main.scale
+        if let image = renderer.uiImage {
+            shareImage = image
+            showShare = true
         }
     }
 
@@ -163,34 +213,11 @@ struct LandingView: View {
     }
 }
 
-private struct LandingStat: View {
-    let value: String
-    let unit: String
-    let label: String
-    let systemImage: String
-    var accent: Color
-
-    var body: some View {
-        AppGlassCard(padding: AppSpacing.md) {
-            VStack(alignment: .leading, spacing: 6) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(accent)
-                HStack(alignment: .firstTextBaseline, spacing: 3) {
-                    Text(value)
-                        .font(AppTypography.title2)
-                        .foregroundStyle(AppColors.textPrimary)
-                    if !unit.isEmpty {
-                        Text(unit)
-                            .font(AppTypography.caption)
-                            .foregroundStyle(AppColors.textSecondary)
-                    }
-                }
-                Text(label)
-                    .font(AppTypography.caption)
-                    .foregroundStyle(AppColors.textSecondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
+/// A thin UIKit share-sheet wrapper.
+private struct ActivityView: UIViewControllerRepresentable {
+    let items: [Any]
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
     }
+    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }

@@ -19,7 +19,7 @@ struct Postcard: Identifiable, Codable, Hashable {
         self.place = route.destinationName
         self.mood = route.mood
         self.theme = route.colorTheme
-        self.landmark = DestinationCatalog.destination(id: route.id)?.landmark ?? .generic
+        self.landmark = route.landmark
         self.unlockedDate = unlockedDate
     }
 }

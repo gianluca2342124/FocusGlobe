@@ -38,15 +38,16 @@ enum JourneyPlanner {
 
     static func category(forKm km: Double) -> RouteCategory {
         switch km {
-        case ..<250:   return .short
+        case ..<80:    return .short    // nearby, free, 30–35 min
         case ..<800:   return .deep
         case ..<2500:  return .long
         default:       return .ultra
         }
     }
 
-    /// Long & Ultra journeys (> 800 km) are premium; nearby journeys are free.
-    static func isPremium(forKm km: Double) -> Bool { km >= 800 }
+    /// Only the nearby short band (≤ 80 km / ≤ 35 min) is free; everything
+    /// longer is premium.
+    static func isPremium(forKm km: Double) -> Bool { km > 80 }
 
     /// Ambient audio for a mood (kept here so destinations stay declarative).
     static func sound(for mood: RouteMood) -> String {
@@ -80,17 +81,23 @@ enum JourneyPlanner {
             isPremium: isPremium(forKm: km),
             colorTheme: dest.theme,
             ambientSoundName: sound(for: dest.mood),
-            displayCode: dest.code
+            displayCode: dest.code,
+            landmark: dest.landmark
         )
     }
 
-    /// All destinations reachable from `origin`, nearest first, excluding
-    /// same-city (< 10 km) results.
+    /// All journeys from `origin`, nearest first:
+    ///  • the generated nearby set (free, 30–35 min), then
+    ///  • famous catalog cities ≥ 80 km away (premium Deep/Long/Ultra).
+    /// Catalog cities closer than 80 km are dropped so the curated nearby set
+    /// owns the free short band.
     static func plan(from origin: JourneyOrigin) -> [PlannedJourney] {
-        DestinationCatalog.all
+        let nearby = NearbyGenerator.nearby(for: origin)
             .map { PlannedJourney(destination: $0, route: route(from: origin, to: $0)) }
-            .filter { $0.distanceKm >= 10 }
-            .sorted { $0.distanceKm < $1.distanceKm }
+        let famous = DestinationCatalog.all
+            .map { PlannedJourney(destination: $0, route: route(from: origin, to: $0)) }
+            .filter { $0.distanceKm >= 80 }
+        return (nearby + famous).sorted { $0.distanceKm < $1.distanceKm }
     }
 
     /// Destinations filtered to a single category (chip). If none match, the

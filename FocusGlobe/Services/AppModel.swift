@@ -56,19 +56,57 @@ final class AppModel: ObservableObject {
         locationState = location.state
         location.$state
             .receive(on: RunLoop.main)
-            .sink { [weak self] in self?.locationState = $0 }
+            .sink { [weak self] state in
+                guard let self else { return }
+                self.locationState = state
+                // In production, a real fix replaces any manual fallback origin
+                // so the previous/manual city is never reused once we know where
+                // the user actually is. (DEBUG keeps the manual override.)
+                #if !DEBUG
+                if case .resolved = state, self.settings.startingCity != nil {
+                    self.settings.startingCity = nil
+                }
+                #endif
+            }
             .store(in: &cancellables)
     }
 
     // MARK: - Location & origin
 
-    /// The effective starting point: a manually chosen city if set, otherwise
-    /// the real resolved location. `nil` when neither is available yet — the UI
-    /// then asks the user to choose a starting city (it never fakes one).
+    /// The effective starting point. **Real location always wins** when
+    /// available; a manually chosen city is only a fallback used while real
+    /// location is unavailable. `nil` when neither exists yet — the UI then asks
+    /// the user to choose a starting city (it never fakes one). The previously
+    /// completed destination is never reused as an origin.
+    ///
+    /// In DEBUG the manual city takes precedence so the Simulator (which always
+    /// reports San Francisco) can be overridden for testing.
     var currentOrigin: JourneyOrigin? {
+        #if DEBUG
         if let manual = settings.startingCity { return manual }
         if case .resolved(let resolved) = locationState { return resolved }
         return nil
+        #else
+        if case .resolved(let resolved) = locationState { return resolved }
+        return settings.startingCity
+        #endif
+    }
+
+    /// Whether the manual starting-city picker should be offered. In production
+    /// it appears only when real location isn't available; in DEBUG it's always
+    /// available as a Simulator override.
+    var allowsManualOrigin: Bool {
+        #if DEBUG
+        return true
+        #else
+        if case .resolved = locationState { return false }
+        return true
+        #endif
+    }
+
+    var hasRealLocation: Bool {
+        if case .resolved = locationState { return true }
+        return false
     }
 
     /// A non-optional origin for journey math. Falls back to the default only

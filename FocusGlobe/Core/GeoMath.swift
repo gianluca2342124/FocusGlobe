@@ -76,6 +76,21 @@ enum GeoMath {
         return angularDistance(lat1: lat1, lon1: lon1, lat2: lat2, lon2: lon2) * earthRadiusKm
     }
 
+    /// The point a given distance & bearing away from `start` (forward geodesic).
+    /// Used to scatter nearby destinations around the user's origin.
+    static func destinationPoint(from start: GeoCoordinate,
+                                 distanceKm: Double,
+                                 bearingDegrees: Double) -> GeoCoordinate {
+        let angular = distanceKm / earthRadiusKm
+        let bearing = bearingDegrees.toRadians
+        let lat1 = start.latitude.toRadians
+        let lon1 = start.longitude.toRadians
+        let lat2 = asin(sin(lat1) * cos(angular) + cos(lat1) * sin(angular) * cos(bearing))
+        let lon2 = lon1 + atan2(sin(bearing) * sin(angular) * cos(lat1),
+                                cos(angular) - sin(lat1) * sin(lat2))
+        return GeoCoordinate(latitude: lat2.toDegrees, longitude: lon2.toDegrees)
+    }
+
     // MARK: - Bearing
 
     /// Initial bearing (degrees, 0 = north, clockwise) from `start` to `end`.

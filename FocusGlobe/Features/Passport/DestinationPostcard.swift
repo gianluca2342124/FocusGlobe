@@ -1,9 +1,44 @@
 import SwiftUI
 
-/// A premium, abstract "destination memory" rendered entirely in SwiftUI — no
-/// external images, no cartoons. Soft mood gradient, atmospheric light, a subtle
-/// landmark silhouette, faint map contour lines, and stars/aurora where the mood
-/// calls for it. Used full-size on Landing and compact in the Passport.
+/// The reusable **signature scene** for a destination: a premium, abstract
+/// "destination memory" rendered entirely in SwiftUI (no images, no cartoons).
+/// Soft mood gradient, atmospheric light, a landmark silhouette, faint map
+/// contour lines, and stars/aurora where the mood calls for it. Shared by the
+/// boarding pass backdrop and the landing/passport postcard.
+struct DestinationScene: View {
+    let mood: RouteMood
+    let theme: RouteTheme
+    var landmark: Landmark = .generic
+    var compact: Bool = false
+
+    private var fg: Color { mood.preferredForeground }
+
+    var body: some View {
+        ZStack {
+            mood.gradient
+
+            RadialGradient(colors: [theme.soft.opacity(0.55), .clear],
+                           center: .init(x: 0.7, y: 0.92), startRadius: 2, endRadius: compact ? 150 : 300)
+
+            if mood == .night || mood == .aurora || mood == .sunset {
+                StarSpecks(count: compact ? 10 : 24).opacity(0.8)
+            }
+            if mood == .aurora {
+                AuroraRibbons(color: theme.soft)
+            }
+
+            ContourLines(color: fg.opacity(0.10))
+
+            LandmarkSilhouette(landmark: landmark)
+                .fill(LinearGradient(colors: [Color.black.opacity(0.42), Color.black.opacity(0.16)],
+                                     startPoint: .bottom, endPoint: .top))
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        }
+    }
+}
+
+/// A premium destination postcard (signature scene + stamp + titles). Used
+/// full-size on Landing and compact in the Passport.
 struct DestinationPostcard: View {
     let title: String
     let place: String
@@ -18,25 +53,7 @@ struct DestinationPostcard: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            mood.gradient
-
-            // Atmospheric horizon glow.
-            RadialGradient(colors: [theme.soft.opacity(0.55), .clear],
-                           center: .init(x: 0.7, y: 0.92), startRadius: 2, endRadius: compact ? 150 : 280)
-
-            if mood == .night || mood == .aurora || mood == .sunset {
-                StarSpecks(count: compact ? 10 : 22).opacity(0.8)
-            }
-            if mood == .aurora {
-                AuroraRibbons(color: theme.soft)
-            }
-
-            ContourLines(color: fg.opacity(0.10))
-
-            LandmarkSilhouette(landmark: landmark)
-                .fill(LinearGradient(colors: [Color.black.opacity(0.42), Color.black.opacity(0.16)],
-                                     startPoint: .bottom, endPoint: .top))
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+            DestinationScene(mood: mood, theme: theme, landmark: landmark, compact: compact)
 
             // Stamp ring.
             Circle()

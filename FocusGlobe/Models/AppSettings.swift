@@ -10,7 +10,8 @@ struct AppSettings: Codable, Equatable {
     var hapticsEnabled: Bool = true
     var pureModeDefault: Bool = false
     /// Default map presentation for journeys (overridable live in-session).
-    var mapStyle: MapDisplayStyle = .night
+    /// Standard 2D by default — satellite is opt-in.
+    var mapStyle: MapDisplayStyle = .standard
 
     /// A manually chosen starting city. When set, it overrides real location
     /// (used by the "Choose starting city" picker and the DEBUG override).

@@ -91,18 +91,24 @@ struct GoogleJourneyMapView: UIViewRepresentable {
             guard lastStyle != displayStyle else { return }
             lastStyle = displayStyle
             switch displayStyle {
-            case .night:
-                map.mapType = .normal
-                map.mapStyle = try? GMSMapStyle(jsonString: MapStyles.dark)
             case .standard:
                 map.mapType = .normal
                 map.mapStyle = try? GMSMapStyle(jsonString: MapStyles.light)
+            case .terrain:
+                map.mapType = .terrain
+                map.mapStyle = nil
             case .satellite:
                 map.mapType = .satellite
                 map.mapStyle = nil
             case .hybrid:
                 map.mapType = .hybrid
                 map.mapStyle = nil
+            case .night:
+                map.mapType = .normal
+                map.mapStyle = try? GMSMapStyle(jsonString: MapStyles.dark)
+            case .monochrome:
+                map.mapType = .normal
+                map.mapStyle = try? GMSMapStyle(jsonString: MapStyles.monochrome)
             }
         }
 
@@ -162,7 +168,7 @@ struct GoogleJourneyMapView: UIViewRepresentable {
 
             // Vehicle (the balloon) — large, premium presence (the protagonist).
             let vehicle = GMSMarker(position: CLLocationCoordinate2D(latitude: data.vehicle.latitude, longitude: data.vehicle.longitude))
-            vehicle.icon = VehicleMarkerRenderer.balloonImage(targetHeight: 84, glow: data.theme.soft)
+            vehicle.icon = VehicleMarkerRenderer.balloonImage(targetHeight: 72, glow: data.theme.soft)
             vehicle.groundAnchor = CGPoint(x: 0.5, y: 0.86) // basket sits near the point; envelope above
             vehicle.isTappable = false
             vehicle.zIndex = 6
