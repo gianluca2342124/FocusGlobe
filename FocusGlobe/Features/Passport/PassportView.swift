@@ -77,22 +77,22 @@ struct PassportView: View {
     }
 
     @ViewBuilder private var routesSection: some View {
-        if let hub = appModel.currentHub {
-            let destinations = hub.allDestinations
+        let journeys = appModel.currentOrigin == nil ? [] : JourneyPlanner.plan(from: appModel.originForJourney)
+        if !journeys.isEmpty {
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
                 HStack {
-                    SectionLabel(text: "Destinations near \(hub.cityName)")
+                    SectionLabel(text: "Destinations near \(appModel.originForJourney.city)")
                     Spacer()
-                    Text("\(destinations.filter { progress.completedRouteIDs.contains($0.id) }.count)/\(destinations.count)")
+                    Text("\(journeys.filter { progress.completedRouteIDs.contains($0.id) }.count)/\(journeys.count)")
                         .font(AppTypography.caption)
                         .foregroundStyle(AppColors.textTertiary)
                 }
                 LazyVGrid(columns: stampColumns, spacing: AppSpacing.sm) {
-                    ForEach(destinations) { dest in
+                    ForEach(journeys) { journey in
                         DestinationStampTile(
-                            destination: dest,
-                            completed: progress.completedRouteIDs.contains(dest.id),
-                            locked: !appModel.isUnlocked(JourneyPlanner.route(from: appModel.originForJourney, to: dest)))
+                            journey: journey,
+                            completed: progress.completedRouteIDs.contains(journey.id),
+                            locked: !appModel.isUnlocked(journey.route))
                     }
                 }
             }
@@ -116,22 +116,22 @@ struct PassportView: View {
 }
 
 private struct DestinationStampTile: View {
-    let destination: JourneyDestination
+    let journey: PlannedJourney
     let completed: Bool
     let locked: Bool
 
     var body: some View {
         if completed {
             ZStack {
-                DestinationScene(mood: destination.mood, theme: destination.theme,
-                                 landmark: destination.landmark, compact: true)
+                DestinationScene(mood: journey.mood, theme: journey.theme,
+                                 landmark: journey.landmark, compact: true)
                 VStack(spacing: 4) {
                     Image(systemName: "checkmark.seal.fill")
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(destination.mood.preferredForeground)
-                    Text(destination.name)
+                        .foregroundStyle(journey.mood.preferredForeground)
+                    Text(journey.name)
                         .font(AppTypography.caption)
-                        .foregroundStyle(destination.mood.preferredForeground)
+                        .foregroundStyle(journey.mood.preferredForeground)
                         .lineLimit(1)
                 }
                 .padding(4)
@@ -143,14 +143,14 @@ private struct DestinationStampTile: View {
             .shadow(color: AppColors.shadow, radius: 8, y: 4)
         } else {
             VStack(spacing: 6) {
-                Image(systemName: locked ? "lock.fill" : destination.mood.systemImage)
+                Image(systemName: locked ? "lock.fill" : journey.mood.systemImage)
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(AppColors.textTertiary)
-                Text(destination.name)
+                Text(journey.name)
                     .font(AppTypography.caption)
                     .foregroundStyle(AppColors.textTertiary)
                     .lineLimit(1)
-                Text(destination.displayCode)
+                Text(journey.code)
                     .font(AppTypography.micro)
                     .foregroundStyle(AppColors.textTertiary.opacity(0.7))
             }

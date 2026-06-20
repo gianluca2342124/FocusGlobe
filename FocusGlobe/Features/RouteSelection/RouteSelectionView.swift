@@ -1,10 +1,10 @@
 import SwiftUI
 
 /// Destination selection, FocusFlight-style: a full-screen real Google map shows
-/// the journey from the user's current location to the selected real destination
-/// (origin halo + route + amber destination tag, no balloon yet). Floating
-/// category chips on top; a horizontal destination strip + white CTA at the
-/// bottom. If no supported hub is near, a clean "preparing journeys" state shows.
+/// the journey from the current origin to the selected real destination (origin
+/// halo + route + amber destination tag, no balloon yet). Floating category
+/// chips on top; a horizontal destination strip + white CTA at the bottom. All
+/// destinations are real cities generated from the origin coordinate.
 struct RouteSelectionView: View {
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
@@ -14,11 +14,7 @@ struct RouteSelectionView: View {
     @State private var showCityPicker = false
 
     private var origin: JourneyOrigin { appModel.originForJourney }
-    private var hub: OriginHub? { appModel.currentHub }
-    private var journeys: [PlannedJourney] {
-        guard let hub else { return [] }
-        return viewModel.journeys(hub: hub, origin: origin)
-    }
+    private var journeys: [PlannedJourney] { viewModel.journeys(from: origin) }
     private var current: PlannedJourney? {
         journeys.first { $0.id == selectedID } ?? journeys.first
     }
@@ -30,14 +26,14 @@ struct RouteSelectionView: View {
 
             VStack(spacing: AppSpacing.sm) {
                 topBar
-                if hub != nil { categoryChips }
+                categoryChips
                 Spacer()
-                if hub == nil {
-                    preparingState
-                } else if let current {
+                if let current {
                     bottomCluster(current)
-                } else {
+                } else if viewModel.selectedCategory != nil {
                     emptyState
+                } else {
+                    preparingState
                 }
             }
             .padding(.top, AppSpacing.xs)
@@ -46,7 +42,7 @@ struct RouteSelectionView: View {
         .focusScreenChrome()
         .sheet(isPresented: $showCityPicker) { LocationPickerView() }
         .onChange(of: viewModel.selectedCategory) { _, _ in
-            if let first = journeys.first { selectedID = first.id }
+            selectedID = journeys.first?.id
         }
     }
 
@@ -115,9 +111,9 @@ struct RouteSelectionView: View {
     private func bottomCluster(_ journey: PlannedJourney) -> some View {
         VStack(spacing: AppSpacing.md) {
             VStack(spacing: 3) {
-                Text(journey.destination.name)
+                Text(journey.name)
                     .font(AppTypography.title2).foregroundStyle(.white)
-                Text(journey.destination.subtitle)
+                Text(journey.subtitle)
                     .font(AppTypography.caption).foregroundStyle(.white.opacity(0.78))
                     .lineLimit(1)
                 HStack(spacing: 8) {
@@ -125,7 +121,7 @@ struct RouteSelectionView: View {
                     Text("·")
                     Label(Formatters.distance(km: journey.distanceKm), systemImage: "ruler")
                     Text("·")
-                    Label(journey.destination.mood.displayName, systemImage: journey.destination.mood.systemImage)
+                    Label(journey.mood.displayName, systemImage: journey.mood.systemImage)
                 }
                 .font(AppTypography.caption)
                 .foregroundStyle(.white.opacity(0.85))
@@ -163,7 +159,7 @@ struct RouteSelectionView: View {
             Text("Journeys are being prepared for your area")
                 .font(AppTypography.headline).foregroundStyle(.white)
                 .multilineTextAlignment(.center)
-            Text("We add new launch cities often. In the meantime, choose a starting city.")
+            Text("Choose a starting city to begin exploring.")
                 .font(AppTypography.caption).foregroundStyle(.white.opacity(0.8))
                 .multilineTextAlignment(.center)
             AppPrimaryButton(title: "Choose starting city", systemImage: "mappin.and.ellipse") {
@@ -220,7 +216,7 @@ private struct DestinationCard: View {
                 HStack(spacing: 5) {
                     HStack(spacing: 3) {
                         Image(systemName: "location.fill").font(.system(size: 8, weight: .bold))
-                        Text(journey.destination.displayCode)
+                        Text(journey.code)
                             .font(.system(size: 13, weight: .heavy, design: .rounded))
                     }
                     .foregroundStyle(isSelected ? Color(hex: 0x14181F) : .white)
@@ -236,7 +232,7 @@ private struct DestinationCard: View {
                 }
 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(journey.destination.name)
+                    Text(journey.name)
                         .font(AppTypography.callout)
                         .foregroundStyle(isSelected ? Color(hex: 0x14181F) : .white)
                         .lineLimit(1)

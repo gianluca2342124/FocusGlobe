@@ -117,14 +117,6 @@ final class AppModel: ObservableObject {
         return false
     }
 
-    /// The supported hub nearest the current origin (within range). `nil` → no
-    /// supported journeys near the user, so the UI shows a clean "preparing
-    /// journeys for your area" state instead of fabricated places.
-    var currentHub: OriginHub? {
-        guard let origin = currentOrigin else { return nil }
-        return HubCatalog.nearestHub(to: origin.coordinate)
-    }
-
     /// A non-optional origin for journey math. Falls back to the default only
     /// as a last resort; the UI prevents starting a journey without an origin.
     var originForJourney: JourneyOrigin { currentOrigin ?? .default }
@@ -172,10 +164,10 @@ final class AppModel: ObservableObject {
         settings.virtualOrigin = origin
     }
 
-    /// A calm default recommendation for the current origin's hub.
+    /// A calm default recommendation for the current origin.
     func recommendedJourney() -> PlannedJourney? {
-        guard let hub = currentHub else { return nil }
-        return JourneyPlanner.recommended(hub: hub, origin: originForJourney)
+        guard currentOrigin != nil else { return nil }
+        return JourneyPlanner.recommended(from: originForJourney)
     }
 
     // MARK: - Access helpers

@@ -1,32 +1,107 @@
 [
   { "country": "Spain", "countryCode": "ES", "cities": [
-    { "name": "Barcelona", "code": "BCN", "latitude": 41.3851, "longitude": 2.1734 },
-    { "name": "Madrid", "code": "MAD", "latitude": 40.4168, "longitude": -3.7038 },
-    { "name": "Valencia", "code": "VLC", "latitude": 39.4699, "longitude": -0.3763 },
-    { "name": "Seville", "code": "SVQ", "latitude": 37.3891, "longitude": -5.9845 },
-    { "name": "Bilbao", "code": "BIO", "latitude": 43.2630, "longitude": -2.9350 },
-    { "name": "Málaga", "code": "AGP", "latitude": 36.7213, "longitude": -4.4214 },
-    { "name": "Palma", "code": "PMI", "latitude": 39.5696, "longitude": 2.6502 },
-    { "name": "Granada", "code": "GRX", "latitude": 37.1773, "longitude": -3.5986 }
+    { "name": "Barcelona", "code": "BCN", "latitude": 41.3851, "longitude": 2.1734, "region": "Catalonia", "population": 1620000 },
+    { "name": "Sitges", "code": "SIT", "latitude": 41.2371, "longitude": 1.8055, "region": "Catalonia" },
+    { "name": "Castelldefels", "code": "CST", "latitude": 41.2800, "longitude": 1.9760, "region": "Catalonia" },
+    { "name": "Gavà", "code": "GAV", "latitude": 41.3060, "longitude": 2.0010, "region": "Catalonia" },
+    { "name": "Sant Boi de Llobregat", "code": "SBL", "latitude": 41.3430, "longitude": 2.0380, "region": "Catalonia" },
+    { "name": "Cornellà de Llobregat", "code": "CRN", "latitude": 41.3550, "longitude": 2.0700, "region": "Catalonia" },
+    { "name": "L'Hospitalet de Llobregat", "code": "HOS", "latitude": 41.3596, "longitude": 2.0999, "region": "Catalonia" },
+    { "name": "Badalona", "code": "BDN", "latitude": 41.4500, "longitude": 2.2470, "region": "Catalonia" },
+    { "name": "Santa Coloma de Gramenet", "code": "SCG", "latitude": 41.4517, "longitude": 2.2080, "region": "Catalonia" },
+    { "name": "Mataró", "code": "MAT", "latitude": 41.5388, "longitude": 2.4449, "region": "Catalonia" },
+    { "name": "Vilanova i la Geltrú", "code": "VNG", "latitude": 41.2241, "longitude": 1.7252, "region": "Catalonia" },
+    { "name": "Cubelles", "code": "CUB", "latitude": 41.2078, "longitude": 1.6736, "region": "Catalonia" },
+    { "name": "Cunit", "code": "CUN", "latitude": 41.1979, "longitude": 1.6356, "region": "Catalonia" },
+    { "name": "Calafell", "code": "CLF", "latitude": 41.1990, "longitude": 1.5680, "region": "Catalonia" },
+    { "name": "El Vendrell", "code": "VEN", "latitude": 41.2200, "longitude": 1.5340, "region": "Catalonia" },
+    { "name": "Sant Pere de Ribes", "code": "SPR", "latitude": 41.2600, "longitude": 1.7720, "region": "Catalonia" },
+    { "name": "Vilafranca del Penedès", "code": "VFR", "latitude": 41.3460, "longitude": 1.6990, "region": "Catalonia" },
+    { "name": "Sant Sadurní d'Anoia", "code": "SSA", "latitude": 41.4270, "longitude": 1.7860, "region": "Catalonia" },
+    { "name": "Martorell", "code": "MTR", "latitude": 41.4740, "longitude": 1.9300, "region": "Catalonia" },
+    { "name": "Sant Cugat del Vallès", "code": "SCU", "latitude": 41.4727, "longitude": 2.0863, "region": "Catalonia" },
+    { "name": "Rubí", "code": "RUB", "latitude": 41.4930, "longitude": 2.0330, "region": "Catalonia" },
+    { "name": "Terrassa", "code": "TRS", "latitude": 41.5640, "longitude": 2.0111, "region": "Catalonia" },
+    { "name": "Sabadell", "code": "SBD", "latitude": 41.5483, "longitude": 2.1075, "region": "Catalonia" },
+    { "name": "Granollers", "code": "GRN", "latitude": 41.6083, "longitude": 2.2876, "region": "Catalonia" },
+    { "name": "Mollet del Vallès", "code": "MOL", "latitude": 41.5400, "longitude": 2.2130, "region": "Catalonia" },
+    { "name": "Montserrat", "code": "MON", "latitude": 41.5930, "longitude": 1.8376, "region": "Catalonia" },
+    { "name": "Manresa", "code": "MAN", "latitude": 41.7230, "longitude": 1.8230, "region": "Catalonia" },
+    { "name": "Igualada", "code": "IGU", "latitude": 41.5790, "longitude": 1.6170, "region": "Catalonia" },
+    { "name": "Vic", "code": "VIC", "latitude": 41.9300, "longitude": 2.2540, "region": "Catalonia" },
+    { "name": "Blanes", "code": "BLA", "latitude": 41.6740, "longitude": 2.7920, "region": "Catalonia" },
+    { "name": "Lloret de Mar", "code": "LLO", "latitude": 41.7000, "longitude": 2.8450, "region": "Catalonia" },
+    { "name": "Tossa de Mar", "code": "TOS", "latitude": 41.7200, "longitude": 2.9310, "region": "Catalonia" },
+    { "name": "Calella", "code": "CAL", "latitude": 41.6147, "longitude": 2.6555, "region": "Catalonia" },
+    { "name": "Girona", "code": "GIR", "latitude": 41.9794, "longitude": 2.8214, "region": "Catalonia" },
+    { "name": "Figueres", "code": "FIG", "latitude": 42.2670, "longitude": 2.9610, "region": "Catalonia" },
+    { "name": "Tarragona", "code": "TAR", "latitude": 41.1189, "longitude": 1.2445, "region": "Catalonia" },
+    { "name": "Reus", "code": "REU", "latitude": 41.1550, "longitude": 1.1070, "region": "Catalonia" },
+    { "name": "Cambrils", "code": "CMB", "latitude": 41.0670, "longitude": 1.0600, "region": "Catalonia" },
+    { "name": "Salou", "code": "SAL", "latitude": 41.0760, "longitude": 1.1410, "region": "Catalonia" },
+    { "name": "Madrid", "code": "MAD", "latitude": 40.4168, "longitude": -3.7038, "region": "Madrid", "population": 3300000 },
+    { "name": "Toledo", "code": "TOL", "latitude": 39.8628, "longitude": -4.0273, "region": "Castilla-La Mancha" },
+    { "name": "Segovia", "code": "SEG", "latitude": 40.9429, "longitude": -4.1088, "region": "Castile and León" },
+    { "name": "Ávila", "code": "AVL", "latitude": 40.6566, "longitude": -4.6818, "region": "Castile and León" },
+    { "name": "Alcalá de Henares", "code": "ALC", "latitude": 40.4818, "longitude": -3.3645, "region": "Madrid" },
+    { "name": "Aranjuez", "code": "ARJ", "latitude": 40.0312, "longitude": -3.6028, "region": "Madrid" },
+    { "name": "Valencia", "code": "VLC", "latitude": 39.4699, "longitude": -0.3763, "region": "Valencia" },
+    { "name": "Alicante", "code": "ALI", "latitude": 38.3452, "longitude": -0.4810, "region": "Valencia" },
+    { "name": "Zaragoza", "code": "ZAZ", "latitude": 41.6488, "longitude": -0.8891, "region": "Aragon" },
+    { "name": "Seville", "code": "SVQ", "latitude": 37.3891, "longitude": -5.9845, "region": "Andalusia" },
+    { "name": "Córdoba", "code": "ODB", "latitude": 37.8882, "longitude": -4.7794, "region": "Andalusia" },
+    { "name": "Granada", "code": "GRX", "latitude": 37.1773, "longitude": -3.5986, "region": "Andalusia" },
+    { "name": "Málaga", "code": "AGP", "latitude": 36.7213, "longitude": -4.4214, "region": "Andalusia" },
+    { "name": "Marbella", "code": "MRB", "latitude": 36.5101, "longitude": -4.8826, "region": "Andalusia" },
+    { "name": "Bilbao", "code": "BIO", "latitude": 43.2630, "longitude": -2.9350, "region": "Basque Country" },
+    { "name": "San Sebastián", "code": "EAS", "latitude": 43.3183, "longitude": -1.9812, "region": "Basque Country" },
+    { "name": "Santander", "code": "SDR", "latitude": 43.4623, "longitude": -3.8099, "region": "Cantabria" },
+    { "name": "A Coruña", "code": "LCG", "latitude": 43.3623, "longitude": -8.4115, "region": "Galicia" },
+    { "name": "Vigo", "code": "VGO", "latitude": 42.2406, "longitude": -8.7207, "region": "Galicia" },
+    { "name": "Santiago de Compostela", "code": "SCQ", "latitude": 42.8782, "longitude": -8.5448, "region": "Galicia" },
+    { "name": "Valladolid", "code": "VLL", "latitude": 41.6523, "longitude": -4.7245, "region": "Castile and León" },
+    { "name": "Salamanca", "code": "SLM", "latitude": 40.9701, "longitude": -5.6635, "region": "Castile and León" },
+    { "name": "Palma", "code": "PMI", "latitude": 39.5696, "longitude": 2.6502, "region": "Balearic Islands" },
+    { "name": "Ibiza", "code": "IBZ", "latitude": 38.9067, "longitude": 1.4206, "region": "Balearic Islands" },
+    { "name": "Las Palmas", "code": "LPA", "latitude": 28.1235, "longitude": -15.4363, "region": "Canary Islands" },
+    { "name": "Santa Cruz de Tenerife", "code": "TCI", "latitude": 28.4636, "longitude": -16.2518, "region": "Canary Islands" }
   ]},
   { "country": "France", "countryCode": "FR", "cities": [
     { "name": "Paris", "code": "PAR", "latitude": 48.8566, "longitude": 2.3522 },
+    { "name": "Versailles", "code": "VRS", "latitude": 48.8049, "longitude": 2.1204 },
+    { "name": "Fontainebleau", "code": "FON", "latitude": 48.4020, "longitude": 2.7019 },
+    { "name": "Chantilly", "code": "CTL", "latitude": 49.1939, "longitude": 2.4699 },
+    { "name": "Reims", "code": "RHE", "latitude": 49.2583, "longitude": 4.0317 },
+    { "name": "Rouen", "code": "URO", "latitude": 49.4432, "longitude": 1.0993 },
+    { "name": "Orléans", "code": "ORL", "latitude": 47.9029, "longitude": 1.9093 },
     { "name": "Lyon", "code": "LYS", "latitude": 45.7640, "longitude": 4.8357 },
     { "name": "Marseille", "code": "MRS", "latitude": 43.2965, "longitude": 5.3698 },
+    { "name": "Aix-en-Provence", "code": "AIX", "latitude": 43.5297, "longitude": 5.4474 },
     { "name": "Nice", "code": "NCE", "latitude": 43.7102, "longitude": 7.2620 },
+    { "name": "Cannes", "code": "CAN", "latitude": 43.5528, "longitude": 7.0174 },
     { "name": "Bordeaux", "code": "BOD", "latitude": 44.8378, "longitude": -0.5792 },
     { "name": "Toulouse", "code": "TLS", "latitude": 43.6047, "longitude": 1.4442 },
     { "name": "Strasbourg", "code": "SXB", "latitude": 48.5734, "longitude": 7.7521 },
-    { "name": "Lille", "code": "LIL", "latitude": 50.6292, "longitude": 3.0573 }
+    { "name": "Lille", "code": "LIL", "latitude": 50.6292, "longitude": 3.0573 },
+    { "name": "Nantes", "code": "NTE", "latitude": 47.2184, "longitude": -1.5536 },
+    { "name": "Montpellier", "code": "MPL", "latitude": 43.6108, "longitude": 3.8767 }
   ]},
   { "country": "United Kingdom", "countryCode": "GB", "cities": [
     { "name": "London", "code": "LON", "latitude": 51.5074, "longitude": -0.1278 },
+    { "name": "Oxford", "code": "OXF", "latitude": 51.7520, "longitude": -1.2577 },
+    { "name": "Cambridge", "code": "CMG", "latitude": 52.2053, "longitude": 0.1218 },
+    { "name": "Brighton", "code": "BTN", "latitude": 50.8225, "longitude": -0.1372 },
+    { "name": "Windsor", "code": "WND", "latitude": 51.4791, "longitude": -0.6095 },
+    { "name": "Canterbury", "code": "CTB", "latitude": 51.2802, "longitude": 1.0789 },
+    { "name": "Bath", "code": "BAT", "latitude": 51.3811, "longitude": -2.3590 },
+    { "name": "Bristol", "code": "BRS", "latitude": 51.4545, "longitude": -2.5879 },
     { "name": "Manchester", "code": "MAN", "latitude": 53.4808, "longitude": -2.2426 },
+    { "name": "Liverpool", "code": "LPL", "latitude": 53.4084, "longitude": -2.9916 },
+    { "name": "Birmingham", "code": "BHX", "latitude": 52.4862, "longitude": -1.8904 },
+    { "name": "Leeds", "code": "LBA", "latitude": 53.8008, "longitude": -1.5491 },
+    { "name": "York", "code": "YRK", "latitude": 53.9600, "longitude": -1.0873 },
     { "name": "Edinburgh", "code": "EDI", "latitude": 55.9533, "longitude": -3.1883 },
     { "name": "Glasgow", "code": "GLA", "latitude": 55.8642, "longitude": -4.2518 },
-    { "name": "Birmingham", "code": "BHX", "latitude": 52.4862, "longitude": -1.8904 },
-    { "name": "Bristol", "code": "BRS", "latitude": 51.4545, "longitude": -2.5879 },
-    { "name": "Liverpool", "code": "LPL", "latitude": 53.4084, "longitude": -2.9916 },
     { "name": "Cardiff", "code": "CWL", "latitude": 51.4816, "longitude": -3.1791 }
   ]},
   { "country": "Ireland", "countryCode": "IE", "cities": [
@@ -36,54 +111,86 @@
   ]},
   { "country": "Portugal", "countryCode": "PT", "cities": [
     { "name": "Lisbon", "code": "LIS", "latitude": 38.7223, "longitude": -9.1393 },
+    { "name": "Sintra", "code": "SNT", "latitude": 38.7980, "longitude": -9.3878 },
+    { "name": "Cascais", "code": "CSC", "latitude": 38.6979, "longitude": -9.4215 },
+    { "name": "Setúbal", "code": "STB", "latitude": 38.5244, "longitude": -8.8882 },
+    { "name": "Évora", "code": "EVR", "latitude": 38.5713, "longitude": -7.9135 },
+    { "name": "Óbidos", "code": "OBD", "latitude": 39.3606, "longitude": -9.1572 },
     { "name": "Porto", "code": "OPO", "latitude": 41.1579, "longitude": -8.6291 },
+    { "name": "Coimbra", "code": "CBR", "latitude": 40.2033, "longitude": -8.4103 },
     { "name": "Faro", "code": "FAO", "latitude": 37.0194, "longitude": -7.9304 },
     { "name": "Funchal", "code": "FNC", "latitude": 32.6669, "longitude": -16.9241 }
   ]},
   { "country": "Germany", "countryCode": "DE", "cities": [
     { "name": "Berlin", "code": "BER", "latitude": 52.5200, "longitude": 13.4050 },
-    { "name": "Munich", "code": "MUC", "latitude": 48.1351, "longitude": 11.5820 },
-    { "name": "Hamburg", "code": "HAM", "latitude": 53.5511, "longitude": 9.9937 },
-    { "name": "Frankfurt", "code": "FRA", "latitude": 50.1109, "longitude": 8.6821 },
-    { "name": "Cologne", "code": "CGN", "latitude": 50.9375, "longitude": 6.9603 },
+    { "name": "Potsdam", "code": "POT", "latitude": 52.3906, "longitude": 13.0645 },
+    { "name": "Leipzig", "code": "LEJ", "latitude": 51.3397, "longitude": 12.3731 },
     { "name": "Dresden", "code": "DRS", "latitude": 51.0504, "longitude": 13.7373 },
-    { "name": "Stuttgart", "code": "STR", "latitude": 48.7758, "longitude": 9.1829 }
+    { "name": "Hamburg", "code": "HAM", "latitude": 53.5511, "longitude": 9.9937 },
+    { "name": "Hannover", "code": "HAJ", "latitude": 52.3759, "longitude": 9.7320 },
+    { "name": "Cologne", "code": "CGN", "latitude": 50.9375, "longitude": 6.9603 },
+    { "name": "Düsseldorf", "code": "DUS", "latitude": 51.2277, "longitude": 6.7735 },
+    { "name": "Frankfurt", "code": "FRA", "latitude": 50.1109, "longitude": 8.6821 },
+    { "name": "Stuttgart", "code": "STR", "latitude": 48.7758, "longitude": 9.1829 },
+    { "name": "Munich", "code": "MUC", "latitude": 48.1351, "longitude": 11.5820 },
+    { "name": "Nuremberg", "code": "NUE", "latitude": 49.4521, "longitude": 11.0767 }
   ]},
   { "country": "Netherlands", "countryCode": "NL", "cities": [
     { "name": "Amsterdam", "code": "AMS", "latitude": 52.3676, "longitude": 4.9041 },
-    { "name": "Rotterdam", "code": "RTM", "latitude": 51.9244, "longitude": 4.4777 },
+    { "name": "Haarlem", "code": "HRL", "latitude": 52.3874, "longitude": 4.6462 },
     { "name": "Utrecht", "code": "UTC", "latitude": 52.0907, "longitude": 5.1214 },
-    { "name": "The Hague", "code": "HAG", "latitude": 52.0705, "longitude": 4.3007 }
+    { "name": "Leiden", "code": "LEI", "latitude": 52.1601, "longitude": 4.4970 },
+    { "name": "The Hague", "code": "HAG", "latitude": 52.0705, "longitude": 4.3007 },
+    { "name": "Rotterdam", "code": "RTM", "latitude": 51.9244, "longitude": 4.4777 }
   ]},
   { "country": "Belgium", "countryCode": "BE", "cities": [
     { "name": "Brussels", "code": "BRU", "latitude": 50.8503, "longitude": 4.3517 },
     { "name": "Antwerp", "code": "ANR", "latitude": 51.2194, "longitude": 4.4025 },
+    { "name": "Ghent", "code": "GNE", "latitude": 51.0543, "longitude": 3.7174 },
     { "name": "Bruges", "code": "BRG", "latitude": 51.2093, "longitude": 3.2247 }
   ]},
   { "country": "Switzerland", "countryCode": "CH", "cities": [
     { "name": "Zürich", "code": "ZRH", "latitude": 47.3769, "longitude": 8.5417 },
-    { "name": "Geneva", "code": "GVA", "latitude": 46.2044, "longitude": 6.1432 },
+    { "name": "Lucerne", "code": "LUC", "latitude": 47.0502, "longitude": 8.3093 },
     { "name": "Bern", "code": "BRN", "latitude": 46.9480, "longitude": 7.4474 },
-    { "name": "Lucerne", "code": "QLJ", "latitude": 47.0502, "longitude": 8.3093 }
+    { "name": "Geneva", "code": "GVA", "latitude": 46.2044, "longitude": 6.1432 },
+    { "name": "Lausanne", "code": "QLS", "latitude": 46.5197, "longitude": 6.6323 },
+    { "name": "Zermatt", "code": "ZMT", "latitude": 46.0207, "longitude": 7.7491 }
   ]},
   { "country": "Austria", "countryCode": "AT", "cities": [
     { "name": "Vienna", "code": "VIE", "latitude": 48.2082, "longitude": 16.3738 },
     { "name": "Salzburg", "code": "SZG", "latitude": 47.8095, "longitude": 13.0550 },
+    { "name": "Graz", "code": "GRZ", "latitude": 47.0707, "longitude": 15.4395 },
     { "name": "Innsbruck", "code": "INN", "latitude": 47.2692, "longitude": 11.4041 }
   ]},
   { "country": "Italy", "countryCode": "IT", "cities": [
-    { "name": "Rome", "code": "ROM", "latitude": 41.9028, "longitude": 12.4964 },
-    { "name": "Milan", "code": "MIL", "latitude": 45.4642, "longitude": 9.1900 },
-    { "name": "Venice", "code": "VCE", "latitude": 45.4408, "longitude": 12.3155 },
-    { "name": "Florence", "code": "FLR", "latitude": 43.7696, "longitude": 11.2558 },
-    { "name": "Naples", "code": "NAP", "latitude": 40.8518, "longitude": 14.2681 },
-    { "name": "Turin", "code": "TRN", "latitude": 45.0703, "longitude": 7.6869 },
-    { "name": "Bologna", "code": "BLQ", "latitude": 44.4949, "longitude": 11.3426 }
+    { "name": "Milan", "code": "MIL", "latitude": 45.4642, "longitude": 9.1900, "region": "Lombardy" },
+    { "name": "Monza", "code": "MNZ", "latitude": 45.5845, "longitude": 9.2744, "region": "Lombardy" },
+    { "name": "Como", "code": "COM", "latitude": 45.8081, "longitude": 9.0852, "region": "Lombardy" },
+    { "name": "Lecco", "code": "LEC", "latitude": 45.8566, "longitude": 9.3977, "region": "Lombardy" },
+    { "name": "Bergamo", "code": "BGO", "latitude": 45.6983, "longitude": 9.6773, "region": "Lombardy" },
+    { "name": "Brescia", "code": "BRC", "latitude": 45.5416, "longitude": 10.2118, "region": "Lombardy" },
+    { "name": "Pavia", "code": "PAV", "latitude": 45.1847, "longitude": 9.1582, "region": "Lombardy" },
+    { "name": "Lodi", "code": "LOD", "latitude": 45.3142, "longitude": 9.5034, "region": "Lombardy" },
+    { "name": "Cremona", "code": "CRE", "latitude": 45.1332, "longitude": 10.0226, "region": "Lombardy" },
+    { "name": "Varese", "code": "VAR", "latitude": 45.8206, "longitude": 8.8251, "region": "Lombardy" },
+    { "name": "Novara", "code": "NOV", "latitude": 45.4469, "longitude": 8.6222, "region": "Piedmont" },
+    { "name": "Piacenza", "code": "PIA", "latitude": 45.0526, "longitude": 9.6929, "region": "Emilia-Romagna" },
+    { "name": "Turin", "code": "TRN", "latitude": 45.0703, "longitude": 7.6869, "region": "Piedmont" },
+    { "name": "Genoa", "code": "GOA", "latitude": 44.4056, "longitude": 8.9463, "region": "Liguria" },
+    { "name": "Verona", "code": "VRN", "latitude": 45.4384, "longitude": 10.9916, "region": "Veneto" },
+    { "name": "Venice", "code": "VCE", "latitude": 45.4408, "longitude": 12.3155, "region": "Veneto" },
+    { "name": "Bologna", "code": "BLQ", "latitude": 44.4949, "longitude": 11.3426, "region": "Emilia-Romagna" },
+    { "name": "Florence", "code": "FLR", "latitude": 43.7696, "longitude": 11.2558, "region": "Tuscany" },
+    { "name": "Rome", "code": "ROM", "latitude": 41.9028, "longitude": 12.4964, "region": "Lazio" },
+    { "name": "Naples", "code": "NAP", "latitude": 40.8518, "longitude": 14.2681, "region": "Campania" },
+    { "name": "Amalfi", "code": "AML", "latitude": 40.6340, "longitude": 14.6027, "region": "Campania" }
   ]},
   { "country": "Greece", "countryCode": "GR", "cities": [
     { "name": "Athens", "code": "ATH", "latitude": 37.9838, "longitude": 23.7275 },
     { "name": "Thessaloniki", "code": "SKG", "latitude": 40.6401, "longitude": 22.9444 },
-    { "name": "Santorini", "code": "JTR", "latitude": 36.3932, "longitude": 25.4615 }
+    { "name": "Santorini", "code": "JTR", "latitude": 36.3932, "longitude": 25.4615 },
+    { "name": "Mykonos", "code": "JMK", "latitude": 37.4467, "longitude": 25.3289 }
   ]},
   { "country": "Czechia", "countryCode": "CZ", "cities": [
     { "name": "Prague", "code": "PRG", "latitude": 50.0755, "longitude": 14.4378 },
@@ -104,8 +211,8 @@
   ]},
   { "country": "Norway", "countryCode": "NO", "cities": [
     { "name": "Oslo", "code": "OSL", "latitude": 59.9139, "longitude": 10.7522 },
-    { "name": "Bergen", "code": "BGO", "latitude": 60.3913, "longitude": 5.3221 },
-    { "name": "Tromsø", "code": "TOS", "latitude": 69.6492, "longitude": 18.9553 }
+    { "name": "Bergen", "code": "BGN", "latitude": 60.3913, "longitude": 5.3221 },
+    { "name": "Tromsø", "code": "TOM", "latitude": 69.6492, "longitude": 18.9553 }
   ]},
   { "country": "Denmark", "countryCode": "DK", "cities": [
     { "name": "Copenhagen", "code": "CPH", "latitude": 55.6761, "longitude": 12.5683 },
@@ -117,31 +224,52 @@
   { "country": "Türkiye", "countryCode": "TR", "cities": [
     { "name": "Istanbul", "code": "IST", "latitude": 41.0082, "longitude": 28.9784 },
     { "name": "Ankara", "code": "ESB", "latitude": 39.9334, "longitude": 32.8597 },
-    { "name": "Antalya", "code": "AYT", "latitude": 36.8969, "longitude": 30.7133 },
-    { "name": "Izmir", "code": "ADB", "latitude": 38.4237, "longitude": 27.1428 }
+    { "name": "Izmir", "code": "ADB", "latitude": 38.4237, "longitude": 27.1428 },
+    { "name": "Antalya", "code": "AYT", "latitude": 36.8969, "longitude": 30.7133 }
   ]},
   { "country": "United States", "countryCode": "US", "cities": [
     { "name": "New York", "code": "NYC", "latitude": 40.7128, "longitude": -74.0060 },
-    { "name": "Los Angeles", "code": "LAX", "latitude": 34.0522, "longitude": -118.2437 },
-    { "name": "San Francisco", "code": "SFO", "latitude": 37.7749, "longitude": -122.4194 },
-    { "name": "Chicago", "code": "CHI", "latitude": 41.8781, "longitude": -87.6298 },
-    { "name": "Miami", "code": "MIA", "latitude": 25.7617, "longitude": -80.1918 },
-    { "name": "Seattle", "code": "SEA", "latitude": 47.6062, "longitude": -122.3321 },
+    { "name": "Jersey City", "code": "JEC", "latitude": 40.7178, "longitude": -74.0431 },
+    { "name": "Newark", "code": "EWR", "latitude": 40.7357, "longitude": -74.1724 },
+    { "name": "White Plains", "code": "WHP", "latitude": 41.0340, "longitude": -73.7629 },
+    { "name": "New Haven", "code": "HVN", "latitude": 41.3083, "longitude": -72.9279 },
+    { "name": "Princeton", "code": "PCT", "latitude": 40.3573, "longitude": -74.6672 },
+    { "name": "Philadelphia", "code": "PHL", "latitude": 39.9526, "longitude": -75.1652 },
     { "name": "Boston", "code": "BOS", "latitude": 42.3601, "longitude": -71.0589 },
+    { "name": "Washington", "code": "WAS", "latitude": 38.9072, "longitude": -77.0369 },
+    { "name": "Los Angeles", "code": "LAX", "latitude": 34.0522, "longitude": -118.2437 },
+    { "name": "Santa Monica", "code": "SMO", "latitude": 34.0195, "longitude": -118.4912 },
+    { "name": "Pasadena", "code": "PAS", "latitude": 34.1478, "longitude": -118.1445 },
+    { "name": "Long Beach", "code": "LGB", "latitude": 33.7701, "longitude": -118.1937 },
+    { "name": "San Diego", "code": "SAN", "latitude": 32.7157, "longitude": -117.1611 },
+    { "name": "San Francisco", "code": "SFO", "latitude": 37.7749, "longitude": -122.4194 },
+    { "name": "Oakland", "code": "OAK", "latitude": 37.8044, "longitude": -122.2712 },
+    { "name": "San Jose", "code": "SJC", "latitude": 37.3382, "longitude": -121.8863 },
+    { "name": "Napa", "code": "APC", "latitude": 38.5025, "longitude": -122.2654 },
+    { "name": "Chicago", "code": "CHI", "latitude": 41.8781, "longitude": -87.6298 },
+    { "name": "Seattle", "code": "SEA", "latitude": 47.6062, "longitude": -122.3321 },
+    { "name": "Miami", "code": "MIA", "latitude": 25.7617, "longitude": -80.1918 },
     { "name": "Austin", "code": "AUS", "latitude": 30.2672, "longitude": -97.7431 },
     { "name": "Denver", "code": "DEN", "latitude": 39.7392, "longitude": -104.9903 },
     { "name": "Honolulu", "code": "HNL", "latitude": 21.3069, "longitude": -157.8583 }
   ]},
   { "country": "Canada", "countryCode": "CA", "cities": [
     { "name": "Toronto", "code": "YYZ", "latitude": 43.6532, "longitude": -79.3832 },
-    { "name": "Vancouver", "code": "YVR", "latitude": 49.2827, "longitude": -123.1207 },
+    { "name": "Hamilton", "code": "YHM", "latitude": 43.2557, "longitude": -79.8711 },
+    { "name": "Niagara Falls", "code": "NIA", "latitude": 43.0896, "longitude": -79.0849 },
     { "name": "Montréal", "code": "YUL", "latitude": 45.5017, "longitude": -73.5673 },
+    { "name": "Vancouver", "code": "YVR", "latitude": 49.2827, "longitude": -123.1207 },
     { "name": "Calgary", "code": "YYC", "latitude": 51.0447, "longitude": -114.0719 }
   ]},
   { "country": "Mexico", "countryCode": "MX", "cities": [
     { "name": "Mexico City", "code": "MEX", "latitude": 19.4326, "longitude": -99.1332 },
-    { "name": "Cancún", "code": "CUN", "latitude": 21.1619, "longitude": -86.8515 },
+    { "name": "Toluca", "code": "TLC", "latitude": 19.2826, "longitude": -99.6557 },
+    { "name": "Cuernavaca", "code": "CVC", "latitude": 18.9242, "longitude": -99.2216 },
+    { "name": "Puebla", "code": "PBC", "latitude": 19.0414, "longitude": -98.2063 },
+    { "name": "Pachuca", "code": "PAC", "latitude": 20.1011, "longitude": -98.7591 },
+    { "name": "Querétaro", "code": "QRO", "latitude": 20.5888, "longitude": -100.3899 },
     { "name": "Guadalajara", "code": "GDL", "latitude": 20.6597, "longitude": -103.3496 },
+    { "name": "Cancún", "code": "CUN", "latitude": 21.1619, "longitude": -86.8515 },
     { "name": "Oaxaca", "code": "OAX", "latitude": 17.0732, "longitude": -96.7266 }
   ]},
   { "country": "Brazil", "countryCode": "BR", "cities": [
@@ -152,12 +280,20 @@
   ]},
   { "country": "Argentina", "countryCode": "AR", "cities": [
     { "name": "Buenos Aires", "code": "BUE", "latitude": -34.6037, "longitude": -58.3816 },
+    { "name": "San Isidro", "code": "SIS", "latitude": -34.4708, "longitude": -58.5128 },
+    { "name": "Tigre", "code": "TIG", "latitude": -34.4264, "longitude": -58.5796 },
+    { "name": "Quilmes", "code": "QLM", "latitude": -34.7203, "longitude": -58.2540 },
+    { "name": "La Plata", "code": "LPL", "latitude": -34.9215, "longitude": -57.9545 },
+    { "name": "Luján", "code": "LUJ", "latitude": -34.5703, "longitude": -59.1050 },
+    { "name": "Rosario", "code": "ROS", "latitude": -32.9442, "longitude": -60.6505 },
+    { "name": "Mar del Plata", "code": "MDQ", "latitude": -38.0055, "longitude": -57.5426 },
     { "name": "Córdoba", "code": "COR", "latitude": -31.4201, "longitude": -64.1888 },
     { "name": "Mendoza", "code": "MDZ", "latitude": -32.8895, "longitude": -68.8458 }
   ]},
   { "country": "Chile", "countryCode": "CL", "cities": [
     { "name": "Santiago", "code": "SCL", "latitude": -33.4489, "longitude": -70.6693 },
-    { "name": "Valparaíso", "code": "VAP", "latitude": -33.0472, "longitude": -71.6127 }
+    { "name": "Valparaíso", "code": "VAP", "latitude": -33.0472, "longitude": -71.6127 },
+    { "name": "Viña del Mar", "code": "VIN", "latitude": -33.0153, "longitude": -71.5500 }
   ]},
   { "country": "Colombia", "countryCode": "CO", "cities": [
     { "name": "Bogotá", "code": "BOG", "latitude": 4.7110, "longitude": -74.0721 },
@@ -170,31 +306,46 @@
   ]},
   { "country": "Japan", "countryCode": "JP", "cities": [
     { "name": "Tokyo", "code": "TYO", "latitude": 35.6762, "longitude": 139.6503 },
+    { "name": "Yokohama", "code": "YOK", "latitude": 35.4437, "longitude": 139.6380 },
+    { "name": "Kawasaki", "code": "KWS", "latitude": 35.5308, "longitude": 139.7029 },
+    { "name": "Kamakura", "code": "KMK", "latitude": 35.3192, "longitude": 139.5466 },
+    { "name": "Hakone", "code": "HKN", "latitude": 35.2324, "longitude": 139.1069 },
+    { "name": "Mount Fuji", "code": "FUJ", "latitude": 35.3606, "longitude": 138.7274 },
+    { "name": "Nikko", "code": "NKK", "latitude": 36.7199, "longitude": 139.6982 },
+    { "name": "Kawagoe", "code": "KWG", "latitude": 35.9251, "longitude": 139.4858 },
     { "name": "Kyoto", "code": "KYO", "latitude": 35.0116, "longitude": 135.7681 },
     { "name": "Osaka", "code": "OSA", "latitude": 34.6937, "longitude": 135.5023 },
+    { "name": "Nara", "code": "NAR", "latitude": 34.6851, "longitude": 135.8048 },
+    { "name": "Kobe", "code": "UKB", "latitude": 34.6901, "longitude": 135.1955 },
     { "name": "Sapporo", "code": "SPK", "latitude": 43.0618, "longitude": 141.3545 },
     { "name": "Fukuoka", "code": "FUK", "latitude": 33.5904, "longitude": 130.4017 }
   ]},
   { "country": "China", "countryCode": "CN", "cities": [
     { "name": "Beijing", "code": "BJS", "latitude": 39.9042, "longitude": 116.4074 },
     { "name": "Shanghai", "code": "SHA", "latitude": 31.2304, "longitude": 121.4737 },
+    { "name": "Hangzhou", "code": "HGH", "latitude": 30.2741, "longitude": 120.1551 },
+    { "name": "Suzhou", "code": "SZH", "latitude": 31.2989, "longitude": 120.5853 },
     { "name": "Hong Kong", "code": "HKG", "latitude": 22.3193, "longitude": 114.1694 },
-    { "name": "Chengdu", "code": "CTU", "latitude": 30.5728, "longitude": 104.0668 },
-    { "name": "Xi'an", "code": "XIY", "latitude": 34.3416, "longitude": 108.9398 }
+    { "name": "Chengdu", "code": "CTU", "latitude": 30.5728, "longitude": 104.0668 }
   ]},
   { "country": "South Korea", "countryCode": "KR", "cities": [
     { "name": "Seoul", "code": "SEL", "latitude": 37.5665, "longitude": 126.9780 },
+    { "name": "Incheon", "code": "ICN", "latitude": 37.4563, "longitude": 126.7052 },
     { "name": "Busan", "code": "PUS", "latitude": 35.1796, "longitude": 129.0756 }
   ]},
   { "country": "India", "countryCode": "IN", "cities": [
     { "name": "Mumbai", "code": "BOM", "latitude": 19.0760, "longitude": 72.8777 },
+    { "name": "Pune", "code": "PNQ", "latitude": 18.5204, "longitude": 73.8567 },
     { "name": "New Delhi", "code": "DEL", "latitude": 28.6139, "longitude": 77.2090 },
-    { "name": "Bengaluru", "code": "BLR", "latitude": 12.9716, "longitude": 77.5946 },
     { "name": "Jaipur", "code": "JAI", "latitude": 26.9124, "longitude": 75.7873 },
+    { "name": "Agra", "code": "AGR", "latitude": 27.1767, "longitude": 78.0081 },
+    { "name": "Bengaluru", "code": "BLR", "latitude": 12.9716, "longitude": 77.5946 },
     { "name": "Goa", "code": "GOI", "latitude": 15.2993, "longitude": 74.1240 }
   ]},
   { "country": "Thailand", "countryCode": "TH", "cities": [
     { "name": "Bangkok", "code": "BKK", "latitude": 13.7563, "longitude": 100.5018 },
+    { "name": "Ayutthaya", "code": "AYU", "latitude": 14.3692, "longitude": 100.5877 },
+    { "name": "Pattaya", "code": "PYX", "latitude": 12.9236, "longitude": 100.8825 },
     { "name": "Chiang Mai", "code": "CNX", "latitude": 18.7883, "longitude": 98.9853 },
     { "name": "Phuket", "code": "HKT", "latitude": 7.8804, "longitude": 98.3923 }
   ]},
@@ -205,14 +356,17 @@
   ]},
   { "country": "Indonesia", "countryCode": "ID", "cities": [
     { "name": "Jakarta", "code": "JKT", "latitude": -6.2088, "longitude": 106.8456 },
+    { "name": "Bandung", "code": "BDO", "latitude": -6.9175, "longitude": 107.6191 },
     { "name": "Bali", "code": "DPS", "latitude": -8.4095, "longitude": 115.1889 }
   ]},
   { "country": "Malaysia", "countryCode": "MY", "cities": [
     { "name": "Kuala Lumpur", "code": "KUL", "latitude": 3.1390, "longitude": 101.6869 },
+    { "name": "Malacca", "code": "MKZ", "latitude": 2.1896, "longitude": 102.2501 },
     { "name": "Penang", "code": "PEN", "latitude": 5.4141, "longitude": 100.3288 }
   ]},
   { "country": "Singapore", "countryCode": "SG", "cities": [
-    { "name": "Singapore", "code": "SIN", "latitude": 1.3521, "longitude": 103.8198 }
+    { "name": "Singapore", "code": "SIN", "latitude": 1.3521, "longitude": 103.8198 },
+    { "name": "Johor Bahru", "code": "JHB", "latitude": 1.4927, "longitude": 103.7414 }
   ]},
   { "country": "Philippines", "countryCode": "PH", "cities": [
     { "name": "Manila", "code": "MNL", "latitude": 14.5995, "longitude": 120.9842 },
@@ -220,7 +374,13 @@
   ]},
   { "country": "United Arab Emirates", "countryCode": "AE", "cities": [
     { "name": "Dubai", "code": "DXB", "latitude": 25.2048, "longitude": 55.2708 },
-    { "name": "Abu Dhabi", "code": "AUH", "latitude": 24.4539, "longitude": 54.3773 }
+    { "name": "Sharjah", "code": "SHJ", "latitude": 25.3463, "longitude": 55.4209 },
+    { "name": "Ajman", "code": "AJM", "latitude": 25.4052, "longitude": 55.5136 },
+    { "name": "Umm Al Quwain", "code": "UAQ", "latitude": 25.5647, "longitude": 55.5532 },
+    { "name": "Ras Al Khaimah", "code": "RKT", "latitude": 25.7895, "longitude": 55.9432 },
+    { "name": "Abu Dhabi", "code": "AUH", "latitude": 24.4539, "longitude": 54.3773 },
+    { "name": "Al Ain", "code": "AAN", "latitude": 24.1917, "longitude": 55.7606 },
+    { "name": "Fujairah", "code": "FJR", "latitude": 25.1288, "longitude": 56.3265 }
   ]},
   { "country": "Qatar", "countryCode": "QA", "cities": [
     { "name": "Doha", "code": "DOH", "latitude": 25.2854, "longitude": 51.5310 }
@@ -229,31 +389,47 @@
     { "name": "Riyadh", "code": "RUH", "latitude": 24.7136, "longitude": 46.6753 },
     { "name": "Jeddah", "code": "JED", "latitude": 21.4858, "longitude": 39.1925 }
   ]},
+  { "country": "Oman", "countryCode": "OM", "cities": [
+    { "name": "Muscat", "code": "MCT", "latitude": 23.5880, "longitude": 58.3829 }
+  ]},
   { "country": "Israel", "countryCode": "IL", "cities": [
     { "name": "Tel Aviv", "code": "TLV", "latitude": 32.0853, "longitude": 34.7818 },
-    { "name": "Jerusalem", "code": "JRS", "latitude": 31.7683, "longitude": 35.2137 }
+    { "name": "Jerusalem", "code": "JRS", "latitude": 31.7683, "longitude": 35.2137 },
+    { "name": "Haifa", "code": "HFA", "latitude": 32.7940, "longitude": 34.9896 }
   ]},
   { "country": "Egypt", "countryCode": "EG", "cities": [
     { "name": "Cairo", "code": "CAI", "latitude": 30.0444, "longitude": 31.2357 },
+    { "name": "Giza", "code": "GIZ", "latitude": 30.0131, "longitude": 31.2089 },
     { "name": "Alexandria", "code": "ALY", "latitude": 31.2001, "longitude": 29.9187 }
   ]},
   { "country": "Morocco", "countryCode": "MA", "cities": [
     { "name": "Marrakech", "code": "RAK", "latitude": 31.6295, "longitude": -7.9811 },
     { "name": "Casablanca", "code": "CAS", "latitude": 33.5731, "longitude": -7.5898 },
+    { "name": "Rabat", "code": "RBA", "latitude": 34.0209, "longitude": -6.8416 },
     { "name": "Fez", "code": "FEZ", "latitude": 34.0181, "longitude": -5.0078 }
   ]},
   { "country": "South Africa", "countryCode": "ZA", "cities": [
     { "name": "Cape Town", "code": "CPT", "latitude": -33.9249, "longitude": 18.4241 },
+    { "name": "Stellenbosch", "code": "STE", "latitude": -33.9321, "longitude": 18.8602 },
     { "name": "Johannesburg", "code": "JNB", "latitude": -26.2041, "longitude": 28.0473 }
   ]},
   { "country": "Kenya", "countryCode": "KE", "cities": [
     { "name": "Nairobi", "code": "NBO", "latitude": -1.2921, "longitude": 36.8219 }
   ]},
   { "country": "Australia", "countryCode": "AU", "cities": [
-    { "name": "Sydney", "code": "SYD", "latitude": -33.8688, "longitude": 151.2093 },
-    { "name": "Melbourne", "code": "MEL", "latitude": -37.8136, "longitude": 144.9631 },
-    { "name": "Brisbane", "code": "BNE", "latitude": -27.4698, "longitude": 153.0251 },
-    { "name": "Perth", "code": "PER", "latitude": -31.9505, "longitude": 115.8605 }
+    { "name": "Sydney", "code": "SYD", "latitude": -33.8688, "longitude": 151.2093, "region": "New South Wales" },
+    { "name": "Parramatta", "code": "PMT", "latitude": -33.8150, "longitude": 151.0011, "region": "New South Wales" },
+    { "name": "Penrith", "code": "PEN", "latitude": -33.7510, "longitude": 150.6940, "region": "New South Wales" },
+    { "name": "Gosford", "code": "GOS", "latitude": -33.4270, "longitude": 151.3430, "region": "New South Wales" },
+    { "name": "Katoomba", "code": "KAT", "latitude": -33.7125, "longitude": 150.3119, "region": "New South Wales" },
+    { "name": "Wollongong", "code": "WOL", "latitude": -34.4278, "longitude": 150.8931, "region": "New South Wales" },
+    { "name": "Newcastle", "code": "NTL", "latitude": -32.9283, "longitude": 151.7817, "region": "New South Wales" },
+    { "name": "Bowral", "code": "BWR", "latitude": -34.4779, "longitude": 150.4178, "region": "New South Wales" },
+    { "name": "Canberra", "code": "CBR", "latitude": -35.2809, "longitude": 149.1300, "region": "ACT" },
+    { "name": "Melbourne", "code": "MEL", "latitude": -37.8136, "longitude": 144.9631, "region": "Victoria" },
+    { "name": "Brisbane", "code": "BNE", "latitude": -27.4698, "longitude": 153.0251, "region": "Queensland" },
+    { "name": "Gold Coast", "code": "OOL", "latitude": -28.0167, "longitude": 153.4000, "region": "Queensland" },
+    { "name": "Perth", "code": "PER", "latitude": -31.9505, "longitude": 115.8605, "region": "Western Australia" }
   ]},
   { "country": "New Zealand", "countryCode": "NZ", "cities": [
     { "name": "Auckland", "code": "AKL", "latitude": -36.8485, "longitude": 174.7633 },
