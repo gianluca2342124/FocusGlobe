@@ -108,10 +108,19 @@ struct HomeView: View {
             }
             .shadow(color: .black.opacity(0.45), radius: 12, y: 3)
 
-            if origin != nil {
+            if let origin {
                 AppPrimaryButton(title: "Start Journey", systemImage: "paperplane.fill") {
                     appModel.haptics.tap()
+                    #if DEBUG
+                    let started = Date()
+                    #endif
+                    // Plan is cached (and catalogs are warmed at launch), so this
+                    // fills the cache for this origin before Route Selection renders.
+                    _ = JourneyPlanner.plan(from: origin)
                     router.openRouteSelection()
+                    #if DEBUG
+                    print("[Performance] Start Journey tap-to-navigation \(Int(Date().timeIntervalSince(started) * 1000)) ms")
+                    #endif
                 }
             } else {
                 AppPrimaryButton(title: "Choose starting city", systemImage: "mappin.and.ellipse") {

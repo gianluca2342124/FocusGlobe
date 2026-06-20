@@ -41,6 +41,8 @@ struct RouteSelectionView: View {
         }
         .focusScreenChrome()
         .sheet(isPresented: $showCityPicker) { LocationPickerView() }
+        .onAppear { viewModel.prepare(from: origin) }
+        .onChange(of: origin) { _, newOrigin in viewModel.prepare(from: newOrigin) }
         .onChange(of: viewModel.selectedCategory) { _, _ in
             selectedID = journeys.first?.id
         }

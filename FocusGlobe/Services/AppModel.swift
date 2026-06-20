@@ -69,6 +69,31 @@ final class AppModel: ObservableObject {
                 #endif
             }
             .store(in: &cancellables)
+
+        // Warm the journey catalogs off the main thread so the first journey plan
+        // — and the first Start Journey tap — is instant rather than paying a
+        // one-time JSON-decode cost on the main thread. DEBUG also validates that
+        // the planner gives universal coverage across representative origins.
+        Self.warmJourneyEngine()
+    }
+
+    /// Decodes the journey catalogs once, off-main, at launch. Their `static let`
+    /// storage then stays cached in memory for the app's lifetime, so planning is
+    /// pure in-memory math (<50 ms) from then on.
+    private static func warmJourneyEngine() {
+        Task.detached(priority: .utility) {
+            #if DEBUG
+            let started = Date()
+            let nodes = TravelNetworkCatalog.allNodes.count
+            _ = WorldCityCatalog.allCities.count
+            let ms = Int(Date().timeIntervalSince(started) * 1000)
+            print("[Performance] TravelNetwork loaded in \(ms) ms (\(nodes) nodes)")
+            await MainActor.run { JourneyPlanner.validateCoverage() }
+            #else
+            _ = TravelNetworkCatalog.allNodes.count
+            _ = WorldCityCatalog.allCities.count
+            #endif
+        }
     }
 
     // MARK: - Location & origin
