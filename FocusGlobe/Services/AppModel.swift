@@ -228,15 +228,19 @@ final class AppModel: ObservableObject {
 
     // MARK: - Premium intro
 
-    /// Show the one-time premium intro once per install, only after the app has a
-    /// real origin and the user isn't already Pro.
+    /// In-memory, per-launch flag: the auto-paywall shows at most once per app
+    /// session (not once per install), and never reopens after the user closes it
+    /// during the same session. Resets naturally on the next cold launch.
+    var launchPaywallShown = false
+
+    /// Whether the launch paywall should auto-present: once per session, only
+    /// after the app has a real origin and the user isn't already Pro.
     var shouldShowPremiumIntro: Bool {
-        !isPro && settings.premiumIntroSeen != true && currentOrigin != nil
+        !isPro && !launchPaywallShown && currentOrigin != nil
     }
 
     func markPremiumIntroSeen() {
-        guard settings.premiumIntroSeen != true else { return }
-        settings.premiumIntroSeen = true
+        launchPaywallShown = true
     }
 
     // MARK: - Balloon skins
@@ -485,6 +489,7 @@ final class AppModel: ObservableObject {
 
     // MARK: - Debug
 
+    #if DEBUG
     func resetAllData() {
         persistence.wipeAll()
         purchases.clear()
@@ -493,6 +498,7 @@ final class AppModel: ObservableObject {
         isPro = false
         settings = .default
     }
+    #endif
 
     // MARK: - Private
 

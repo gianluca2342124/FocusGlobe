@@ -6,7 +6,6 @@ import RevenueCatUI
 struct SettingsView: View {
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
-    @State private var showResetConfirm = false
     @State private var restoreMessage: String?
     @State private var showCityPicker = false
     #if canImport(RevenueCatUI)
@@ -26,9 +25,6 @@ struct SettingsView: View {
                     experienceSection
                     proSection
                     privacySection
-                    #if DEBUG
-                    developerSection
-                    #endif
                     versionFooter
                 }
                 .padding(AppSpacing.screen)
@@ -42,12 +38,6 @@ struct SettingsView: View {
         #if canImport(RevenueCatUI)
         .sheet(isPresented: $showCustomerCenter) { CustomerCenterView() }
         #endif
-        .confirmationDialog("Reset all local data?", isPresented: $showResetConfirm, titleVisibility: .visible) {
-            Button("Reset everything", role: .destructive) { appModel.resetAllData() }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This clears your history, miles, streak and postcards on this device.")
-        }
     }
 
     // MARK: Sections
@@ -237,32 +227,6 @@ struct SettingsView: View {
             }
         }
     }
-
-    #if DEBUG
-    private var developerSection: some View {
-        SettingsCard(title: "Developer") {
-            VStack(spacing: 0) {
-                Button { showCityPicker = true } label: {
-                    SettingsRow(systemImage: "mappin.and.ellipse", title: "Override starting city",
-                                subtitle: "Simulator only — not shown in production", tint: AppColors.gold,
-                                trailing: AnyView(Image(systemName: "chevron.right")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundStyle(AppColors.textTertiary)))
-                }
-                .buttonStyle(SoftPressStyle())
-                RowDivider()
-                Button {
-                    showResetConfirm = true
-                } label: {
-                    SettingsRow(systemImage: "trash", title: "Reset local data",
-                                subtitle: "Debug only", tint: AppColors.danger,
-                                trailing: AnyView(EmptyView()))
-                }
-                .buttonStyle(SoftPressStyle())
-            }
-        }
-    }
-    #endif
 
     private var versionFooter: some View {
         Text("Version \(appVersion)")

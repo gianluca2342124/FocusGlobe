@@ -143,10 +143,12 @@ struct GoogleJourneyMapView: UIViewRepresentable {
             fullPolyline = full
 
             // A subtle white air trail behind the balloon (NOT a coloured
-            // completed-route line — there is a single route line only).
+            // completed-route line — there is a single route line only). It fades
+            // from invisible at the tail to soft white near the basket (set as a
+            // gradient span each frame in `update`).
             let trail = GMSPolyline()
-            trail.strokeWidth = 5
-            trail.strokeColor = UIColor.white.withAlphaComponent(0.30)
+            trail.strokeWidth = 6
+            trail.strokeColor = UIColor.white.withAlphaComponent(0.28)
             trail.zIndex = 5
             trail.map = map
             traveledPolyline = trail
@@ -179,17 +181,20 @@ struct GoogleJourneyMapView: UIViewRepresentable {
             vehicle.map = map
             vehicleMarker = vehicle
 
-            // --- Cinematic take-off camera: full route → zoom to balloon → follow.
-            let bounds = GMSCoordinateBounds(
-                coordinate: CLLocationCoordinate2D(latitude: data.origin.latitude, longitude: data.origin.longitude),
-                coordinate: CLLocationCoordinate2D(latitude: data.destination.latitude, longitude: data.destination.longitude))
-            map.moveCamera(GMSCameraUpdate.fit(bounds, withPadding: 64))
+            // --- Take-off camera: centre on the balloon (the start) FIRST, then a
+            // quick, smooth zoom IN toward it. Both the start and end poses are
+            // centred on the balloon (we never fly out to the route midpoint), so
+            // the motion is fast and identical for Short…Ultra — never sluggish on
+            // long routes.
+            let startTarget = CLLocationCoordinate2D(latitude: data.vehicle.latitude,
+                                                     longitude: data.vehicle.longitude)
+            let zoom = CameraController.followZoom(forDistanceKm: data.routeDistanceKm)
+            map.moveCamera(GMSCameraUpdate.setTarget(startTarget, zoom: Float(max(3, zoom - 2.4))))
 
-            // Brief whole-route overview, then a quicker dive in to the balloon.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self, weak map] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self, weak map] in
                 guard let self, let map else { return }
                 CATransaction.begin()
-                CATransaction.setAnimationDuration(1.4)
+                CATransaction.setAnimationDuration(1.1)
                 CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .easeInEaseOut))
                 map.animate(to: self.followCamera(for: data, vehicle: data.vehicle))
                 CATransaction.commit()
@@ -216,6 +221,14 @@ struct GoogleJourneyMapView: UIViewRepresentable {
             MapRouteRenderer.traveledPoints(from: tailStart, to: data.vehicle, samples: 14)
                 .forEach { trailPath.add(CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)) }
             traveledPolyline?.path = trailPath
+            // Fade the wisp from invisible at the tail to a soft translucent white
+            // right behind the basket — reads as moving air (not smoke) and never
+            // competes with the single coloured route line.
+            if trailPath.count() > 1 {
+                let air = GMSStrokeStyle.gradient(from: UIColor.white.withAlphaComponent(0.0),
+                                                  to: UIColor.white.withAlphaComponent(0.34))
+                traveledPolyline?.spans = [GMSStyleSpan(style: air)]
+            }
 
             // Respond to explicit camera commands (Recenter / Full Route / Tilt).
             let commandChanged = data.cameraToken != lastCameraToken

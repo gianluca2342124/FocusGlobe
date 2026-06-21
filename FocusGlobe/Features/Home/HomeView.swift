@@ -48,8 +48,9 @@ struct HomeView: View {
         .sheet(isPresented: $showCityPicker) { LocationPickerView() }
     }
 
-    /// Show the one-time premium intro once, after we have a real origin and the
-    /// user isn't already Pro. Marked seen immediately so it never re-triggers.
+    /// Auto-present the premium paywall once per session for non-Pro users, after
+    /// we have a real origin and the UI is ready. Marked shown immediately so it
+    /// never loops or reopens once the user closes it during this session.
     private func maybeShowPremiumIntro() {
         guard appModel.shouldShowPremiumIntro, !router.showPaywall else { return }
         appModel.markPremiumIntroSeen()

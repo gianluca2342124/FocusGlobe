@@ -145,10 +145,14 @@ final class FocusSessionViewModel: ObservableObject {
     var remainingSeconds: Int { max(0, Int(timer.remaining.rounded(.up))) }
     var remainingTimeText: String { Formatters.countdown(remainingSeconds) }
 
-    /// Coarse minutes label for the big "Time Remaining" readout (e.g. "25 min").
+    /// Coarse remaining-time label for the big "Time Remaining" readout.
+    /// Under an hour it reads as whole minutes ("33 min"); from an hour up it
+    /// reads as hours + zero-padded minutes ("1h 05m", "2h 14m", "8h 42m") so a
+    /// long journey never shows an unwieldy raw minute count like "522 min".
     var remainingMinutesText: String {
-        let m = Int((Double(remainingSeconds) / 60).rounded(.up))
-        return "\(max(0, m)) min"
+        let totalMinutes = max(0, Int((Double(remainingSeconds) / 60).rounded(.up)))
+        if totalMinutes < 60 { return "\(totalMinutes) min" }
+        return String(format: "%dh %02dm", totalMinutes / 60, totalMinutes % 60)
     }
 
     var remainingDistanceKm: Double { journeyDistanceKm * (1 - progress) }

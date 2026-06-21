@@ -20,11 +20,11 @@ struct PaywallView: View {
     private static let termsURL = URL(string: "https://focusglobe.app/terms")!
 
     private let benefits: [(String, String)] = [
-        ("crown.fill", "Unlock Ultra journeys"),
-        ("paintbrush.pointed.fill", "Exclusive balloon skins"),
-        ("bolt.fill", "Double selected rewards"),
-        ("sparkles", "Premium journey experiences"),
-        ("heart.fill", "Support FocusGlobe"),
+        ("nosign", "No ads"),
+        ("paintbrush.pointed.fill", "Exclusive skins"),
+        ("multiply.circle.fill", "2x rewards"),
+        ("music.note", "Focus sounds & music"),
+        ("square.grid.2x2.fill", "All widgets unlocked"),
     ]
 
     private var subs: SubscriptionManager { appModel.subscriptions }
@@ -32,20 +32,27 @@ struct PaywallView: View {
     var body: some View {
         ZStack {
             goldBackground
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: AppSpacing.lg) {
-                    closeRow
-                    balloonHero
-                    Text("Unlock All Features")
-                        .font(.system(size: 30, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                        .multilineTextAlignment(.center)
-                    benefitsCard
-                    if appModel.isPro { proState } else { purchaseSection }
+            // The close button, plans and the gold CTA are pinned so the purchase
+            // button is always visible without scrolling on every iPhone. Only the
+            // hero + benefits live in a flexible scroll area (they compress to fit
+            // on normal devices and scroll only on the very smallest screens).
+            VStack(spacing: AppSpacing.sm) {
+                closeRow
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: AppSpacing.sm) {
+                        balloonHero
+                        Text("Unlock All Features")
+                            .font(.system(size: 26, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .multilineTextAlignment(.center)
+                        benefitsCard
+                    }
+                    .padding(.bottom, AppSpacing.xs)
                 }
-                .padding(.horizontal, AppSpacing.screen)
-                .padding(.bottom, AppSpacing.xl)
+                if appModel.isPro { proState } else { purchaseSection }
             }
+            .padding(.horizontal, AppSpacing.screen)
+            .padding(.bottom, AppSpacing.md)
         }
         .onAppear {
             appModel.analytics.log(.paywallOpened)
@@ -88,22 +95,22 @@ struct PaywallView: View {
         ZStack {
             Circle()
                 .fill(RadialGradient(colors: [AppColors.gold.opacity(0.55), .clear],
-                                     center: .center, startRadius: 6, endRadius: 130))
-                .frame(width: 250, height: 250)
+                                     center: .center, startRadius: 6, endRadius: 110))
+                .frame(width: 210, height: 210)
             // Existing balloon asset (easy to swap later in Xcode).
-            BalloonView(height: 128, showBurner: true, showGlow: true, glow: AppColors.gold.opacity(0.9))
+            BalloonView(height: 104, showBurner: true, showGlow: true, glow: AppColors.gold.opacity(0.9))
         }
-        .frame(height: 200)
+        .frame(height: 150)
     }
 
     private var benefitsCard: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.md) {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
             ForEach(benefits, id: \.1) { benefit in
                 HStack(spacing: AppSpacing.sm) {
                     Image(systemName: benefit.0)
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundStyle(AppColors.gold)
-                        .frame(width: 26, height: 26)
+                        .frame(width: 24, height: 24)
                         .background(Circle().fill(AppColors.gold.opacity(0.16)))
                     Text(benefit.1)
                         .font(AppTypography.callout)
@@ -190,7 +197,8 @@ struct PaywallView: View {
                     .font(.system(size: 17, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
             }
-            .padding(AppSpacing.md)
+            .padding(.vertical, AppSpacing.sm)
+            .padding(.horizontal, AppSpacing.md)
             .background(
                 RoundedRectangle(cornerRadius: AppSpacing.pillRadius, style: .continuous)
                     .fill(.ultraThinMaterial)

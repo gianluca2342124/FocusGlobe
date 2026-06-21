@@ -32,8 +32,8 @@ struct AppSettings: Codable, Equatable {
     /// Sky Balloon. Optional so older saved settings keep decoding.
     var selectedSkinID: String? = nil
 
-    /// Whether the one-time premium intro has been shown on this install.
-    /// Optional so older saved settings keep decoding.
+    /// Legacy flag (the launch paywall is now gated per-session in memory, not
+    /// persisted). Retained only so older saved settings keep decoding.
     var premiumIntroSeen: Bool? = nil
 
     static let `default` = AppSettings()
