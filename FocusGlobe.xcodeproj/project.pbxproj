@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		7AAFA3F02FE59EC3002F4953 /* GoogleMaps in Frameworks */ = {isa = PBXBuildFile; productRef = 7AAFA3EF2FE59EC3002F4953 /* GoogleMaps */; };
+		7AE8FE6E2FE865DB00CD10A8 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 7AE8FE6D2FE865DB00CD10A8 /* RevenueCat */; };
+		7AE8FE702FE865DB00CD10A8 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 7AE8FE6F2FE865DB00CD10A8 /* RevenueCatUI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -23,7 +25,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7AE8FE6E2FE865DB00CD10A8 /* RevenueCat in Frameworks */,
 				7AAFA3F02FE59EC3002F4953 /* GoogleMaps in Frameworks */,
+				7AE8FE702FE865DB00CD10A8 /* RevenueCatUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -67,6 +71,8 @@
 			name = FocusGlobe;
 			packageProductDependencies = (
 				7AAFA3EF2FE59EC3002F4953 /* GoogleMaps */,
+				7AE8FE6D2FE865DB00CD10A8 /* RevenueCat */,
+				7AE8FE6F2FE865DB00CD10A8 /* RevenueCatUI */,
 			);
 			productName = FocusGlobe;
 			productReference = AA0000000000000000000003 /* FocusGlobe.app */;
@@ -99,6 +105,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				7AAFA3EE2FE59EC3002F4953 /* XCRemoteSwiftPackageReference "ios-maps-sdk" */,
+				7AE8FE6C2FE865DB00CD10A8 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 			);
 			productRefGroup = AA0000000000000000000004 /* Products */;
 			projectDirPath = "";
@@ -338,6 +345,14 @@
 				version = 10.14.0;
 			};
 		};
+		7AE8FE6C2FE865DB00CD10A8 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.79.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -345,6 +360,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7AAFA3EE2FE59EC3002F4953 /* XCRemoteSwiftPackageReference "ios-maps-sdk" */;
 			productName = GoogleMaps;
+		};
+		7AE8FE6D2FE865DB00CD10A8 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7AE8FE6C2FE865DB00CD10A8 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
+		};
+		7AE8FE6F2FE865DB00CD10A8 /* RevenueCatUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7AE8FE6C2FE865DB00CD10A8 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCatUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
