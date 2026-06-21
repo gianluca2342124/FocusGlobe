@@ -13,6 +13,11 @@ struct UserProgress: Codable, Equatable {
     /// Start-of-day of the most recent landing, used for streak math.
     var lastLandingDay: Date? = nil
 
+    /// Day-key (yyyy-MM-dd) on which the daily-missions completion bonus was last
+    /// claimed, so it can only be claimed once per day. Optional so older saved
+    /// progress keeps decoding.
+    var missionRewardDay: String? = nil
+
     static let empty = UserProgress()
 
     var hasAnyProgress: Bool {

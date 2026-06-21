@@ -10,8 +10,8 @@ struct AppSettings: Codable, Equatable {
     var hapticsEnabled: Bool = true
     var pureModeDefault: Bool = false
     /// Default map presentation for journeys (overridable live in-session).
-    /// Standard 2D by default — satellite is opt-in.
-    var mapStyle: MapDisplayStyle = .standard
+    /// Premium graphite "dark" by default — satellite/standard are opt-in.
+    var mapStyle: MapDisplayStyle = .graphite
 
     /// A manually chosen starting city. Used only when real location is
     /// unavailable (and, in DEBUG, as a Simulator override). `nil` means "use my
@@ -22,6 +22,14 @@ struct AppSettings: Codable, Equatable {
     /// world." Once set it becomes the origin for the next journey (it is NOT
     /// overwritten by GPS). Cleared by "Return to my real location".
     var virtualOrigin: JourneyOrigin? = nil
+
+    /// The selected balloon skin id (see `BalloonSkin`). `nil` → the default
+    /// Sky Balloon. Optional so older saved settings keep decoding.
+    var selectedSkinID: String? = nil
+
+    /// Whether the one-time premium intro has been shown on this install.
+    /// Optional so older saved settings keep decoding.
+    var premiumIntroSeen: Bool? = nil
 
     static let `default` = AppSettings()
 }

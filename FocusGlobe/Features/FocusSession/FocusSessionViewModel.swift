@@ -14,7 +14,7 @@ final class FocusSessionViewModel: ObservableObject {
     let timer: SessionTimerService
 
     @Published var pureMode: Bool = false
-    @Published var mapStyle: MapDisplayStyle = .night
+    @Published var mapStyle: MapDisplayStyle = .graphite
     /// Camera behaviour the user can toggle in-session (follow vs. full route).
     @Published var cameraMode: JourneyCameraMode = .follow
     /// A gentle 3D tilt of the follow camera (where Google supports it).

@@ -13,6 +13,7 @@ struct LandingView: View {
     @State private var earnedMiles: Int
     @State private var adState: AdState = .available
     @State private var appeared = false
+    @State private var celebrateStreak = false
     @State private var shareImage: UIImage?
     @State private var showShare = false
 
@@ -35,6 +36,7 @@ struct LandingView: View {
             ScrollView {
                 VStack(spacing: AppSpacing.lg) {
                     title
+                    if summary.streakIncreased { streakCelebration }
                     heroPostcard
                     statsStrip
                     if let intention = summary.intention { intentionCard(intention) }
@@ -49,6 +51,10 @@ struct LandingView: View {
         .focusScreenChrome()
         .onAppear {
             withAnimation(.spring(response: 0.7, dampingFraction: 0.7).delay(0.05)) { appeared = true }
+            if summary.streakIncreased {
+                withAnimation(.spring(response: 0.55, dampingFraction: 0.55).delay(0.35)) { celebrateStreak = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { appModel.haptics.tap() }
+            }
         }
         .sheet(isPresented: $showShare) {
             if let shareImage { ActivityView(items: [shareImage, shareText]) }
@@ -66,6 +72,16 @@ struct LandingView: View {
                 .lineLimit(1).minimumScaleFactor(0.7)
         }
         .frame(maxWidth: .infinity)
+    }
+
+    // A calm one-time streak moment — a warm flame pill that springs in with a
+    // soft glow. No confetti; premium and quiet.
+    private var streakCelebration: some View {
+        StreakPill(days: summary.streak)
+            .scaleEffect(celebrateStreak ? 1 : 0.5)
+            .opacity(celebrateStreak ? 1 : 0)
+            .shadow(color: Color(hex: 0xF2643C).opacity(celebrateStreak ? 0.55 : 0), radius: 16, y: 0)
+            .frame(maxWidth: .infinity)
     }
 
     private var heroPostcard: some View {
@@ -154,29 +170,66 @@ struct LandingView: View {
         }
     }
 
-    // The ad action, demoted to a quiet secondary option.
+    // A real secondary reward card. The headline never says "ad"; a small AD
+    // badge keeps it transparent, and the final doubled total is shown up front.
     private var doubleReward: some View {
         Button {
             Task { await watchAdToDouble() }
         } label: {
-            HStack(spacing: 6) {
+            HStack(spacing: AppSpacing.sm) {
+                ZStack {
+                    Circle().fill(AppColors.gold.opacity(0.16)).frame(width: 42, height: 42)
+                    Image(systemName: adState == .doubled ? "checkmark" : "bolt.fill")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(adState == .doubled ? AppColors.success : AppColors.gold)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(adState == .doubled ? "Miles doubled" : "Double your miles")
+                            .font(AppTypography.callout)
+                            .foregroundStyle(AppColors.textPrimary)
+                        if adState == .available { adBadge }
+                    }
+                    Text(doubleRewardSubtitle)
+                        .font(AppTypography.caption)
+                        .foregroundStyle(AppColors.textSecondary)
+                }
+                Spacer()
                 if adState == .loading {
                     ProgressView().controlSize(.small).tint(AppColors.textSecondary)
-                    Text("Playing…")
-                } else if adState == .doubled {
-                    Image(systemName: "checkmark.circle.fill")
-                    Text("Miles doubled")
-                } else {
-                    Image(systemName: "play.circle")
-                    Text("Watch a short ad to double miles")
+                } else if adState == .available {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(AppColors.textTertiary)
                 }
             }
-            .font(AppTypography.caption)
-            .foregroundStyle(adState == .doubled ? AppColors.success : AppColors.textTertiary)
+            .padding(AppSpacing.md)
+            .frame(maxWidth: .infinity)
+            .glassBackground(cornerRadius: AppSpacing.cardRadius, tintOpacity: 0.18, shadowRadius: 10, shadowY: 5)
+            .overlay(
+                RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
+                    .strokeBorder(AppColors.gold.opacity(adState == .doubled ? 0 : 0.35), lineWidth: 1)
+            )
         }
         .buttonStyle(SoftPressStyle())
         .disabled(adState != .available)
-        .padding(.top, 2)
+    }
+
+    private var doubleRewardSubtitle: String {
+        switch adState {
+        case .doubled: return "Now \(Formatters.miles(earnedMiles)) miles"
+        case .loading: return "Playing…"
+        case .available: return "Double to \(Formatters.miles(summary.baseMiles * 2)) miles"
+        }
+    }
+
+    private var adBadge: some View {
+        Text("AD")
+            .font(.system(size: 9, weight: .heavy, design: .rounded))
+            .foregroundStyle(AppColors.textTertiary)
+            .padding(.horizontal, 5).padding(.vertical, 2)
+            .overlay(RoundedRectangle(cornerRadius: 4)
+                .strokeBorder(AppColors.textTertiary.opacity(0.5), lineWidth: 1))
     }
 
     private var shareText: String {

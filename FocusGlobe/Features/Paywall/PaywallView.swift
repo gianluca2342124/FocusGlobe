@@ -6,13 +6,14 @@ struct PaywallView: View {
     @State private var isPurchasing = false
 
     private let benefits: [(String, String)] = [
-        ("nosign", "No ads, ever"),
-        ("map.fill", "All premium routes unlocked"),
-        ("infinity", "Long & ultra focus, up to 12 hours"),
+        ("crown.fill", "Every premium destination unlocked"),
+        ("infinity", "Long & ultra journeys, up to 12 hours"),
+        ("balloon.fill", "Exclusive balloon skins"),
+        ("bolt.fill", "Double miles on every landing"),
+        ("globe.europe.africa.fill", "Globe View & advanced map styles"),
         ("music.note", "Premium ambient soundscapes"),
-        ("balloon.fill", "Premium balloon & airship skins"),
-        ("globe.europe.africa.fill", "The full Globe Passport"),
-        ("rectangle.3.group.fill", "Widgets, Live Activities & Dynamic Island"),
+        ("nosign", "No ads, ever"),
+        ("sparkles", "Early access to future perks"),
     ]
 
     var body: some View {
@@ -40,9 +41,17 @@ struct PaywallView: View {
                 AppIconButton(systemImage: "xmark", size: 38, accessibilityLabel: "Close") { dismiss() }
             }
             BalloonView(height: 132, showBurner: true, showGlow: true,
-                        glow: AppColors.brand.opacity(0.85))
-                .padding(.bottom, AppSpacing.xs)
-            Text("FocusGlobe Pro")
+                        glow: AppColors.gold.opacity(0.85))
+                .padding(.bottom, AppSpacing.xxs)
+            HStack(spacing: 6) {
+                Image(systemName: "crown.fill")
+                    .font(.system(size: 13, weight: .bold))
+                Text("FOCUSGLOBE PRO")
+                    .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    .tracking(1.5)
+            }
+            .foregroundStyle(AppColors.gold)
+            Text("Travel further, in style.")
                 .font(AppTypography.title)
                 .foregroundStyle(AppColors.textPrimary)
             Text("Unlock every route and keep the skies ad-free.")

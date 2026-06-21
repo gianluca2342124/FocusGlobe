@@ -19,6 +19,13 @@ import UIKit
 ///    small balloon "ready to depart"). Used on Home.
 ///  • `.route`  — frame the journey from the user's location to the destination
 ///    (route line, endpoints, optional code tags). Used on Selection & Boarding.
+/// A nearby destination shown as a subtle "radar" marker on the Choose Journey
+/// map (small code tag at a real coordinate). Display-only.
+struct MapPin: Equatable {
+    let code: String
+    let coordinate: GeoCoordinate
+}
+
 struct JourneyBackdropMap: View {
     enum Mode: Equatable { case origin, route }
 
@@ -36,6 +43,9 @@ struct JourneyBackdropMap: View {
     /// Bottom inset (points) so the origin sits in the upper half of the screen,
     /// above the text block. Used on Home; 0 elsewhere.
     var bottomInset: CGFloat = 0
+    /// Nearby destinations to surface as a subtle radar of small tags (Choose
+    /// Journey only). Empty everywhere else.
+    var nearby: [MapPin] = []
 
     private var theme: RouteTheme { destination?.colorTheme ?? .teal }
     private var mood: RouteMood { destination?.mood ?? .calm }
@@ -45,7 +55,8 @@ struct JourneyBackdropMap: View {
         GoogleBackdropMapView(origin: origin, destination: destination,
                               mode: mode, progress: progress,
                               showsCodeTags: showsCodeTags, showsBalloon: showsBalloon,
-                              showsOrigin: showsOrigin, bottomInset: bottomInset, theme: theme)
+                              showsOrigin: showsOrigin, bottomInset: bottomInset,
+                              nearby: nearby, theme: theme)
             .allowsHitTesting(false)
         #else
         fallback.allowsHitTesting(false)
@@ -135,6 +146,7 @@ struct GoogleBackdropMapView: UIViewRepresentable {
     let showsBalloon: Bool
     let showsOrigin: Bool
     let bottomInset: CGFloat
+    let nearby: [MapPin]
     let theme: RouteTheme
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -144,7 +156,7 @@ struct GoogleBackdropMapView: UIViewRepresentable {
                                               longitude: origin.coordinate.longitude,
                                               zoom: 10.5)
         let map = GMSMapView(frame: .zero, camera: camera)
-        map.mapStyle = try? GMSMapStyle(jsonString: MapStyles.dark)
+        map.mapStyle = try? GMSMapStyle(jsonString: MapStyles.graphite)
         map.isMyLocationEnabled = false
         map.settings.setAllGesturesEnabled(false)
         map.settings.compassButton = false
@@ -165,6 +177,7 @@ struct GoogleBackdropMapView: UIViewRepresentable {
         private var markers: [GMSMarker] = []
         private var polylines: [GMSPolyline] = []
         private var circle: GMSCircle?
+        private var rings: [GMSCircle] = []
         private var lastKey = ""
 
         func configure(map: GMSMapView, view: GoogleBackdropMapView) {
@@ -174,13 +187,15 @@ struct GoogleBackdropMapView: UIViewRepresentable {
                 String(format: "%.3f,%.3f", view.origin.coordinate.latitude, view.origin.coordinate.longitude),
                 dest?.id ?? "-",
                 view.showsCodeTags ? "t" : "_", view.showsBalloon ? "b" : "_", view.showsOrigin ? "o" : "_",
-                String(format: "%.0f", view.bottomInset)
+                String(format: "%.0f", view.bottomInset),
+                "n\(view.nearby.count)"
             ].joined(separator: "|")
             guard key != lastKey else { return }
             lastKey = key
 
             markers.forEach { $0.map = nil }; markers.removeAll()
             polylines.forEach { $0.map = nil }; polylines.removeAll()
+            rings.forEach { $0.map = nil }; rings.removeAll()
             circle?.map = nil; circle = nil
 
             let accent = UIColor(view.theme.accent)
@@ -267,6 +282,31 @@ struct GoogleBackdropMapView: UIViewRepresentable {
                 balloon.zIndex = 6
                 balloon.map = map
                 markers.append(balloon)
+            }
+
+            // Radar of nearby destinations around the origin (Choose Journey only).
+            if !view.nearby.isEmpty {
+                for (i, km) in [45.0, 95.0, 165.0].enumerated() {
+                    let ring = GMSCircle(position: originCoord, radius: km * 1000)
+                    ring.fillColor = .clear
+                    ring.strokeColor = accent.withAlphaComponent(CGFloat(0.45 - Double(i) * 0.12))
+                    ring.strokeWidth = 1.4
+                    ring.zIndex = 0
+                    ring.map = map
+                    rings.append(ring)
+                }
+                for pin in view.nearby.prefix(10) where pin.code != dest.destinationCode {
+                    let c = CLLocationCoordinate2D(latitude: pin.coordinate.latitude,
+                                                   longitude: pin.coordinate.longitude)
+                    let tag = GMSMarker(position: c)
+                    tag.icon = VehicleMarkerRenderer.tagImage(code: pin.code, highlighted: false,
+                                                              accent: UIColor(AppColors.textPrimary))
+                    tag.groundAnchor = CGPoint(x: 0.5, y: 1.0)
+                    tag.isTappable = false
+                    tag.zIndex = 5
+                    tag.map = map
+                    markers.append(tag)
+                }
             }
 
             if view.showsCodeTags {

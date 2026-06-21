@@ -14,6 +14,9 @@ struct LandingSummary: Equatable, Identifiable {
     let streak: Int
     let isNewRoute: Bool
     let isNewBest: Bool
+    /// `true` when this landing pushed the daily streak up (new day), so Landing
+    /// can play a one-time streak micro-celebration.
+    var streakIncreased: Bool = false
 
     var focusedMinutes: Int { focusedSeconds / 60 }
 }

@@ -12,6 +12,7 @@ struct RouteSelectionView: View {
     @StateObject private var viewModel = RouteSelectionViewModel()
     @State private var selectedID: String?
     @State private var showCityPicker = false
+    @State private var showGlobe = false
 
     private var origin: JourneyOrigin { appModel.originForJourney }
     private var journeys: [PlannedJourney] { viewModel.journeys(from: origin) }
@@ -41,6 +42,9 @@ struct RouteSelectionView: View {
         }
         .focusScreenChrome()
         .sheet(isPresented: $showCityPicker) { LocationPickerView() }
+        .fullScreenCover(isPresented: $showGlobe) {
+            if let current { GlobeJourneyView(origin: origin, route: current.route) }
+        }
         .onAppear { viewModel.prepare(from: origin) }
         .onChange(of: origin) { _, newOrigin in viewModel.prepare(from: newOrigin) }
         .onChange(of: viewModel.selectedCategory) { _, _ in
@@ -48,9 +52,16 @@ struct RouteSelectionView: View {
         }
     }
 
+    /// The nearest free destinations, surfaced as a subtle on-map radar.
+    private var nearbyPins: [MapPin] {
+        JourneyPlanner.plan(from: origin, category: .short)
+            .prefix(12)
+            .map { MapPin(code: $0.code, coordinate: $0.route.destination) }
+    }
+
     @ViewBuilder private var mapLayer: some View {
         if let current {
-            JourneyDiscoveryMap(origin: origin, route: current.route)
+            JourneyDiscoveryMap(origin: origin, route: current.route, nearby: nearbyPins)
                 .ignoresSafeArea()
                 .animation(.easeInOut(duration: 0.5), value: current.id)
         } else {
@@ -81,7 +92,15 @@ struct RouteSelectionView: View {
                 Text("from \(origin.city)").font(AppTypography.caption).foregroundStyle(.white.opacity(0.7))
             }
             Spacer()
-            Color.clear.frame(width: 44, height: 44)
+            HStack(spacing: AppSpacing.xs) {
+                if current != nil {
+                    AppIconButton(systemImage: "globe.europe.africa.fill", size: 44, tint: .white,
+                                  accessibilityLabel: "Globe View") {
+                        appModel.haptics.tap(); showGlobe = true
+                    }
+                }
+                CrownButton(size: 44) { appModel.haptics.tap(); router.presentPaywall() }
+            }
         }
         .padding(.horizontal, AppSpacing.screen)
     }
@@ -227,9 +246,7 @@ private struct DestinationCard: View {
                     .overlay(Capsule().strokeBorder(AppColors.gold, lineWidth: 1.5))
                     Spacer()
                     if isLocked {
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(isSelected ? Color(hex: 0x14181F).opacity(0.6) : .white.opacity(0.7))
+                        PremiumBadge(compact: true)
                     }
                 }
 
@@ -257,9 +274,12 @@ private struct DestinationCard: View {
             }
             .overlay(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .strokeBorder(isSelected ? Color.clear : AppColors.glassStroke, lineWidth: 1)
+                    .strokeBorder(isSelected ? Color.clear
+                                  : (isLocked ? AppColors.gold.opacity(0.55) : AppColors.glassStroke),
+                                  lineWidth: isLocked && !isSelected ? 1.5 : 1)
             )
-            .shadow(color: .black.opacity(0.3), radius: 10, y: 5)
+            .shadow(color: (isLocked && !isSelected ? AppColors.gold.opacity(0.25) : .black.opacity(0.3)),
+                    radius: 10, y: 5)
         }
         .buttonStyle(SoftPressStyle(scale: 0.97))
     }

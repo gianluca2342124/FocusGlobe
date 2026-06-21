@@ -3,6 +3,7 @@ import Foundation
 /// User-selectable map presentation, surfaced as floating controls in the
 /// session and in Settings. Maps to Google Maps `mapType` + custom style JSON.
 enum MapDisplayStyle: String, CaseIterable, Codable, Identifiable {
+    case graphite
     case standard
     case terrain
     case satellite
@@ -14,6 +15,7 @@ enum MapDisplayStyle: String, CaseIterable, Codable, Identifiable {
 
     var displayName: String {
         switch self {
+        case .graphite:   return "Dark"
         case .standard:   return "Standard"
         case .terrain:    return "Terrain"
         case .satellite:  return "Satellite"
@@ -25,6 +27,7 @@ enum MapDisplayStyle: String, CaseIterable, Codable, Identifiable {
 
     var systemImage: String {
         switch self {
+        case .graphite:   return "moon.fill"
         case .standard:   return "map.fill"
         case .terrain:    return "mountain.2.fill"
         case .satellite:  return "globe.americas.fill"
@@ -41,6 +44,29 @@ enum MapDisplayStyle: String, CaseIterable, Codable, Identifiable {
 /// the route + balloon are the focus. Used only by the Google renderer; the
 /// fallback map styles itself with the route's mood gradient.
 enum MapStyles {
+
+    /// The premium default: a calm graphite "dark terrain" look — dark grey land,
+    /// near-black grey ocean, subtle grey labels. Neutral (no navy/blue), not
+    /// satellite, not bright. Used as the default backdrop and session style.
+    static let graphite = """
+    [
+      {"elementType":"geometry","stylers":[{"color":"#232a31"}]},
+      {"elementType":"labels.text.fill","stylers":[{"color":"#8d96a3"}]},
+      {"elementType":"labels.text.stroke","stylers":[{"color":"#161a1f"}]},
+      {"featureType":"poi","stylers":[{"visibility":"off"}]},
+      {"featureType":"transit","stylers":[{"visibility":"off"}]},
+      {"featureType":"road","elementType":"labels","stylers":[{"visibility":"off"}]},
+      {"featureType":"road","elementType":"geometry","stylers":[{"color":"#2d343d"}]},
+      {"featureType":"administrative","elementType":"geometry","stylers":[{"visibility":"off"}]},
+      {"featureType":"administrative.land_parcel","stylers":[{"visibility":"off"}]},
+      {"featureType":"administrative.locality","elementType":"labels.text.fill","stylers":[{"color":"#9aa3b1"}]},
+      {"featureType":"administrative.country","elementType":"labels.text.fill","stylers":[{"color":"#aab2c0"}]},
+      {"featureType":"landscape","elementType":"geometry","stylers":[{"color":"#262d35"}]},
+      {"featureType":"landscape.natural","elementType":"geometry","stylers":[{"color":"#222931"}]},
+      {"featureType":"water","elementType":"geometry","stylers":[{"color":"#12161b"}]},
+      {"featureType":"water","elementType":"labels","stylers":[{"visibility":"off"}]}
+    ]
+    """
 
     static let light = """
     [

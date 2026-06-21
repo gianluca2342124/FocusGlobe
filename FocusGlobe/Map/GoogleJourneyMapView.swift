@@ -91,6 +91,9 @@ struct GoogleJourneyMapView: UIViewRepresentable {
             guard lastStyle != displayStyle else { return }
             lastStyle = displayStyle
             switch displayStyle {
+            case .graphite:
+                map.mapType = .normal
+                map.mapStyle = try? GMSMapStyle(jsonString: MapStyles.graphite)
             case .standard:
                 map.mapType = .normal
                 map.mapStyle = try? GMSMapStyle(jsonString: MapStyles.light)
@@ -223,10 +226,10 @@ struct GoogleJourneyMapView: UIViewRepresentable {
             }
 
             // Gently follow once the take-off sequence has finished and the user
-            // hasn't taken manual control.
+            // hasn't taken manual control. A slower glide keeps the motion calm.
             if following && data.cameraMode == .follow && data.isMoving {
                 CATransaction.begin()
-                CATransaction.setAnimationDuration(1.4)
+                CATransaction.setAnimationDuration(1.9)
                 CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .linear))
                 map.animate(to: followCamera(for: data, vehicle: data.vehicle))
                 CATransaction.commit()

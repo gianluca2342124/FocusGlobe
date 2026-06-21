@@ -27,15 +27,31 @@ struct HomeView: View {
             .padding(.bottom, AppSpacing.lg)
         }
         .focusScreenChrome()
-        .onAppear { appModel.requestLocation() }
+        .onAppear {
+            appModel.requestLocation()
+            maybeShowPremiumIntro()
+        }
+        .onChange(of: appModel.currentOrigin) { _, newOrigin in
+            if newOrigin != nil { maybeShowPremiumIntro() }
+        }
         .sheet(isPresented: $showCityPicker) { LocationPickerView() }
+    }
+
+    /// Show the one-time premium intro once, after we have a real origin and the
+    /// user isn't already Pro. Marked seen immediately so it never re-triggers.
+    private func maybeShowPremiumIntro() {
+        guard appModel.shouldShowPremiumIntro, !router.showPaywall else { return }
+        appModel.markPremiumIntroSeen()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            router.presentPaywall()
+        }
     }
 
     @ViewBuilder private var map: some View {
         if let origin {
             // Zoomed-out, region-from-above framing with the origin lifted into
             // the upper half so it never collides with the text block.
-            JourneyBackdropMap(origin: origin, mode: .origin, showsBalloon: true, bottomInset: 320)
+            JourneyBackdropMap(origin: origin, mode: .origin, showsBalloon: true, bottomInset: 360)
                 .ignoresSafeArea()
         } else {
             // No real/chosen origin yet — a calm high-altitude map with no
@@ -64,13 +80,15 @@ struct HomeView: View {
         .allowsHitTesting(false)
     }
 
-    // DEBUG-only Simulator override pill. In production there is no prominent
-    // "change city" affordance on Home — travel happens by completing journeys.
-    @ViewBuilder private var topBar: some View {
-        #if DEBUG
+    // Crown (premium) entry point on the left; a DEBUG-only Simulator city
+    // override on the right. In production there is no prominent "change city"
+    // affordance on Home — travel happens by completing journeys.
+    private var topBar: some View {
         VStack {
             HStack {
+                CrownButton { appModel.haptics.tap(); router.presentPaywall() }
                 Spacer()
+                #if DEBUG
                 Button { showCityPicker = true } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "location.fill").font(.system(size: 12, weight: .bold))
@@ -83,17 +101,21 @@ struct HomeView: View {
                     .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.22, shadowRadius: 8, shadowY: 4)
                 }
                 .buttonStyle(SoftPressStyle())
+                #endif
             }
             Spacer()
         }
         .padding(.horizontal, AppSpacing.screen)
         .padding(.top, AppSpacing.xs)
-        #endif
     }
 
     private var bottomCluster: some View {
         VStack(alignment: .leading, spacing: AppSpacing.lg) {
             VStack(alignment: .leading, spacing: 2) {
+                if appModel.progress.currentStreak > 0 {
+                    StreakPill(days: appModel.progress.currentStreak)
+                        .padding(.bottom, AppSpacing.xs)
+                }
                 Text(viewModel.greeting)
                     .font(AppTypography.headline)
                     .foregroundStyle(.white.opacity(0.82))

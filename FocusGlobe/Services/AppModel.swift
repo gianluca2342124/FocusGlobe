@@ -125,13 +125,26 @@ final class AppModel: ObservableObject {
         settings.virtualOrigin != nil || settings.startingCity != nil
     }
 
-    /// Whether the manual starting-city picker should be offered. In production
-    /// it appears only when real location isn't available; in DEBUG it's always
-    /// available as a Simulator override.
+    /// `true` once the user has begun travelling the world — either by landing
+    /// at least once or by holding a virtual origin. From this point the app
+    /// continues from the latest landed destination and never offers a normal
+    /// "change starting city" control.
+    var hasStartedTravelling: Bool {
+        progress.landings > 0 || settings.virtualOrigin != nil
+    }
+
+    /// First-launch gate: show the resolving / choose-a-city onboarding only while
+    /// we have no origin at all (no GPS fix yet, none chosen, never travelled).
+    var needsOnboarding: Bool { currentOrigin == nil }
+
+    /// Whether the manual starting-city picker should be offered. In production it
+    /// appears only when real location isn't available *and* the user hasn't yet
+    /// started travelling; in DEBUG it's always available as a Simulator override.
     var allowsManualOrigin: Bool {
         #if DEBUG
         return true
         #else
+        if hasStartedTravelling { return false }
         if case .resolved = locationState { return false }
         return true
         #endif
@@ -195,6 +208,97 @@ final class AppModel: ObservableObject {
         return JourneyPlanner.recommended(from: originForJourney)
     }
 
+    // MARK: - Premium intro
+
+    /// Show the one-time premium intro once per install, only after the app has a
+    /// real origin and the user isn't already Pro.
+    var shouldShowPremiumIntro: Bool {
+        !isPro && settings.premiumIntroSeen != true && currentOrigin != nil
+    }
+
+    func markPremiumIntroSeen() {
+        guard settings.premiumIntroSeen != true else { return }
+        settings.premiumIntroSeen = true
+    }
+
+    // MARK: - Balloon skins
+
+    var selectedSkin: BalloonSkin { BalloonSkin.skin(id: settings.selectedSkinID) }
+
+    func isSkinUnlocked(_ skin: BalloonSkin) -> Bool {
+        switch skin.unlock {
+        case .free:            return true
+        case .journeys(let n): return progress.landings >= n
+        case .miles(let n):    return progress.totalFocusMiles >= n
+        case .pro:             return isPro
+        }
+    }
+
+    /// 0…1 progress toward a milestone skin; `nil` for free, Pro, or already-unlocked.
+    func unlockProgress(for skin: BalloonSkin) -> Double? {
+        guard !isSkinUnlocked(skin) else { return nil }
+        switch skin.unlock {
+        case .journeys(let n): return n <= 0 ? 1 : min(1, Double(progress.landings) / Double(n))
+        case .miles(let n):    return n <= 0 ? 1 : min(1, Double(progress.totalFocusMiles) / Double(n))
+        case .free, .pro:      return nil
+        }
+    }
+
+    func selectSkin(_ skin: BalloonSkin) {
+        guard isSkinUnlocked(skin) else { return }
+        settings.selectedSkinID = skin.id
+        haptics.tap()
+    }
+
+    // MARK: - Daily missions
+
+    /// Today's goals, computed fresh from the session history (so they reset at
+    /// midnight with no scheduler). Progress is real; completion is derived.
+    var dailyMissions: [DailyMission] {
+        let cal = Calendar.current
+        let todays = history.filter { $0.completed && cal.isDateInToday($0.date) }
+        let journeys = Double(todays.count)
+        let minutes = Double(todays.reduce(0) { $0 + $1.focusedSeconds }) / 60.0
+        let miles = Double(todays.reduce(0) { $0 + $1.focusMiles })
+        let earlierRouteIDs = Set(history.filter { $0.completed && !cal.isDateInToday($0.date) }.map { $0.routeID })
+        let newDestinations = Double(Set(todays.map { $0.routeID }).subtracting(earlierRouteIDs).count)
+        return [
+            DailyMission(id: "journey", title: "Complete a journey", systemImage: "paperplane.fill",
+                         accent: .indigo, target: 1, current: journeys),
+            DailyMission(id: "focus", title: "Focus 30 minutes", systemImage: "timer",
+                         accent: .teal, target: 30, current: minutes),
+            DailyMission(id: "new", title: "Visit a new destination", systemImage: "mappin.and.ellipse",
+                         accent: .gold, target: 1, current: newDestinations),
+            DailyMission(id: "miles", title: "Earn 60 miles", systemImage: "sparkles",
+                         accent: .coral, target: 60, current: miles),
+        ]
+    }
+
+    var dailyMissionsComplete: Bool { dailyMissions.allSatisfy { $0.isComplete } }
+
+    /// Bonus miles granted once when all of today's missions are complete.
+    let dailyMissionRewardMiles = 50
+
+    var canClaimDailyMissionReward: Bool {
+        dailyMissionsComplete && progress.missionRewardDay != Self.dayKey(Date())
+    }
+
+    func claimDailyMissionReward() {
+        guard canClaimDailyMissionReward else { return }
+        var p = progress
+        p.totalFocusMiles += dailyMissionRewardMiles
+        p.missionRewardDay = Self.dayKey(Date())
+        progress = p
+        persistAll()
+        haptics.rewardClaim()
+        analytics.log(.rewardClaimed, ["source": "daily_missions", "miles": dailyMissionRewardMiles])
+    }
+
+    private static func dayKey(_ date: Date) -> String {
+        let c = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        return "\(c.year ?? 0)-\(c.month ?? 0)-\(c.day ?? 0)"
+    }
+
     // MARK: - Access helpers
 
     /// Whether the user may start this route (free, or Pro unlocks premium).
@@ -254,7 +358,9 @@ final class AppModel: ObservableObject {
         if !p.postcards.contains(where: { $0.id == postcard.id }) {
             p.postcards.insert(postcard, at: 0)
         }
+        let previousStreak = progress.currentStreak
         applyStreak(to: &p, landingDate: record.date)
+        let streakIncreased = p.currentStreak > previousStreak
         progress = p
 
         // Travelling the world: the destination becomes the next origin.
@@ -277,7 +383,8 @@ final class AppModel: ObservableObject {
             postcard: postcard,
             streak: p.currentStreak,
             isNewRoute: isNewRoute,
-            isNewBest: isNewBest
+            isNewBest: isNewBest,
+            streakIncreased: streakIncreased
         )
     }
 

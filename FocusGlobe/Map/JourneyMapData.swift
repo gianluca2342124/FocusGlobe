@@ -18,8 +18,8 @@ struct JourneyMapData: Equatable {
     var followsVehicle: Bool
     /// `true` while the journey is actively moving (not paused).
     var isMoving: Bool
-    /// Map presentation (Night / Standard / Satellite / Hybrid).
-    var style: MapDisplayStyle = .night
+    /// Map presentation (Dark / Standard / Satellite / Hybrid …).
+    var style: MapDisplayStyle = .graphite
     /// How the camera frames the journey (follow the balloon vs. full route).
     var cameraMode: JourneyCameraMode = .follow
     /// A gentle 3D tilt of the follow camera (where supported).

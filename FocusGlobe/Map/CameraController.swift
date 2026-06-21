@@ -17,10 +17,13 @@ enum CameraController {
     /// (independent of total route length; the whole route is reachable via the
     /// "Full route" control instead).
     static func followZoom(forDistanceKm km: Double) -> Double {
+        // Slightly pulled back from a street-level chase so the balloon stays
+        // cinematic but not huge, and the route line reads as aligned with the
+        // basket. Calmer, more premium motion.
         switch km {
-        case ..<120:  return 15.5   // nearby: streets, beaches, hills
-        case ..<600:  return 15.0
-        default:      return 14.5   // far: still close, still flying low
+        case ..<120:  return 14.4   // nearby: streets, beaches, hills
+        case ..<600:  return 14.0
+        default:      return 13.6   // far: still close, still flying low
         }
     }
 
