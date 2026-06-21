@@ -10,11 +10,12 @@ struct JourneyDiscoveryMap: View {
     let route: Route
     /// Nearby destinations rendered as a subtle radar of small tags.
     var nearby: [MapPin] = []
+    var onOriginPoint: (CGPoint?) -> Void = { _ in }
 
     var body: some View {
         // No balloon here — the user is choosing a destination, not yet flying.
         JourneyBackdropMap(origin: origin, destination: route, mode: .route,
                            progress: 0.5, showsCodeTags: true, showsBalloon: false,
-                           nearby: nearby)
+                           nearby: nearby, onOriginPoint: onOriginPoint)
     }
 }

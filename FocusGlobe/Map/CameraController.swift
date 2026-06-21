@@ -21,9 +21,9 @@ enum CameraController {
         // cinematic but not huge, and the route line reads as aligned with the
         // basket. Calmer, more premium motion.
         switch km {
-        case ..<120:  return 14.4   // nearby: streets, beaches, hills
-        case ..<600:  return 14.0
-        default:      return 13.6   // far: still close, still flying low
+        case ..<120:  return 13.8   // nearby: streets, beaches, hills (a touch wider)
+        case ..<600:  return 13.4
+        default:      return 13.0   // far: still close, still flying low
         }
     }
 

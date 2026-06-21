@@ -1,10 +1,12 @@
 import SwiftUI
 
-/// The premium check-in ritual. A real Google route map sits behind a white
-/// paper "Boarding Pass" that prints in from a slot; the user must pick a focus,
-/// then drags the ticket itself down to tear it along the perforation — which
-/// takes off. Collectible, tactile, dark-first. One universal ticket design for
-/// every journey (a soft sky with drifting balloons; no per-destination art).
+/// The premium check-in ritual. A real Google route map sits behind a dark
+/// graphite "Boarding Pass" that prints in from a slot. Step 1: choose a focus
+/// (mandatory). Step 2: swipe horizontally across the perforation to tear off
+/// the barcode strip, which takes off. Collectible, tactile, dark-first.
+///
+/// All the trip info (cities, duration, distance, date, focus) lives on the
+/// ticket body; only the barcode strip detaches.
 struct BoardingView: View {
     let route: Route
 
@@ -12,24 +14,24 @@ struct BoardingView: View {
     @EnvironmentObject private var router: AppRouter
     @Environment(\.dismiss) private var dismiss
 
-    /// Mandatory focus — the ticket cannot tear until one is chosen.
     @State private var selectedPreset: FocusPreset?
 
     // Print choreography.
     @State private var printed: CGFloat = 0
+    @State private var perforationIn = false
     @State private var barcodeIn = false
     @State private var focusIn = false
 
-    // Tear-to-take-off.
-    @State private var tearDrag: CGFloat = 0
+    // Tear-to-take-off (horizontal).
+    @State private var tearX: CGFloat = 0
     @State private var torn = false
     @State private var nudge = false
 
-    private let tearThreshold: CGFloat = 96
+    private let tearThreshold: CGFloat = 120
 
     private var origin: JourneyOrigin { appModel.originForJourney }
     private var distanceKm: Double { GeoMath.distanceKm(from: origin.coordinate, to: route.destination) }
-    private var effectiveTear: CGFloat { torn ? 520 : tearDrag }
+    private var effectiveTear: CGFloat { torn ? 620 : tearX }
 
     var body: some View {
         ZStack {
@@ -81,8 +83,6 @@ struct BoardingView: View {
         }
     }
 
-    // MARK: Ticket (printer slot + tearable pass)
-
     private var ticketStack: some View {
         VStack(spacing: AppSpacing.xs) {
             PrinterSlot()
@@ -90,38 +90,37 @@ struct BoardingView: View {
                 .opacity(printed < 1 ? 1 : 0)
 
             JourneyTicket(origin: origin, route: route, distanceKm: distanceKm,
-                          focus: selectedPreset, barcodeIn: barcodeIn,
+                          focus: selectedPreset, printed: printed,
+                          perforationIn: perforationIn, barcodeIn: barcodeIn,
                           tear: effectiveTear, torn: torn)
                 .frame(maxWidth: 420)
-                .opacity(printed)
-                .offset(y: (1 - printed) * -26 + (nudge ? -8 : 0))
-                .scaleEffect(x: 1, y: 0.97 + 0.03 * printed, anchor: .top)
+                .offset(y: nudge ? -6 : 0)
                 .gesture(tearGesture)
                 .allowsHitTesting(focusIn && !torn)
         }
     }
 
     private var tearGesture: some Gesture {
-        DragGesture(minimumDistance: 6)
+        DragGesture(minimumDistance: 8)
             .onChanged { value in
                 guard focusIn, !torn else { return }
                 guard selectedPreset != nil else {
-                    if value.translation.height > 6 { triggerNudge() }
+                    if abs(value.translation.width) > 6 { triggerNudge() }
                     return
                 }
-                tearDrag = max(0, value.translation.height)
+                tearX = max(0, value.translation.width)
             }
             .onEnded { _ in
                 guard focusIn, !torn, selectedPreset != nil else { return }
-                if tearDrag >= tearThreshold {
+                if tearX >= tearThreshold {
                     commitTear()
                 } else {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) { tearDrag = 0 }
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) { tearX = 0 }
                 }
             }
     }
 
-    // MARK: Focus selection (mandatory)
+    // MARK: Focus (mandatory)
 
     private var focusSelector: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xs) {
@@ -148,10 +147,10 @@ struct BoardingView: View {
 
     private var takeoffHint: some View {
         HStack(spacing: 6) {
-            Image(systemName: selectedPreset == nil ? "hand.tap" : "arrow.down")
+            Image(systemName: selectedPreset == nil ? "hand.tap" : "arrow.left.and.right")
                 .font(.system(size: 12, weight: .bold))
-            Text(selectedPreset == nil ? "Choose a focus to take off"
-                 : "Pull the ticket down to tear & take off")
+            Text(selectedPreset == nil ? "Choose your focus"
+                 : "Swipe across the perforation to take off")
                 .font(AppTypography.caption)
         }
         .foregroundStyle(selectedPreset == nil ? AppColors.gold : .white.opacity(0.85))
@@ -161,15 +160,18 @@ struct BoardingView: View {
 
     private func runPrintSequence() {
         guard printed == 0 else { return }
-        withAnimation(.easeOut(duration: 1.2)) { printed = 1 }
+        withAnimation(.easeOut(duration: 1.1)) { printed = 1 }       // body reveals top→down
         for t in [0.18, 0.55, 0.9] {
             DispatchQueue.main.asyncAfter(deadline: .now() + t) { appModel.haptics.tap() }
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.95) {     // perforation after body
+            withAnimation(.easeOut(duration: 0.3)) { perforationIn = true }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {      // barcode last, with scan
             withAnimation(.spring(response: 0.5, dampingFraction: 0.82)) { barcodeIn = true }
             appModel.haptics.resume()
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {      // focus options appear
             withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) { focusIn = true }
         }
     }
@@ -194,8 +196,6 @@ struct BoardingView: View {
 
 // MARK: - Printer slot
 
-/// A thin printer slot with a one-time gold light sweep, so the ticket reads as
-/// being printed out from above.
 private struct PrinterSlot: View {
     @State private var sweep: CGFloat = -0.35
 
@@ -220,111 +220,131 @@ private struct PrinterSlot: View {
     }
 }
 
-// MARK: - The ticket
+// MARK: - Ticket
 
 private struct JourneyTicket: View {
     let origin: JourneyOrigin
     let route: Route
     let distanceKm: Double
     let focus: FocusPreset?
+    let printed: CGFloat
+    let perforationIn: Bool
     let barcodeIn: Bool
     let tear: CGFloat
     let torn: Bool
 
-    private let paper = Color(hex: 0xF7F4EC)
-    private let ink = Color(hex: 0x1A2230)
-    private let inkSoft = Color(hex: 0x5B6373)
+    private let ink = Color(hex: 0xF1F4FB)
+    private let inkSoft = Color(hex: 0xAEB7CC)
 
     var body: some View {
         VStack(spacing: 0) {
-            topCard
-                .offset(y: -tear * 0.14)
-                .opacity(torn ? 0 : 1)
+            body_
+                .mask(alignment: .top) {
+                    GeometryReader { g in
+                        Rectangle()
+                            .frame(height: max(0, g.size.height * printed))
+                            .frame(maxHeight: .infinity, alignment: .top)
+                    }
+                }
             perforation
-            bottomCard
-                .offset(y: tear)
-                .opacity(torn ? 0 : 1)
+                .opacity(perforationIn ? 1 : 0)
+            barcodeStrip
+                .offset(x: tear)
+                .opacity(torn ? 0 : (barcodeIn ? 1 : 0))
         }
     }
 
-    private var topCard: some View {
-        TicketSkyHeader(originCode: origin.code, originCity: origin.city,
-                        destCode: route.destinationCode, destCity: route.destinationName,
-                        duration: route.durationLabel, category: route.category,
-                        ink: ink, inkSoft: inkSoft)
-            .frame(height: 150)
-            .background(paper)
-            .clipShape(UnevenRoundedRectangle(topLeadingRadius: AppSpacing.cardRadius,
-                                              bottomLeadingRadius: 0, bottomTrailingRadius: 0,
-                                              topTrailingRadius: AppSpacing.cardRadius, style: .continuous))
-            .overlay(alignment: .bottomLeading) { notch.offset(x: -9, y: 9) }
-            .overlay(alignment: .bottomTrailing) { notch.offset(x: 9, y: 9) }
-            .compositingGroup()
-            .shadow(color: .black.opacity(0.4), radius: 18, x: 0, y: 10)
+    // MARK: Body (all trip info stays here)
+
+    private var body_: some View {
+        VStack(spacing: 0) {
+            TicketSkyHeader(originCode: origin.code, originCity: origin.city,
+                            destCode: route.destinationCode, destCity: route.destinationName,
+                            duration: route.durationLabel, category: route.category,
+                            ink: ink, inkSoft: inkSoft)
+                .frame(height: 116)
+
+            VStack(spacing: AppSpacing.sm) {
+                HStack(spacing: 0) {
+                    detail("DURATION", route.durationLabel)
+                    detail("DISTANCE", Formatters.distance(km: distanceKm))
+                    detail("DATE", Self.dateText)
+                }
+                Rectangle().fill(ink.opacity(0.08)).frame(height: 1)
+                HStack(spacing: AppSpacing.sm) {
+                    ZStack {
+                        Circle().fill((focus?.accent ?? inkSoft).opacity(0.20)).frame(width: 34, height: 34)
+                        Image(systemName: focus?.systemImage ?? "target")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(focus?.accent ?? inkSoft)
+                    }
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("FOCUS")
+                            .font(.system(size: 9, weight: .semibold, design: .rounded)).tracking(0.5)
+                            .foregroundStyle(inkSoft)
+                        Text(focus?.title ?? "Choose your focus")
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundStyle(focus == nil ? inkSoft : ink)
+                    }
+                    Spacer()
+                }
+            }
+            .padding(AppSpacing.md)
+        }
+        .background(graphite)
+        .clipShape(UnevenRoundedRectangle(topLeadingRadius: AppSpacing.cardRadius,
+                                          bottomLeadingRadius: 0, bottomTrailingRadius: 0,
+                                          topTrailingRadius: AppSpacing.cardRadius, style: .continuous))
+        .overlay(alignment: .bottomLeading) { notch.offset(x: -9, y: 9) }
+        .overlay(alignment: .bottomTrailing) { notch.offset(x: 9, y: 9) }
+        .compositingGroup()
+        .shadow(color: .black.opacity(0.5), radius: 18, x: 0, y: 10)
     }
 
-    private var bottomCard: some View {
-        ticketDetails
-            .background(paper)
-            .clipShape(UnevenRoundedRectangle(topLeadingRadius: 0,
-                                              bottomLeadingRadius: AppSpacing.cardRadius,
-                                              bottomTrailingRadius: AppSpacing.cardRadius,
-                                              topTrailingRadius: 0, style: .continuous))
-            .overlay(alignment: .topLeading) { notch.offset(x: -9, y: -9) }
-            .overlay(alignment: .topTrailing) { notch.offset(x: 9, y: -9) }
-            .compositingGroup()
-            .shadow(color: .black.opacity(0.4), radius: 18, x: 0, y: 10)
+    // MARK: Perforation (the cut line above the barcode)
+
+    private var perforation: some View {
+        ZStack {
+            DashLine()
+                .stroke(inkSoft.opacity(0.5), style: StrokeStyle(lineWidth: 1.2, dash: [4, 5]))
+                .frame(height: 1)
+                .padding(.horizontal, AppSpacing.md)
+            // Horizontal shimmer hinting the swipe gesture.
+            if barcodeIn && !torn { PerforationShimmer() }
+        }
+        .frame(height: 14)
+    }
+
+    // MARK: Barcode strip (the detachable part)
+
+    private var barcodeStrip: some View {
+        HStack(spacing: AppSpacing.sm) {
+            BarcodeStrip(seed: origin.code + route.id + route.destinationCode,
+                         barColor: ink, scanIn: barcodeIn)
+                .frame(height: 40)
+            QRBlock(seed: route.id, color: ink).frame(width: 40, height: 40)
+        }
+        .padding(.horizontal, AppSpacing.md)
+        .padding(.vertical, AppSpacing.sm)
+        .frame(maxWidth: .infinity)
+        .background(graphite)
+        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 0,
+                                          bottomLeadingRadius: AppSpacing.cardRadius,
+                                          bottomTrailingRadius: AppSpacing.cardRadius,
+                                          topTrailingRadius: 0, style: .continuous))
+        .overlay(alignment: .topLeading) { notch.offset(x: -9, y: -9) }
+        .overlay(alignment: .topTrailing) { notch.offset(x: 9, y: -9) }
+        .compositingGroup()
+        .shadow(color: .black.opacity(0.5), radius: 14, x: 0, y: 8)
+    }
+
+    private var graphite: LinearGradient {
+        LinearGradient(colors: [Color(hex: 0x1E2531), Color(hex: 0x12161F)],
+                       startPoint: .top, endPoint: .bottom)
     }
 
     private var notch: some View {
         Circle().fill(Color.black).frame(width: 18, height: 18).blendMode(.destinationOut)
-    }
-
-    // A thin perforation line; the tear gap opens as the bottom card slides down.
-    private var perforation: some View {
-        DashLine()
-            .stroke(inkSoft.opacity(0.45), style: StrokeStyle(lineWidth: 1.2, dash: [4, 5]))
-            .frame(height: 1)
-            .padding(.horizontal, AppSpacing.md)
-            .background(paper.opacity(torn ? 0 : 1))
-    }
-
-    private var ticketDetails: some View {
-        VStack(spacing: AppSpacing.md) {
-            HStack(spacing: AppSpacing.sm) {
-                ZStack {
-                    Circle().fill((focus?.accent ?? inkSoft).opacity(0.16)).frame(width: 36, height: 36)
-                    Image(systemName: focus?.systemImage ?? "target")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(focus?.accent ?? inkSoft)
-                }
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("FOCUS")
-                        .font(.system(size: 9, weight: .semibold, design: .rounded)).tracking(0.5)
-                        .foregroundStyle(inkSoft)
-                    Text(focus?.title ?? "Choose your focus")
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundStyle(focus == nil ? inkSoft : ink)
-                }
-                Spacer()
-            }
-
-            Rectangle().fill(ink.opacity(0.08)).frame(height: 1)
-
-            HStack(spacing: 0) {
-                detail("DURATION", route.durationLabel)
-                detail("DISTANCE", Formatters.distance(km: distanceKm))
-                detail("DATE", Self.dateText)
-            }
-
-            HStack(spacing: AppSpacing.sm) {
-                BarcodeStrip(seed: origin.code + route.id + route.destinationCode,
-                             barColor: ink, scanIn: barcodeIn)
-                    .frame(height: 40)
-                QRBlock(seed: route.id, color: ink).frame(width: 40, height: 40)
-            }
-        }
-        .padding(AppSpacing.md)
     }
 
     private func detail(_ label: String, _ value: String) -> some View {
@@ -347,7 +367,7 @@ private struct JourneyTicket: View {
     }()
 }
 
-// MARK: - Ticket sky header (universal, no per-destination art)
+// MARK: - Dark sky header (universal, subtle balloon silhouettes)
 
 private struct TicketSkyHeader: View {
     let originCode: String
@@ -361,25 +381,24 @@ private struct TicketSkyHeader: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(colors: [Color(hex: 0xBFD8F0), Color(hex: 0xEADFCB)],
+            LinearGradient(colors: [Color(hex: 0x273141), Color(hex: 0x161D2A)],
                            startPoint: .top, endPoint: .bottom)
+            // Faint moon glow.
             Circle()
-                .fill(RadialGradient(colors: [Color(hex: 0xFCEAC6), .clear],
-                                     center: .center, startRadius: 2, endRadius: 70))
-                .frame(width: 140, height: 140)
-                .offset(x: 116, y: -48)
-            TicketHills().fill(Color.white.opacity(0.40)).offset(y: 34)
-            TicketHills().fill(Color.white.opacity(0.24)).scaleEffect(x: -1).offset(y: 50)
-
-            BalloonMark(size: 26).offset(x: -120, y: -20).opacity(0.95)
-            BalloonMark(size: 18).offset(x: 96, y: -38).opacity(0.85)
-            BalloonMark(size: 13).offset(x: 30, y: -50).opacity(0.7)
+                .fill(RadialGradient(colors: [Color.white.opacity(0.16), .clear],
+                                     center: .center, startRadius: 1, endRadius: 60))
+                .frame(width: 120, height: 120)
+                .offset(x: 118, y: -42)
+            // Dark balloon silhouettes — subtle, not bright.
+            BalloonSilhouette().fill(Color.black.opacity(0.30)).frame(width: 22, height: 30).offset(x: -118, y: -18)
+            BalloonSilhouette().fill(Color.black.opacity(0.24)).frame(width: 15, height: 21).offset(x: 92, y: -34)
+            BalloonSilhouette().fill(Color.black.opacity(0.18)).frame(width: 11, height: 15).offset(x: 28, y: -44)
 
             VStack {
                 HStack {
                     Text("FocusGlobe · Boarding Pass")
                         .font(.system(size: 10, weight: .semibold, design: .rounded)).tracking(0.5)
-                        .foregroundStyle(ink.opacity(0.8))
+                        .foregroundStyle(ink.opacity(0.85))
                     Spacer()
                     HStack(spacing: 4) {
                         Image(systemName: category.systemImage).font(.system(size: 9, weight: .bold))
@@ -387,7 +406,7 @@ private struct TicketSkyHeader: View {
                     }
                     .foregroundStyle(ink)
                     .padding(.horizontal, 7).padding(.vertical, 3)
-                    .background(Capsule().fill(Color.white.opacity(0.55)))
+                    .background(Capsule().fill(Color.white.opacity(0.12)))
                 }
                 Spacer()
                 HStack(alignment: .center) {
@@ -395,7 +414,7 @@ private struct TicketSkyHeader: View {
                     Spacer(minLength: AppSpacing.xs)
                     VStack(spacing: 2) {
                         Image(systemName: "paperplane.fill")
-                            .font(.system(size: 12, weight: .bold)).foregroundStyle(ink.opacity(0.85))
+                            .font(.system(size: 12, weight: .bold)).foregroundStyle(ink.opacity(0.9))
                         Text(duration)
                             .font(.system(size: 10, weight: .semibold, design: .rounded))
                             .foregroundStyle(inkSoft)
@@ -411,8 +430,8 @@ private struct TicketSkyHeader: View {
     private func codeBlock(_ code: String, _ city: String, _ align: HorizontalAlignment) -> some View {
         VStack(alignment: align, spacing: 1) {
             Text(code)
-                .font(.system(size: 34, weight: .heavy, design: .rounded))
-                .foregroundStyle(ink)               // both codes share the same ink colour
+                .font(.system(size: 32, weight: .heavy, design: .rounded))
+                .foregroundStyle(ink)               // both codes share the same colour
                 .minimumScaleFactor(0.7).lineLimit(1)
             Text(city)
                 .font(.system(size: 11, weight: .medium, design: .rounded))
@@ -421,18 +440,37 @@ private struct TicketSkyHeader: View {
     }
 }
 
-private struct TicketHills: Shape {
+private struct BalloonSilhouette: Shape {
     func path(in rect: CGRect) -> Path {
         var p = Path()
-        p.move(to: CGPoint(x: rect.minX, y: rect.maxY))
-        p.addLine(to: CGPoint(x: rect.minX, y: rect.midY))
-        p.addQuadCurve(to: CGPoint(x: rect.midX, y: rect.midY + 12),
-                       control: CGPoint(x: rect.width * 0.25, y: rect.midY - 18))
-        p.addQuadCurve(to: CGPoint(x: rect.maxX, y: rect.midY + 6),
-                       control: CGPoint(x: rect.width * 0.75, y: rect.midY + 24))
-        p.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        let w = rect.width, h = rect.height
+        p.addEllipse(in: CGRect(x: 0, y: 0, width: w, height: h * 0.78))
+        let cx = w / 2
+        p.move(to: CGPoint(x: cx - w * 0.12, y: h * 0.70))
+        p.addLine(to: CGPoint(x: cx + w * 0.12, y: h * 0.70))
+        p.addLine(to: CGPoint(x: cx + w * 0.06, y: h * 0.88))
+        p.addLine(to: CGPoint(x: cx - w * 0.06, y: h * 0.88))
         p.closeSubpath()
+        p.addRect(CGRect(x: cx - w * 0.07, y: h * 0.88, width: w * 0.14, height: h * 0.12))
         return p
+    }
+}
+
+private struct PerforationShimmer: View {
+    @State private var x: CGFloat = -0.4
+    var body: some View {
+        GeometryReader { g in
+            LinearGradient(colors: [.clear, .white.opacity(0.5), .clear],
+                           startPoint: .leading, endPoint: .trailing)
+                .frame(width: 60)
+                .offset(x: g.size.width * x)
+                .blendMode(.screen)
+        }
+        .frame(height: 14)
+        .allowsHitTesting(false)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: false)) { x = 1.2 }
+        }
     }
 }
 
@@ -484,7 +522,7 @@ private struct DashLine: Shape {
     }
 }
 
-/// A deterministic boarding-pass barcode (dark bars on paper) with a one-time
+/// A deterministic barcode (off-white bars on the dark strip) with a one-time
 /// gold "scan" sweep when the ticket prints.
 private struct BarcodeStrip: View {
     let seed: String

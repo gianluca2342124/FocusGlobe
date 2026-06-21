@@ -232,14 +232,11 @@ struct SettingsView: View {
     #endif
 
     private var versionFooter: some View {
-        VStack(spacing: 4) {
-            AppLogo(size: 24)
-            Text("Version \(appVersion)")
-                .font(AppTypography.micro)
-                .foregroundStyle(AppColors.textTertiary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.top, AppSpacing.sm)
+        Text("Version \(appVersion)")
+            .font(AppTypography.micro)
+            .foregroundStyle(AppColors.textTertiary)
+            .frame(maxWidth: .infinity)
+            .padding(.top, AppSpacing.sm)
     }
 
     private var appVersion: String {

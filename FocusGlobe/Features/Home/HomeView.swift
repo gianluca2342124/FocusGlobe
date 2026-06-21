@@ -11,12 +11,16 @@ struct HomeView: View {
     @EnvironmentObject private var router: AppRouter
     @StateObject private var viewModel = HomeViewModel()
     @State private var showCityPicker = false
+    @State private var originPoint: CGPoint?
 
     private var origin: JourneyOrigin? { appModel.currentOrigin }
 
     var body: some View {
         ZStack {
             map
+            if let originPoint {
+                RadarPulse().position(originPoint).allowsHitTesting(false)
+            }
             atmosphere
             topBar
             VStack {
@@ -49,17 +53,25 @@ struct HomeView: View {
 
     @ViewBuilder private var map: some View {
         if let origin {
-            // Zoomed-out, region-from-above framing with the origin lifted into
-            // the upper half so it never collides with the text block.
-            JourneyBackdropMap(origin: origin, mode: .origin, showsBalloon: true, bottomInset: 360)
+            // Origin centred (no bottom inset) so the Google attribution stays at
+            // the natural bottom — clear of the greeting/title above it.
+            JourneyBackdropMap(origin: origin, mode: .origin, showsBalloon: true,
+                               bottomInset: 0, onOriginPoint: setOriginPoint)
                 .ignoresSafeArea()
         } else {
             // No real/chosen origin yet — a calm high-altitude map with no
             // "you are here" halo, so we never imply a fake location.
             JourneyBackdropMap(origin: .default, mode: .origin,
-                               showsBalloon: false, showsOrigin: false)
+                               showsBalloon: false, showsOrigin: false,
+                               onOriginPoint: setOriginPoint)
                 .ignoresSafeArea()
         }
+    }
+
+    private func setOriginPoint(_ p: CGPoint?) {
+        guard let p else { if originPoint != nil { originPoint = nil }; return }
+        if let o = originPoint, abs(o.x - p.x) < 1.5, abs(o.y - p.y) < 1.5 { return }
+        originPoint = p
     }
 
     private var atmosphere: some View {
@@ -85,8 +97,9 @@ struct HomeView: View {
     // affordance on Home — travel happens by completing journeys.
     private var topBar: some View {
         VStack {
-            HStack {
+            HStack(spacing: AppSpacing.xs) {
                 CrownButton { appModel.haptics.tap(); router.presentPaywall() }
+                if appModel.progress.currentStreak > 0 { streakBadge }
                 Spacer()
                 #if DEBUG
                 Button { showCityPicker = true } label: {
@@ -109,24 +122,38 @@ struct HomeView: View {
         .padding(.top, AppSpacing.xs)
     }
 
+    // A calm, premium streak chip — small glass capsule, gold flame + count.
+    private var streakBadge: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "flame.fill")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(AppColors.gold)
+            Text("\(appModel.progress.currentStreak)")
+                .font(.system(size: 13, weight: .heavy, design: .rounded))
+                .foregroundStyle(.white)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.18, shadowRadius: 6, shadowY: 3)
+        .accessibilityLabel("\(appModel.progress.currentStreak) day streak")
+    }
+
     private var bottomCluster: some View {
         VStack(alignment: .leading, spacing: AppSpacing.lg) {
             VStack(alignment: .leading, spacing: 2) {
-                if appModel.progress.currentStreak > 0 {
-                    StreakPill(days: appModel.progress.currentStreak)
-                        .padding(.bottom, AppSpacing.xs)
-                }
                 Text(viewModel.greeting)
-                    .font(AppTypography.headline)
-                    .foregroundStyle(.white.opacity(0.82))
+                    .font(AppTypography.subhead)
+                    .foregroundStyle(.white.opacity(0.55))
                 Text(bigTitle)
                     .font(.system(size: 46, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .lineLimit(1)
                     .minimumScaleFactor(0.55)
-                Text(subtitle)
-                    .font(AppTypography.subhead)
-                    .foregroundStyle(.white.opacity(0.8))
+                if !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(AppTypography.subhead)
+                        .foregroundStyle(.white.opacity(0.7))
+                }
             }
             .shadow(color: .black.opacity(0.45), radius: 12, y: 3)
 
@@ -165,7 +192,7 @@ struct HomeView: View {
     }
 
     private var subtitle: String {
-        if origin != nil { return "Your balloon is ready to drift." }
+        if origin != nil { return "" }
         return appModel.isLocating ? "Finding where you are…" : "Pick a starting city to begin."
     }
 

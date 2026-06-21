@@ -4,9 +4,6 @@ struct PassportView: View {
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
 
-    private let stampColumns = [GridItem(.flexible(), spacing: AppSpacing.sm),
-                                GridItem(.flexible(), spacing: AppSpacing.sm),
-                                GridItem(.flexible(), spacing: AppSpacing.sm)]
     private let cardColumns = [GridItem(.flexible(), spacing: AppSpacing.sm),
                                GridItem(.flexible(), spacing: AppSpacing.sm)]
 
@@ -26,7 +23,6 @@ struct PassportView: View {
                     statsGrid
                     missionsSection
                     postcardsSection
-                    routesSection
                     skinsSection
                 }
                 .padding(AppSpacing.screen)
@@ -78,29 +74,6 @@ struct PassportView: View {
                     .font(AppTypography.callout)
                     .foregroundStyle(AppColors.textSecondary)
                 Spacer()
-            }
-        }
-    }
-
-    @ViewBuilder private var routesSection: some View {
-        let journeys = appModel.currentOrigin == nil ? [] : JourneyPlanner.plan(from: appModel.originForJourney)
-        if !journeys.isEmpty {
-            VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                HStack {
-                    SectionLabel(text: "Destinations near \(appModel.originForJourney.city)")
-                    Spacer()
-                    Text("\(journeys.filter { progress.completedRouteIDs.contains($0.id) }.count)/\(journeys.count)")
-                        .font(AppTypography.caption)
-                        .foregroundStyle(AppColors.textTertiary)
-                }
-                LazyVGrid(columns: stampColumns, spacing: AppSpacing.sm) {
-                    ForEach(journeys) { journey in
-                        DestinationStampTile(
-                            journey: journey,
-                            completed: progress.completedRouteIDs.contains(journey.id),
-                            locked: !appModel.isUnlocked(journey.route))
-                    }
-                }
             }
         }
     }
@@ -276,54 +249,5 @@ private struct SkinTile: View {
                 .strokeBorder(selected ? skin.theme.accent.opacity(0.8) : Color.clear, lineWidth: 2))
         }
         .buttonStyle(SoftPressStyle())
-    }
-}
-
-private struct DestinationStampTile: View {
-    let journey: PlannedJourney
-    let completed: Bool
-    let locked: Bool
-
-    var body: some View {
-        if completed {
-            ZStack {
-                DestinationScene(mood: journey.mood, theme: journey.theme,
-                                 landmark: journey.landmark, compact: true)
-                VStack(spacing: 4) {
-                    Image(systemName: "checkmark.seal.fill")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(journey.mood.preferredForeground)
-                    Text(journey.name)
-                        .font(AppTypography.caption)
-                        .foregroundStyle(journey.mood.preferredForeground)
-                        .lineLimit(1)
-                }
-                .padding(4)
-            }
-            .frame(height: 116)
-            .clipShape(RoundedRectangle(cornerRadius: AppSpacing.pillRadius, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: AppSpacing.pillRadius, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.15), lineWidth: 1))
-            .shadow(color: AppColors.shadow, radius: 8, y: 4)
-        } else {
-            VStack(spacing: 6) {
-                Image(systemName: locked ? "lock.fill" : journey.mood.systemImage)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(AppColors.textTertiary)
-                Text(journey.name)
-                    .font(AppTypography.caption)
-                    .foregroundStyle(AppColors.textTertiary)
-                    .lineLimit(1)
-                Text(journey.code)
-                    .font(AppTypography.micro)
-                    .foregroundStyle(AppColors.textTertiary.opacity(0.7))
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 116)
-            .background(RoundedRectangle(cornerRadius: AppSpacing.pillRadius, style: .continuous)
-                .fill(AppColors.hairline))
-            .overlay(RoundedRectangle(cornerRadius: AppSpacing.pillRadius, style: .continuous)
-                .strokeBorder(AppColors.hairline, style: StrokeStyle(lineWidth: 1, dash: [4, 4])))
-        }
     }
 }

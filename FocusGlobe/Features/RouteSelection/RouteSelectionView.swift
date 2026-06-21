@@ -12,7 +12,7 @@ struct RouteSelectionView: View {
     @StateObject private var viewModel = RouteSelectionViewModel()
     @State private var selectedID: String?
     @State private var showCityPicker = false
-    @State private var showGlobe = false
+    @State private var originPoint: CGPoint?
 
     private var origin: JourneyOrigin { appModel.originForJourney }
     private var journeys: [PlannedJourney] { viewModel.journeys(from: origin) }
@@ -23,6 +23,9 @@ struct RouteSelectionView: View {
     var body: some View {
         ZStack {
             mapLayer
+            if let originPoint {
+                RadarPulse().position(originPoint).allowsHitTesting(false)
+            }
             scrims
 
             VStack(spacing: AppSpacing.sm) {
@@ -42,9 +45,6 @@ struct RouteSelectionView: View {
         }
         .focusScreenChrome()
         .sheet(isPresented: $showCityPicker) { LocationPickerView() }
-        .fullScreenCover(isPresented: $showGlobe) {
-            if let current { GlobeJourneyView(origin: origin, route: current.route) }
-        }
         .onAppear { viewModel.prepare(from: origin) }
         .onChange(of: origin) { _, newOrigin in viewModel.prepare(from: newOrigin) }
         .onChange(of: viewModel.selectedCategory) { _, _ in
@@ -61,13 +61,21 @@ struct RouteSelectionView: View {
 
     @ViewBuilder private var mapLayer: some View {
         if let current {
-            JourneyDiscoveryMap(origin: origin, route: current.route, nearby: nearbyPins)
+            JourneyDiscoveryMap(origin: origin, route: current.route, nearby: nearbyPins,
+                                onOriginPoint: setOriginPoint)
                 .ignoresSafeArea()
                 .animation(.easeInOut(duration: 0.5), value: current.id)
         } else {
-            JourneyBackdropMap(origin: origin, mode: .origin, showsBalloon: false)
+            JourneyBackdropMap(origin: origin, mode: .origin, showsBalloon: false,
+                               onOriginPoint: setOriginPoint)
                 .ignoresSafeArea()
         }
+    }
+
+    private func setOriginPoint(_ p: CGPoint?) {
+        guard let p else { if originPoint != nil { originPoint = nil }; return }
+        if let o = originPoint, abs(o.x - p.x) < 1.5, abs(o.y - p.y) < 1.5 { return }
+        originPoint = p
     }
 
     private var scrims: some View {
@@ -92,15 +100,7 @@ struct RouteSelectionView: View {
                 Text("from \(origin.city)").font(AppTypography.caption).foregroundStyle(.white.opacity(0.7))
             }
             Spacer()
-            HStack(spacing: AppSpacing.xs) {
-                if current != nil {
-                    AppIconButton(systemImage: "globe.europe.africa.fill", size: 44, tint: .white,
-                                  accessibilityLabel: "Globe View") {
-                        appModel.haptics.tap(); showGlobe = true
-                    }
-                }
-                CrownButton(size: 44) { appModel.haptics.tap(); router.presentPaywall() }
-            }
+            CrownButton(size: 44) { appModel.haptics.tap(); router.presentPaywall() }
         }
         .padding(.horizontal, AppSpacing.screen)
     }

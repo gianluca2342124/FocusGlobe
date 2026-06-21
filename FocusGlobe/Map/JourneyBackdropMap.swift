@@ -46,6 +46,9 @@ struct JourneyBackdropMap: View {
     /// Nearby destinations to surface as a subtle radar of small tags (Choose
     /// Journey only). Empty everywhere else.
     var nearby: [MapPin] = []
+    /// Reports the origin's on-screen point (in the map's coordinate space) so a
+    /// SwiftUI radar pulse can be overlaid there. `nil` when no origin is shown.
+    var onOriginPoint: (CGPoint?) -> Void = { _ in }
 
     private var theme: RouteTheme { destination?.colorTheme ?? .teal }
     private var mood: RouteMood { destination?.mood ?? .calm }
@@ -56,7 +59,7 @@ struct JourneyBackdropMap: View {
                               mode: mode, progress: progress,
                               showsCodeTags: showsCodeTags, showsBalloon: showsBalloon,
                               showsOrigin: showsOrigin, bottomInset: bottomInset,
-                              nearby: nearby, theme: theme)
+                              nearby: nearby, onOriginPoint: onOriginPoint, theme: theme)
             .allowsHitTesting(false)
         #else
         fallback.allowsHitTesting(false)
@@ -147,6 +150,7 @@ struct GoogleBackdropMapView: UIViewRepresentable {
     let showsOrigin: Bool
     let bottomInset: CGFloat
     let nearby: [MapPin]
+    let onOriginPoint: (CGPoint?) -> Void
     let theme: RouteTheme
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -171,6 +175,15 @@ struct GoogleBackdropMapView: UIViewRepresentable {
         // text block below.
         map.padding = UIEdgeInsets(top: 0, left: 0, bottom: bottomInset, right: 0)
         context.coordinator.configure(map: map, view: self)
+
+        // Report the origin's screen point for the SwiftUI radar overlay.
+        let report = onOriginPoint
+        let showOrigin = showsOrigin
+        let coord = CLLocationCoordinate2D(latitude: origin.coordinate.latitude,
+                                           longitude: origin.coordinate.longitude)
+        DispatchQueue.main.async {
+            report(showOrigin ? map.projection.point(for: coord) : nil)
+        }
     }
 
     final class Coordinator {

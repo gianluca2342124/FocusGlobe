@@ -142,13 +142,14 @@ struct GoogleJourneyMapView: UIViewRepresentable {
             full.map = map
             fullPolyline = full
 
-            // Travelled portion (bright accent).
-            let traveled = GMSPolyline()
-            traveled.strokeWidth = 7
-            traveled.strokeColor = UIColor(data.theme.accent)
-            traveled.zIndex = 3
-            traveled.map = map
-            traveledPolyline = traveled
+            // A subtle white air trail behind the balloon (NOT a coloured
+            // completed-route line — there is a single route line only).
+            let trail = GMSPolyline()
+            trail.strokeWidth = 5
+            trail.strokeColor = UIColor.white.withAlphaComponent(0.30)
+            trail.zIndex = 5
+            trail.map = map
+            traveledPolyline = trail
 
             // Origin & destination dots.
             let origin = GMSMarker(position: CLLocationCoordinate2D(latitude: data.origin.latitude, longitude: data.origin.longitude))
@@ -184,12 +185,11 @@ struct GoogleJourneyMapView: UIViewRepresentable {
                 coordinate: CLLocationCoordinate2D(latitude: data.destination.latitude, longitude: data.destination.longitude))
             map.moveCamera(GMSCameraUpdate.fit(bounds, withPadding: 64))
 
-            // Hold the whole-route overview briefly, then dive in close to the
-            // balloon and follow it.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self, weak map] in
+            // Brief whole-route overview, then a quicker dive in to the balloon.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self, weak map] in
                 guard let self, let map else { return }
                 CATransaction.begin()
-                CATransaction.setAnimationDuration(2.3)
+                CATransaction.setAnimationDuration(1.4)
                 CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .easeInEaseOut))
                 map.animate(to: self.followCamera(for: data, vehicle: data.vehicle))
                 CATransaction.commit()
@@ -208,11 +208,14 @@ struct GoogleJourneyMapView: UIViewRepresentable {
             vehicleMarker?.position = vehicleCoord
             CATransaction.commit()
 
-            // Update the travelled polyline.
-            let traveledPath = GMSMutablePath()
-            MapRouteRenderer.traveledPoints(from: data.origin, to: data.vehicle)
-                .forEach { traveledPath.add(CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)) }
-            traveledPolyline?.path = traveledPath
+            // Air trail: just the short wisp of route immediately behind the
+            // balloon (fades back into the single route line).
+            let tailStartFrac = max(0, data.progress - 0.06)
+            let tailStart = GeoMath.interpolate(from: data.origin, to: data.destination, fraction: tailStartFrac)
+            let trailPath = GMSMutablePath()
+            MapRouteRenderer.traveledPoints(from: tailStart, to: data.vehicle, samples: 14)
+                .forEach { trailPath.add(CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)) }
+            traveledPolyline?.path = trailPath
 
             // Respond to explicit camera commands (Recenter / Full Route / Tilt).
             let commandChanged = data.cameraToken != lastCameraToken
