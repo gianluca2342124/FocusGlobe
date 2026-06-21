@@ -43,6 +43,9 @@ struct JourneyBackdropMap: View {
     /// Bottom inset (points) so the origin sits in the upper half of the screen,
     /// above the text block. Used on Home; 0 elsewhere.
     var bottomInset: CGFloat = 0
+    /// Camera zoom for origin-only framing (Home). Lower = more of the
+    /// region/world. Only affects `.origin` mode with an origin shown.
+    var originZoom: Float = 9.3
     /// Nearby destinations to surface as a subtle radar of small tags (Choose
     /// Journey only). Empty everywhere else.
     var nearby: [MapPin] = []
@@ -59,7 +62,8 @@ struct JourneyBackdropMap: View {
                               mode: mode, progress: progress,
                               showsCodeTags: showsCodeTags, showsBalloon: showsBalloon,
                               showsOrigin: showsOrigin, bottomInset: bottomInset,
-                              nearby: nearby, onOriginPoint: onOriginPoint, theme: theme)
+                              nearby: nearby, onOriginPoint: onOriginPoint,
+                              originZoom: originZoom, theme: theme)
             .allowsHitTesting(false)
         #else
         fallback.allowsHitTesting(false)
@@ -151,6 +155,7 @@ struct GoogleBackdropMapView: UIViewRepresentable {
     let bottomInset: CGFloat
     let nearby: [MapPin]
     let onOriginPoint: (CGPoint?) -> Void
+    let originZoom: Float
     let theme: RouteTheme
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -248,7 +253,7 @@ struct GoogleBackdropMapView: UIViewRepresentable {
                     addTag(code: view.origin.code, highlighted: false, at: originCoord, accent: accent, on: map)
                 }
                 // Zoomed out so you see the city/region from above, not the street.
-                let zoom: Float = view.showsOrigin ? 9.3 : 4.0
+                let zoom: Float = view.showsOrigin ? view.originZoom : 4.0
                 CATransaction.begin()
                 CATransaction.setDisableActions(true)
                 map.moveCamera(GMSCameraUpdate.setCamera(

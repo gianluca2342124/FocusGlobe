@@ -33,6 +33,8 @@ final class AppModel: ObservableObject {
     let ads = AdService()
     let purchases: PurchaseService
     let location = LocationService()
+    /// RevenueCat-backed subscription state (inert until the SDK is linked).
+    let subscriptions = SubscriptionManager()
 
     private let persistence: PersistenceService
     private var cancellables: Set<AnyCancellable> = []
@@ -67,6 +69,18 @@ final class AppModel: ObservableObject {
                     self.settings.startingCity = nil
                 }
                 #endif
+            }
+            .store(in: &cancellables)
+
+        // RevenueCat: configure once (non-blocking) and let it drive Pro state
+        // when it's the source of truth. When the SDK isn't linked it stays inert
+        // and the local/mock Pro flag is used instead.
+        subscriptions.configure()
+        subscriptions.$isPro
+            .receive(on: RunLoop.main)
+            .sink { [weak self] pro in
+                guard let self, self.subscriptions.isAvailable else { return }
+                self.isPro = pro
             }
             .store(in: &cancellables)
 
@@ -452,6 +466,11 @@ final class AppModel: ObservableObject {
     }
 
     func restorePurchases() async -> Bool {
+        if subscriptions.isAvailable {
+            let ok = await subscriptions.restore()
+            isPro = subscriptions.isPro
+            return ok
+        }
         let ok = await purchases.restore()
         isPro = purchases.isPro
         return ok

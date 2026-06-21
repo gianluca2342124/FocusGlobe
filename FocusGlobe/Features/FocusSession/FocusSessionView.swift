@@ -82,6 +82,11 @@ struct FocusSessionView: View {
 
     private var vignette: some View {
         ZStack {
+            // Keep bright map types (Terrain/Standard/Satellite) feeling dark and
+            // premium without changing the map type itself. Dark styles stay clean.
+            if !vm.mapStyle.isDark {
+                Color.black.opacity(0.22).ignoresSafeArea()
+            }
             RadialGradient(colors: [.clear, .black.opacity(0.28)],
                            center: .center, startRadius: 220, endRadius: 580)
             VStack(spacing: 0) {

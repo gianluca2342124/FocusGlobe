@@ -32,7 +32,7 @@ struct RootView: View {
             FocusSessionContainerView(journey: journey)
         }
         .sheet(isPresented: $router.showPaywall) {
-            PaywallView()
+            PaywallContainerView()
         }
         .preferredColorScheme(appModel.settings.appearance.colorScheme)
     }

@@ -14,7 +14,7 @@ final class FocusSessionViewModel: ObservableObject {
     let timer: SessionTimerService
 
     @Published var pureMode: Bool = false
-    @Published var mapStyle: MapDisplayStyle = .graphite
+    @Published var mapStyle: MapDisplayStyle = .terrain
     /// Camera behaviour the user can toggle in-session (follow vs. full route).
     @Published var cameraMode: JourneyCameraMode = .follow
     /// A gentle 3D tilt of the follow camera (where Google supports it).
@@ -54,10 +54,11 @@ final class FocusSessionViewModel: ObservableObject {
         guard self.appModel == nil else { return }
         self.appModel = appModel
         pureMode = appModel.settings.pureModeDefault
-        // Always begin the flight on the premium dark style, regardless of the
-        // saved style or the app's Light/Dark appearance — the map must never go
-        // bright/white in flight. The user can still switch via the in-session menu.
-        mapStyle = appModel.settings.mapStyle.isDark ? appModel.settings.mapStyle : .graphite
+        // The active flight defaults to Terrain (premium topographic look). A dark
+        // overlay in FocusSessionView keeps it feeling dark/premium so it never
+        // reads as a bright/white map. The user can still switch via the in-session
+        // menu (controls unchanged).
+        mapStyle = .terrain
     }
 
     func setMapStyle(_ style: MapDisplayStyle) {

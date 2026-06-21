@@ -64,7 +64,7 @@ struct HomeView: View {
             // also lifts the Google attribution to just above the (compact) text
             // cluster, so it stays visible without colliding with the title.
             JourneyBackdropMap(origin: origin, mode: .origin, showsBalloon: true,
-                               bottomInset: 330, onOriginPoint: setOriginPoint)
+                               bottomInset: 330, originZoom: 6.3, onOriginPoint: setOriginPoint)
                 .ignoresSafeArea()
         } else {
             // No real/chosen origin yet — a calm high-altitude map with no

@@ -44,7 +44,6 @@ struct BoardingView: View {
                 Spacer(minLength: AppSpacing.xs)
                 ticketStack
                 focusSelector.opacity(focusIn ? 1 : 0)
-                takeoffHint.opacity(focusIn ? 1 : 0)
                 Spacer()
             }
             .padding(.horizontal, AppSpacing.screen)
@@ -101,10 +100,9 @@ struct BoardingView: View {
 
     private var focusSelector: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xs) {
-            Text("CHOOSE A FOCUS (OPTIONAL)")
-                .font(.system(size: 10, weight: .semibold, design: .rounded))
-                .tracking(0.8)
-                .foregroundStyle(.white.opacity(0.6))
+            Text("What do you want to focus?")
+                .font(AppTypography.subhead)
+                .foregroundStyle(.white.opacity(0.75))
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: AppSpacing.xs) {
                     ForEach(FocusPreset.all) { preset in
@@ -119,16 +117,6 @@ struct BoardingView: View {
                 .padding(.vertical, 2)
             }
         }
-    }
-
-    private var takeoffHint: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "arrow.left.and.right")
-                .font(.system(size: 12, weight: .bold))
-            Text("Swipe across the perforation to take off")
-                .font(AppTypography.caption)
-        }
-        .foregroundStyle(.white.opacity(0.85))
     }
 
     // MARK: Choreography

@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(RevenueCatUI)
+import RevenueCatUI
+#endif
 
 struct SettingsView: View {
     @EnvironmentObject private var appModel: AppModel
@@ -6,6 +9,9 @@ struct SettingsView: View {
     @State private var showResetConfirm = false
     @State private var restoreMessage: String?
     @State private var showCityPicker = false
+    #if canImport(RevenueCatUI)
+    @State private var showCustomerCenter = false
+    #endif
 
     var body: some View {
         ZStack {
@@ -33,6 +39,9 @@ struct SettingsView: View {
         .focusScreenChrome()
         .onAppear { appModel.analytics.log(.settingsOpened) }
         .sheet(isPresented: $showCityPicker) { LocationPickerView() }
+        #if canImport(RevenueCatUI)
+        .sheet(isPresented: $showCustomerCenter) { CustomerCenterView() }
+        #endif
         .confirmationDialog("Reset all local data?", isPresented: $showResetConfirm, titleVisibility: .visible) {
             Button("Reset everything", role: .destructive) { appModel.resetAllData() }
             Button("Cancel", role: .cancel) {}
@@ -174,6 +183,19 @@ struct SettingsView: View {
                     SettingsRow(systemImage: "checkmark.seal.fill", title: "Pro is active",
                                 subtitle: "Thank you for your support", tint: AppColors.success,
                                 trailing: AnyView(EmptyView()))
+                    #if canImport(RevenueCatUI)
+                    if appModel.subscriptions.isAvailable {
+                        RowDivider()
+                        Button { showCustomerCenter = true } label: {
+                            SettingsRow(systemImage: "person.crop.circle", title: "Manage subscription",
+                                        subtitle: "Billing, restore & support", tint: AppColors.brand,
+                                        trailing: AnyView(Image(systemName: "chevron.right")
+                                            .font(.system(size: 13, weight: .semibold))
+                                            .foregroundStyle(AppColors.textTertiary)))
+                        }
+                        .buttonStyle(SoftPressStyle())
+                    }
+                    #endif
                 } else {
                     Button {
                         router.presentPaywall()
