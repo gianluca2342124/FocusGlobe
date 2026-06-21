@@ -1,128 +1,289 @@
 import SwiftUI
 
+/// The custom FocusGlobe premium paywall — a dark/gold luxury screen that drives
+/// RevenueCat purchases underneath (via `AppModel.subscriptions`). This is the
+/// single premium surface for every trigger (crown, Ultra lock, premium skins,
+/// go-Pro). It never uses the RevenueCatUI template paywall.
+///
+/// Prices are the App Store localized prices from RevenueCat (never hardcoded);
+/// the fallback placeholders only appear in the disabled "products unavailable"
+/// state.
 struct PaywallView: View {
     @EnvironmentObject private var appModel: AppModel
     @Environment(\.dismiss) private var dismiss
-    @State private var isPurchasing = false
+
+    @State private var selectedKind: PlanKind = .annual
+    @State private var animateBlobs = false
+
+    // TODO: replace with your real policy URLs (placeholders for now).
+    private static let privacyURL = URL(string: "https://focusglobe.app/privacy")!
+    private static let termsURL = URL(string: "https://focusglobe.app/terms")!
 
     private let benefits: [(String, String)] = [
-        ("crown.fill", "Every premium destination unlocked"),
-        ("infinity", "Long & ultra journeys, up to 12 hours"),
-        ("balloon.fill", "Exclusive balloon skins"),
-        ("bolt.fill", "Double miles on every landing"),
-        ("globe.europe.africa.fill", "Globe View & advanced map styles"),
-        ("music.note", "Premium ambient soundscapes"),
-        ("nosign", "No ads, ever"),
-        ("sparkles", "Early access to future perks"),
+        ("crown.fill", "Unlock Ultra journeys"),
+        ("paintbrush.pointed.fill", "Exclusive balloon skins"),
+        ("bolt.fill", "Double selected rewards"),
+        ("sparkles", "Premium journey experiences"),
+        ("heart.fill", "Support FocusGlobe"),
     ]
+
+    private var subs: SubscriptionManager { appModel.subscriptions }
 
     var body: some View {
         ZStack {
-            AppBackground()
-            ScrollView {
+            goldBackground
+            ScrollView(showsIndicators: false) {
                 VStack(spacing: AppSpacing.lg) {
-                    header
+                    closeRow
+                    balloonHero
+                    Text("Unlock All Features")
+                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
                     benefitsCard
-                    Spacer(minLength: AppSpacing.md)
-                    purchaseArea
+                    if appModel.isPro { proState } else { purchaseSection }
                 }
-                .padding(AppSpacing.screen)
-                .padding(.top, AppSpacing.md)
+                .padding(.horizontal, AppSpacing.screen)
+                .padding(.bottom, AppSpacing.xl)
             }
         }
-        .presentationDragIndicator(.visible)
-        .onAppear { appModel.analytics.log(.paywallOpened) }
+        .onAppear {
+            appModel.analytics.log(.paywallOpened)
+            subs.loadOfferings()
+        }
     }
 
-    private var header: some View {
-        VStack(spacing: AppSpacing.sm) {
-            HStack {
-                Spacer()
-                AppIconButton(systemImage: "xmark", size: 38, accessibilityLabel: "Close") { dismiss() }
-            }
-            BalloonView(height: 132, showBurner: true, showGlow: true,
-                        glow: AppColors.gold.opacity(0.85))
-                .padding(.bottom, AppSpacing.xxs)
-            HStack(spacing: 6) {
-                Image(systemName: "crown.fill")
-                    .font(.system(size: 13, weight: .bold))
-                Text("FOCUSGLOBE PRO")
-                    .font(.system(size: 13, weight: .heavy, design: .rounded))
-                    .tracking(1.5)
-            }
-            .foregroundStyle(AppColors.gold)
-            Text("Travel further, in style.")
-                .font(AppTypography.title)
-                .foregroundStyle(AppColors.textPrimary)
-            Text("Unlock every route and keep the skies ad-free.")
-                .font(AppTypography.subhead)
-                .foregroundStyle(AppColors.textSecondary)
-                .multilineTextAlignment(.center)
+    // MARK: Background
+
+    private var goldBackground: some View {
+        ZStack {
+            LinearGradient(colors: [Color(hex: 0x241B0E), Color(hex: 0x100E08)],
+                           startPoint: .top, endPoint: .bottom)
+            blob(AppColors.gold.opacity(0.45), 320, x: animateBlobs ? -120 : -70, y: animateBlobs ? -230 : -180)
+            blob(Color(hex: 0xF2C879).opacity(0.40), 280, x: animateBlobs ? 150 : 110, y: animateBlobs ? -40 : -120)
+            blob(Color(hex: 0xE0A23E).opacity(0.32), 260, x: animateBlobs ? -110 : -150, y: animateBlobs ? 220 : 280)
         }
+        .ignoresSafeArea()
+        .onAppear {
+            withAnimation(.easeInOut(duration: 9).repeatForever(autoreverses: true)) { animateBlobs = true }
+        }
+        .allowsHitTesting(false)
+    }
+
+    private func blob(_ color: Color, _ size: CGFloat, x: CGFloat, y: CGFloat) -> some View {
+        Circle().fill(color).frame(width: size, height: size).blur(radius: 80).offset(x: x, y: y)
+    }
+
+    // MARK: Header
+
+    private var closeRow: some View {
+        HStack {
+            Spacer()
+            AppIconButton(systemImage: "xmark", size: 36, tint: .white, accessibilityLabel: "Close") { dismiss() }
+        }
+        .padding(.top, AppSpacing.xs)
+    }
+
+    private var balloonHero: some View {
+        ZStack {
+            Circle()
+                .fill(RadialGradient(colors: [AppColors.gold.opacity(0.55), .clear],
+                                     center: .center, startRadius: 6, endRadius: 130))
+                .frame(width: 250, height: 250)
+            // Existing balloon asset (easy to swap later in Xcode).
+            BalloonView(height: 128, showBurner: true, showGlow: true, glow: AppColors.gold.opacity(0.9))
+        }
+        .frame(height: 200)
     }
 
     private var benefitsCard: some View {
-        AppGlassCard {
-            VStack(alignment: .leading, spacing: AppSpacing.md) {
-                ForEach(benefits, id: \.1) { benefit in
-                    HStack(spacing: AppSpacing.sm) {
-                        Image(systemName: benefit.0)
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(AppColors.brand)
-                            .frame(width: 26)
-                        Text(benefit.1)
-                            .font(AppTypography.callout)
-                            .foregroundStyle(AppColors.textPrimary)
-                        Spacer()
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(AppColors.success)
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
+            ForEach(benefits, id: \.1) { benefit in
+                HStack(spacing: AppSpacing.sm) {
+                    Image(systemName: benefit.0)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(AppColors.gold)
+                        .frame(width: 26, height: 26)
+                        .background(Circle().fill(AppColors.gold.opacity(0.16)))
+                    Text(benefit.1)
+                        .font(AppTypography.callout)
+                        .foregroundStyle(.white)
+                    Spacer()
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(AppColors.gold)
+                }
+            }
+        }
+        .padding(AppSpacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
+                    .fill(Color.black.opacity(0.22)))
+                .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
+                    .strokeBorder(AppColors.gold.opacity(0.25), lineWidth: 1))
+        )
+    }
+
+    // MARK: Already Pro
+
+    private var proState: some View {
+        VStack(spacing: AppSpacing.sm) {
+            Label("You're a Pro member", systemImage: "checkmark.seal.fill")
+                .font(AppTypography.headline)
+                .foregroundStyle(AppColors.gold)
+            Button { dismiss() } label: {
+                Text("Close")
+                    .font(AppTypography.headline)
+                    .foregroundStyle(Color(hex: 0x14181F))
+                    .frame(maxWidth: .infinity).frame(height: 54)
+                    .background(Capsule().fill(goldGradient))
+            }
+            .buttonStyle(SoftPressStyle())
+        }
+    }
+
+    // MARK: Plans + purchase
+
+    private var purchaseSection: some View {
+        VStack(spacing: AppSpacing.sm) {
+            ForEach(PlanKind.allCases) { kind in planCard(kind) }
+
+            purchaseButton
+                .padding(.top, AppSpacing.xs)
+
+            if let message = subs.errorMessage {
+                Text(message)
+                    .font(AppTypography.caption)
+                    .foregroundStyle(AppColors.danger)
+                    .multilineTextAlignment(.center)
+            }
+
+            footer
+        }
+    }
+
+    private func planCard(_ kind: PlanKind) -> some View {
+        let plan = subs.plan(kind)
+        let selected = selectedKind == kind
+        return Button {
+            appModel.haptics.tap()
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { selectedKind = kind }
+        } label: {
+            HStack(spacing: AppSpacing.sm) {
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text(kind.title)
+                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                        if kind == .annual { discountBadge }
+                    }
+                    if let sub = planSubtitle(kind, plan) {
+                        Text(sub)
+                            .font(AppTypography.caption)
+                            .foregroundStyle(.white.opacity(0.7))
                     }
                 }
+                Spacer()
+                Text(plan?.localizedPrice ?? "—")
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+            }
+            .padding(AppSpacing.md)
+            .background(
+                RoundedRectangle(cornerRadius: AppSpacing.pillRadius, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(RoundedRectangle(cornerRadius: AppSpacing.pillRadius, style: .continuous)
+                        .fill(Color.black.opacity(selected ? 0.10 : 0.28)))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: AppSpacing.pillRadius, style: .continuous)
+                    .strokeBorder(selected ? AppColors.gold : AppColors.gold.opacity(0.18),
+                                  lineWidth: selected ? 2 : 1)
+            )
+            .shadow(color: selected ? AppColors.gold.opacity(0.35) : .clear, radius: 12, y: 0)
+        }
+        .buttonStyle(SoftPressStyle(scale: 0.99))
+    }
+
+    private func planSubtitle(_ kind: PlanKind, _ plan: PlanOption?) -> String? {
+        switch kind {
+        case .annual:   return plan?.monthlyEquivalent
+        case .lifetime: return "Pay once."
+        case .monthly:  return nil
+        }
+    }
+
+    private var discountBadge: some View {
+        Text("-60%")
+            .font(.system(size: 10, weight: .heavy, design: .rounded))
+            .foregroundStyle(Color(hex: 0x14181F))
+            .padding(.horizontal, 6).padding(.vertical, 2)
+            .background(Capsule().fill(AppColors.gold))
+    }
+
+    private var purchaseButton: some View {
+        let available = subs.plan(selectedKind)?.available ?? false
+        let working = subs.isPurchasing
+        return Button { purchase() } label: {
+            ZStack {
+                if working {
+                    ProgressView().tint(Color(hex: 0x14181F))
+                } else {
+                    Text(available ? buttonTitle : "Products unavailable")
+                        .font(AppTypography.headline)
+                        .foregroundStyle(Color(hex: 0x14181F))
+                }
+            }
+            .frame(maxWidth: .infinity).frame(height: 56)
+            .background(Capsule().fill(goldGradient))
+            .shadow(color: AppColors.gold.opacity(0.4), radius: 16, y: 8)
+            .opacity(available ? 1 : 0.5)
+        }
+        .buttonStyle(SoftPressStyle())
+        .disabled(!available || working)
+    }
+
+    private var buttonTitle: String {
+        selectedKind == .annual ? "Start 7 days free trial" : "Continue"
+    }
+
+    private var goldGradient: LinearGradient {
+        LinearGradient(colors: [Color(hex: 0xF6D38A), Color(hex: 0xDE9F38)],
+                       startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
+
+    private var footer: some View {
+        HStack(spacing: AppSpacing.sm) {
+            Link("Privacy", destination: Self.privacyURL)
+            Text("·").foregroundStyle(.white.opacity(0.4))
+            Link("Terms", destination: Self.termsURL)
+            Text("·").foregroundStyle(.white.opacity(0.4))
+            Button("Restore") { restore() }
+        }
+        .font(AppTypography.caption)
+        .foregroundStyle(.white.opacity(0.65))
+        .padding(.top, AppSpacing.xs)
+    }
+
+    // MARK: Actions
+
+    private func purchase() {
+        Task {
+            let ok = await subs.purchase(selectedKind)
+            if ok {
+                appModel.haptics.rewardClaim()
+                dismiss()
             }
         }
     }
 
-    @ViewBuilder private var purchaseArea: some View {
-        if appModel.isPro {
-            VStack(spacing: AppSpacing.sm) {
-                Label("You're a Pro member", systemImage: "checkmark.seal.fill")
-                    .font(AppTypography.headline)
-                    .foregroundStyle(AppColors.success)
-                AppSecondaryButton(title: "Close") { dismiss() }
-            }
-        } else {
-            VStack(spacing: AppSpacing.sm) {
-                Text("Founder's price · $3.99 / month")
-                    .font(AppTypography.caption)
-                    .foregroundStyle(AppColors.textTertiary)
-                AppPrimaryButton(title: "Start FocusGlobe Pro",
-                                 systemImage: "sparkles",
-                                 isLoading: isPurchasing) {
-                    Task { await purchase() }
-                }
-                Button("Restore Purchases") {
-                    Task { _ = await appModel.restorePurchases() }
-                }
-                .font(AppTypography.caption)
-                .foregroundStyle(AppColors.textSecondary)
-
-                Text("Mock purchase for the MVP — no real charge. Replace with StoreKit before release.")
-                    .font(AppTypography.micro)
-                    .foregroundStyle(AppColors.textTertiary)
-                    .multilineTextAlignment(.center)
-                    .padding(.top, 2)
-            }
-        }
-    }
-
-    private func purchase() async {
-        isPurchasing = true
-        let ok = await appModel.goPro()
-        isPurchasing = false
-        if ok {
-            appModel.haptics.rewardClaim()
-            dismiss()
+    private func restore() {
+        appModel.haptics.tap()
+        Task {
+            let ok = await appModel.restorePurchases()
+            if ok { dismiss() }
         }
     }
 }

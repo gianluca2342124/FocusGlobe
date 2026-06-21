@@ -1,119 +1,100 @@
 # RevenueCat Setup — FocusGlobe
 
-FocusGlobe's premium upgrade flow is powered by **RevenueCat**. All RevenueCat
-code is guarded with `#if canImport(RevenueCat)` / `#if canImport(RevenueCatUI)`,
-so the app **compiles and runs without the package** (it behaves as "not Pro" and
-shows the built-in fallback paywall). Once you add the Swift Package below, the
-native RevenueCat paywall + entitlement state light up automatically — no other
-code changes needed.
+The premium upgrade flow is a **custom gold FocusGlobe paywall** (`PaywallView`)
+that drives RevenueCat purchases underneath. The RevenueCatUI **template
+paywall is not used** for the main screen — RevenueCatUI is only used for the
+optional **Customer Center** in Settings.
 
-## 1. Add the Swift Package (Xcode)
+All RevenueCat code is guarded with `#if canImport(RevenueCat)` /
+`#if canImport(RevenueCatUI)`, so the app still compiles/runs if the SDK is
+absent or offerings fail to load (plans fall back to disabled placeholders and
+the app behaves as "not Pro").
 
-The package is **not** added to `project.pbxproj` automatically (doing that by
-hand risks corrupting the project). Add it in Xcode:
+## Dashboard configuration
 
-1. Xcode → **File → Add Package Dependencies…**
-2. Enter the package URL:
-   ```
-   https://github.com/RevenueCat/purchases-ios-spm.git
-   ```
-3. Choose **Up to Next Major Version** (e.g. 5.0.0 < 6.0.0).
-4. Add **both** products to the **FocusGlobe** app target:
-   - `RevenueCat`
-   - `RevenueCatUI`
-5. Build. The `#if canImport(...)` blocks now compile in and the native paywall
-   is used everywhere.
+- **Offering:** `default` (the code uses `offerings.current`, falling back to
+  `offerings.all["default"]`).
+- **Entitlement (identifier checked in code):** `FocusGlobe Pro`
+  - REST API ID (reference only): `entldabe1bce7f`
+  - The code checks `customerInfo.entitlements["FocusGlobe Pro"]`. As a safety
+    net it also treats **any** active entitlement as Pro (FocusGlobe ships a
+    single entitlement), so it stays correct even if the dashboard identifier
+    differs from the display name. **Verify** the entitlement *identifier* in the
+    dashboard matches `SubscriptionManager.entitlementID` — change that one
+    constant if it differs.
+- **Products** (mapped to the `FocusGlobe Pro` entitlement):
 
-(Installation reference:
-https://www.revenuecat.com/docs/getting-started/installation/ios#install-via-swift-package-manager)
+  | Plan     | Product identifier        | REST API ID (reference) |
+  |----------|---------------------------|-------------------------|
+  | Annual   | `subscription_annually`   | `prod546ae7419f`        |
+  | Lifetime | `subscription_lifetime`   | `prodfd0bad48c5`        |
+  | Monthly  | `subscription_monthly`*   | —                       |
 
-## 2. API key
+  *Monthly is matched by product identifier `subscription_monthly` **or** by
+  RevenueCat `packageType == .monthly`, so a differently-named monthly product in
+  the `default` offering still maps correctly. If your monthly product uses a
+  different identifier, set `SubscriptionManager.monthlyProductID`.
 
-Paste your **public** RevenueCat API key in:
+Purchases use the SDK `Package`/`StoreProduct` from the fetched offering — **no
+REST API IDs are passed to purchase calls**. The IDs above are for debugging.
 
-```
-FocusGlobe/Services/SubscriptionManager.swift  →  static let apiKey = "..."
-```
+## API key
 
-It is configured once at launch from `AppModel.init()` via
-`subscriptions.configure()`. Configuration is non-blocking and is skipped if the
-key is empty or still a placeholder.
+Paste your **public** RevenueCat API key in
+`FocusGlobe/Services/SubscriptionManager.swift` → `static let apiKey`. It's
+configured once at launch from `AppModel.init()` (non-blocking).
 
-## 3. Entitlement
+## The custom paywall
 
-Create one entitlement in the RevenueCat dashboard, named **exactly**:
+`PaywallView` (`FocusGlobe/Features/Paywall/PaywallView.swift`):
 
-```
-FocusGlobe Pro
-```
+- Dark/gold luxury look with soft animated gold blobs and the FocusGlobe balloon
+  (`BalloonView` — swap the image asset later; the reference is kept clean).
+- Title **"Unlock All Features"**, benefit rows, and three plans:
+  - **Annually** (selected by default, `-60%` badge, shows the localized annual
+    price + a localized "/month" equivalent = annual price ÷ 12). Button:
+    **"Start 7 days free trial"**.
+  - **Lifetime** ("Pay once."). Button: **"Continue"**.
+  - **Monthly**. Button: **"Continue"**.
+- A gold purchase button (loading state, double-tap-proof) and a footer with
+  **Privacy · Terms · Restore**. Privacy/Terms URLs are placeholders in
+  `PaywallView` — replace `privacyURL` / `termsURL`.
+- All prices are the App Store **localized** prices from RevenueCat. The expected
+  EU base prices (18,99 € / 35,99 € / 3,99 € → 1,58 €/month) only appear as
+  disabled placeholders when products can't load.
 
-This entitlement unlocks:
-- **Ultra** journeys (Short / Deep / Long stay free).
-- Premium balloon skins.
+Every premium trigger (Home/Choose Journey crown, Ultra lock, "Unlock with Pro",
+premium skins, first-launch intro) calls `router.presentPaywall()`, which
+presents this one screen.
 
-The id is referenced once: `SubscriptionManager.entitlementID`.
+## Centralized state — `SubscriptionManager`
 
-## 4. Products / offering
+`customerInfo`/entitlement, `offerings`, localized `plans`, `isPro`,
+`isLoading`, `isPurchasing`, `errorMessage`, plus `configure()`,
+`loadOfferings()`, `refreshCustomerInfo()`, `purchase(_:)`, `restorePurchases()`.
+`AppModel` mirrors `isPro` so Ultra journeys + premium skins unlock immediately
+after purchase/restore. Gating is unchanged: **only Ultra requires Pro**;
+Short/Deep/Long are free.
 
-Create these products (App Store Connect) and attach them to your RevenueCat
-**Offering** + **Paywall**:
-
-| Role     | Product identifier |
-|----------|--------------------|
-| Lifetime | `lifetime`         |
-| Yearly   | `yearly`           |
-| Monthly  | `monthly`          |
-
-Map all three to the **FocusGlobe Pro** entitlement. Build the paywall in the
-RevenueCat **Paywalls** editor — the app renders it natively, so prices/copy come
-from the dashboard (nothing is hardcoded in the app).
-
-(Paywalls: https://www.revenuecat.com/docs/tools/paywalls ·
-Displaying: https://www.revenuecat.com/docs/tools/paywalls/displaying-paywalls)
-
-## 5. Where the paywall appears
-
-Every premium trigger calls `router.presentPaywall()`, which presents
-`PaywallContainerView` as a sheet → the RevenueCat paywall (or the built-in
-fallback when the package isn't linked). Triggers:
-
-- Crown button on **Home** and **Choose Journey**.
-- **Ultra** journey lock ("Unlock with Pro").
-- Premium **balloon skins** in Passport.
-- "Remove ads & go Pro" in **Settings**.
-- The one-time premium intro on first Home.
-
-After purchase/restore, `SubscriptionManager` receives the updated `CustomerInfo`
-(via `customerInfoStream`) and flips `isPro`, which `AppModel` mirrors so Ultra +
-skins unlock immediately.
-
-## 6. Customer Center
+## Customer Center
 
 When RevenueCatUI is linked and the user is Pro, **Settings → FocusGlobe Pro**
-shows a **Manage subscription** row that presents RevenueCat's native
-`CustomerCenterView` (billing, restore, support). It's hidden otherwise so
-Settings stays clean.
+shows a **Manage subscription** row that presents `CustomerCenterView`.
 
-(Customer Center: https://www.revenuecat.com/docs/tools/customer-center ·
-Customer Info: https://www.revenuecat.com/docs/customers/customer-info)
+## Testing in Sandbox
 
-## 7. Testing in Sandbox
+1. Sign into a **Sandbox tester** (App Store Connect) on the device.
+2. Ensure the three products are **Ready to Submit** and attached to the
+   `default` offering + the `FocusGlobe Pro` entitlement.
+3. Run, open any crown / Ultra journey → the custom paywall appears with live
+   localized prices.
+4. Purchase → Pro unlocks immediately (Ultra + premium skins).
+5. **Restore** uses the Apple account and refreshes `CustomerInfo`.
 
-1. Add a **Sandbox tester** in App Store Connect and sign into it on the device
-   (Settings → App Store → Sandbox Account, or sign in when prompted at purchase).
-2. Ensure products are **Ready to Submit** and linked to the offering.
-3. Run the app, tap any crown / Ultra journey → the paywall appears.
-4. Purchase → the app should unlock Ultra + premium skins immediately.
-5. Reset: delete the app or use **Settings → Developer → Reset local data**
-   (note: this clears local mock state; the real entitlement comes from
-   RevenueCat and re-asserts on next launch).
+## Verify in App Store Connect / RevenueCat
 
-## 8. Graceful degradation
-
-- If offerings fail to load, the RevenueCat paywall shows its own error/retry
-  state and the rest of the app keeps working.
-- If customer info fails to refresh, the app keeps running (Pro simply stays at
-  its last known value); errors are only surfaced when the user initiates a
-  purchase/restore.
-- Without the package, the built-in `PaywallView` fallback is used and Pro is
-  driven by the local mock (`PurchaseService`) for development.
+- The three products exist, are approved/Ready, and are in the `default`
+  offering as packages.
+- The annual product has the **7-day free trial** introductory offer (the button
+  copy promises it).
+- The `FocusGlobe Pro` entitlement is attached to all three products.

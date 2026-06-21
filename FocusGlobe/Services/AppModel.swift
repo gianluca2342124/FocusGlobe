@@ -467,7 +467,7 @@ final class AppModel: ObservableObject {
 
     func restorePurchases() async -> Bool {
         if subscriptions.isAvailable {
-            let ok = await subscriptions.restore()
+            let ok = await subscriptions.restorePurchases()
             isPro = subscriptions.isPro
             return ok
         }
