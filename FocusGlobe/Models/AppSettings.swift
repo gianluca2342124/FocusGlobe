@@ -23,6 +23,11 @@ struct AppSettings: Codable, Equatable {
     /// overwritten by GPS). Cleared by "Return to my real location".
     var virtualOrigin: JourneyOrigin? = nil
 
+    /// The city the user departed from on the most recent completed journey, so
+    /// Choose Journey can offer a "back to …" return trip. Optional so older
+    /// saved settings keep decoding.
+    var previousOrigin: JourneyOrigin? = nil
+
     /// The selected balloon skin id (see `BalloonSkin`). `nil` → the default
     /// Sky Balloon. Optional so older saved settings keep decoding.
     var selectedSkinID: String? = nil

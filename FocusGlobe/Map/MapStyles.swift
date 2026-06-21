@@ -36,6 +36,9 @@ enum MapDisplayStyle: String, CaseIterable, Codable, Identifiable {
         case .monochrome: return "circle.lefthalf.filled"
         }
     }
+
+    /// Dark presentations safe to keep during the active flight (never bright).
+    var isDark: Bool { self == .graphite || self == .night }
 }
 
 /// Calm, minimal Google Maps style JSON for Light and Dark mode.

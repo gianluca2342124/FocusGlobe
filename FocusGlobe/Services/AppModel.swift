@@ -137,17 +137,15 @@ final class AppModel: ObservableObject {
     /// we have no origin at all (no GPS fix yet, none chosen, never travelled).
     var needsOnboarding: Bool { currentOrigin == nil }
 
-    /// Whether the manual starting-city picker should be offered. In production it
-    /// appears only when real location isn't available *and* the user hasn't yet
-    /// started travelling; in DEBUG it's always available as a Simulator override.
+    /// Whether the manual starting-city picker should be offered. It appears only
+    /// when there is no valid origin yet — i.e. real location isn't resolved *and*
+    /// the user hasn't started travelling. Once GPS resolves or a journey has been
+    /// completed, the picker is hidden everywhere (Home and Settings). A separate
+    /// DEBUG-only developer override remains for the Simulator.
     var allowsManualOrigin: Bool {
-        #if DEBUG
-        return true
-        #else
         if hasStartedTravelling { return false }
         if case .resolved = locationState { return false }
         return true
-        #endif
     }
 
     var hasRealLocation: Bool {
@@ -181,10 +179,15 @@ final class AppModel: ObservableObject {
         location.requestLocation()
     }
 
+    /// The city the user departed from on the last completed journey — used to
+    /// offer a "back to …" return trip on Choose Journey.
+    var previousOrigin: JourneyOrigin? { settings.previousOrigin }
+
     /// Pick a starting city manually. Starts a fresh trip from there.
     func setManualOrigin(_ origin: JourneyOrigin) {
         settings.virtualOrigin = nil
         settings.startingCity = origin
+        settings.previousOrigin = nil
         haptics.tap()
     }
 
@@ -192,6 +195,7 @@ final class AppModel: ObservableObject {
     func useCurrentLocation() {
         settings.virtualOrigin = nil
         settings.startingCity = nil
+        settings.previousOrigin = nil
         location.requestLocation()
         haptics.tap()
     }
@@ -301,9 +305,10 @@ final class AppModel: ObservableObject {
 
     // MARK: - Access helpers
 
-    /// Whether the user may start this route (free, or Pro unlocks premium).
+    /// Whether the user may start this route. Only **Ultra** journeys require Pro;
+    /// Short, Deep and Long are always free and bookable.
     func isUnlocked(_ route: Route) -> Bool {
-        !route.isPremium || isPro
+        route.category != .ultra || isPro
     }
 
     func hasCompleted(_ route: Route) -> Bool {
@@ -363,7 +368,9 @@ final class AppModel: ObservableObject {
         let streakIncreased = p.currentStreak > previousStreak
         progress = p
 
-        // Travelling the world: the destination becomes the next origin.
+        // Remember where we came from so the next screen can offer a return trip,
+        // then make the destination the next origin (travelling the world).
+        settings.previousOrigin = origin
         arrive(at: JourneyOrigin(city: route.destinationName, country: "",
                                  coordinate: route.destination, code: route.destinationCode))
 

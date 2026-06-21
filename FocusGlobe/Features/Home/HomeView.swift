@@ -19,7 +19,14 @@ struct HomeView: View {
         ZStack {
             map
             if let originPoint {
-                RadarPulse().position(originPoint).allowsHitTesting(false)
+                // Full-bleed container so `.position` shares the map's projection
+                // coordinate space exactly (no safe-area offset).
+                ZStack(alignment: .topLeading) {
+                    Color.clear
+                    RadarPulse().position(originPoint)
+                }
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
             }
             atmosphere
             topBar
@@ -53,10 +60,11 @@ struct HomeView: View {
 
     @ViewBuilder private var map: some View {
         if let origin {
-            // Origin centred (no bottom inset) so the Google attribution stays at
-            // the natural bottom — clear of the greeting/title above it.
+            // Lift the origin/balloon into the upper half. The map's bottom inset
+            // also lifts the Google attribution to just above the (compact) text
+            // cluster, so it stays visible without colliding with the title.
             JourneyBackdropMap(origin: origin, mode: .origin, showsBalloon: true,
-                               bottomInset: 0, onOriginPoint: setOriginPoint)
+                               bottomInset: 330, onOriginPoint: setOriginPoint)
                 .ignoresSafeArea()
         } else {
             // No real/chosen origin yet — a calm high-altitude map with no
@@ -101,19 +109,18 @@ struct HomeView: View {
                 CrownButton { appModel.haptics.tap(); router.presentPaywall() }
                 if appModel.progress.currentStreak > 0 { streakBadge }
                 Spacer()
+                // Non-interactive origin indicator (never opens the picker once a
+                // real/virtual origin exists). DEBUG-only dev hint.
                 #if DEBUG
-                Button { showCityPicker = true } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "location.fill").font(.system(size: 12, weight: .bold))
-                        Text(origin?.code ?? "SET")
-                            .font(.system(size: 13, weight: .heavy, design: .rounded))
-                    }
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, AppSpacing.sm)
-                    .padding(.vertical, 9)
-                    .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.22, shadowRadius: 8, shadowY: 4)
+                HStack(spacing: 6) {
+                    Image(systemName: "location.fill").font(.system(size: 12, weight: .bold))
+                    Text(origin?.code ?? "—")
+                        .font(.system(size: 13, weight: .heavy, design: .rounded))
                 }
-                .buttonStyle(SoftPressStyle())
+                .foregroundStyle(.white.opacity(0.9))
+                .padding(.horizontal, AppSpacing.sm)
+                .padding(.vertical, 9)
+                .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.22, shadowRadius: 8, shadowY: 4)
                 #endif
             }
             Spacer()
@@ -139,7 +146,7 @@ struct HomeView: View {
     }
 
     private var bottomCluster: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.lg) {
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(viewModel.greeting)
                     .font(AppTypography.subhead)
@@ -178,12 +185,60 @@ struct HomeView: View {
                 }
             }
 
-            VStack(spacing: AppSpacing.xs) {
-                homeRow(title: "Passport", systemImage: "globe.europe.africa") { router.openPassport() }
-                homeRow(title: "History", systemImage: "clock.arrow.circlepath") { router.openHistory() }
-                homeRow(title: "Settings", systemImage: "gearshape") { router.openSettings() }
+            missionsCard
+
+            HStack(spacing: AppSpacing.xs) {
+                compactNav(title: "Passport", systemImage: "globe.europe.africa") { router.openPassport() }
+                compactNav(title: "Settings", systemImage: "gearshape") { router.openSettings() }
             }
         }
+    }
+
+    // A calm Missions / Daily Goals summary (replaces the old History row).
+    // Shows today's progress and opens the Passport where the full list lives.
+    private var missionsCard: some View {
+        let missions = appModel.dailyMissions
+        let done = missions.filter { $0.isComplete }.count
+        return Button { router.openPassport() } label: {
+            HStack(spacing: AppSpacing.sm) {
+                Image(systemName: "target")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(AppColors.gold)
+                    .frame(width: 24)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Daily goals").font(AppTypography.callout).foregroundStyle(.white)
+                    Text("\(done) of \(missions.count) complete")
+                        .font(AppTypography.caption).foregroundStyle(.white.opacity(0.7))
+                }
+                Spacer()
+                HStack(spacing: 5) {
+                    ForEach(missions) { mission in
+                        Circle()
+                            .fill(mission.isComplete ? AppColors.gold : Color.white.opacity(0.25))
+                            .frame(width: 7, height: 7)
+                    }
+                }
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.vertical, 13)
+            .glassBackground(cornerRadius: 16, tintOpacity: 0.16, shadowRadius: 8, shadowY: 4)
+        }
+        .buttonStyle(SoftPressStyle(scale: 0.99))
+    }
+
+    private func compactNav(title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: AppSpacing.xs) {
+                Image(systemName: systemImage).font(.system(size: 15, weight: .semibold))
+                Text(title).font(AppTypography.callout)
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 13)
+            .glassBackground(cornerRadius: 16, tintOpacity: 0.16, shadowRadius: 8, shadowY: 4)
+        }
+        .buttonStyle(SoftPressStyle(scale: 0.98))
     }
 
     private var bigTitle: String {
@@ -194,25 +249,5 @@ struct HomeView: View {
     private var subtitle: String {
         if origin != nil { return "" }
         return appModel.isLocating ? "Finding where you are…" : "Pick a starting city to begin."
-    }
-
-    private func homeRow(title: String, systemImage: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: AppSpacing.sm) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 15, weight: .semibold))
-                    .frame(width: 24)
-                Text(title).font(AppTypography.callout)
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.5))
-            }
-            .foregroundStyle(.white)
-            .padding(.horizontal, AppSpacing.md)
-            .padding(.vertical, 13)
-            .glassBackground(cornerRadius: 16, tintOpacity: 0.16, shadowRadius: 8, shadowY: 4)
-        }
-        .buttonStyle(SoftPressStyle(scale: 0.99))
     }
 }

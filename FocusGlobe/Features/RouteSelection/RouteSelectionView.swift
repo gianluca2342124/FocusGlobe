@@ -15,7 +15,25 @@ struct RouteSelectionView: View {
     @State private var originPoint: CGPoint?
 
     private var origin: JourneyOrigin { appModel.originForJourney }
-    private var journeys: [PlannedJourney] { viewModel.journeys(from: origin) }
+
+    /// The "back to the previous city" trip, if we came from somewhere.
+    private var returnJourney: PlannedJourney? {
+        guard let prev = appModel.previousOrigin, prev.city != origin.city else { return nil }
+        return JourneyPlanner.returnJourney(from: origin, to: prev)
+    }
+
+    /// Journeys for the current origin (filtered by chip), with the return trip
+    /// moved to the first position and marked, deduped against the normal list.
+    private var journeys: [PlannedJourney] {
+        var list = viewModel.journeys(from: origin)
+        if let ret = returnJourney,
+           viewModel.selectedCategory == nil || viewModel.selectedCategory == ret.category {
+            list.removeAll { $0.code == ret.code || $0.name == ret.name }
+            list.insert(ret, at: 0)
+        }
+        return list
+    }
+
     private var current: PlannedJourney? {
         journeys.first { $0.id == selectedID } ?? journeys.first
     }
@@ -24,7 +42,14 @@ struct RouteSelectionView: View {
         ZStack {
             mapLayer
             if let originPoint {
-                RadarPulse().position(originPoint).allowsHitTesting(false)
+                // Full-bleed container so `.position` shares the map's projection
+                // coordinate space exactly (no safe-area offset).
+                ZStack(alignment: .topLeading) {
+                    Color.clear
+                    RadarPulse().position(originPoint)
+                }
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
             }
             scrims
 
@@ -132,6 +157,13 @@ struct RouteSelectionView: View {
     private func bottomCluster(_ journey: PlannedJourney) -> some View {
         VStack(spacing: AppSpacing.md) {
             VStack(spacing: 3) {
+                if journey.isReturn {
+                    HStack(spacing: 5) {
+                        Image(systemName: "arrow.uturn.backward").font(.system(size: 10, weight: .bold))
+                        Text("RETURN").font(.system(size: 10, weight: .heavy, design: .rounded)).tracking(1.2)
+                    }
+                    .foregroundStyle(AppColors.brand)
+                }
                 Text(journey.name)
                     .font(AppTypography.title2).foregroundStyle(.white)
                 Text(journey.subtitle)
@@ -236,14 +268,15 @@ private struct DestinationCard: View {
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
                 HStack(spacing: 5) {
                     HStack(spacing: 3) {
-                        Image(systemName: "location.fill").font(.system(size: 8, weight: .bold))
+                        Image(systemName: journey.isReturn ? "arrow.uturn.backward" : "location.fill")
+                            .font(.system(size: 8, weight: .bold))
                         Text(journey.code)
                             .font(.system(size: 13, weight: .heavy, design: .rounded))
                     }
                     .foregroundStyle(isSelected ? Color(hex: 0x14181F) : .white)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 4)
-                    .overlay(Capsule().strokeBorder(AppColors.gold, lineWidth: 1.5))
+                    .overlay(Capsule().strokeBorder(journey.isReturn ? AppColors.brand : AppColors.gold, lineWidth: 1.5))
                     Spacer()
                     if isLocked {
                         PremiumBadge(compact: true)

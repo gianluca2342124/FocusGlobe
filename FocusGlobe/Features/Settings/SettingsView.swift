@@ -219,14 +219,25 @@ struct SettingsView: View {
     #if DEBUG
     private var developerSection: some View {
         SettingsCard(title: "Developer") {
-            Button {
-                showResetConfirm = true
-            } label: {
-                SettingsRow(systemImage: "trash", title: "Reset local data",
-                            subtitle: "Debug only", tint: AppColors.danger,
-                            trailing: AnyView(EmptyView()))
+            VStack(spacing: 0) {
+                Button { showCityPicker = true } label: {
+                    SettingsRow(systemImage: "mappin.and.ellipse", title: "Override starting city",
+                                subtitle: "Simulator only — not shown in production", tint: AppColors.gold,
+                                trailing: AnyView(Image(systemName: "chevron.right")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(AppColors.textTertiary)))
+                }
+                .buttonStyle(SoftPressStyle())
+                RowDivider()
+                Button {
+                    showResetConfirm = true
+                } label: {
+                    SettingsRow(systemImage: "trash", title: "Reset local data",
+                                subtitle: "Debug only", tint: AppColors.danger,
+                                trailing: AnyView(EmptyView()))
+                }
+                .buttonStyle(SoftPressStyle())
             }
-            .buttonStyle(SoftPressStyle())
         }
     }
     #endif

@@ -6,6 +6,9 @@ import Foundation
 struct PlannedJourney: Identifiable, Hashable {
     let node: JourneyDestinationNode
     let route: Route
+    /// `true` when this is the "back to the previous city" return trip, so the UI
+    /// can mark it (return arrow + subtle accent).
+    var isReturn: Bool = false
 
     var id: String { route.id }
     var distanceKm: Double { route.approximateDistanceKm }
@@ -222,6 +225,23 @@ enum JourneyPlanner {
             displayCode: node.code,
             landmark: node.landmark
         )
+    }
+
+    /// A "back to the previous city" trip, using the same real route/duration/
+    /// category logic. The previous origin may not be a catalogue node (it can be
+    /// the user's real GPS city), so we synthesise a node from it.
+    static func returnJourney(from origin: JourneyOrigin, to previous: JourneyOrigin) -> PlannedJourney {
+        let km = GeoMath.distanceKm(from: origin.coordinate, to: previous.coordinate)
+        let node = JourneyDestinationNode(
+            name: previous.city,
+            country: previous.country,
+            region: previous.country.isEmpty ? nil : previous.country,
+            code: previous.code ?? Route.code(previous.city),
+            latitude: previous.coordinate.latitude,
+            longitude: previous.coordinate.longitude,
+            population: nil, airportCode: nil, tourismScore: 72,
+            tags: ["return"], metroGroup: nil, premiumWeight: nil)
+        return PlannedJourney(node: node, route: route(from: origin, to: node, km: km), isReturn: true)
     }
 
     private static func make(_ origin: JourneyOrigin, _ node: JourneyDestinationNode, _ km: Double) -> PlannedJourney {

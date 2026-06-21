@@ -54,7 +54,10 @@ final class FocusSessionViewModel: ObservableObject {
         guard self.appModel == nil else { return }
         self.appModel = appModel
         pureMode = appModel.settings.pureModeDefault
-        mapStyle = appModel.settings.mapStyle
+        // Always begin the flight on the premium dark style, regardless of the
+        // saved style or the app's Light/Dark appearance — the map must never go
+        // bright/white in flight. The user can still switch via the in-session menu.
+        mapStyle = appModel.settings.mapStyle.isDark ? appModel.settings.mapStyle : .graphite
     }
 
     func setMapStyle(_ style: MapDisplayStyle) {

@@ -25,13 +25,11 @@ struct BoardingView: View {
     // Tear-to-take-off (horizontal).
     @State private var tearX: CGFloat = 0
     @State private var torn = false
-    @State private var nudge = false
 
     private let tearThreshold: CGFloat = 120
 
     private var origin: JourneyOrigin { appModel.originForJourney }
     private var distanceKm: Double { GeoMath.distanceKm(from: origin.coordinate, to: route.destination) }
-    private var effectiveTear: CGFloat { torn ? 620 : tearX }
 
     var body: some View {
         ZStack {
@@ -92,39 +90,18 @@ struct BoardingView: View {
             JourneyTicket(origin: origin, route: route, distanceKm: distanceKm,
                           focus: selectedPreset, printed: printed,
                           perforationIn: perforationIn, barcodeIn: barcodeIn,
-                          tear: effectiveTear, torn: torn)
+                          tearX: $tearX, torn: torn,
+                          canTear: focusIn && !torn, threshold: tearThreshold,
+                          onCommit: commitTear)
                 .frame(maxWidth: 420)
-                .offset(y: nudge ? -6 : 0)
-                .gesture(tearGesture)
-                .allowsHitTesting(focusIn && !torn)
         }
     }
 
-    private var tearGesture: some Gesture {
-        DragGesture(minimumDistance: 8)
-            .onChanged { value in
-                guard focusIn, !torn else { return }
-                guard selectedPreset != nil else {
-                    if abs(value.translation.width) > 6 { triggerNudge() }
-                    return
-                }
-                tearX = max(0, value.translation.width)
-            }
-            .onEnded { _ in
-                guard focusIn, !torn, selectedPreset != nil else { return }
-                if tearX >= tearThreshold {
-                    commitTear()
-                } else {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) { tearX = 0 }
-                }
-            }
-    }
-
-    // MARK: Focus (mandatory)
+    // MARK: Focus (optional — you can take off without choosing)
 
     private var focusSelector: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xs) {
-            Text("CHOOSE YOUR FOCUS")
+            Text("CHOOSE A FOCUS (OPTIONAL)")
                 .font(.system(size: 10, weight: .semibold, design: .rounded))
                 .tracking(0.8)
                 .foregroundStyle(.white.opacity(0.6))
@@ -142,18 +119,16 @@ struct BoardingView: View {
                 .padding(.vertical, 2)
             }
         }
-        .scaleEffect(nudge ? 1.03 : 1)
     }
 
     private var takeoffHint: some View {
         HStack(spacing: 6) {
-            Image(systemName: selectedPreset == nil ? "hand.tap" : "arrow.left.and.right")
+            Image(systemName: "arrow.left.and.right")
                 .font(.system(size: 12, weight: .bold))
-            Text(selectedPreset == nil ? "Choose your focus"
-                 : "Swipe across the perforation to take off")
+            Text("Swipe across the perforation to take off")
                 .font(AppTypography.caption)
         }
-        .foregroundStyle(selectedPreset == nil ? AppColors.gold : .white.opacity(0.85))
+        .foregroundStyle(.white.opacity(0.85))
     }
 
     // MARK: Choreography
@@ -173,15 +148,6 @@ struct BoardingView: View {
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {      // focus options appear
             withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) { focusIn = true }
-        }
-    }
-
-    private func triggerNudge() {
-        guard !nudge else { return }
-        appModel.haptics.pause()
-        withAnimation(.spring(response: 0.2, dampingFraction: 0.5)) { nudge = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { nudge = false }
         }
     }
 
@@ -230,11 +196,16 @@ private struct JourneyTicket: View {
     let printed: CGFloat
     let perforationIn: Bool
     let barcodeIn: Bool
-    let tear: CGFloat
+    @Binding var tearX: CGFloat
     let torn: Bool
+    let canTear: Bool
+    let threshold: CGFloat
+    let onCommit: () -> Void
 
     private let ink = Color(hex: 0xF1F4FB)
     private let inkSoft = Color(hex: 0xAEB7CC)
+
+    private var effTear: CGFloat { torn ? 620 : tearX }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -248,10 +219,28 @@ private struct JourneyTicket: View {
                 }
             perforation
                 .opacity(perforationIn ? 1 : 0)
+            // The barcode strip tears along the perforation: it curls + sags as it
+            // separates (pivoting from the top edge) rather than sliding flat.
             barcodeStrip
-                .offset(x: tear)
+                .rotationEffect(.degrees(Double(min(14, effTear * 0.06))), anchor: .topLeading)
+                .offset(x: effTear * 0.7, y: effTear * 0.22)
                 .opacity(torn ? 0 : (barcodeIn ? 1 : 0))
+                .overlay { if canTear && tearX == 0 { TearFingerHint() } }
+                .gesture(tearGesture)
         }
+    }
+
+    private var tearGesture: some Gesture {
+        DragGesture(minimumDistance: 8)
+            .onChanged { v in
+                guard canTear else { return }
+                tearX = max(0, v.translation.width)
+            }
+            .onEnded { _ in
+                guard canTear else { return }
+                if tearX >= threshold { onCommit() }
+                else { withAnimation(.spring(response: 0.4, dampingFraction: 0.72)) { tearX = 0 } }
+            }
     }
 
     // MARK: Body (all trip info stays here)
@@ -471,6 +460,28 @@ private struct PerforationShimmer: View {
         .onAppear {
             withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: false)) { x = 1.2 }
         }
+    }
+}
+
+/// A subtle animated finger gliding horizontally across the strip — previews the
+/// swipe-to-tear gesture without blocking it.
+private struct TearFingerHint: View {
+    @State private var animate = false
+    var body: some View {
+        GeometryReader { g in
+            Image(systemName: "hand.point.up.left.fill")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.55))
+                .shadow(color: .black.opacity(0.4), radius: 4, y: 1)
+                .offset(x: animate ? g.size.width * 0.5 : g.size.width * 0.12, y: 2)
+                .opacity(animate ? 0.2 : 0.75)
+                .onAppear {
+                    withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: false)) {
+                        animate = true
+                    }
+                }
+        }
+        .allowsHitTesting(false)
     }
 }
 
