@@ -1,48 +1,15 @@
 //  AppleJourneyMapView.swift
 //
-//  FUTURE MIGRATION TARGET — Apple Maps / MapKit.
+//  Historical placeholder. Apple Maps / MapKit is now implemented:
 //
-//  Google Maps is the temporary MVP provider. When we migrate, this file
-//  becomes the real map renderer and `JourneyMapView` switches to it. The key
-//  point of the architecture: this renderer consumes the exact same
-//  `JourneyMapData` as the Google renderer, so NONE of the journey, timer,
-//  progress or reward logic changes during migration. See
-//  MAP_PROVIDER_MIGRATION.md for the full checklist.
+//   • Active in-flight map → `AppleActiveJourneyMapView` (AppleActiveJourneyMapView.swift)
+//   • Backdrop maps (Home / Choose Journey / Boarding / Onboarding)
+//                         → `AppleBackdropMapView` (AppleJourneyBackdropMap.swift)
 //
-//  Sketch of the eventual implementation (intentionally left commented so the
-//  project builds today without taking a MapKit dependency for the journey
-//  screen):
+//  Both consume the same provider-independent `JourneyMapData` / backdrop inputs
+//  as the Google renderers, and the active provider is chosen at runtime by
+//  `FocusGlobeMapProvider` (default `.apple`). Google Maps remains as a
+//  migration-phase fallback. See APPLE_MAPS_MIGRATION.md.
 //
-//  import SwiftUI
-//  import MapKit
-//
-//  struct AppleJourneyMapView: View {
-//      let data: JourneyMapData
-//
-//      var body: some View {
-//          Map(position: .constant(.camera(MapCamera(
-//              centerCoordinate: CLLocationCoordinate2D(
-//                  latitude: data.vehicle.latitude,
-//                  longitude: data.vehicle.longitude),
-//              distance: distance(forZoom: CameraController.zoom(forDistanceKm: data.routeDistanceKm))
-//          )))) {
-//              // Full route — reuse MapRouteRenderer.routePoints(...)
-//              MapPolyline(coordinates: MapRouteRenderer
-//                  .routePoints(from: data.origin, to: data.destination)
-//                  .map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) })
-//                  .stroke(data.theme.soft.opacity(0.5), lineWidth: 4)
-//
-//              // Travelled route — reuse MapRouteRenderer.traveledPoints(...)
-//              MapPolyline(coordinates: MapRouteRenderer
-//                  .traveledPoints(from: data.origin, to: data.vehicle)
-//                  .map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) })
-//                  .stroke(data.theme.accent, lineWidth: 6)
-//
-//              Annotation("", coordinate: CLLocationCoordinate2D(
-//                  latitude: data.vehicle.latitude, longitude: data.vehicle.longitude)) {
-//                  BalloonMark(size: 40, glow: data.theme.soft)
-//              }
-//          }
-//          .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
-//      }
-//  }
+//  This file intentionally declares no type (kept only to preserve history /
+//  avoid churn). It can be deleted in the future Google-removal cleanup.

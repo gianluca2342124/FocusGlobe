@@ -60,6 +60,30 @@ struct JourneyBackdropMap: View {
     private var mood: RouteMood { destination?.mood ?? .calm }
 
     var body: some View {
+        switch FocusGlobeMapProvider.current {
+        case .apple:
+            appleBackdrop
+        case .google:
+            googleBackdrop
+        case .fallback:
+            fallback.allowsHitTesting(false)
+        }
+    }
+
+    /// Apple Maps (MapKit) backdrop — the default for the normal app path.
+    private var appleBackdrop: some View {
+        AppleBackdropMapView(origin: origin, destination: destination,
+                             mode: mode, progress: progress,
+                             showsCodeTags: showsCodeTags, showsBalloon: showsBalloon,
+                             showsOrigin: showsOrigin, bottomInset: bottomInset,
+                             nearby: nearby, onOriginPoint: onOriginPoint,
+                             originZoom: originZoom, theme: theme,
+                             skinAssetName: skinAssetName)
+            .allowsHitTesting(false)
+    }
+
+    /// Google Maps backdrop — kept as a migration-phase fallback (DEBUG override).
+    @ViewBuilder private var googleBackdrop: some View {
         #if canImport(GoogleMaps)
         GoogleBackdropMapView(origin: origin, destination: destination,
                               mode: mode, progress: progress,
