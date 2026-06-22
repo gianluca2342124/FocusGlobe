@@ -169,52 +169,44 @@ struct SettingsView: View {
 
     // MARK: Journey sound
 
-    /// Selects the looping ambience that plays during a journey. Wind is free;
-    /// the rest require active Pro. The master Sound toggle (in Experience) stays
-    /// the on/off switch — this only chooses which sound plays.
+    /// Selects the looping ambience that plays during a journey, shown as a grid
+    /// of colourful "sound cards". Wind is free; the rest require active Pro
+    /// (locked cards open the paywall). The master Sound toggle (in Experience)
+    /// stays the on/off switch — this only chooses *which* sound plays.
     private var journeyAudioSection: some View {
-        SettingsCard(title: "Journey sound") {
-            VStack(spacing: 0) {
-                ForEach(Array(JourneyAudioOption.all.enumerated()), id: \.element.id) { index, option in
-                    if index > 0 { RowDivider() }
-                    audioRow(option)
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            SectionLabel(text: "Journey sound")
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: AppSpacing.sm),
+                                GridItem(.flexible(), spacing: AppSpacing.sm)],
+                      spacing: AppSpacing.sm) {
+                ForEach(JourneyAudioOption.all) { option in
+                    JourneySoundCard(option: option,
+                                     theme: audioTheme(option),
+                                     unlocked: appModel.isAudioUnlocked(option),
+                                     selected: appModel.selectedJourneyAudio.id == option.id) {
+                        if appModel.isAudioUnlocked(option) {
+                            appModel.selectJourneyAudio(option)
+                        } else {
+                            appModel.haptics.tap()
+                            router.presentPaywall()
+                        }
+                    }
                 }
             }
         }
     }
 
-    private func audioRow(_ option: JourneyAudioOption) -> some View {
-        let unlocked = appModel.isAudioUnlocked(option)
-        let selected = appModel.selectedJourneyAudio.id == option.id
-        return Button {
-            if unlocked {
-                appModel.selectJourneyAudio(option)
-            } else {
-                appModel.haptics.tap()
-                router.presentPaywall()
-            }
-        } label: {
-            SettingsRow(systemImage: option.systemImage,
-                        title: option.displayName,
-                        subtitle: option.isPremium ? (unlocked ? "Pro" : "Unlock with Pro") : "Free",
-                        tint: option.isPremium ? AppColors.gold : AppColors.brand,
-                        trailing: AnyView(audioTrailing(unlocked: unlocked, selected: selected,
-                                                         premium: option.isPremium)))
-        }
-        .buttonStyle(SoftPressStyle())
-    }
-
-    @ViewBuilder private func audioTrailing(unlocked: Bool, selected: Bool, premium: Bool) -> some View {
-        if selected {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(AppColors.success)
-        } else if premium && !unlocked {
-            PremiumBadge()
-        } else {
-            Image(systemName: "circle")
-                .font(.system(size: 16, weight: .regular))
-                .foregroundStyle(AppColors.textTertiary)
+    /// A distinct accent per sound so each card has its own personality.
+    private func audioTheme(_ option: JourneyAudioOption) -> RouteTheme {
+        switch option.id {
+        case "wind":        return .teal
+        case "focus-music": return .indigo
+        case "alpha-waves": return .lavender
+        case "rain":        return .slate
+        case "ocean":       return .aurora
+        case "relaxing":    return .mint
+        case "jazz":        return .coral
+        default:            return .teal
         }
     }
 
@@ -374,4 +366,84 @@ private func iconBadge(_ systemImage: String, tint: Color) -> some View {
         .foregroundStyle(tint)
         .frame(width: 32, height: 32)
         .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(tint.opacity(0.14)))
+}
+
+// MARK: - Journey sound card
+
+/// A large, colourful "sound disc" card for the journey-audio picker. Each sound
+/// has its own gradient personality; the selected card shows a bright ring +
+/// check, and locked premium cards show a gold crown (and open the paywall).
+private struct JourneySoundCard: View {
+    let option: JourneyAudioOption
+    let theme: RouteTheme
+    let unlocked: Bool
+    let selected: Bool
+    let action: () -> Void
+
+    private var locked: Bool { option.isPremium && !unlocked }
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(alignment: .top) {
+                    ZStack {
+                        Circle().fill(.white.opacity(0.18))
+                        Image(systemName: option.systemImage)
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                    .frame(width: 42, height: 42)
+                    Spacer()
+                    statusBadge
+                }
+                Spacer(minLength: AppSpacing.sm)
+                Text(option.displayName)
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                Text(statusText)
+                    .font(AppTypography.micro)
+                    .foregroundStyle(.white.opacity(0.85))
+            }
+            .padding(AppSpacing.md)
+            .frame(height: 118, alignment: .topLeading)
+            .frame(maxWidth: .infinity)
+            .background(cardBackground)
+            .overlay(
+                RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
+                    .strokeBorder(.white.opacity(selected ? 0.9 : 0.12), lineWidth: selected ? 2.5 : 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous))
+            .shadow(color: theme.accent.opacity(selected ? 0.5 : 0.22), radius: selected ? 14 : 8, y: 5)
+        }
+        .buttonStyle(SoftPressStyle(scale: 0.98))
+    }
+
+    private var cardBackground: some View {
+        ZStack {
+            LinearGradient(colors: [theme.accent.opacity(0.9), theme.soft.opacity(0.55)],
+                           startPoint: .topLeading, endPoint: .bottomTrailing)
+            Color.black.opacity(0.16)   // keep the white text legible on any accent
+        }
+    }
+
+    @ViewBuilder private var statusBadge: some View {
+        if selected {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundStyle(.white)
+        } else if locked {
+            Image(systemName: "crown.fill")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(Color(hex: 0x14181F))
+                .padding(6)
+                .background(Circle().fill(AppColors.gold))
+        }
+    }
+
+    private var statusText: String {
+        if selected { return "Playing on journeys" }
+        if option.isPremium { return unlocked ? "Pro" : "Unlock with Pro" }
+        return "Free"
+    }
 }

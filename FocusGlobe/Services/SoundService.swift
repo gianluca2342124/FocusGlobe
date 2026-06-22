@@ -160,10 +160,12 @@ final class SoundService {
 
 // MARK: - Procedural wind fallback
 
-/// A lightweight procedural "soft wind/air" loop using AVAudioEngine — the safe
-/// fallback when no audio file is bundled yet. It is low-passed white noise with
-/// a slow gusting envelope; the render block is allocation-free and cheap, so it
-/// won't cause frame drops during the map animation.
+/// A lightweight procedural "soft balloon air" loop using AVAudioEngine — the
+/// safe fallback when no audio file is bundled yet. It is heavily low-passed
+/// white noise (two cascaded poles → no harsh highs) with a slow, shallow
+/// gusting envelope, tuned to feel like calm high-altitude drifting rather than
+/// harsh wind. The render block is allocation-free and cheap, so it won't cause
+/// frame drops during the map animation.
 private final class ProceduralWind {
     private let engine = AVAudioEngine()
     private var sourceNode: AVAudioSourceNode?
@@ -176,9 +178,11 @@ private final class ProceduralWind {
         guard let format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 2) else { return }
 
         // Captured render state (mutated only on the audio thread).
-        var lpState: Float = 0
+        var lp1: Float = 0
+        var lp2: Float = 0
+        let cutoff: Float = 0.02          // low cutoff → soft, dark, no harsh highs
         var lfoPhase: Float = 0
-        let lfoInc = Float(2.0 * Double.pi * 0.08 / sampleRate)   // ~0.08 Hz gusting
+        let lfoInc = Float(2.0 * Double.pi * 0.05 / sampleRate)   // ~0.05 Hz: slow, smooth swell
         var seed: UInt32 = 0x9E3779B9
         let twoPi = Float(2.0 * Double.pi)
 
@@ -188,13 +192,14 @@ private final class ProceduralWind {
                 // Fast xorshift32 white noise in [-1, 1].
                 seed ^= seed << 13; seed ^= seed >> 17; seed ^= seed << 5
                 let white = (Float(seed) / Float(UInt32.max)) * 2 - 1
-                // One-pole low-pass → soft, airy timbre (not a hiss).
-                lpState += 0.018 * (white - lpState)
-                // Slow gusting amplitude envelope.
+                // Two cascaded one-pole low-passes → gentle, airy, relaxing.
+                lp1 += cutoff * (white - lp1)
+                lp2 += cutoff * (lp1 - lp2)
+                // Slow, shallow gusting swell (calm, not pulsing).
                 lfoPhase += lfoInc
                 if lfoPhase > twoPi { lfoPhase -= twoPi }
-                let gust = 0.55 + 0.45 * sinf(lfoPhase)
-                let sample = lpState * 3.2 * gust         // lift the quiet LP output
+                let gust = 0.6 + 0.18 * sinf(lfoPhase)
+                let sample = lp2 * 13.0 * gust            // compensate the soft LP, calm level
                 for bufferIndex in 0..<abl.count {
                     if let data = abl[bufferIndex].mData {
                         data.assumingMemoryBound(to: Float.self)[frame] = sample

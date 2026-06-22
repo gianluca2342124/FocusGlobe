@@ -3,28 +3,32 @@ import UIKit
 
 // MARK: - Brand assets
 
-/// Resolves bundled brand art (see SETUP.md):
-///   • `BalloonFront` imageset → the official front-view balloon render.
+/// Resolves bundled brand art (see SKINS_SETUP.md):
+///   • `BalloonSkin_Default` imageset → the default front-view balloon render
+///     (also the universal fallback for any missing skin / hero asset).
 ///   • `BrandLogo` → optional wordmark override.
 enum BrandAssets {
-    static let balloonFrontName = "BalloonFront"
+    /// The default balloon image set — the universal fallback when a specific
+    /// skin (or the paywall hero) asset is missing. (The legacy `BalloonFront`
+    /// asset is no longer required.)
+    static let defaultBalloonName = "BalloonSkin_Default"
     static let brandLogoName = "BrandLogo"
 
-    static var hasBalloonFront: Bool { UIImage(named: balloonFrontName) != nil }
     static var hasBrandLogo: Bool { UIImage(named: brandLogoName) != nil }
 }
 
-/// The single source of truth for the balloon image.
+/// The single source of truth for the default balloon image.
 ///
-/// The official `BalloonFront.png` is a 1024×1024 render with large transparent
-/// margins, so used raw it appears tiny (a "dot") at marker size. We trim it to
-/// its opaque bounds **once** (cached) so every consumer — SwiftUI hero views
-/// and the Google Maps marker — shows the full, properly-sized balloon.
+/// The default balloon render typically has large transparent margins, so used
+/// raw it appears tiny (a "dot") at marker size. We trim it to its opaque bounds
+/// **once** (cached) so every consumer — SwiftUI hero views and the Google Maps
+/// marker — shows the full, properly-sized balloon.
 enum BrandBalloon {
-    /// The official balloon, cropped to its opaque content. `nil` only if the
-    /// asset is genuinely missing (then callers use the vector fallback).
+    /// The default balloon (`BalloonSkin_Default`), cropped to its opaque
+    /// content. `nil` only if the asset is genuinely missing (then callers use
+    /// the vector fallback). Does **not** depend on the legacy `BalloonFront`.
     static let image: UIImage? = {
-        guard let raw = UIImage(named: BrandAssets.balloonFrontName) else { return nil }
+        guard let raw = UIImage(named: BrandAssets.defaultBalloonName) else { return nil }
         return raw.trimmingTransparentPixels() ?? raw
     }()
 
@@ -35,10 +39,11 @@ enum BrandBalloon {
 ///
 /// For a given skin `assetName` it loads `UIImage(named:)`, trims the
 /// transparent margins **once** (so the balloon fills its frame/marker like the
-/// brand art does), and caches the result. If the specific skin asset is missing
-/// it gracefully falls back to the default `BalloonFront` image; if that is also
-/// missing it returns `nil` and callers draw the vector `BalloonMark`. Nothing
-/// here ever crashes on a missing asset.
+/// brand art does), and caches the result. Fallback order, so the app never
+/// crashes on a missing asset:
+///   1. the requested `assetName`
+///   2. `BalloonSkin_Default` (via `BrandBalloon.image`)
+///   3. `nil` → callers draw the vector `BalloonMark`
 ///
 /// The cache is guarded by a lock because `VehicleMarkerRenderer` is
 /// `nonisolated` and may resolve marker art outside the main actor.
@@ -46,8 +51,8 @@ enum BalloonSkinImage {
     private static let lock = NSLock()
     private static var cache: [String: UIImage] = [:]
 
-    /// The trimmed image for a skin asset, or the default balloon when missing.
-    /// `nil` only if neither the skin asset nor `BalloonFront` exists.
+    /// The trimmed image for a skin asset, or `BalloonSkin_Default` when missing.
+    /// `nil` only if neither the skin asset nor `BalloonSkin_Default` exists.
     static func image(named assetName: String) -> UIImage? {
         lock.lock()
         defer { lock.unlock() }
@@ -56,7 +61,7 @@ enum BalloonSkinImage {
         if let raw = UIImage(named: assetName) {
             resolved = raw.trimmingTransparentPixels() ?? raw
         } else {
-            resolved = BrandBalloon.image   // graceful fallback to the default art
+            resolved = BrandBalloon.image   // graceful fallback → BalloonSkin_Default
         }
         if let resolved { cache[assetName] = resolved }
         return resolved
@@ -330,9 +335,9 @@ struct BalloonMark: View {
 
 // MARK: - Brand balloon view (asset-preferring)
 
-/// The balloon for hero moments. Prefers the bundled `BalloonFront` PNG when
-/// present; otherwise renders the crafted `BalloonMark`. An optional animated
-/// burner glow adds life on top of either.
+/// The balloon for hero moments. Prefers the bundled skin/hero PNG when present
+/// (falling back to `BalloonSkin_Default`); otherwise renders the crafted
+/// `BalloonMark`. An optional animated burner glow adds life on top of either.
 struct BalloonView: View {
     /// Overall visual height of the balloon.
     var height: CGFloat = 160
@@ -343,9 +348,13 @@ struct BalloonView: View {
     /// Which skin artwork to render. Defaults to the standard balloon so every
     /// existing call site is unchanged; pass the user's selected skin to theme it.
     var skin: BalloonSkin = .default
+    /// Optional explicit asset name (e.g. the paywall hero `PaywallBalloonHero`).
+    /// When set it takes precedence over `skin`, and still falls back through
+    /// `BalloonSkin_Default` → vector if missing. Swap the art freely in Xcode.
+    var assetName: String? = nil
 
     var body: some View {
-        if let balloon = BalloonSkinImage.image(named: skin.assetName) {
+        if let balloon = BalloonSkinImage.image(named: assetName ?? skin.assetName) {
             Image(uiImage: balloon)
                 .resizable()
                 .scaledToFit()

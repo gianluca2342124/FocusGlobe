@@ -9,8 +9,10 @@ so the feature works before you add anything.
 ## Default vs premium
 
 - **Wind** (`JourneyAudioWind`) is the **free default**, available to everyone.
-  It should sound like soft wind/air from the balloon. Until you add the file,
-  it is generated procedurally.
+  It should be a **soft, relaxing hot-air-balloon ambience** — calm air / quiet
+  high-altitude drifting, *not* harsh wind noise. Until you add the file, it is
+  generated procedurally; that fallback is tuned soft (heavily low-passed, slow
+  gentle swell, calm volume) so it already feels relaxing.
 - The rest require an **active** Pro subscription. If Pro lapses, a selected
   premium sound re-locks and falls back to **Wind**. Premium audio is never
   permanently unlocked.

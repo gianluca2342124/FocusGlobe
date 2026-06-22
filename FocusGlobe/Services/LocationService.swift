@@ -8,6 +8,12 @@ import Foundation
 /// unavailable, the state reflects that so the UI can ask the user to choose a
 /// starting city instead.
 ///
+/// Reliability: we fire a fast one-shot request *and* continuous updates so a
+/// fix arrives as soon as possible. A timeout flips the state to `.unavailable`
+/// (so the UI can offer manual city selection cleanly instead of spinning
+/// forever) while updates keep running — so if a real fix arrives later it still
+/// wins and is preferred.
+///
 /// CoreLocation is the source of truth and is provider-independent — this type
 /// never touches the Google Maps SDK.
 ///
@@ -29,7 +35,11 @@ final class LocationService: NSObject, ObservableObject {
 
     private let manager = CLLocationManager()
     private let geocoder = CLGeocoder()
-    private var didRequestFix = false
+    private var isResolvingFix = false
+    private var timeoutTask: Task<Void, Never>?
+    /// How long to wait for a real fix before offering manual city selection.
+    /// Updates keep running, so a real fix that arrives later still wins.
+    private let fixTimeout: TimeInterval = 10
 
     override init() {
         super.init()
@@ -37,7 +47,7 @@ final class LocationService: NSObject, ObservableObject {
         manager.desiredAccuracy = kCLLocationAccuracyKilometer
     }
 
-    /// Begins the location flow: prompt if needed, otherwise take a single fix.
+    /// Begins the location flow: prompt if needed, otherwise take a fix.
     /// Safe to call repeatedly (idempotent).
     func requestLocation() {
         switch manager.authorizationStatus {
@@ -47,7 +57,7 @@ final class LocationService: NSObject, ObservableObject {
         case .authorizedWhenInUse, .authorizedAlways:
             if case .resolved = state { return }
             state = .resolving
-            requestFix()
+            beginFix()
         case .denied, .restricted:
             state = .denied
         @unknown default:
@@ -57,13 +67,39 @@ final class LocationService: NSObject, ObservableObject {
 
     // MARK: - Private
 
-    private func requestFix() {
-        guard !didRequestFix else { return }
-        didRequestFix = true
+    /// Try hard for a real fix: a fast one-shot plus continuous updates until we
+    /// resolve. A timeout offers manual selection if it's slow, while updates
+    /// keep running so a later real fix is still preferred.
+    private func beginFix() {
+        guard !isResolvingFix else { return }
+        isResolvingFix = true
+        startTimeout()
         manager.requestLocation()
+        manager.startUpdatingLocation()
+    }
+
+    private func startTimeout() {
+        timeoutTask?.cancel()
+        let seconds = fixTimeout
+        timeoutTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            guard let self, !Task.isCancelled else { return }
+            // Still waiting? Offer manual selection — but keep updates running so a
+            // real fix that arrives later still resolves and is preferred.
+            if case .resolving = self.state { self.state = .unavailable }
+        }
+    }
+
+    private func stopFix() {
+        isResolvingFix = false
+        timeoutTask?.cancel()
+        timeoutTask = nil
+        manager.stopUpdatingLocation()
     }
 
     private func resolve(_ location: CLLocation) {
+        guard isResolvingFix else { return }   // ignore stray updates after we resolve
+        stopFix()
         let coordinate = GeoCoordinate(latitude: location.coordinate.latitude,
                                        longitude: location.coordinate.longitude)
         geocoder.reverseGeocodeLocation(location) { [weak self] placemarks, _ in
@@ -92,8 +128,9 @@ extension LocationService: CLLocationManagerDelegate {
             case .authorizedWhenInUse, .authorizedAlways:
                 if case .resolved = self.state { return }
                 self.state = .resolving
-                self.requestFix()
+                self.beginFix()
             case .denied, .restricted:
+                self.stopFix()
                 self.state = .denied
             case .notDetermined:
                 break
@@ -111,10 +148,16 @@ extension LocationService: CLLocationManagerDelegate {
 
     nonisolated func locationManager(_ manager: CLLocationManager,
                                      didFailWithError error: Error) {
+        let isDenied = (error as? CLError)?.code == .denied
         Task { @MainActor [weak self] in
             guard let self else { return }
-            if case .resolved = self.state { return }
-            self.state = .unavailable
+            if isDenied {
+                self.stopFix()
+                self.state = .denied
+                return
+            }
+            // Transient failure: keep updates running; the timeout offers manual
+            // selection if no fix ever arrives. Never override a real resolve.
         }
     }
 }

@@ -5,8 +5,8 @@ import SwiftUI
 /// Each skin carries its own identity, accent, unlock rule and **image asset
 /// name**. The renderer (`BalloonView` / `VehicleMarkerRenderer`) loads
 /// `assetName` from the bundle; if a specific image is missing it falls back to
-/// the default `BalloonFront` artwork and finally to the crafted vector balloon,
-/// so the app never crashes on a missing asset (see SKINS_SETUP.md).
+/// `BalloonSkin_Default` and finally to the crafted vector balloon, so the app
+/// never crashes on a missing asset (see SKINS_SETUP.md).
 ///
 /// Milestone unlocks are derived purely from on-device progress (completed
 /// journeys / landings). Premium skins require an **active** Pro subscription —
@@ -31,7 +31,7 @@ struct BalloonSkin: Identifiable, Hashable {
     let name: String
     let subtitle: String
     /// The bundled image asset name (see SKINS_SETUP.md). Resolved at render
-    /// time; missing assets fall back to `BalloonFront` then the vector balloon.
+    /// time; missing assets fall back to `BalloonSkin_Default` then the vector.
     let assetName: String
     /// SF Symbol used as the skin's small glyph / accent chip in the gallery.
     let systemImage: String
@@ -60,34 +60,34 @@ struct BalloonSkin: Identifiable, Hashable {
     /// unlocks based on completed journeys.
     static let all: [BalloonSkin] = [
         BalloonSkin(id: "default", name: "Default",
-                    subtitle: "The calm default", assetName: "BalloonSkinDefault",
+                    subtitle: "The calm default", assetName: "BalloonSkin_Default",
                     systemImage: "balloon.fill", theme: .teal, unlock: .free, sortOrder: 0),
         BalloonSkin(id: "balloon", name: "Balloon",
-                    subtitle: "Bright and bold", assetName: "BalloonSkinBalloon",
+                    subtitle: "Bright and bold", assetName: "BalloonSkin_Balloon",
                     systemImage: "balloon.2.fill", theme: .indigo, unlock: .journeys(10), sortOrder: 1),
         BalloonSkin(id: "marshmallow", name: "Marshmallow",
-                    subtitle: "Soft and sweet", assetName: "BalloonSkinMarshmallow",
+                    subtitle: "Soft and sweet", assetName: "BalloonSkin_Marshmallow",
                     systemImage: "cloud.fill", theme: .coral, unlock: .journeys(25), sortOrder: 2),
         BalloonSkin(id: "emoji", name: "Emoji",
-                    subtitle: "Say hello", assetName: "BalloonSkinEmoji",
+                    subtitle: "Say hello", assetName: "BalloonSkin_Emoji",
                     systemImage: "face.smiling.fill", theme: .gold, unlock: .journeys(50), sortOrder: 3),
-        BalloonSkin(id: "hohoho", name: "Ho ho ho!",
-                    subtitle: "Festive cheer", assetName: "BalloonSkinHoHoHo",
+        BalloonSkin(id: "hohoho", name: "Ho Ho Ho",
+                    subtitle: "Festive cheer", assetName: "BalloonSkin_HoHoHo",
                     systemImage: "gift.fill", theme: .coral, unlock: .journeys(75), sortOrder: 4),
         BalloonSkin(id: "sky-pilot", name: "Sky Pilot",
-                    subtitle: "Ready for the skies", assetName: "BalloonSkinSkyPilot",
+                    subtitle: "Ready for the skies", assetName: "BalloonSkin_SkyPilot",
                     systemImage: "airplane", theme: .mint, unlock: .journeys(100), sortOrder: 5),
         BalloonSkin(id: "moon", name: "Moon",
-                    subtitle: "Lunar glow", assetName: "BalloonSkinMoon",
+                    subtitle: "Lunar glow", assetName: "BalloonSkin_Moon",
                     systemImage: "moon.stars.fill", theme: .indigo, unlock: .pro, sortOrder: 6),
         BalloonSkin(id: "galaxy", name: "Galaxy",
-                    subtitle: "Cosmic drift", assetName: "BalloonSkinGalaxy",
+                    subtitle: "Cosmic drift", assetName: "BalloonSkin_Galaxy",
                     systemImage: "sparkles", theme: .aurora, unlock: .pro, sortOrder: 7),
         BalloonSkin(id: "cloudy", name: "Cloudy",
-                    subtitle: "Head in the clouds", assetName: "BalloonSkinCloudy",
+                    subtitle: "Head in the clouds", assetName: "BalloonSkin_Cloudy",
                     systemImage: "cloud.sun.fill", theme: .mint, unlock: .pro, sortOrder: 8),
         BalloonSkin(id: "king", name: "King",
-                    subtitle: "Rule the skies", assetName: "BalloonSkinKing",
+                    subtitle: "Rule the skies", assetName: "BalloonSkin_King",
                     systemImage: "crown.fill", theme: .gold, unlock: .pro, sortOrder: 9),
     ]
 

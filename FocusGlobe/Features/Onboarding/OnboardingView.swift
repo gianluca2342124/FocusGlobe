@@ -27,9 +27,10 @@ struct OnboardingView: View {
             scrim
             VStack(spacing: AppSpacing.lg) {
                 Spacer()
+                // Clean, minimal start screen — keep the balloon + live map, but
+                // no FocusGlobe logo/wordmark here.
                 BalloonView(height: 150, showBurner: true, showGlow: true,
                             glow: AppColors.gold.opacity(0.7))
-                AppLogo(size: 34)
                 if isResolving { resolvingBlock } else { fallbackBlock }
                 Spacer()
                 if isResolving && allowManualHint { manualHint }

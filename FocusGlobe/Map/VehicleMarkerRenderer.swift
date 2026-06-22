@@ -3,9 +3,9 @@ import UIKit
 
 /// Renders map marker images.
 ///
-/// The moving vehicle on the live map is the **official balloon asset**
-/// (`BalloonFront`) so the protagonist is identical everywhere. Only if the
-/// asset is genuinely missing do we fall back to the crafted vector balloon.
+/// The moving vehicle on the live map is the user's **selected skin asset**
+/// (falling back to `BalloonSkin_Default`) so the protagonist matches the rest
+/// of the app. Only if no asset is available do we fall back to the vector.
 ///
 /// These methods are deliberately **nonisolated** so the Google Maps coordinator
 /// can call them synchronously from `updateUIView`. Asset lookup and
@@ -18,9 +18,9 @@ enum VehicleMarkerRenderer {
     /// The balloon marker, sized for the map. Uses the selected skin's (trimmed)
     /// PNG when present — trimmed so the full balloon fills the marker rather than
     /// appearing tiny inside the asset's transparent padding. Missing skin assets
-    /// fall back to `BalloonFront`, then to the crafted vector balloon.
+    /// fall back to `BalloonSkin_Default`, then to the crafted vector balloon.
     static func balloonImage(targetHeight: CGFloat = 110, glow: Color,
-                             assetName: String = BrandAssets.balloonFrontName) -> UIImage? {
+                             assetName: String = BrandAssets.defaultBalloonName) -> UIImage? {
         if let balloon = BalloonSkinImage.image(named: assetName) {
             return resized(balloon, targetHeight: targetHeight)
         }

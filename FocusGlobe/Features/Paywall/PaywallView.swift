@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 
 /// The custom FocusGlobe premium paywall — a dark/gold luxury screen that drives
@@ -14,6 +15,9 @@ struct PaywallView: View {
 
     @State private var selectedKind: PlanKind = .annual
     @State private var animateBlobs = false
+    /// Drives the periodic gloss sweep across the purchase CTA (off-screen at rest).
+    @State private var shineX: CGFloat = -0.5
+    private let shineTimer = Timer.publish(every: 3.6, on: .main, in: .common).autoconnect()
 
     // TODO: replace with your real policy URLs (placeholders for now).
     private static let privacyURL = URL(string: "https://focusglobe.app/privacy")!
@@ -21,11 +25,15 @@ struct PaywallView: View {
 
     private let benefits: [(String, String)] = [
         ("nosign", "No ads"),
-        ("paintbrush.pointed.fill", "Exclusive skins"),
-        ("multiply.circle.fill", "2x rewards"),
+        ("balloon.fill", "Exclusive skins"),
+        ("gift.fill", "2x rewards"),
         ("music.note", "Focus sounds & music"),
         ("square.grid.2x2.fill", "All widgets unlocked"),
     ]
+
+    /// The paywall hero balloon asset — swap freely in Xcode (Assets.xcassets).
+    /// Falls back to `BalloonSkin_Default`, then the vector balloon, if missing.
+    static let heroAssetName = "PaywallBalloonHero"
 
     private var subs: SubscriptionManager { appModel.subscriptions }
 
@@ -93,14 +101,23 @@ struct PaywallView: View {
 
     private var balloonHero: some View {
         ZStack {
-            Circle()
-                .fill(RadialGradient(colors: [AppColors.gold.opacity(0.55), .clear],
-                                     center: .center, startRadius: 6, endRadius: 110))
-                .frame(width: 210, height: 210)
-            // Existing balloon asset (easy to swap later in Xcode).
-            BalloonView(height: 104, showBurner: true, showGlow: true, glow: AppColors.gold.opacity(0.9))
+            // Soft, diffused golden atmosphere behind the balloon. A radial that
+            // fades fully to clear (no hard circle edge) and is heavily blurred, so
+            // it reads as premium light rather than a disc and never looks cut off.
+            RadialGradient(colors: [AppColors.gold.opacity(0.42),
+                                    AppColors.gold.opacity(0.16),
+                                    .clear],
+                           center: .center, startRadius: 0, endRadius: 130)
+                .frame(width: 260, height: 240)
+                .blur(radius: 28)
+                .allowsHitTesting(false)
+            // Paywall hero balloon — uses `PaywallBalloonHero` (swap in Xcode),
+            // falling back to the default skin / vector if the asset is missing.
+            BalloonView(height: 108, showBurner: true, showGlow: false,
+                        assetName: Self.heroAssetName)
         }
-        .frame(height: 150)
+        .frame(height: 168)
+        .frame(maxWidth: .infinity)
     }
 
     private var benefitsCard: some View {
@@ -246,11 +263,39 @@ struct PaywallView: View {
             }
             .frame(maxWidth: .infinity).frame(height: 56)
             .background(Capsule().fill(goldGradient))
+            // Subtle gloss sweep every few seconds (only on the live CTA).
+            .overlay {
+                if available && !working {
+                    shineSweep.clipShape(Capsule()).allowsHitTesting(false)
+                }
+            }
             .shadow(color: AppColors.gold.opacity(0.4), radius: 16, y: 8)
             .opacity(available ? 1 : 0.5)
         }
         .buttonStyle(SoftPressStyle())
         .disabled(!available || working)
+        .onReceive(shineTimer) { _ in triggerShine() }
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { triggerShine() }
+        }
+    }
+
+    /// A diagonal highlight band that sweeps across the CTA, brightening the gold.
+    private var shineSweep: some View {
+        GeometryReader { geo in
+            let w = geo.size.width
+            LinearGradient(colors: [.clear, .white.opacity(0.55), .clear],
+                           startPoint: .leading, endPoint: .trailing)
+                .frame(width: w * 0.45, height: geo.size.height * 2)
+                .rotationEffect(.degrees(20))
+                .position(x: w * shineX, y: geo.size.height / 2)
+                .blendMode(.plusLighter)
+        }
+    }
+
+    private func triggerShine() {
+        shineX = -0.5
+        withAnimation(.easeInOut(duration: 1.05)) { shineX = 1.5 }
     }
 
     private var buttonTitle: String {
