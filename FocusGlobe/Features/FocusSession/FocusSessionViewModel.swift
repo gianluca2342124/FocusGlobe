@@ -13,8 +13,13 @@ final class FocusSessionViewModel: ObservableObject {
 
     let timer: SessionTimerService
 
-    @Published var pureMode: Bool = false
-    @Published var mapStyle: MapDisplayStyle = .terrain
+    /// Active flight default is Standard Apple Maps (see APPLE_MAPS_MIGRATION.md).
+    @Published var mapStyle: MapDisplayStyle = .standard
+    /// Whether map labels/POIs are shown (Labels toggle in the map controls).
+    @Published var labelsOn: Bool = true
+    /// Whether this session's journey audio is muted (volume only — pause/resume
+    /// and the loop are unaffected).
+    @Published private(set) var isMuted: Bool = false
     /// Camera behaviour the user can toggle in-session (follow vs. full route).
     @Published var cameraMode: JourneyCameraMode = .follow
     /// A gentle 3D tilt of the follow camera (where Google supports it).
@@ -46,7 +51,9 @@ final class FocusSessionViewModel: ObservableObject {
         self.origin = journey.origin
         self.route = journey.route
         self.intention = journey.intention
-        self.timer = SessionTimerService(total: journey.route.duration)
+        // Resume support: seed elapsed when continuing an unfinished journey.
+        self.timer = SessionTimerService(total: journey.route.duration,
+                                         startElapsed: TimeInterval(journey.resumeElapsedSeconds ?? 0))
         self.journeyDistanceKm = GeoMath.distanceKm(from: journey.origin.coordinate,
                                                     to: journey.route.destination)
     }
@@ -56,13 +63,11 @@ final class FocusSessionViewModel: ObservableObject {
     func attach(appModel: AppModel) {
         guard self.appModel == nil else { return }
         self.appModel = appModel
-        pureMode = appModel.settings.pureModeDefault
         skinAssetName = appModel.selectedSkin.assetName
-        // The active flight defaults to Terrain (premium topographic look). A dark
-        // overlay in FocusSessionView keeps it feeling dark/premium so it never
-        // reads as a bright/white map. The user can still switch via the in-session
-        // menu (controls unchanged).
-        mapStyle = .terrain
+        // The active flight defaults to Standard Apple Maps. A bottom scrim in
+        // FocusSessionView keeps readouts legible. The user can switch styles and
+        // toggle labels via the in-session menu.
+        mapStyle = .standard
     }
 
     func setMapStyle(_ style: MapDisplayStyle) {
@@ -183,7 +188,8 @@ final class FocusSessionViewModel: ObservableObject {
             cameraMode: cameraMode,
             tilted: tilted,
             cameraToken: cameraToken,
-            skinAssetName: skinAssetName
+            skinAssetName: skinAssetName,
+            labelsOn: labelsOn
         )
     }
 
@@ -209,8 +215,23 @@ final class FocusSessionViewModel: ObservableObject {
         appModel?.analytics.log(.journeyResumed, ["route": route.id])
     }
 
-    func togglePureMode() {
-        pureMode.toggle()
+    /// Toggle map labels/POIs (re-applies the map style configuration).
+    func toggleLabels() {
+        labelsOn.toggle()
+        appModel?.haptics.tap()
+    }
+
+    // MARK: - Audio mute
+
+    /// `true` when no journey audio is effectively playing — either muted in this
+    /// session or the global Sound setting is off (so the button reflects it).
+    var isAudioMuted: Bool { isMuted || !(appModel?.settings.soundEnabled ?? true) }
+
+    var muteIconName: String { isAudioMuted ? "speaker.slash.fill" : "speaker.wave.2.fill" }
+
+    func toggleMute() {
+        isMuted.toggle()
+        appModel?.sound.setMuted(isMuted)
         appModel?.haptics.tap()
     }
 
@@ -229,14 +250,30 @@ final class FocusSessionViewModel: ObservableObject {
         if resumeAfterCancelDismiss { resume() }
     }
 
-    /// Records the cancellation. The caller dismisses the cover afterwards.
+    /// Leave the journey before landing. Saved as a resumable snapshot so the
+    /// user can continue (or discard) from Home. The caller dismisses the cover.
     func confirmCancel() {
         showCancelConfirm = false
+        saveResumeSnapshot()
         timer.stop()
         appModel?.sound.stop()
-        appModel?.cancelJourney(origin: origin, route: route,
-                                focusedSeconds: Int(timer.elapsed.rounded()),
-                                intention: intention)
+    }
+
+    // MARK: - Resume snapshot
+
+    /// Persist a lightweight snapshot so an unfinished journey can be resumed
+    /// (called when leaving the journey or when the app is backgrounded).
+    func persistForResume() { saveResumeSnapshot() }
+
+    private func saveResumeSnapshot() {
+        guard let appModel, !didLand else { return }
+        let elapsed = Int(timer.elapsed.rounded())
+        let total = Int(timer.total.rounded())
+        guard elapsed > 0, elapsed < total else { return }   // nothing to resume / already done
+        appModel.saveResumableJourney(origin: origin, route: route, intention: intention,
+                                      elapsedSeconds: elapsed,
+                                      skinAssetName: appModel.selectedSkin.assetName,
+                                      soundID: appModel.selectedJourneyAudio.id)
     }
 
     // MARK: - Landing
@@ -244,6 +281,7 @@ final class FocusSessionViewModel: ObservableObject {
     private func land() {
         guard !didLand, let appModel else { return }
         appModel.sound.stop()
+        appModel.clearResumableJourney()   // completed → no longer resumable
         appModel.haptics.landing()
         let summary = appModel.completeJourney(
             origin: origin,

@@ -31,8 +31,11 @@ final class SessionTimerService: ObservableObject {
     private var timer: Timer?
     private let tickInterval: TimeInterval = 1.0
 
-    init(total: TimeInterval) {
+    init(total: TimeInterval, startElapsed: TimeInterval = 0) {
         self.total = max(1, total)
+        // Resume support: seed accumulated time so `start()` continues from here.
+        self.accumulated = min(self.total, max(0, startElapsed))
+        self.elapsed = self.accumulated
     }
 
     // MARK: - Derived

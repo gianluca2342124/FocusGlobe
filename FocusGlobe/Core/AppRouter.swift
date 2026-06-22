@@ -8,6 +8,9 @@ struct Journey: Identifiable, Hashable {
     let origin: JourneyOrigin
     let route: Route
     let intention: String?
+    /// When resuming an unfinished journey, the elapsed seconds to start from.
+    /// `nil` for a fresh journey.
+    var resumeElapsedSeconds: Int? = nil
 }
 
 /// Centralised navigation. Provider-independent and view-independent so flows

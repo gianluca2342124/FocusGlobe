@@ -4,48 +4,51 @@ import UIKit
 /// Applies a `MapDisplayStyle` to an `MKMapView` using **only MapKit-supported
 /// configurations** (no Google-style JSON — MapKit can't do that).
 ///
-/// FocusGlobe's default is a calm, dark, muted map: `MKStandardMapConfiguration`
-/// with the *muted* emphasis, points-of-interest hidden, and the map forced into
-/// dark cartography via `overrideUserInterfaceStyle`. Bright styles
-/// (standard/satellite/hybrid) are opt-in; the active flight stays dark.
+/// User-facing styles:
+///  • Monochrome — dark, muted standard map (grey land, near-black sea). Default.
+///  • Terra — dark + muted with realistic elevation for a planet/terrain feel.
+///  • Standard — native Apple standard (green/yellow land, blue sea).
+///  • Satellite — Apple imagery; with labels = hybrid, without = pure imagery.
 ///
-/// MapKit limitations vs Google are documented in APPLE_MAPS_MIGRATION.md.
+/// Labels: ON shows place labels (and POIs); OFF hides POIs via
+/// `pointOfInterestFilter` and, for Satellite, drops the label layer (imagery).
+/// MapKit cannot fully hide base place-name labels on the standard map, so for
+/// Monochrome/Terra/Standard the toggle suppresses POIs as the best supported
+/// approximation (documented in APPLE_MAPS_MIGRATION.md).
 enum AppleMapStyle {
 
-    /// Apply the chosen style to the map.
-    static func apply(_ style: MapDisplayStyle, to map: MKMapView) {
+    static func apply(_ style: MapDisplayStyle, to map: MKMapView, labelsOn: Bool = true) {
+        // ON → default POIs + labels; OFF → hide POIs (place labels may remain).
+        let poi: MKPointOfInterestFilter? = labelsOn ? nil : .excludingAll
+
         switch style {
-        case .graphite, .night, .monochrome:
-            // Premium dark/muted — FocusGlobe's signature look.
+        case .monochrome, .graphite, .night:
             map.overrideUserInterfaceStyle = .dark
-            map.preferredConfiguration = standard(emphasis: .muted)
+            map.preferredConfiguration = standard(emphasis: .muted, poi: poi)
 
-        case .standard:
-            map.overrideUserInterfaceStyle = .unspecified
-            map.preferredConfiguration = standard(emphasis: .default)
-
-        case .terrain:
-            // MapKit has no Google-style terrain; use a realistic-elevation
-            // standard map kept dark + muted for a subtle topographic feel.
+        case .terra, .terrain:
             map.overrideUserInterfaceStyle = .dark
             let cfg = MKStandardMapConfiguration(elevationStyle: .realistic, emphasisStyle: .muted)
-            cfg.pointOfInterestFilter = .excludingAll
+            cfg.pointOfInterestFilter = poi
             cfg.showsTraffic = false
             map.preferredConfiguration = cfg
 
-        case .satellite:
+        case .standard:
             map.overrideUserInterfaceStyle = .unspecified
-            map.preferredConfiguration = MKImageryMapConfiguration(elevationStyle: .realistic)
+            map.preferredConfiguration = standard(emphasis: .default, poi: poi)
 
-        case .hybrid:
+        case .satellite, .hybrid:
             map.overrideUserInterfaceStyle = .unspecified
-            map.preferredConfiguration = MKHybridMapConfiguration(elevationStyle: .realistic)
+            map.preferredConfiguration = labelsOn
+                ? MKHybridMapConfiguration(elevationStyle: .realistic)   // imagery + labels
+                : MKImageryMapConfiguration(elevationStyle: .realistic)  // pure imagery
         }
     }
 
-    private static func standard(emphasis: MKStandardMapConfiguration.EmphasisStyle) -> MKStandardMapConfiguration {
+    private static func standard(emphasis: MKStandardMapConfiguration.EmphasisStyle,
+                                 poi: MKPointOfInterestFilter?) -> MKStandardMapConfiguration {
         let cfg = MKStandardMapConfiguration(emphasisStyle: emphasis)
-        cfg.pointOfInterestFilter = .excludingAll   // calm — no business clutter
+        cfg.pointOfInterestFilter = poi
         cfg.showsTraffic = false
         return cfg
     }

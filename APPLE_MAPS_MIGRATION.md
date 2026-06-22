@@ -56,28 +56,45 @@ Landing/postcard was not map-based and is unchanged.
 
 ## Default style & map-style controls
 
-Default = `MKStandardMapConfiguration(emphasisStyle: .muted)` forced to dark
-cartography (`overrideUserInterfaceStyle = .dark`) with points-of-interest
-hidden — calm, premium, dark. The existing style menu maps to MapKit:
+The user-facing style menu shows only four Apple-appropriate styles (plus a
+**Labels** toggle). Legacy cases (`graphite`/`terrain`/`hybrid`/`night`) are
+kept only so older saved settings decode; they map to the closest style.
 
-| Style       | MapKit |
-|-------------|--------|
-| Dark / Night / Mono | Standard, muted, forced dark |
-| Standard    | Standard, default emphasis |
-| Terrain     | Standard + **realistic elevation**, dark + muted |
-| Satellite   | Imagery |
-| Hybrid      | Hybrid + realistic elevation |
+| Style (menu) | MapKit |
+|--------------|--------|
+| **Monochrome** | Standard, muted emphasis, forced **dark** (grey land / near-black sea) |
+| **Terra**      | Standard + **realistic elevation**, dark + muted (planet/terrain feel) |
+| **Standard**   | Standard, default emphasis (green/yellow land, blue sea) |
+| **Satellite**  | Hybrid (imagery + labels) / Imagery (labels off) |
+
+Per-screen defaults:
+
+- Home / Start / Choose Journey / Boarding → **Monochrome**.
+- Active Journey (after takeoff) → **Standard**.
+
+Labels toggle (active-journey map controls, ON by default): for Satellite it
+switches Hybrid ↔ Imagery (clean). For the standard-based styles it toggles
+`pointOfInterestFilter` (POIs) — MapKit can't fully hide base place-name labels
+on the standard map, so that's the best supported approximation.
+
+## Takeoff camera
+
+The active journey opens with the **whole-route overview**, holds briefly
+(~0.6s), then quickly zooms (~0.85s) to the balloon and hands over to follow
+mode — fast and identical for Short…Ultra.
 
 ## Known MapKit limitations vs Google
 
 - **No JSON styling.** MapKit can't reproduce Google's custom JSON. We use
-  supported configurations + dark override + muted emphasis instead. A separate
-  "Mono" cartography doesn't exist → it maps to the dark/muted look.
+  supported configurations + dark override + muted emphasis instead.
+- **Labels can't be fully hidden** on the standard map (Monochrome/Terra/
+  Standard) — the Labels toggle suppresses POIs as the closest approximation;
+  base place-name labels remain. Satellite toggles cleanly (Hybrid ↔ Imagery).
 - **No gradient polylines.** The air trail is a single translucent white line
   (Google faded it via a stroke gradient). Closest native equivalent.
-- **Terrain isn't Google terrain.** It's a realistic-elevation standard map kept
-  dark/muted. If it ever reads too bright on a device, switch the default
-  `.terrain` mapping in `AppleMapStyle` to the plain muted-dark standard.
+- **Terra isn't Google terrain.** It's a realistic-elevation standard map kept
+  dark/muted. If it ever reads too bright on a device, switch the `.terra`
+  mapping in `AppleMapStyle` to the plain muted-dark standard.
 - **Camera pitch may be clamped** by MapKit at low altitudes; the 3D tilt uses
   `MKMapCamera.pitch` and is best-effort.
 - **Follow camera** is animated by setting `mapView.camera` inside a

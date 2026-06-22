@@ -1,44 +1,59 @@
 import Foundation
 
 /// User-selectable map presentation, surfaced as floating controls in the
-/// session and in Settings. Maps to Google Maps `mapType` + custom style JSON.
+/// session. On Apple Maps the user-facing set is just Monochrome / Terra /
+/// Standard / Satellite (see `selectable`); the other cases are legacy values
+/// kept only so older persisted settings keep decoding (they map to the closest
+/// Apple style in `AppleMapStyle`).
 enum MapDisplayStyle: String, CaseIterable, Codable, Identifiable {
+    case monochrome   // dark/graphite land, near-black sea — the FocusGlobe default
+    case terra        // dark/premium with a planet/terrain (realistic elevation) feel
+    case standard     // native Apple standard (green/yellow land, blue sea)
+    case satellite    // native Apple imagery (labels via the Labels toggle)
+    // Legacy (not shown in the menu; decode-only):
     case graphite
-    case standard
     case terrain
-    case satellite
     case hybrid
     case night
-    case monochrome
 
     var id: String { rawValue }
 
+    /// The only styles shown to the user (Apple-appropriate).
+    static let selectable: [MapDisplayStyle] = [.monochrome, .terra, .standard, .satellite]
+
     var displayName: String {
         switch self {
-        case .graphite:   return "Dark"
+        case .monochrome: return "Monochrome"
+        case .terra:      return "Terra"
         case .standard:   return "Standard"
-        case .terrain:    return "Terrain"
         case .satellite:  return "Satellite"
-        case .hybrid:     return "Hybrid"
-        case .night:      return "Night"
-        case .monochrome: return "Mono"
+        case .graphite:   return "Monochrome"
+        case .terrain:    return "Terra"
+        case .hybrid:     return "Satellite"
+        case .night:      return "Monochrome"
         }
     }
 
     var systemImage: String {
         switch self {
-        case .graphite:   return "moon.fill"
-        case .standard:   return "map.fill"
-        case .terrain:    return "mountain.2.fill"
-        case .satellite:  return "globe.americas.fill"
-        case .hybrid:     return "square.stack.3d.up.fill"
-        case .night:      return "moon.stars.fill"
         case .monochrome: return "circle.lefthalf.filled"
+        case .terra:      return "globe.europe.africa.fill"
+        case .standard:   return "map.fill"
+        case .satellite:  return "globe.americas.fill"
+        case .graphite:   return "circle.lefthalf.filled"
+        case .terrain:    return "globe.europe.africa.fill"
+        case .hybrid:     return "globe.americas.fill"
+        case .night:      return "moon.stars.fill"
         }
     }
 
-    /// Dark presentations safe to keep during the active flight (never bright).
-    var isDark: Bool { self == .graphite || self == .night }
+    /// Dark presentations (kept clean during the active flight — no extra scrim).
+    var isDark: Bool {
+        switch self {
+        case .monochrome, .terra, .graphite, .night, .terrain: return true
+        case .standard, .satellite, .hybrid:                   return false
+        }
+    }
 }
 
 /// Calm, minimal Google Maps style JSON for Light and Dark mode.

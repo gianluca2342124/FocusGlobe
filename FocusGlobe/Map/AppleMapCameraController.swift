@@ -16,11 +16,11 @@ enum AppleMapCameraController {
         }
     }
 
-    /// A pulled-back start altitude for the take-off. We centre on the balloon at
-    /// this distance, then zoom IN to `followDistance` — both poses share the same
-    /// centre (no lateral fly), so Short…Ultra take off equally fast.
-    static func takeoffStartDistance(forRouteKm km: Double) -> CLLocationDistance {
-        followDistance(forRouteKm: km) * 3.0
+    /// Camera altitude that frames the whole route (origin → destination),
+    /// used for the take-off overview before zooming in to the balloon. Roughly
+    /// proportional to the route span so both endpoints are comfortably visible.
+    static func overviewDistance(forRouteKm km: Double) -> CLLocationDistance {
+        max(40_000, km * 1000 * 1.9)
     }
 
     /// Longitude span (degrees) for a Google-style zoom level at a given view

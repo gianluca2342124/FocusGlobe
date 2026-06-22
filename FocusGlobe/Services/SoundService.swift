@@ -23,7 +23,12 @@ final class SoundService {
     private var wind: ProceduralWind?
     private var isJourneyActive = false
     private var pausedByInterruption = false
+    private var muted = false
     private let targetVolume: Float = 0.6
+
+    /// Whether the current journey audio is muted (volume 0 but still "playing",
+    /// so pause/resume are unaffected).
+    var isMuted: Bool { muted }
 
     private var observers: [NSObjectProtocol] = []
 
@@ -48,6 +53,7 @@ final class SoundService {
         guard isEnabled else { return }
         stop()
         isJourneyActive = true
+        muted = false
         configureSession()
 
         if let url = bundledURL(for: option.assetName),
@@ -97,6 +103,15 @@ final class SoundService {
     func setEnabled(_ enabled: Bool) {
         isEnabled = enabled
         if enabled { resume() } else { pause() }
+    }
+
+    /// Mute/unmute the current journey audio without tearing it down (volume only),
+    /// so pause/resume and the loop are unaffected.
+    func setMuted(_ value: Bool) {
+        muted = value
+        let v: Float = value ? 0 : targetVolume
+        player?.setVolume(v, fadeDuration: 0.2)
+        wind?.setVolume(v)
     }
 
     // MARK: - Session
@@ -221,6 +236,11 @@ private final class ProceduralWind {
             print("🔈 [audio] Procedural wind failed to start: \(error.localizedDescription)")
             #endif
         }
+    }
+
+    /// Set the output level (used for mute/unmute without stopping the engine).
+    func setVolume(_ v: Float) {
+        engine.mainMixerNode.outputVolume = v
     }
 
     func pause() {

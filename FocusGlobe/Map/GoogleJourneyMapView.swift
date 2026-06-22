@@ -97,7 +97,7 @@ struct GoogleJourneyMapView: UIViewRepresentable {
             case .standard:
                 map.mapType = .normal
                 map.mapStyle = try? GMSMapStyle(jsonString: MapStyles.light)
-            case .terrain:
+            case .terrain, .terra:
                 map.mapType = .terrain
                 map.mapStyle = nil
             case .satellite:

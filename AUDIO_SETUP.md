@@ -86,6 +86,9 @@ app still runs fine — audio simply pauses when backgrounded.
 
 ## Choosing the audio (UI)
 
-Settings → **Journey sound** lists Wind (free) and the premium options. The
-selected option shows a check; locked premium options show a gold **PRO** badge
-and open the custom paywall when tapped. The selection is **persisted** locally.
+**Passport → Journey sound** (at the bottom) lists Wind (free) and the premium
+options as colourful sound cards. The selected option shows a check; locked
+premium options show a gold crown and open the custom paywall when tapped. The
+selection is **persisted** locally. During an active journey, a speaker button
+mutes/unmutes the audio without stopping it (the global Sound toggle in Settings
+remains the master switch).

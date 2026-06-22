@@ -11,6 +11,7 @@ struct HomeView: View {
     @EnvironmentObject private var router: AppRouter
     @StateObject private var viewModel = HomeViewModel()
     @State private var showCityPicker = false
+    @State private var showResume = false
     @State private var originPoint: CGPoint?
 
     private var origin: JourneyOrigin? { appModel.currentOrigin }
@@ -40,18 +41,43 @@ struct HomeView: View {
         .focusScreenChrome()
         .onAppear {
             appModel.requestLocation()
+            maybeShowResume()
             maybeShowPremiumIntro()
         }
         .onChange(of: appModel.currentOrigin) { _, newOrigin in
             if newOrigin != nil { maybeShowPremiumIntro() }
         }
         .sheet(isPresented: $showCityPicker) { LocationPickerView() }
+        .sheet(isPresented: $showResume) {
+            ResumeJourneySheet(
+                snapshot: appModel.resumableJourney,
+                onContinue: { showResume = false; continueResumableJourney() },
+                onStartNew: { showResume = false; appModel.clearResumableJourney(); router.openRouteSelection() }
+            )
+        }
+    }
+
+    /// Offer to continue an unfinished journey if one was saved (and we're not
+    /// already in a journey). Shown over Home on launch / return.
+    private func maybeShowResume() {
+        guard appModel.resumableJourney != nil, router.activeJourney == nil else { return }
+        showResume = true
+    }
+
+    /// Reconstruct and present the saved journey (seeded at its saved elapsed).
+    private func continueResumableJourney() {
+        guard let journey = appModel.makeResumeJourney() else { return }
+        // Let the sheet dismiss first, then present the full-screen journey cover.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            router.activeJourney = journey
+        }
     }
 
     /// Auto-present the premium paywall once per session for non-Pro users, after
-    /// we have a real origin and the UI is ready. Marked shown immediately so it
-    /// never loops or reopens once the user closes it during this session.
+    /// we have a real origin and the UI is ready. Never clashes with the resume
+    /// card. Marked shown immediately so it never loops or reopens this session.
     private func maybeShowPremiumIntro() {
+        guard appModel.resumableJourney == nil, !showResume else { return }
         guard appModel.shouldShowPremiumIntro, !router.showPaywall else { return }
         appModel.markPremiumIntroSeen()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
@@ -64,8 +90,10 @@ struct HomeView: View {
             // Lift the origin/balloon into the upper half. The map's bottom inset
             // also lifts the Google attribution to just above the (compact) text
             // cluster, so it stays visible without colliding with the title.
+            // Wide, travel-app framing: from e.g. Barcelona this shows Europe-scale
+            // context (not a local city map). Balloon/origin stays in the upper half.
             JourneyBackdropMap(origin: origin, mode: .origin, showsBalloon: true,
-                               bottomInset: 330, originZoom: 6.3,
+                               bottomInset: 330, originZoom: 4.6,
                                skinAssetName: appModel.selectedSkin.assetName,
                                onOriginPoint: setOriginPoint)
                 .ignoresSafeArea()
@@ -255,5 +283,64 @@ struct HomeView: View {
     private var subtitle: String {
         if origin != nil { return "" }
         return appModel.isLocating ? "Finding where you are…" : "Pick a starting city to begin."
+    }
+}
+
+// MARK: - Resume unfinished journey
+
+/// A calm card offered on Home when an unfinished journey was saved. The user
+/// chooses to continue it (resumed at the saved progress) or start a new one.
+private struct ResumeJourneySheet: View {
+    let snapshot: ResumableJourney?
+    let onContinue: () -> Void
+    let onStartNew: () -> Void
+
+    var body: some View {
+        ZStack {
+            AppBackground().ignoresSafeArea()
+            VStack(spacing: AppSpacing.lg) {
+                Spacer()
+                BalloonView(height: 120, showBurner: true, showGlow: true,
+                            glow: (snapshot?.route.colorTheme.soft ?? AppColors.gold.opacity(0.7)),
+                            assetName: snapshot?.skinAssetName)
+                VStack(spacing: 6) {
+                    Text("Continue your journey?")
+                        .font(AppTypography.title2)
+                        .foregroundStyle(.white)
+                    if let s = snapshot {
+                        Text("\(s.origin.city) → \(s.route.destinationName)")
+                            .font(AppTypography.headline)
+                            .foregroundStyle(.white.opacity(0.9))
+                        Text(progressText(s))
+                            .font(AppTypography.caption)
+                            .foregroundStyle(.white.opacity(0.65))
+                    }
+                }
+                .multilineTextAlignment(.center)
+                Spacer()
+                VStack(spacing: AppSpacing.sm) {
+                    AppPrimaryButton(title: "Continue journey", systemImage: "paperplane.fill") { onContinue() }
+                    Button(action: onStartNew) {
+                        Text("Start a new journey")
+                            .font(AppTypography.headline)
+                            .foregroundStyle(.white.opacity(0.85))
+                            .frame(maxWidth: .infinity).frame(height: 52)
+                            .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.18,
+                                             shadowRadius: 8, shadowY: 4)
+                    }
+                    .buttonStyle(SoftPressStyle())
+                }
+            }
+            .padding(AppSpacing.screen)
+            .padding(.bottom, AppSpacing.xl)
+        }
+        .presentationDetents([.medium, .large])
+        .interactiveDismissDisabled(true)
+    }
+
+    private func progressText(_ s: ResumableJourney) -> String {
+        let total = max(1, s.route.durationMinutes * 60)
+        let pct = Int((Double(s.elapsedSeconds) / Double(total) * 100).rounded())
+        return "\(min(99, max(1, pct)))% complete · \(s.route.durationLabel)"
     }
 }

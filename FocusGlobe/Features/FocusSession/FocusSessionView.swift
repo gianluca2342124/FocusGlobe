@@ -53,28 +53,26 @@ struct FocusSessionView: View {
             // over any map (dark or light).
             vignette
 
-            if vm.pureMode {
-                pureControls
-            } else {
-                topControls
-                bottomReadouts
-            }
+            topControls
+            bottomReadouts
         }
-        .statusBarHidden(vm.pureMode)
-        .animation(.spring(response: 0.45, dampingFraction: 0.85), value: vm.pureMode)
         .confirmationDialog("Leave this journey?",
                             isPresented: $vm.showCancelConfirm,
                             titleVisibility: .visible) {
-            Button("End journey", role: .destructive) {
+            Button("Leave", role: .destructive) {
                 vm.confirmCancel()
                 router.finishToHome()
             }
             Button("Keep focusing", role: .cancel) { vm.dismissCancel() }
         } message: {
-            Text("Your progress won't be saved as a landing. You can always start again.")
+            Text("You can pick up where you left off from Home.")
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { vm.refresh() }
+            switch phase {
+            case .active:              vm.refresh()
+            case .inactive, .background: vm.persistForResume()
+            @unknown default:          break
+            }
         }
     }
 
@@ -90,11 +88,11 @@ struct FocusSessionView: View {
             RadialGradient(colors: [.clear, .black.opacity(0.28)],
                            center: .center, startRadius: 220, endRadius: 580)
             VStack(spacing: 0) {
-                LinearGradient(colors: [.black.opacity(vm.pureMode ? 0.18 : 0.30), .clear],
+                LinearGradient(colors: [.black.opacity(0.30), .clear],
                                startPoint: .top, endPoint: .bottom)
                     .frame(height: 170)
                 Spacer()
-                LinearGradient(colors: [.clear, .black.opacity(vm.pureMode ? 0.34 : 0.62)],
+                LinearGradient(colors: [.clear, .black.opacity(0.62)],
                                startPoint: .top, endPoint: .bottom)
                     .frame(height: 300)
             }
@@ -123,8 +121,11 @@ struct FocusSessionView: View {
                     AppIconButton(systemImage: "view.3d", size: 46,
                                   tint: vm.tilted ? AppColors.gold : AppColors.textPrimary,
                                   accessibilityLabel: "Toggle 3D tilt") { vm.toggleTilt() }
-                    AppIconButton(systemImage: "eye.slash", size: 46, tint: AppColors.textPrimary,
-                                  accessibilityLabel: "Pure mode") { vm.togglePureMode() }
+                    AppIconButton(systemImage: vm.muteIconName, size: 46,
+                                  tint: vm.isAudioMuted ? AppColors.gold : AppColors.textPrimary,
+                                  accessibilityLabel: vm.isAudioMuted ? "Unmute journey audio" : "Mute journey audio") {
+                        vm.toggleMute()
+                    }
                 }
             }
             Spacer()
@@ -136,10 +137,14 @@ struct FocusSessionView: View {
 
     private var mapStyleMenu: some View {
         Menu {
-            ForEach(MapDisplayStyle.allCases) { style in
+            ForEach(MapDisplayStyle.selectable) { style in
                 Button { vm.setMapStyle(style) } label: {
-                    Label(style.displayName, systemImage: style.systemImage)
+                    Label(style.displayName, systemImage: vm.mapStyle == style ? "checkmark" : style.systemImage)
                 }
+            }
+            Divider()
+            Button { vm.toggleLabels() } label: {
+                Label(vm.labelsOn ? "Hide labels" : "Show labels", systemImage: "textformat")
             }
         } label: {
             GlassCircle(systemImage: vm.mapStyle.systemImage)
@@ -195,42 +200,6 @@ struct FocusSessionView: View {
     private var centerCluster: some View {
         // No seconds countdown — calm and timeless. Just the pause control.
         WhitePauseButton(isPaused: vm.isPaused, size: 60) { vm.togglePause() }
-    }
-
-    // MARK: - Pure mode
-
-    private var pureControls: some View {
-        VStack {
-            HStack {
-                Spacer()
-                Text(vm.remainingMinutesText)
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, AppSpacing.md)
-                    .padding(.vertical, AppSpacing.xs + 2)
-                    .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.22,
-                                     shadowRadius: 10, shadowY: 5)
-                Spacer()
-            }
-            .padding(.top, AppSpacing.xs)
-
-            Spacer()
-
-            VStack(spacing: AppSpacing.sm) {
-                WhitePauseButton(isPaused: vm.isPaused, size: 60) { vm.togglePause() }
-                Button { vm.togglePureMode() } label: {
-                    Text("Show controls")
-                        .font(AppTypography.caption)
-                        .foregroundStyle(.white.opacity(0.85))
-                        .padding(.horizontal, AppSpacing.sm)
-                        .padding(.vertical, 6)
-                }
-                .buttonStyle(SoftPressStyle())
-            }
-            .padding(.bottom, AppSpacing.lg)
-        }
-        .padding(.horizontal, AppSpacing.screen)
-        .transition(.opacity)
     }
 }
 

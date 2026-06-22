@@ -35,7 +35,7 @@ struct AppleBackdropMapView: UIViewRepresentable {
         map.showsUserLocation = false
         map.isAccessibilityElement = false
         map.accessibilityElementsHidden = true
-        AppleMapStyle.apply(.graphite, to: map)   // backdrops are always dark/premium
+        AppleMapStyle.apply(.monochrome, to: map, labelsOn: true)   // dark premium default
         // Start near the origin so the first frame isn't the default world map;
         // precise framing is applied in updateUIView once laid out.
         map.setRegion(MKCoordinateRegion(center: origin.coordinate.cl,

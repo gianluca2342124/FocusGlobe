@@ -29,7 +29,7 @@ struct AppleActiveJourneyMapView: UIViewRepresentable {
         map.showsUserLocation = false
         map.isAccessibilityElement = false
         map.accessibilityElementsHidden = true
-        AppleMapStyle.apply(data.style, to: map)
+        AppleMapStyle.apply(data.style, to: map, labelsOn: data.labelsOn)
 
         // Detect manual panning so the session can pause following.
         let pan = UIPanGestureRecognizer(target: context.coordinator,
@@ -37,17 +37,18 @@ struct AppleActiveJourneyMapView: UIViewRepresentable {
         pan.delegate = context.coordinator
         map.addGestureRecognizer(pan)
 
-        // Start centred on the balloon (pulled back) so the first frame is the
-        // take-off pose, not the default world map.
-        map.setCamera(MKMapCamera(lookingAtCenter: data.vehicle.cl,
-                                  fromDistance: AppleMapCameraController.takeoffStartDistance(forRouteKm: data.routeDistanceKm),
+        // Start framed on the whole route (overview) so the first frame is the
+        // cinematic overview, not the default world map.
+        let mid = GeoMath.interpolate(from: data.origin, to: data.destination, fraction: 0.5)
+        map.setCamera(MKMapCamera(lookingAtCenter: mid.cl,
+                                  fromDistance: AppleMapCameraController.overviewDistance(forRouteKm: data.routeDistanceKm),
                                   pitch: 0, heading: 0), animated: false)
         return map
     }
 
     func updateUIView(_ map: MKMapView, context: Context) {
         context.coordinator.onUserPan = onUserPan
-        context.coordinator.apply(style: data.style, to: map)
+        context.coordinator.apply(style: data.style, labelsOn: data.labelsOn, to: map)
         context.coordinator.configureIfNeeded(map: map, data: data)
         context.coordinator.update(map: map, data: data)
     }
@@ -59,6 +60,7 @@ struct AppleActiveJourneyMapView: UIViewRepresentable {
 
         private var didConfigure = false
         private var lastStyle: MapDisplayStyle?
+        private var lastLabelsOn: Bool?
         private var following = false
         private var takeoffDone = false
         private var lastCameraMode: JourneyCameraMode = .follow
@@ -84,10 +86,11 @@ struct AppleActiveJourneyMapView: UIViewRepresentable {
 
         // MARK: Style
 
-        func apply(style: MapDisplayStyle, to map: MKMapView) {
-            guard lastStyle != style else { return }
+        func apply(style: MapDisplayStyle, labelsOn: Bool, to map: MKMapView) {
+            guard lastStyle != style || lastLabelsOn != labelsOn else { return }
             lastStyle = style
-            AppleMapStyle.apply(style, to: map)
+            lastLabelsOn = labelsOn
+            AppleMapStyle.apply(style, to: map, labelsOn: labelsOn)
         }
 
         // MARK: Configure (once)
@@ -119,17 +122,19 @@ struct AppleActiveJourneyMapView: UIViewRepresentable {
             map.addAnnotation(b)
             balloon = b
 
-            // Take-off camera: centre on the balloon (start) at a pulled-back
-            // distance FIRST, then a quick smooth zoom IN. Same centre → fast for
-            // Short…Ultra (no lateral fly).
-            let start = MKMapCamera(lookingAtCenter: data.vehicle.cl,
-                                    fromDistance: AppleMapCameraController.takeoffStartDistance(forRouteKm: data.routeDistanceKm),
-                                    pitch: 0, heading: 0)
-            map.setCamera(start, animated: false)
+            // Take-off camera: show the WHOLE route first (overview), hold briefly,
+            // then quickly zoom in to the balloon and hand over to follow mode.
+            // Fast and intentional — and equally fast for Short…Ultra.
+            let routeRect = AppleMapCameraController.boundingRect(data.origin, data.destination)
+            let overviewPadding = UIEdgeInsets(top: 90, left: 70, bottom: 90, right: 70)
+            DispatchQueue.main.async { [weak map] in
+                guard let map else { return }
+                map.setVisibleMapRect(routeRect, edgePadding: overviewPadding, animated: false)
+            }
 
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self, weak map] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self, weak map] in
                 guard let self, let map else { return }
-                UIView.animate(withDuration: 1.0, delay: 0, options: .curveEaseInOut) {
+                UIView.animate(withDuration: 0.85, delay: 0, options: .curveEaseInOut) {
                     map.camera = self.followCamera(for: data, at: data.vehicle)
                 }
                 self.following = true

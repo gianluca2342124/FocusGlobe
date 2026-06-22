@@ -30,6 +30,8 @@ struct JourneyMapData: Equatable {
     /// The user's selected balloon skin asset name, used for the vehicle marker.
     /// Defaults to the standard balloon so non-journey renderers are unchanged.
     var skinAssetName: String = BalloonSkin.default.assetName
+    /// Whether map labels/POIs are shown (Labels toggle in the active journey).
+    var labelsOn: Bool = true
 
     /// The straight-line span of the route, used to pick a sensible zoom.
     var routeDistanceKm: Double {

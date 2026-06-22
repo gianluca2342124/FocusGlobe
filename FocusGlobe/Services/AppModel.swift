@@ -32,6 +32,9 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// A lightweight snapshot of an unfinished journey, offered for resume on Home.
+    @Published private(set) var resumableJourney: ResumableJourney?
+
     /// Mirrors the location service's resolution state so views can observe it.
     @Published private(set) var locationState: LocationService.State = .idle
 
@@ -59,6 +62,7 @@ final class AppModel: ObservableObject {
         self.progress = persistence.load(UserProgress.self, for: .progress) ?? .empty
         self.history = persistence.load([FocusSessionRecord].self, for: .history) ?? []
         self.isPro = persistence.bool(for: .isPro)
+        self.resumableJourney = persistence.load(ResumableJourney.self, for: .resumableJourney)
 
         haptics.isEnabled = loadedSettings.hapticsEnabled
         sound.isEnabled = loadedSettings.soundEnabled
@@ -387,6 +391,40 @@ final class AppModel: ObservableObject {
         progress.postcards.first { $0.id == routeID }
     }
 
+    // MARK: - Resume unfinished journey
+
+    /// Persist a lightweight snapshot of an unfinished journey so it can be
+    /// resumed (or discarded) from Home. Does not change the virtual origin —
+    /// that only moves when a journey actually lands.
+    func saveResumableJourney(origin: JourneyOrigin, route: Route, intention: String?,
+                              elapsedSeconds: Int, skinAssetName: String, soundID: String?) {
+        let snapshot = ResumableJourney(origin: origin, route: route, intention: intention,
+                                        elapsedSeconds: elapsedSeconds, skinAssetName: skinAssetName,
+                                        soundID: soundID, savedAt: Date())
+        resumableJourney = snapshot
+        persistence.save(snapshot, for: .resumableJourney)
+    }
+
+    func clearResumableJourney() {
+        guard resumableJourney != nil else { return }
+        resumableJourney = nil
+        persistence.remove(.resumableJourney)
+    }
+
+    /// Reconstruct a `Journey` from the saved snapshot, seeded at the saved
+    /// elapsed time. Returns `nil` (and discards safely) if the snapshot is
+    /// invalid or already complete.
+    func makeResumeJourney() -> Journey? {
+        guard let snapshot = resumableJourney else { return nil }
+        let total = snapshot.route.durationMinutes * 60
+        guard snapshot.elapsedSeconds > 0, snapshot.elapsedSeconds < total else {
+            clearResumableJourney()
+            return nil
+        }
+        return Journey(origin: snapshot.origin, route: snapshot.route, intention: snapshot.intention,
+                       resumeElapsedSeconds: snapshot.elapsedSeconds)
+    }
+
     // MARK: - Journey lifecycle
 
     /// Banks a completed journey: miles, streak, landing count, best duration,
@@ -546,6 +584,7 @@ final class AppModel: ObservableObject {
         progress = .empty
         history = []
         isPro = false
+        resumableJourney = nil
         settings = .default
     }
     #endif
@@ -585,4 +624,17 @@ final class AppModel: ObservableObject {
         persistence.save(progress, for: .progress)
         persistence.save(history, for: .history)
     }
+}
+
+/// A lightweight, Codable snapshot of an unfinished journey, used to offer a
+/// "Continue / Start new" choice on the next launch. Stored in UserDefaults.
+/// Carries enough to safely reconstruct the active session.
+struct ResumableJourney: Codable, Equatable {
+    let origin: JourneyOrigin
+    let route: Route
+    let intention: String?
+    let elapsedSeconds: Int
+    let skinAssetName: String
+    let soundID: String?
+    let savedAt: Date
 }
