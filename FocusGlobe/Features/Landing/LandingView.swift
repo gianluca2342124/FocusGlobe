@@ -41,12 +41,15 @@ struct LandingView: View {
                     statsStrip
                     if let intention = summary.intention { intentionCard(intention) }
                     actions
-                    if !appModel.isPro { doubleReward }
                 }
                 .padding(AppSpacing.screen)
                 .padding(.top, AppSpacing.xl)
                 .padding(.bottom, AppSpacing.xxl)
             }
+
+            // A premium, one-shot confetti burst when the landing appears.
+            LandingConfettiView(colors: [theme.accent, theme.soft, AppColors.gold, .white])
+                .allowsHitTesting(false)
         }
         .focusScreenChrome()
         .onAppear {
@@ -159,6 +162,8 @@ struct LandingView: View {
                 appModel.analytics.log(.rewardClaimed, ["route": summary.route.id, "miles": earnedMiles])
                 router.finishToHome()
             }
+            // Double-your-miles sits directly under Claim Miles.
+            if !appModel.isPro { doubleReward }
             HStack(spacing: AppSpacing.sm) {
                 AppSecondaryButton(title: "Share Postcard", systemImage: "square.and.arrow.up") {
                     sharePostcard()
@@ -273,4 +278,55 @@ private struct ActivityView: UIViewControllerRepresentable {
         UIActivityViewController(activityItems: items, applicationActivities: nil)
     }
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
+}
+
+/// A tasteful, one-shot confetti burst for the landing screen — small soft
+/// pieces in the route/gold palette that drift down and fade once on appear.
+private struct LandingConfettiView: View {
+    let colors: [Color]
+    private let pieces: [Piece]
+    @State private var go = false
+
+    struct Piece: Identifiable {
+        let id = UUID()
+        let x: CGFloat
+        let size: CGFloat
+        let delay: Double
+        let drift: CGFloat
+        let spin: Double
+        let color: Color
+    }
+
+    init(colors: [Color]) {
+        self.colors = colors
+        var rng = SystemRandomNumberGenerator()
+        let palette = colors.isEmpty ? [Color.white] : colors
+        self.pieces = (0..<44).map { _ in
+            Piece(x: .random(in: 0.03...0.97, using: &rng),
+                  size: .random(in: 5...9, using: &rng),
+                  delay: .random(in: 0...0.45, using: &rng),
+                  drift: .random(in: -36...36, using: &rng),
+                  spin: .random(in: 180...520, using: &rng),
+                  color: palette.randomElement(using: &rng) ?? .white)
+        }
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack {
+                ForEach(pieces) { p in
+                    RoundedRectangle(cornerRadius: 1.5)
+                        .fill(p.color)
+                        .frame(width: p.size, height: p.size * 1.7)
+                        .rotationEffect(.degrees(go ? p.spin : 0))
+                        .position(x: geo.size.width * p.x + (go ? p.drift : 0),
+                                  y: go ? geo.size.height + 40 : -50)
+                        .opacity(go ? 0 : 1)
+                        .animation(.easeIn(duration: 2.3).delay(p.delay), value: go)
+                }
+            }
+        }
+        .ignoresSafeArea()
+        .onAppear { go = true }
+    }
 }

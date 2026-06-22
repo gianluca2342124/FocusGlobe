@@ -196,10 +196,15 @@ struct AppleActiveJourneyMapView: UIViewRepresentable {
         }
 
         private func followCamera(for data: JourneyMapData, at vehicle: GeoCoordinate) -> MKMapCamera {
-            MKMapCamera(lookingAtCenter: vehicle.cl,
-                        fromDistance: AppleMapCameraController.followDistance(forRouteKm: data.routeDistanceKm),
-                        pitch: data.tilted ? 55 : 0,
-                        heading: 0)
+            // Orient the camera along the bearing from the balloon to the
+            // destination, so the route reads vertically (forward = up) and the
+            // balloon flies upward/ahead — not sideways. The bearing drifts only
+            // gradually on a geodesic, so the follow re-orients smoothly.
+            let heading = GeoMath.bearingDegrees(from: vehicle, to: data.destination)
+            return MKMapCamera(lookingAtCenter: vehicle.cl,
+                               fromDistance: AppleMapCameraController.followDistance(forRouteKm: data.routeDistanceKm),
+                               pitch: data.tilted ? 55 : 0,
+                               heading: heading)
         }
 
         // MARK: MKMapViewDelegate

@@ -7,12 +7,13 @@ import MapKit
 enum AppleMapCameraController {
 
     /// Follow-camera altitude (metres) from the route span. Close and low so the
-    /// balloon drifts over real neighbourhoods — never too close, never sluggish.
+    /// balloon feels like it's flying quickly over real streets — small enough to
+    /// reveal streets/labels (when Labels are on). Never sluggish on long routes.
     static func followDistance(forRouteKm km: Double) -> CLLocationDistance {
         switch km {
-        case ..<120:  return 9_500
-        case ..<600:  return 13_000
-        default:      return 17_000
+        case ..<120:  return 2_800
+        case ..<600:  return 4_200
+        default:      return 6_500
         }
     }
 

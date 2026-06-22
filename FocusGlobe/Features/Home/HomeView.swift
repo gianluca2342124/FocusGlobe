@@ -90,11 +90,13 @@ struct HomeView: View {
             // Lift the origin/balloon into the upper half. The map's bottom inset
             // also lifts the Google attribution to just above the (compact) text
             // cluster, so it stays visible without colliding with the title.
-            // Wide, travel-app framing: from e.g. Barcelona this shows Europe-scale
-            // context (not a local city map). Balloon/origin stays in the upper half.
+            // Very wide, planetary travel-app framing: from e.g. Barcelona this
+            // shows Europe-scale context (not a local city map), in the Terra
+            // (dark/earthy, realistic-elevation) style. Origin stays upper-half.
             JourneyBackdropMap(origin: origin, mode: .origin, showsBalloon: true,
-                               bottomInset: 330, originZoom: 4.6,
+                               bottomInset: 330, originZoom: 4.3,
                                skinAssetName: appModel.selectedSkin.assetName,
+                               style: .terra,
                                onOriginPoint: setOriginPoint)
                 .ignoresSafeArea()
         } else {

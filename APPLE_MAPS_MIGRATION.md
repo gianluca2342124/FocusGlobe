@@ -60,28 +60,39 @@ The user-facing style menu shows only four Apple-appropriate styles (plus a
 **Labels** toggle). Legacy cases (`graphite`/`terrain`/`hybrid`/`night`) are
 kept only so older saved settings decode; they map to the closest style.
 
+The four styles are made deliberately distinct (the app runs in dark appearance,
+so styles force their own light/dark to avoid all looking the same):
+
 | Style (menu) | MapKit |
 |--------------|--------|
-| **Monochrome** | Standard, muted emphasis, forced **dark** (grey land / near-black sea) |
-| **Terra**      | Standard + **realistic elevation**, dark + muted (planet/terrain feel) |
-| **Standard**   | Standard, default emphasis (green/yellow land, blue sea) |
+| **Monochrome** | Standard, **muted** emphasis, **flat**, forced **dark** → desaturated graphite (grey land / near-black sea) |
+| **Terra**      | Standard, **default** emphasis, **realistic elevation**, forced **dark** → richer dark earth + terrain relief (planetary at wide zooms) |
+| **Standard**   | Standard, default emphasis, forced **light** → green/yellow land, blue sea |
 | **Satellite**  | Hybrid (imagery + labels) / Imagery (labels off) |
 
 Per-screen defaults:
 
-- Home / Start / Choose Journey / Boarding → **Monochrome**.
+- **Home → Terra** (planetary/earthy, very wide Europe-scale framing).
+- Start / Choose Journey / Boarding → **Monochrome**.
 - Active Journey (after takeoff) → **Standard**.
 
 Labels toggle (active-journey map controls, ON by default): for Satellite it
 switches Hybrid ↔ Imagery (clean). For the standard-based styles it toggles
-`pointOfInterestFilter` (POIs) — MapKit can't fully hide base place-name labels
-on the standard map, so that's the best supported approximation.
+`pointOfInterestFilter` (POIs) — MapKit can't fully hide base place/road/country
+labels on a vector map, so POI suppression is the best supported approximation.
 
-## Takeoff camera
+## Takeoff & follow camera
 
-The active journey opens with the **whole-route overview**, holds briefly
-(~0.6s), then quickly zooms (~0.85s) to the balloon and hands over to follow
-mode — fast and identical for Short…Ultra.
+The active journey opens with the **whole-route overview** (north-up), holds
+briefly (~0.6s), then quickly zooms (~0.85s) to the balloon and hands over to
+follow mode — fast and identical for Short…Ultra.
+
+Close follow is **route-oriented**: the camera heading is set to the
+origin→destination bearing (`MKMapCamera.heading`), so the route reads vertically
+and the balloon flies upward/forward (not sideways). The follow altitude is low
+(~2.8–6.5 km by route length) so it feels like watching the balloon move quickly
+over streets. Full Route returns to the north-up whole-route overview; Recenter
+returns to route-oriented follow.
 
 ## Known MapKit limitations vs Google
 
@@ -92,14 +103,27 @@ mode — fast and identical for Short…Ultra.
   base place-name labels remain. Satellite toggles cleanly (Hybrid ↔ Imagery).
 - **No gradient polylines.** The air trail is a single translucent white line
   (Google faded it via a stroke gradient). Closest native equivalent.
-- **Terra isn't Google terrain.** It's a realistic-elevation standard map kept
-  dark/muted. If it ever reads too bright on a device, switch the `.terra`
-  mapping in `AppleMapStyle` to the plain muted-dark standard.
+- **Terra isn't Google terrain.** It's a realistic-elevation standard map.
+  Home uses it for an earthy/planetary feel at a very wide zoom.
+- **No forced 3D globe at Home.** MapKit only renders the true 3D globe at
+  near-world zooms; at Europe-scale it's a flat (realistic-elevation) map. Terra
+  + a very wide zoom is the closest premium "planetary" approximation. Pitch is
+  not applied at that altitude (MapKit clamps pitch at high altitudes).
 - **Camera pitch may be clamped** by MapKit at low altitudes; the 3D tilt uses
   `MKMapCamera.pitch` and is best-effort.
 - **Follow camera** is animated by setting `mapView.camera` inside a
   `UIView` animation block (to match the balloon's glide duration); if a future
   iOS changes this, it degrades to a per-tick snap (still functional).
+
+## "Publishing changes from within view updates"
+
+The only place a MapKit view writes back to SwiftUI state is the origin
+projection used to position the Home/Choose-Journey radar pulse
+(`onOriginPoint`). It is dispatched via `DispatchQueue.main.async` from the
+backdrop's `updateUIView`, i.e. outside the view-update cycle, which is the
+standard fix for that warning. If the warning still appears it does not originate
+in the map layer (more likely a Combine sink such as the RevenueCat `isPro`
+mirror updating on the main run loop) and is benign.
 
 ## DEBUG provider switch
 

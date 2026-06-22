@@ -22,6 +22,7 @@ struct AppleBackdropMapView: UIViewRepresentable {
     let originZoom: Float
     let theme: RouteTheme
     let skinAssetName: String
+    var style: MapDisplayStyle = .monochrome
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -35,7 +36,7 @@ struct AppleBackdropMapView: UIViewRepresentable {
         map.showsUserLocation = false
         map.isAccessibilityElement = false
         map.accessibilityElementsHidden = true
-        AppleMapStyle.apply(.monochrome, to: map, labelsOn: true)   // dark premium default
+        AppleMapStyle.apply(style, to: map, labelsOn: true)   // dark premium backdrop
         // Start near the origin so the first frame isn't the default world map;
         // precise framing is applied in updateUIView once laid out.
         map.setRegion(MKCoordinateRegion(center: origin.coordinate.cl,
@@ -64,7 +65,8 @@ struct AppleBackdropMapView: UIViewRepresentable {
                 view.showsCodeTags ? "t" : "_", view.showsBalloon ? "b" : "_", view.showsOrigin ? "o" : "_",
                 String(format: "%.0f", view.bottomInset),
                 "n\(view.nearby.count)",
-                view.skinAssetName
+                view.skinAssetName,
+                view.style.rawValue
             ].joined(separator: "|")
 
             if key != lastKey {
@@ -92,8 +94,14 @@ struct AppleBackdropMapView: UIViewRepresentable {
                                                             radiusMeters: view.mode == .origin ? 2600 : 1400,
                                                             tag: AppleMapRouteRenderer.Tag.halo),
                                level: .aboveRoads)
-                map.addAnnotation(AppleMapAnnotationRenderer.dot(at: originCoord, fill: .white,
-                                                                 ring: accent, diameter: 12))
+                // Skip the white origin dot when the balloon sits on the origin
+                // (Home): the balloon is the marker there. Choose Journey (no
+                // balloon) keeps its origin dot.
+                let homeBalloon = (view.mode == .origin && view.showsBalloon)
+                if !homeBalloon {
+                    map.addAnnotation(AppleMapAnnotationRenderer.dot(at: originCoord, fill: .white,
+                                                                     ring: accent, diameter: 12))
+                }
             }
 
             guard view.mode == .route, let dest = view.destination else {

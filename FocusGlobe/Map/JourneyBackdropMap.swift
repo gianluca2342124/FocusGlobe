@@ -52,6 +52,9 @@ struct JourneyBackdropMap: View {
     /// The selected balloon skin asset name for the (optional) balloon marker.
     /// Defaults to the standard balloon; Home passes the user's selected skin.
     var skinAssetName: String = BalloonSkin.default.assetName
+    /// The Apple Maps base style for this backdrop. Monochrome by default; Home
+    /// uses Terra for a more planetary/earthy premium look.
+    var style: MapDisplayStyle = .monochrome
     /// Reports the origin's on-screen point (in the map's coordinate space) so a
     /// SwiftUI radar pulse can be overlaid there. `nil` when no origin is shown.
     var onOriginPoint: (CGPoint?) -> Void = { _ in }
@@ -78,7 +81,7 @@ struct JourneyBackdropMap: View {
                              showsOrigin: showsOrigin, bottomInset: bottomInset,
                              nearby: nearby, onOriginPoint: onOriginPoint,
                              originZoom: originZoom, theme: theme,
-                             skinAssetName: skinAssetName)
+                             skinAssetName: skinAssetName, style: style)
             .allowsHitTesting(false)
     }
 
