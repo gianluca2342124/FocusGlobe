@@ -252,7 +252,7 @@ struct RouteSelectionView: View {
     private func select(_ journey: PlannedJourney) {
         if appModel.isUnlocked(journey.route) {
             appModel.analytics.log(.routeSelected, ["route": journey.id, "source": "discovery"])
-            router.openBoarding(journey.route)
+            router.openFocusLoadout(journey.route)
         } else {
             appModel.haptics.tap()
             router.presentPaywall()

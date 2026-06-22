@@ -25,7 +25,10 @@ final class AppRouter: ObservableObject {
 
     enum Destination: Hashable {
         case routeSelection
-        case boarding(Route)
+        /// Pre-boarding focus-selection ritual (between Choose Journey and Boarding).
+        case focusLoadout(Route)
+        /// Boarding, carrying the focus chosen in the loadout step (if any).
+        case boarding(Route, FocusPreset?)
         case passport
         case history
         case settings
@@ -40,7 +43,10 @@ final class AppRouter: ObservableObject {
     func openRouteSelection() {
         if path.last != .routeSelection { path.append(.routeSelection) }
     }
-    func openBoarding(_ route: Route) { path.append(.boarding(route)) }
+    /// Open the pre-boarding focus ritual for the chosen route.
+    func openFocusLoadout(_ route: Route) { path.append(.focusLoadout(route)) }
+    /// Open the boarding ticket, optionally pre-filled with the chosen focus.
+    func openBoarding(_ route: Route, focus: FocusPreset? = nil) { path.append(.boarding(route, focus)) }
     func openPassport() { path.append(.passport) }
     func openHistory() { path.append(.history) }
     func openSettings() { path.append(.settings) }

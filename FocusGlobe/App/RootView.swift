@@ -17,7 +17,9 @@ struct RootView: View {
                         .navigationDestination(for: AppRouter.Destination.self) { destination in
                             switch destination {
                             case .routeSelection: RouteSelectionView()
-                            case .boarding(let route): BoardingView(route: route)
+                            case .focusLoadout(let route): PreBoardingFocusView(route: route)
+                            case .boarding(let route, let focus):
+                                BoardingView(route: route, preselectedFocus: focus)
                             case .passport: PassportView()
                             case .history: HistoryView()
                             case .settings: SettingsView()

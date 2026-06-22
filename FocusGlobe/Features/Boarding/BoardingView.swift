@@ -16,6 +16,14 @@ struct BoardingView: View {
 
     @State private var selectedPreset: FocusPreset?
 
+    /// `route` is required; `preselectedFocus` carries the focus chosen on the
+    /// new pre-boarding ritual so the ticket arrives pre-filled. Everything else
+    /// keeps its default boarding behaviour.
+    init(route: Route, preselectedFocus: FocusPreset? = nil) {
+        self.route = route
+        _selectedPreset = State(initialValue: preselectedFocus)
+    }
+
     // Print choreography.
     @State private var printed: CGFloat = 0
     @State private var perforationIn = false
