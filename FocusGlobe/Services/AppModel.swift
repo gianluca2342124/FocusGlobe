@@ -21,7 +21,16 @@ final class AppModel: ObservableObject {
     }
     @Published private(set) var progress: UserProgress
     @Published private(set) var history: [FocusSessionRecord]
-    @Published private(set) var isPro: Bool
+    @Published private(set) var isPro: Bool {
+        didSet {
+            // When Pro lapses, premium skins/audio must re-lock immediately and
+            // any premium selection falls back to its free default. Premium
+            // content is never permanently unlocked. (didSet doesn't fire during
+            // `init`, so launch-time safety relies on the resolvers below.)
+            guard oldValue != isPro, !isPro else { return }
+            reconcilePremiumSelections()
+        }
+    }
 
     /// Mirrors the location service's resolution state so views can observe it.
     @Published private(set) var locationState: LocationService.State = .idle
@@ -245,14 +254,20 @@ final class AppModel: ObservableObject {
 
     // MARK: - Balloon skins
 
-    var selectedSkin: BalloonSkin { BalloonSkin.skin(id: settings.selectedSkinID) }
+    /// The selected skin — resolved defensively so a locked skin is never
+    /// rendered. If a premium skin was selected and Pro has since lapsed (or a
+    /// milestone isn't earned), this safely falls back to the default skin.
+    var selectedSkin: BalloonSkin {
+        let stored = BalloonSkin.skin(id: settings.selectedSkinID)
+        return isSkinUnlocked(stored) ? stored : .default
+    }
 
     func isSkinUnlocked(_ skin: BalloonSkin) -> Bool {
         switch skin.unlock {
         case .free:            return true
-        case .journeys(let n): return progress.landings >= n
+        case .journeys(let n): return progress.landings >= n        // completed journeys
         case .miles(let n):    return progress.totalFocusMiles >= n
-        case .pro:             return isPro
+        case .pro:             return isPro   // active subscription only — re-locks if Pro lapses
         }
     }
 
@@ -270,6 +285,41 @@ final class AppModel: ObservableObject {
         guard isSkinUnlocked(skin) else { return }
         settings.selectedSkinID = skin.id
         haptics.tap()
+    }
+
+    // MARK: - Journey audio
+
+    /// The selected journey ambience — resolved defensively so a locked premium
+    /// option is never played. Premium options fall back to Wind when Pro isn't
+    /// active.
+    var selectedJourneyAudio: JourneyAudioOption {
+        let stored = JourneyAudioOption.option(id: settings.selectedJourneyAudioID)
+        return isAudioUnlocked(stored) ? stored : .wind
+    }
+
+    /// Wind is free for everyone; the rest require an **active** subscription.
+    func isAudioUnlocked(_ option: JourneyAudioOption) -> Bool {
+        !option.isPremium || isPro
+    }
+
+    func selectJourneyAudio(_ option: JourneyAudioOption) {
+        guard isAudioUnlocked(option) else { return }
+        settings.selectedJourneyAudioID = option.id
+        haptics.tap()
+    }
+
+    // MARK: - Premium reconciliation
+
+    /// Re-locks premium content when Pro is inactive: a selected premium skin or
+    /// audio option falls back to its free default. Availability always reflects
+    /// the *current* subscription — premium content is never permanently unlocked.
+    private func reconcilePremiumSelections() {
+        if !isSkinUnlocked(BalloonSkin.skin(id: settings.selectedSkinID)) {
+            settings.selectedSkinID = nil
+        }
+        if !isAudioUnlocked(JourneyAudioOption.option(id: settings.selectedJourneyAudioID)) {
+            settings.selectedJourneyAudioID = nil
+        }
     }
 
     // MARK: - Daily missions

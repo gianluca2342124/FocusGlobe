@@ -18,7 +18,10 @@ struct PassportView: View {
                         ScreenHeader(title: "Globe Passport",
                                      subtitle: "Your landings, miles and collection")
                         Spacer()
-                        CrownButton { appModel.haptics.tap(); router.presentPaywall() }
+                        // The crown only opens the paywall — hide it once Pro.
+                        if !appModel.isPro {
+                            CrownButton { appModel.haptics.tap(); router.presentPaywall() }
+                        }
                     }
                     statsGrid
                     missionsSection
@@ -211,7 +214,8 @@ private struct SkinTile: View {
     var body: some View {
         Button(action: action) {
             VStack(spacing: AppSpacing.xs) {
-                BalloonView(height: 52, showBurner: unlocked, showGlow: selected, glow: skin.theme.soft)
+                BalloonView(height: 52, showBurner: unlocked, showGlow: selected,
+                            glow: skin.theme.soft, skin: skin)
                     .frame(height: 54)
                     .opacity(unlocked ? 1 : 0.42)
                     .grayscale(unlocked ? 0 : 0.7)

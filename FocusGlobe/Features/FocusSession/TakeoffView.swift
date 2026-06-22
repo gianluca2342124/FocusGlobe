@@ -7,6 +7,7 @@ struct TakeoffView: View {
     let route: Route
     var onComplete: () -> Void
 
+    @EnvironmentObject private var appModel: AppModel
     @State private var appeared = false
     @State private var rise = false
 
@@ -38,7 +39,7 @@ struct TakeoffView: View {
                 .offset(y: appeared ? 0 : 8)
 
                 BalloonView(height: 210, showBurner: true, showGlow: true,
-                            glow: route.colorTheme.soft)
+                            glow: route.colorTheme.soft, skin: appModel.selectedSkin)
                     .offset(y: rise ? -26 : 56)
                     .opacity(appeared ? 1 : 0)
 

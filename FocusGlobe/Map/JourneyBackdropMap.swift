@@ -49,6 +49,9 @@ struct JourneyBackdropMap: View {
     /// Nearby destinations to surface as a subtle radar of small tags (Choose
     /// Journey only). Empty everywhere else.
     var nearby: [MapPin] = []
+    /// The selected balloon skin asset name for the (optional) balloon marker.
+    /// Defaults to the standard balloon; Home passes the user's selected skin.
+    var skinAssetName: String = BalloonSkin.default.assetName
     /// Reports the origin's on-screen point (in the map's coordinate space) so a
     /// SwiftUI radar pulse can be overlaid there. `nil` when no origin is shown.
     var onOriginPoint: (CGPoint?) -> Void = { _ in }
@@ -63,7 +66,8 @@ struct JourneyBackdropMap: View {
                               showsCodeTags: showsCodeTags, showsBalloon: showsBalloon,
                               showsOrigin: showsOrigin, bottomInset: bottomInset,
                               nearby: nearby, onOriginPoint: onOriginPoint,
-                              originZoom: originZoom, theme: theme)
+                              originZoom: originZoom, theme: theme,
+                              skinAssetName: skinAssetName)
             .allowsHitTesting(false)
         #else
         fallback.allowsHitTesting(false)
@@ -157,6 +161,7 @@ struct GoogleBackdropMapView: UIViewRepresentable {
     let onOriginPoint: (CGPoint?) -> Void
     let originZoom: Float
     let theme: RouteTheme
+    let skinAssetName: String
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -206,7 +211,8 @@ struct GoogleBackdropMapView: UIViewRepresentable {
                 dest?.id ?? "-",
                 view.showsCodeTags ? "t" : "_", view.showsBalloon ? "b" : "_", view.showsOrigin ? "o" : "_",
                 String(format: "%.0f", view.bottomInset),
-                "n\(view.nearby.count)"
+                "n\(view.nearby.count)",
+                view.skinAssetName
             ].joined(separator: "|")
             guard key != lastKey else { return }
             lastKey = key
@@ -242,7 +248,8 @@ struct GoogleBackdropMapView: UIViewRepresentable {
                 // Origin-only (Home): optional small balloon over "you are here".
                 if view.showsBalloon {
                     let balloon = GMSMarker(position: originCoord)
-                    balloon.icon = VehicleMarkerRenderer.balloonImage(targetHeight: 58, glow: view.theme.soft)
+                    balloon.icon = VehicleMarkerRenderer.balloonImage(targetHeight: 58, glow: view.theme.soft,
+                                                                      assetName: view.skinAssetName)
                     balloon.groundAnchor = CGPoint(x: 0.5, y: 0.9)
                     balloon.isTappable = false
                     balloon.zIndex = 6
@@ -294,7 +301,8 @@ struct GoogleBackdropMapView: UIViewRepresentable {
             if view.showsBalloon {
                 let vehicle = GeoMath.interpolate(from: view.origin.coordinate, to: dest.destination, fraction: view.progress)
                 let balloon = GMSMarker(position: CLLocationCoordinate2D(latitude: vehicle.latitude, longitude: vehicle.longitude))
-                balloon.icon = VehicleMarkerRenderer.balloonImage(targetHeight: 84, glow: view.theme.soft)
+                balloon.icon = VehicleMarkerRenderer.balloonImage(targetHeight: 84, glow: view.theme.soft,
+                                                                  assetName: view.skinAssetName)
                 balloon.groundAnchor = CGPoint(x: 0.5, y: 0.88)
                 balloon.isTappable = false
                 balloon.zIndex = 6

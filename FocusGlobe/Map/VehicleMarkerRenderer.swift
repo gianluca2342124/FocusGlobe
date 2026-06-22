@@ -15,11 +15,13 @@ import UIKit
 /// runs on the main thread, so this is safe.
 enum VehicleMarkerRenderer {
 
-    /// The balloon marker, sized for the map. Uses the official (trimmed) PNG
-    /// when present — trimmed so the full balloon fills the marker rather than
-    /// appearing tiny inside the asset's transparent padding.
-    static func balloonImage(targetHeight: CGFloat = 110, glow: Color) -> UIImage? {
-        if let balloon = BrandBalloon.image {
+    /// The balloon marker, sized for the map. Uses the selected skin's (trimmed)
+    /// PNG when present — trimmed so the full balloon fills the marker rather than
+    /// appearing tiny inside the asset's transparent padding. Missing skin assets
+    /// fall back to `BalloonFront`, then to the crafted vector balloon.
+    static func balloonImage(targetHeight: CGFloat = 110, glow: Color,
+                             assetName: String = BrandAssets.balloonFrontName) -> UIImage? {
+        if let balloon = BalloonSkinImage.image(named: assetName) {
             return resized(balloon, targetHeight: targetHeight)
         }
         // Fallback: the crafted vector (only when the asset is unavailable).

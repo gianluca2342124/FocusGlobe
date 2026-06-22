@@ -32,6 +32,10 @@ struct AppSettings: Codable, Equatable {
     /// Sky Balloon. Optional so older saved settings keep decoding.
     var selectedSkinID: String? = nil
 
+    /// The selected journey audio ambience id (see `JourneyAudioOption`). `nil`
+    /// → Wind (the free default). Optional so older saved settings keep decoding.
+    var selectedJourneyAudioID: String? = nil
+
     /// Legacy flag (the launch paywall is now gated per-session in memory, not
     /// persisted). Retained only so older saved settings keep decoding.
     var premiumIntroSeen: Bool? = nil

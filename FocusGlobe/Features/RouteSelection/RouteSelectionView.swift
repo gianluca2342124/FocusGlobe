@@ -125,7 +125,12 @@ struct RouteSelectionView: View {
                 Text("from \(origin.city)").font(AppTypography.caption).foregroundStyle(.white.opacity(0.7))
             }
             Spacer()
-            CrownButton(size: 44) { appModel.haptics.tap(); router.presentPaywall() }
+            // The crown only opens the paywall — hide it once the user is Pro.
+            if !appModel.isPro {
+                CrownButton(size: 44) { appModel.haptics.tap(); router.presentPaywall() }
+            } else {
+                Color.clear.frame(width: 44, height: 44)   // keep the title centered
+            }
         }
         .padding(.horizontal, AppSpacing.screen)
     }

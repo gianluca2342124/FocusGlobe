@@ -27,6 +27,9 @@ struct JourneyMapData: Equatable {
     /// Bumped by the session to ask the renderer to (re)apply the camera now —
     /// e.g. after Recenter / Full Route / Tilt taps.
     var cameraToken: Int = 0
+    /// The user's selected balloon skin asset name, used for the vehicle marker.
+    /// Defaults to the standard balloon so non-journey renderers are unchanged.
+    var skinAssetName: String = BalloonSkin.default.assetName
 
     /// The straight-line span of the route, used to pick a sensible zoom.
     var routeDistanceKm: Double {

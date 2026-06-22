@@ -38,6 +38,9 @@ final class FocusSessionViewModel: ObservableObject {
     private var cancellable: AnyCancellable?
     private var started = false
     private var resumeAfterCancelDismiss = false
+    /// The balloon skin asset captured at attach time so the map marker renders
+    /// the user's selected skin (falls back to the default art if missing).
+    private var skinAssetName: String = BalloonSkin.default.assetName
 
     init(journey: Journey) {
         self.origin = journey.origin
@@ -54,6 +57,7 @@ final class FocusSessionViewModel: ObservableObject {
         guard self.appModel == nil else { return }
         self.appModel = appModel
         pureMode = appModel.settings.pureModeDefault
+        skinAssetName = appModel.selectedSkin.assetName
         // The active flight defaults to Terrain (premium topographic look). A dark
         // overlay in FocusSessionView keeps it feeling dark/premium so it never
         // reads as a bright/white map. The user can still switch via the in-session
@@ -115,7 +119,7 @@ final class FocusSessionViewModel: ObservableObject {
 
         appModel.analytics.log(.journeyStarted, ["route": route.id, "minutes": route.durationMinutes])
         appModel.haptics.takeoff()
-        appModel.sound.playAmbient(named: route.ambientSoundName)
+        appModel.sound.startJourney(option: appModel.selectedJourneyAudio)
         timer.start()
     }
 
@@ -178,7 +182,8 @@ final class FocusSessionViewModel: ObservableObject {
             style: mapStyle,
             cameraMode: cameraMode,
             tilted: tilted,
-            cameraToken: cameraToken
+            cameraToken: cameraToken,
+            skinAssetName: skinAssetName
         )
     }
 

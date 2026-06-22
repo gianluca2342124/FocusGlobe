@@ -173,8 +173,10 @@ struct GoogleJourneyMapView: UIViewRepresentable {
             destinationMarker = destination
 
             // Vehicle (the balloon) — large, premium presence (the protagonist).
+            // Rendered with the user's selected skin (falls back to the default art).
             let vehicle = GMSMarker(position: CLLocationCoordinate2D(latitude: data.vehicle.latitude, longitude: data.vehicle.longitude))
-            vehicle.icon = VehicleMarkerRenderer.balloonImage(targetHeight: 72, glow: data.theme.soft)
+            vehicle.icon = VehicleMarkerRenderer.balloonImage(targetHeight: 72, glow: data.theme.soft,
+                                                              assetName: data.skinAssetName)
             vehicle.groundAnchor = CGPoint(x: 0.5, y: 0.86) // basket sits near the point; envelope above
             vehicle.isTappable = false
             vehicle.zIndex = 6

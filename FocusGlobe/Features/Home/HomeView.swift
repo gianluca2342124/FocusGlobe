@@ -65,7 +65,8 @@ struct HomeView: View {
             // also lifts the Google attribution to just above the (compact) text
             // cluster, so it stays visible without colliding with the title.
             JourneyBackdropMap(origin: origin, mode: .origin, showsBalloon: true,
-                               bottomInset: 330, originZoom: 6.3, onOriginPoint: setOriginPoint)
+                               bottomInset: 330, originZoom: 6.3, onOriginPoint: setOriginPoint,
+                               skinAssetName: appModel.selectedSkin.assetName)
                 .ignoresSafeArea()
         } else {
             // No real/chosen origin yet — a calm high-altitude map with no
@@ -107,7 +108,10 @@ struct HomeView: View {
     private var topBar: some View {
         VStack {
             HStack(spacing: AppSpacing.xs) {
-                CrownButton { appModel.haptics.tap(); router.presentPaywall() }
+                // The crown only opens the paywall — hide it once the user is Pro.
+                if !appModel.isPro {
+                    CrownButton { appModel.haptics.tap(); router.presentPaywall() }
+                }
                 if appModel.progress.currentStreak > 0 { streakBadge }
                 Spacer()
                 // Non-interactive origin indicator (never opens the picker once a

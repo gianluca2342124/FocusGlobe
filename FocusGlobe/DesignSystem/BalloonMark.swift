@@ -31,6 +31,38 @@ enum BrandBalloon {
     static var isAvailable: Bool { image != nil }
 }
 
+/// Resolves (and caches) per-skin balloon artwork.
+///
+/// For a given skin `assetName` it loads `UIImage(named:)`, trims the
+/// transparent margins **once** (so the balloon fills its frame/marker like the
+/// brand art does), and caches the result. If the specific skin asset is missing
+/// it gracefully falls back to the default `BalloonFront` image; if that is also
+/// missing it returns `nil` and callers draw the vector `BalloonMark`. Nothing
+/// here ever crashes on a missing asset.
+///
+/// The cache is guarded by a lock because `VehicleMarkerRenderer` is
+/// `nonisolated` and may resolve marker art outside the main actor.
+enum BalloonSkinImage {
+    private static let lock = NSLock()
+    private static var cache: [String: UIImage] = [:]
+
+    /// The trimmed image for a skin asset, or the default balloon when missing.
+    /// `nil` only if neither the skin asset nor `BalloonFront` exists.
+    static func image(named assetName: String) -> UIImage? {
+        lock.lock()
+        defer { lock.unlock() }
+        if let cached = cache[assetName] { return cached }
+        let resolved: UIImage?
+        if let raw = UIImage(named: assetName) {
+            resolved = raw.trimmingTransparentPixels() ?? raw
+        } else {
+            resolved = BrandBalloon.image   // graceful fallback to the default art
+        }
+        if let resolved { cache[assetName] = resolved }
+        return resolved
+    }
+}
+
 extension UIImage {
     /// Returns a copy cropped to the bounding box of non-transparent pixels.
     func trimmingTransparentPixels(alphaThreshold: UInt8 = 12) -> UIImage? {
@@ -308,9 +340,12 @@ struct BalloonView: View {
     var showGlow: Bool = false
     var glow: Color = Color(hex: 0xFFB23E)
     var burnerAnimated: Bool = true
+    /// Which skin artwork to render. Defaults to the standard balloon so every
+    /// existing call site is unchanged; pass the user's selected skin to theme it.
+    var skin: BalloonSkin = .default
 
     var body: some View {
-        if let balloon = BrandBalloon.image {
+        if let balloon = BalloonSkinImage.image(named: skin.assetName) {
             Image(uiImage: balloon)
                 .resizable()
                 .scaledToFit()

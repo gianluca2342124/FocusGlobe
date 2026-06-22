@@ -23,6 +23,7 @@ struct SettingsView: View {
                     locationSection
                     mapSection
                     experienceSection
+                    journeyAudioSection
                     proSection
                     privacySection
                     versionFooter
@@ -163,6 +164,57 @@ struct SettingsView: View {
                           subtitle: "Hide controls when a journey begins",
                           isOn: boolBinding(\.pureModeDefault))
             }
+        }
+    }
+
+    // MARK: Journey sound
+
+    /// Selects the looping ambience that plays during a journey. Wind is free;
+    /// the rest require active Pro. The master Sound toggle (in Experience) stays
+    /// the on/off switch — this only chooses which sound plays.
+    private var journeyAudioSection: some View {
+        SettingsCard(title: "Journey sound") {
+            VStack(spacing: 0) {
+                ForEach(Array(JourneyAudioOption.all.enumerated()), id: \.element.id) { index, option in
+                    if index > 0 { RowDivider() }
+                    audioRow(option)
+                }
+            }
+        }
+    }
+
+    private func audioRow(_ option: JourneyAudioOption) -> some View {
+        let unlocked = appModel.isAudioUnlocked(option)
+        let selected = appModel.selectedJourneyAudio.id == option.id
+        return Button {
+            if unlocked {
+                appModel.selectJourneyAudio(option)
+            } else {
+                appModel.haptics.tap()
+                router.presentPaywall()
+            }
+        } label: {
+            SettingsRow(systemImage: option.systemImage,
+                        title: option.displayName,
+                        subtitle: option.isPremium ? (unlocked ? "Pro" : "Unlock with Pro") : "Free",
+                        tint: option.isPremium ? AppColors.gold : AppColors.brand,
+                        trailing: AnyView(audioTrailing(unlocked: unlocked, selected: selected,
+                                                         premium: option.isPremium)))
+        }
+        .buttonStyle(SoftPressStyle())
+    }
+
+    @ViewBuilder private func audioTrailing(unlocked: Bool, selected: Bool, premium: Bool) -> some View {
+        if selected {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(AppColors.success)
+        } else if premium && !unlocked {
+            PremiumBadge()
+        } else {
+            Image(systemName: "circle")
+                .font(.system(size: 16, weight: .regular))
+                .foregroundStyle(AppColors.textTertiary)
         }
     }
 
