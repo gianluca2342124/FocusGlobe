@@ -379,6 +379,7 @@ final class AppModel: ObservableObject {
         progress = p
         persistAll()
         haptics.rewardClaim()
+        uiSound.play(.claim)
         analytics.log(.rewardClaimed, ["source": "daily_missions", "miles": dailyMissionRewardMiles])
     }
 
@@ -389,10 +390,13 @@ final class AppModel: ObservableObject {
 
     // MARK: - Access helpers
 
-    /// Whether the user may start this route. Only **Ultra** journeys require Pro;
-    /// Short, Deep and Long are always free and bookable.
+    /// Whether the user may start this route. **Long and Ultra** journeys require
+    /// Pro; Short and Deep are always free and bookable.
     func isUnlocked(_ route: Route) -> Bool {
-        route.category != .ultra || isPro
+        switch route.category {
+        case .long, .ultra: return isPro
+        case .short, .deep: return true
+        }
     }
 
     func hasCompleted(_ route: Route) -> Bool {

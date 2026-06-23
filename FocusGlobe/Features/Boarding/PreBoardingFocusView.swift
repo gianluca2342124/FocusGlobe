@@ -286,7 +286,10 @@ struct PreBoardingFocusView: View {
                 DragGesture(coordinateSpace: .named("ritual"))
                     .onChanged { v in
                         didInteract = true
-                        if dragging?.id != preset.id { dragging = preset }
+                        if dragging?.id != preset.id {
+                            dragging = preset
+                            appModel.haptics.bubble()   // soft pop on grab (fires once)
+                        }
                         dragPoint = v.location
                     }
                     .onEnded { v in

@@ -20,9 +20,16 @@ struct GlassBackground: ViewModifier {
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .fill(tint.opacity(tintOpacity))
                 }
-                .overlay {
+                .overlay {   // hairline base stroke
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .strokeBorder(AppColors.glassStroke.opacity(strokeOpacity), lineWidth: 1)
+                }
+                .overlay {   // thin luminous "liquid glass" highlight along the top edge
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(
+                            LinearGradient(colors: [Color.white.opacity(0.5 * strokeOpacity), .clear],
+                                           startPoint: .top, endPoint: .center),
+                            lineWidth: 1)
                 }
                 .shadow(color: AppColors.shadow, radius: shadowRadius, x: 0, y: shadowY)
         }

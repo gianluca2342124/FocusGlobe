@@ -22,8 +22,8 @@ final class FocusSessionViewModel: ObservableObject {
     @Published private(set) var isMuted: Bool = false
     /// Camera behaviour the user can toggle in-session (follow vs. full route).
     @Published var cameraMode: JourneyCameraMode = .follow
-    /// A gentle 3D tilt of the follow camera (where Google supports it).
-    @Published var tilted = false
+    /// A gentle 3D tilt of the follow camera. Journeys start in 3D by default.
+    @Published var tilted = true
     /// `true` once the user pans the map, until they tap Recenter.
     @Published private(set) var followInterrupted = false
     @Published private(set) var isPaused = false

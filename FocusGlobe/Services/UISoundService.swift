@@ -10,11 +10,11 @@ import Foundation
 ///    services, which **mix over** the ambient audio rather than ducking or
 ///    stopping it.
 ///
-/// Each earcon prefers a bundled audio file (clearly named `ui_<earcon>` —
-/// e.g. `ui_confirm.caf`) and falls back to a tasteful built-in iOS system sound
-/// when no file is present. So the layer is premium-ready immediately and can be
-/// upgraded later by simply dropping audio files into the app bundle — no code
-/// change required (see UI_SOUNDS_SETUP.md).
+/// Each earcon prefers a bundled audio file (clearly named `UISound…` —
+/// e.g. `UISoundSuccess.caf`) and falls back to a tasteful built-in iOS system
+/// sound when no file is present. So the layer is premium-ready immediately and
+/// can be upgraded later by simply dropping audio files into the app bundle —
+/// no code change required (see UI_SOUNDS_SETUP.md). Missing assets never crash.
 ///
 /// Respects the master Sound setting via `isEnabled` (mirrors `settings.soundEnabled`).
 @MainActor
@@ -24,12 +24,13 @@ final class UISoundService {
     /// Meaningful moments — intentionally a short, curated list (not every tap).
     enum Earcon: String, CaseIterable {
         case tap            // a key / primary CTA tap
-        case transition     // moving into a new important screen
+        case transition     // moving into a new important screen / modal
         case focusDrop      // a focus token snaps into the basket
         case confirm        // confirming the focus / a commit
         case journeyStart   // take-off, the journey begins
         case ticketTear     // tearing the boarding ticket
         case landing        // arriving / landing
+        case claim          // claiming miles / a reward
         case modal          // opening an important modal (e.g. paywall)
     }
 
@@ -51,7 +52,7 @@ final class UISoundService {
     }
 
     private func resolveSoundID(for earcon: Earcon) -> SystemSoundID {
-        let name = "ui_\(earcon.rawValue)"
+        let name = earcon.assetName
         for ext in ["caf", "aif", "aiff", "wav", "m4a"] {
             if let url = Bundle.main.url(forResource: name, withExtension: ext) {
                 var sid: SystemSoundID = 0
@@ -65,9 +66,25 @@ final class UISoundService {
 }
 
 private extension UISoundService.Earcon {
+    /// Expected bundled file name (no extension) for this earcon. Drop a file
+    /// with one of the supported extensions into the app target to use it.
+    var assetName: String {
+        switch self {
+        case .tap:          return "UISoundTap"
+        case .transition:   return "UISoundTransition"
+        case .focusDrop:    return "UISoundDrop"
+        case .confirm:      return "UISoundSuccess"
+        case .journeyStart: return "UISoundTakeoff"
+        case .ticketTear:   return "UISoundTicketTear"
+        case .landing:      return "UISoundLanding"
+        case .claim:        return "UISoundClaim"
+        case .modal:        return "UISoundTransition"
+        }
+    }
+
     /// Built-in iOS system-sound IDs used until bundled assets are added. These
     /// are deliberately the short, soft "tock/tink" family — clean and premium,
-    /// never the loud alert tones. Replaceable by adding `ui_<name>` audio files.
+    /// never the loud alert tones.
     var systemFallback: SystemSoundID {
         switch self {
         case .tap:          return 1104   // soft keyboard press
@@ -77,6 +94,7 @@ private extension UISoundService.Earcon {
         case .journeyStart: return 1103   // "Tock"
         case .ticketTear:   return 1105   // keyboard delete (short, dry)
         case .landing:      return 1057   // "Tink"
+        case .claim:        return 1057   // "Tink"
         case .modal:        return 1104   // soft keyboard press
         }
     }

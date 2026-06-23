@@ -70,7 +70,6 @@ struct AppleActiveJourneyMapView: UIViewRepresentable {
 
         private var balloon: MapImageAnnotation?
         private var routeOverlay: MKGeodesicPolyline?
-        private var trailOverlay: MKPolyline?
 
         // MARK: Gestures — detect manual panning
 
@@ -107,7 +106,7 @@ struct AppleActiveJourneyMapView: UIViewRepresentable {
             // the white air trail).
             let route = AppleMapRouteRenderer.geodesicRoute(from: data.origin, to: data.destination,
                                                             tag: AppleMapRouteRenderer.Tag.routeSoft)
-            map.addOverlay(route, level: .aboveRoads)
+            map.addOverlay(route, level: .aboveLabels)   // sit as high as MapKit allows (cleaner in 3D)
             routeOverlay = route
 
             // Origin & destination dots.
@@ -159,14 +158,9 @@ struct AppleActiveJourneyMapView: UIViewRepresentable {
                 }
             }
 
-            // Air trail: just the short wisp of route right behind the balloon.
-            let tailStartFrac = max(0, data.progress - 0.06)
-            let tailStart = GeoMath.interpolate(from: data.origin, to: data.destination, fraction: tailStartFrac)
-            let points = MapRouteRenderer.traveledPoints(from: tailStart, to: data.vehicle, samples: 14)
-            if let old = trailOverlay { map.removeOverlay(old) }
-            let trail = AppleMapRouteRenderer.trail(points: points)
-            map.addOverlay(trail, level: .aboveRoads)
-            trailOverlay = trail
+            // (No per-tick "air trail" overlay: re-adding an overlay every tick
+            // flickered in 3D and conflicted with building z-order. The single
+            // faint full-route line — added once above — is cleaner and stable.)
 
             // Respond to explicit camera commands (Recenter / Full Route / Tilt).
             let commandChanged = data.cameraToken != lastCameraToken

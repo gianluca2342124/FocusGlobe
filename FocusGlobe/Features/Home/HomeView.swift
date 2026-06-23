@@ -12,6 +12,7 @@ struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
     @State private var showCityPicker = false
     @State private var showResume = false
+    @State private var showStreak = false
     @State private var originPoint: CGPoint?
 
     private var origin: JourneyOrigin? { appModel.currentOrigin }
@@ -48,6 +49,7 @@ struct HomeView: View {
             if newOrigin != nil { maybeShowPremiumIntro() }
         }
         .sheet(isPresented: $showCityPicker) { LocationPickerView() }
+        .sheet(isPresented: $showStreak) { StreakDetailsView() }
         .sheet(isPresented: $showResume) {
             ResumeJourneySheet(
                 snapshot: appModel.resumableJourney,
@@ -90,21 +92,22 @@ struct HomeView: View {
             // Lift the origin/balloon into the upper half. The map's bottom inset
             // also lifts the Google attribution to just above the (compact) text
             // cluster, so it stays visible without colliding with the title.
-            // Planetary "Dark Earth" framing: a far, top-down view so the round
-            // Earth reads from space (a large portion of the globe, not a flat
-            // regional map). The balloon stays pinned over the origin on the globe.
+            // Planetary Satellite framing: a far, top-down satellite view so the
+            // round Earth reads as a small 3D globe in space (a large global
+            // context, not a flat regional map). The balloon stays pinned over
+            // the origin on the globe.
             JourneyBackdropMap(origin: origin, mode: .origin, showsBalloon: true,
                                bottomInset: 330, originZoom: 4.3,
                                skinAssetName: appModel.selectedSkin.assetName,
-                               style: .terra, planetary: true,
+                               style: .satellite, planetary: true,
                                onOriginPoint: setOriginPoint)
                 .ignoresSafeArea()
         } else {
-            // No real/chosen origin yet — a calm planetary "Dark Earth" globe with
+            // No real/chosen origin yet — a calm planetary Satellite globe with
             // no "you are here" halo, so we never imply a fake location.
             JourneyBackdropMap(origin: .default, mode: .origin,
                                showsBalloon: false, showsOrigin: false,
-                               style: .terra, planetary: true,
+                               style: .satellite, planetary: true,
                                onOriginPoint: setOriginPoint)
                 .ignoresSafeArea()
         }
@@ -144,7 +147,7 @@ struct HomeView: View {
                 if !appModel.isPro {
                     CrownButton { appModel.haptics.tap(); appModel.uiSound.play(.modal); router.presentPaywall() }
                 }
-                if appModel.progress.currentStreak > 0 { streakBadge }
+                streakButton
                 Spacer()
                 // Non-interactive origin indicator (never opens the picker once a
                 // real/virtual origin exists). DEBUG-only dev hint.
@@ -166,20 +169,29 @@ struct HomeView: View {
         .padding(.top, AppSpacing.xs)
     }
 
-    // A calm, premium streak chip — small glass capsule, gold flame + count.
-    private var streakBadge: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "flame.fill")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(AppColors.gold)
-            Text("\(appModel.progress.currentStreak)")
-                .font(.system(size: 13, weight: .heavy, design: .rounded))
-                .foregroundStyle(.white)
+    // A calm, premium streak badge — a glass capsule with a gold flame + count.
+    // Tapping opens the Streak Details sheet (shown even at 0).
+    private var streakButton: some View {
+        Button {
+            appModel.haptics.tap()
+            appModel.uiSound.play(.transition)
+            showStreak = true
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(LinearGradient(colors: [Color(hex: 0xFFB13C), Color(hex: 0xF2643C)],
+                                                    startPoint: .top, endPoint: .bottom))
+                Text("\(appModel.progress.currentStreak)")
+                    .font(.system(size: 16, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.white)
+            }
+            .padding(.horizontal, 13)
+            .padding(.vertical, 9)
+            .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.18, shadowRadius: 7, shadowY: 4)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.18, shadowRadius: 6, shadowY: 3)
-        .accessibilityLabel("\(appModel.progress.currentStreak) day streak")
+        .buttonStyle(SoftPressStyle())
+        .accessibilityLabel("\(appModel.progress.currentStreak) day streak. Opens streak details.")
     }
 
     private var bottomCluster: some View {

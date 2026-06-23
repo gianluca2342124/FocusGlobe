@@ -251,6 +251,8 @@ struct RouteSelectionView: View {
 
     private func select(_ journey: PlannedJourney) {
         if appModel.isUnlocked(journey.route) {
+            appModel.haptics.tap()
+            appModel.uiSound.play(.transition)
             appModel.analytics.log(.routeSelected, ["route": journey.id, "source": "discovery"])
             router.openFocusLoadout(journey.route)
         } else {

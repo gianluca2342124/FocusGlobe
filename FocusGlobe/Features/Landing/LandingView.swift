@@ -159,6 +159,7 @@ struct LandingView: View {
         VStack(spacing: AppSpacing.sm) {
             AppPrimaryButton(title: "Claim Miles", systemImage: "checkmark") {
                 appModel.haptics.rewardClaim()
+                appModel.uiSound.play(.claim)
                 appModel.analytics.log(.rewardClaimed, ["route": summary.route.id, "miles": earnedMiles])
                 router.finishToHome()
             }
@@ -261,6 +262,7 @@ struct LandingView: View {
         if success {
             appModel.grantBonusMiles(for: summary)
             appModel.haptics.rewardClaim()
+            appModel.uiSound.play(.claim)
             withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                 earnedMiles = summary.baseMiles * 2
                 adState = .doubled

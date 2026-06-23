@@ -36,4 +36,12 @@ final class HapticsService {
         guard isEnabled else { return }
         UISelectionFeedbackGenerator().selectionChanged()
     }
+
+    /// A very soft "bubble pop" — for subtle, premium confirmations such as a
+    /// drag grab. Lighter than `tap()`; never used repeatedly per frame.
+    func bubble() {
+        guard isEnabled else { return }
+        let g = UIImpactFeedbackGenerator(style: .soft)
+        g.prepare(); g.impactOccurred(intensity: 0.5)
+    }
 }

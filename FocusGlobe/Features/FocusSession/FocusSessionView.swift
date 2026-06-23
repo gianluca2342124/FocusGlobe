@@ -118,11 +118,15 @@ struct FocusSessionView: View {
                                   accessibilityLabel: vm.showsRecenter ? "Recenter on balloon" : "View full route") {
                         vm.showsRecenter ? vm.recenter() : vm.showFullRoute()
                     }
-                    AppIconButton(systemImage: "view.3d", size: 46,
-                                  tint: vm.tilted ? AppColors.gold : AppColors.textPrimary,
-                                  accessibilityLabel: "Toggle 3D tilt") { vm.toggleTilt() }
+                    // Shows the action it will switch TO: "2D" while 3D is active,
+                    // "3D" while 2D is active. Active state is a glass highlight,
+                    // never a coloured/yellow tint.
+                    GlassTextButton(text: vm.tilted ? "2D" : "3D", size: 46, active: vm.tilted,
+                                    accessibilityLabel: vm.tilted ? "Switch to 2D" : "Switch to 3D") {
+                        vm.toggleTilt()
+                    }
                     AppIconButton(systemImage: vm.muteIconName, size: 46,
-                                  tint: vm.isAudioMuted ? AppColors.gold : AppColors.textPrimary,
+                                  tint: AppColors.textPrimary,
                                   accessibilityLabel: vm.isAudioMuted ? "Unmute journey audio" : "Mute journey audio") {
                         vm.toggleMute()
                     }
