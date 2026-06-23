@@ -23,6 +23,14 @@ struct AppleBackdropMapView: UIViewRepresentable {
     let theme: RouteTheme
     let skinAssetName: String
     var style: MapDisplayStyle = .monochrome
+    /// Far, top-down planetary framing (Home) so Earth curvature reads.
+    var planetary: Bool = false
+
+    /// Camera altitude (metres) for the planetary Home framing — far enough that
+    /// MapKit renders the curved 3D globe in the satellite/imagery style. This is
+    /// the best native MapKit approximation of an "Apple Earth" view; exact globe
+    /// rendering at this altitude is provided by the OS and may vary by device.
+    static let planetaryDistance: CLLocationDistance = 17_000_000
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -39,9 +47,14 @@ struct AppleBackdropMapView: UIViewRepresentable {
         AppleMapStyle.apply(style, to: map, labelsOn: true)   // dark premium backdrop
         // Start near the origin so the first frame isn't the default world map;
         // precise framing is applied in updateUIView once laid out.
-        map.setRegion(MKCoordinateRegion(center: origin.coordinate.cl,
-                                         span: MKCoordinateSpan(latitudeDelta: 12, longitudeDelta: 12)),
-                      animated: false)
+        if planetary {
+            map.camera = MKMapCamera(lookingAtCenter: origin.coordinate.cl,
+                                     fromDistance: Self.planetaryDistance, pitch: 0, heading: 0)
+        } else {
+            map.setRegion(MKCoordinateRegion(center: origin.coordinate.cl,
+                                             span: MKCoordinateSpan(latitudeDelta: 12, longitudeDelta: 12)),
+                          animated: false)
+        }
         return map
     }
 
@@ -162,6 +175,12 @@ struct AppleBackdropMapView: UIViewRepresentable {
                 let rect = AppleMapCameraController.boundingRect(view.origin.coordinate, dest.destination)
                 map.setVisibleMapRect(rect, edgePadding: UIEdgeInsets(top: 80, left: 60, bottom: 80, right: 60),
                                       animated: false)
+            } else if view.planetary {
+                // Far, top-down camera → MapKit renders the curved 3D globe in the
+                // satellite/imagery style: the best native "planetary Earth" view.
+                map.setCamera(MKMapCamera(lookingAtCenter: view.origin.coordinate.cl,
+                                          fromDistance: AppleBackdropMapView.planetaryDistance,
+                                          pitch: 0, heading: 0), animated: false)
             } else {
                 let zoom = Double(view.showsOrigin ? view.originZoom : 4.0)
                 let w = Double(map.bounds.width)

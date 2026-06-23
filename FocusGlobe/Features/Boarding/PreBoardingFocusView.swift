@@ -30,9 +30,15 @@ struct PreBoardingFocusView: View {
 
     private var origin: JourneyOrigin { appModel.originForJourney }
 
-    /// A forgiving drop zone around the basket socket.
-    private var dropZone: CGRect { dropFrame == .zero ? .zero : dropFrame.insetBy(dx: -70, dy: -120) }
-    private var targetHot: Bool { dragging != nil && dropZone != .zero && dropZone.contains(dragPoint) }
+    /// Forgiving, distance-based hit test around the basket socket so dropping a
+    /// token never needs to be pixel-perfect — a generous magnetic radius.
+    private func isNearTarget(_ p: CGPoint) -> Bool {
+        guard dropFrame != .zero else { return false }
+        let c = CGPoint(x: dropFrame.midX, y: dropFrame.midY)
+        let reach = max(dropFrame.width, dropFrame.height) * 0.5 + 150
+        return hypot(p.x - c.x, p.y - c.y) <= reach
+    }
+    private var targetHot: Bool { dragging != nil && isNearTarget(dragPoint) }
 
     var body: some View {
         GeometryReader { geo in
@@ -61,7 +67,7 @@ struct PreBoardingFocusView: View {
 
                 // Floating token that follows the finger while dragging.
                 if let d = dragging {
-                    tokenCard(d, compact: true)
+                    tokenCard(d, compact: true, active: true)
                         .frame(width: 84)
                         .scaleEffect(1.12)
                         .shadow(color: d.accent.opacity(0.5), radius: 14, y: 6)
@@ -120,7 +126,7 @@ struct PreBoardingFocusView: View {
         return VStack(spacing: 0) {
             envelope(width: w, height: envH)
                 .offset(y: selected != nil ? -6 : 0)        // subtle lift when loaded
-            ropes(width: basketW * 1.06, height: w * 0.12)
+            ropes(width: basketW, height: w * 0.12)
             basket(width: basketW, height: basketH, dropSize: dropSize)
                 .overlay(alignment: .top) { burnerGlow.offset(y: -w * 0.14) }
         }
@@ -145,12 +151,15 @@ struct PreBoardingFocusView: View {
 
     private func ropes(width w: CGFloat, height h: CGFloat) -> some View {
         Path { p in
-            for fx in [0.16, 0.4, 0.6, 0.84] {
-                p.move(to: CGPoint(x: w * (0.42 + (fx - 0.5) * 0.2), y: 0))
-                p.addLine(to: CGPoint(x: w * fx, y: h))
+            let cx = w / 2
+            let top = w * 0.16     // narrow near the envelope mouth
+            let bot = w * 0.42     // splay out toward the basket's top edges
+            for s in [-1.0, -0.4, 0.4, 1.0] {
+                p.move(to: CGPoint(x: cx + CGFloat(s) * top, y: 1))
+                p.addLine(to: CGPoint(x: cx + CGFloat(s) * bot, y: h - 1))
             }
         }
-        .stroke(.white.opacity(0.13), lineWidth: 1)
+        .stroke(.white.opacity(0.16), lineWidth: 1.2)
         .frame(width: w, height: h)
     }
 
@@ -281,44 +290,59 @@ struct PreBoardingFocusView: View {
                         dragPoint = v.location
                     }
                     .onEnded { v in
-                        let hit = dropZone != .zero && dropZone.contains(v.location)
-                        if hit { assign(preset) }
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) { dragging = nil }
+                        // Accept if released near the socket OR simply dragged
+                        // meaningfully upward toward the balloon — generous, so a
+                        // drop succeeds every time.
+                        let accepted = isNearTarget(v.location) || v.translation.height < -90
+                        if accepted {
+                            assign(preset)                 // clears `dragging` with a snap
+                        } else {
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.72)) { dragging = nil }
+                        }
                     }
             )
     }
 
-    private func tokenCard(_ preset: FocusPreset, compact: Bool) -> some View {
+    /// A premium, **fully colour-filled** focus token. `active` lifts it (brighter
+    /// border + stronger glow) for the dragged/elevated copy.
+    private func tokenCard(_ preset: FocusPreset, compact: Bool, active: Bool = false) -> some View {
         VStack(spacing: 5) {
-            ZStack {
-                Circle().fill(preset.accent).frame(width: 34, height: 34)
-                    .shadow(color: preset.accent.opacity(0.5), radius: 7)
-                Image(systemName: preset.systemImage)
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(.white)
-            }
+            Image(systemName: preset.systemImage)
+                .font(.system(size: 19, weight: .bold))
+                .foregroundStyle(.white)
             Text(preset.title)
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.9))
-                .lineLimit(1).minimumScaleFactor(0.8)
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .lineLimit(1).minimumScaleFactor(0.7)
         }
+        .shadow(color: .black.opacity(0.35), radius: 3, y: 1)   // legibility on bright accents
         .frame(maxWidth: compact ? nil : .infinity)
-        .padding(.horizontal, compact ? 14 : 4)
-        .padding(.vertical, 8)
+        .frame(height: 62)
+        .padding(.horizontal, compact ? 18 : 4)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.black.opacity(0.25)))
-                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(.white.opacity(0.10), lineWidth: 1))
+            ZStack {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(LinearGradient(colors: [preset.accent, preset.accent.opacity(0.78)],
+                                         startPoint: .topLeading, endPoint: .bottomTrailing))
+                RoundedRectangle(cornerRadius: 18, style: .continuous)   // soft top sheen
+                    .fill(LinearGradient(colors: [.white.opacity(0.22), .clear],
+                                         startPoint: .top, endPoint: .center))
+                    .blendMode(.plusLighter)
+            }
         )
-        .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(.white.opacity(active ? 0.85 : 0.22), lineWidth: active ? 2 : 1)
+        )
+        .shadow(color: preset.accent.opacity(active ? 0.65 : 0.4), radius: active ? 16 : 8, y: active ? 9 : 5)
+        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
     // MARK: - Actions
 
     private func assign(_ preset: FocusPreset) {
         appModel.haptics.takeoff()
+        appModel.uiSound.play(.focusDrop)
         withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
             selected = preset
             dragging = nil
@@ -332,6 +356,7 @@ struct PreBoardingFocusView: View {
     private func confirm() {
         guard let preset = selected else { return }
         appModel.haptics.takeoff()
+        appModel.uiSound.play(.confirm)
         withAnimation(.easeIn(duration: 0.5)) { lift = true }   // balloon lifts / take-off
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.42) {
             router.proceedToBoarding(route, focus: preset)

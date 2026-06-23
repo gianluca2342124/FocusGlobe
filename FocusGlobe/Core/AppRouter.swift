@@ -62,6 +62,27 @@ final class AppRouter: ObservableObject {
     func openSettings() { path.append(.settings) }
     func presentPaywall() { showPaywall = true }
 
+    // MARK: Deep links (widgets)
+
+    /// Route an incoming `focusglobe://…` deep link (e.g. from a Home Screen
+    /// widget) to the right place. Always lands somewhere safe; unknown links
+    /// open Home. Clears any active journey cover first so navigation is visible.
+    func handleDeepLink(_ url: URL) {
+        guard url.scheme == FocusGlobeShared.urlScheme else { return }
+        let target = (url.host ?? url.path.replacingOccurrences(of: "/", with: "")).lowercased()
+        activeJourney = nil
+        switch target {
+        case "choose", "journey", "start":
+            path = [.routeSelection]
+        case "passport", "stats", "goals", "missions":
+            path = [.passport]
+        case "resume", "current", "home", "":
+            path.removeAll()   // Home auto-offers resume when a journey is saved
+        default:
+            path.removeAll()
+        }
+    }
+
     // MARK: Journey lifecycle
 
     func startJourney(origin: JourneyOrigin, route: Route, intention: String?) {

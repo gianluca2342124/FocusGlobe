@@ -90,20 +90,21 @@ struct HomeView: View {
             // Lift the origin/balloon into the upper half. The map's bottom inset
             // also lifts the Google attribution to just above the (compact) text
             // cluster, so it stays visible without colliding with the title.
-            // Very wide, planetary travel-app framing: from e.g. Barcelona this
-            // shows Europe-scale context (not a local city map), in the Terra
-            // (dark/earthy, realistic-elevation) style. Origin stays upper-half.
+            // Planetary, satellite 3D framing: a far, top-down view so the Earth's
+            // curvature reads — an "Apple Earth" globe rather than a flat regional
+            // map. The balloon stays pinned over the origin on the globe.
             JourneyBackdropMap(origin: origin, mode: .origin, showsBalloon: true,
                                bottomInset: 330, originZoom: 4.3,
                                skinAssetName: appModel.selectedSkin.assetName,
-                               style: .terra,
+                               style: .satellite, planetary: true,
                                onOriginPoint: setOriginPoint)
                 .ignoresSafeArea()
         } else {
-            // No real/chosen origin yet — a calm high-altitude map with no
+            // No real/chosen origin yet — a calm planetary globe with no
             // "you are here" halo, so we never imply a fake location.
             JourneyBackdropMap(origin: .default, mode: .origin,
                                showsBalloon: false, showsOrigin: false,
+                               style: .satellite, planetary: true,
                                onOriginPoint: setOriginPoint)
                 .ignoresSafeArea()
         }
@@ -141,7 +142,7 @@ struct HomeView: View {
             HStack(spacing: AppSpacing.xs) {
                 // The crown only opens the paywall — hide it once the user is Pro.
                 if !appModel.isPro {
-                    CrownButton { appModel.haptics.tap(); router.presentPaywall() }
+                    CrownButton { appModel.haptics.tap(); appModel.uiSound.play(.modal); router.presentPaywall() }
                 }
                 if appModel.progress.currentStreak > 0 { streakBadge }
                 Spacer()
@@ -203,6 +204,7 @@ struct HomeView: View {
             if let origin {
                 AppPrimaryButton(title: "Start Journey", systemImage: "paperplane.fill") {
                     appModel.haptics.tap()
+                    appModel.uiSound.play(.transition)
                     #if DEBUG
                     let started = Date()
                     #endif

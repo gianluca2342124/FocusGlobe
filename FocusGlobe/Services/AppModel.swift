@@ -1,5 +1,8 @@
 import Combine
 import Foundation
+#if canImport(WidgetKit)
+import WidgetKit
+#endif
 
 /// The app's single source of truth and coordinator.
 ///
@@ -23,12 +26,13 @@ final class AppModel: ObservableObject {
     @Published private(set) var history: [FocusSessionRecord]
     @Published private(set) var isPro: Bool {
         didSet {
+            guard oldValue != isPro else { return }
             // When Pro lapses, premium skins/audio must re-lock immediately and
             // any premium selection falls back to its free default. Premium
             // content is never permanently unlocked. (didSet doesn't fire during
             // `init`, so launch-time safety relies on the resolvers below.)
-            guard oldValue != isPro, !isPro else { return }
-            reconcilePremiumSelections()
+            if !isPro { reconcilePremiumSelections() }
+            syncWidgets()
         }
     }
 
@@ -42,6 +46,8 @@ final class AppModel: ObservableObject {
     let analytics = AnalyticsService()
     let haptics = HapticsService()
     let sound = SoundService()
+    /// One-shot premium UI earcons — separate from the ambient journey `sound`.
+    let uiSound = UISoundService()
     let ads = AdService()
     let purchases: PurchaseService
     let location = LocationService()
@@ -66,6 +72,7 @@ final class AppModel: ObservableObject {
 
         haptics.isEnabled = loadedSettings.hapticsEnabled
         sound.isEnabled = loadedSettings.soundEnabled
+        uiSound.isEnabled = loadedSettings.soundEnabled
 
         // Mirror the location state so views observe `appModel.locationState`.
         locationState = location.state
@@ -82,6 +89,7 @@ final class AppModel: ObservableObject {
                     self.settings.startingCity = nil
                 }
                 #endif
+                self.syncWidgets()   // origin city may have changed
             }
             .store(in: &cancellables)
 
@@ -102,6 +110,9 @@ final class AppModel: ObservableObject {
         // one-time JSON-decode cost on the main thread. DEBUG also validates that
         // the planner gives universal coverage across representative origins.
         Self.warmJourneyEngine()
+
+        // Publish the initial widget snapshot from the just-loaded state.
+        syncWidgets()
     }
 
     /// Decodes the journey catalogs once, off-main, at launch. Their `static let`
@@ -403,12 +414,14 @@ final class AppModel: ObservableObject {
                                         soundID: soundID, savedAt: Date())
         resumableJourney = snapshot
         persistence.save(snapshot, for: .resumableJourney)
+        syncWidgets()
     }
 
     func clearResumableJourney() {
         guard resumableJourney != nil else { return }
         resumableJourney = nil
         persistence.remove(.resumableJourney)
+        syncWidgets()
     }
 
     /// Reconstruct a `Journey` from the saved snapshot, seeded at the saved
@@ -614,15 +627,70 @@ final class AppModel: ObservableObject {
     private func settingsChanged(from old: AppSettings) {
         haptics.isEnabled = settings.hapticsEnabled
         sound.setEnabled(settings.soundEnabled)
+        uiSound.isEnabled = settings.soundEnabled
         persistence.save(settings, for: .settings)
         if old.appearance != settings.appearance {
             analytics.log(.appearanceChanged, ["mode": settings.appearance.rawValue])
         }
+        syncWidgets()
     }
 
     private func persistAll() {
         persistence.save(progress, for: .progress)
         persistence.save(history, for: .history)
+        syncWidgets()
+    }
+
+    // MARK: - Widget snapshot
+
+    /// Assemble the read-only snapshot the widgets render, write it to the shared
+    /// App Group store and ask WidgetKit to refresh. Cheap; safe to call often.
+    private func syncWidgets() {
+        WidgetStore.write(makeWidgetSnapshot())
+        #if canImport(WidgetKit)
+        WidgetCenter.shared.reloadAllTimelines()
+        #endif
+    }
+
+    private func makeWidgetSnapshot() -> WidgetSnapshot {
+        var snap = WidgetSnapshot()
+        snap.isPro = isPro
+        snap.originCity = currentOrigin?.city
+        snap.originCode = currentOrigin?.code
+
+        snap.totalFocusMiles = progress.totalFocusMiles
+        snap.landings = progress.landings
+        snap.currentStreak = progress.currentStreak
+        snap.bestFocusMinutes = progress.bestFocusMinutes
+        snap.postcardCount = progress.postcards.count
+
+        if let r = resumableJourney {
+            let total = max(1, r.route.durationMinutes * 60)
+            snap.hasResumable = r.elapsedSeconds > 0 && r.elapsedSeconds < total
+            snap.resumeOriginCity = r.origin.city
+            snap.resumeDestinationCity = r.route.destinationName
+            snap.resumeRemainingSeconds = max(0, total - r.elapsedSeconds)
+            snap.resumeProgress = min(1, Double(r.elapsedSeconds) / Double(total))
+        }
+
+        if let longest = history.filter({ $0.completed }).max(by: { $0.distanceKm < $1.distanceKm }) {
+            snap.longestRouteOrigin = longest.originName
+            snap.longestRouteDestination = longest.destinationName
+            snap.longestRouteKm = Int(longest.distanceKm.rounded())
+            snap.longestRouteDurationMinutes = longest.plannedMinutes
+        }
+
+        let missions = dailyMissions
+        snap.goals = missions.map {
+            WidgetGoal(title: $0.title, systemImage: $0.systemImage,
+                       current: $0.current, target: $0.target)
+        }
+        snap.goalsCompleted = missions.filter { $0.isComplete }.count
+        snap.goalsTotal = missions.count
+        snap.canClaimReward = canClaimDailyMissionReward
+
+        snap.updatedAt = Date()
+        return snap
     }
 }
 

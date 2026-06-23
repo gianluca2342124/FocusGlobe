@@ -126,6 +126,7 @@ struct BoardingView: View {
 
     private func commitTear() {
         appModel.haptics.takeoff()
+        appModel.uiSound.play(.ticketTear)
         withAnimation(.easeIn(duration: 0.45)) { torn = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             router.startJourney(origin: origin, route: route, intention: selectedPreset?.title)

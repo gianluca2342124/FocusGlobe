@@ -124,6 +124,7 @@ final class FocusSessionViewModel: ObservableObject {
 
         appModel.analytics.log(.journeyStarted, ["route": route.id, "minutes": route.durationMinutes])
         appModel.haptics.takeoff()
+        appModel.uiSound.play(.journeyStart)
         appModel.sound.startJourney(option: appModel.selectedJourneyAudio)
         timer.start()
     }
@@ -283,6 +284,7 @@ final class FocusSessionViewModel: ObservableObject {
         appModel.sound.stop()
         appModel.clearResumableJourney()   // completed → no longer resumable
         appModel.haptics.landing()
+        appModel.uiSound.play(.landing)
         let summary = appModel.completeJourney(
             origin: origin,
             route: route,

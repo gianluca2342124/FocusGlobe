@@ -26,6 +26,7 @@ struct FocusGlobeApp: App {
                 .tint(AppColors.brand)
                 .preferredColorScheme(appModel.settings.appearance.colorScheme)
                 .onAppear { appModel.analytics.log(.appOpened) }
+                .onOpenURL { router.handleDeepLink($0) }   // widget deep links
         }
     }
 }
