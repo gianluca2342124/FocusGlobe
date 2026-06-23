@@ -109,6 +109,12 @@ final class AppModel: ObservableObject {
         // — and the first Start Journey tap — is instant rather than paying a
         // one-time JSON-decode cost on the main thread. DEBUG also validates that
         // the planner gives universal coverage across representative origins.
+        // AdMob: configure analytics + resolve UMP consent and initialise the SDK
+        // (safe no-op without the Google Mobile Ads package). No ad is requested
+        // before consent is resolved/allowed; ads never show for Pro users.
+        ads.configure(analytics: analytics)
+        ads.start()
+
         Self.warmJourneyEngine()
 
         // Publish the initial widget snapshot from the just-loaded state.
@@ -586,11 +592,28 @@ final class AppModel: ObservableObject {
         return ok
     }
 
+    /// Double-miles rewarded ad (Landing). Pro users never reach this (the button
+    /// is hidden for Pro); the service also guards against showing them an ad.
     func watchRewardedAd() async -> Bool {
-        analytics.log(.mockAdStarted)
-        let ok = await ads.showRewardedAd()
-        if ok { analytics.log(.mockAdCompleted) }
-        return ok
+        await ads.showRewarded(.doubleMiles, isPro: isPro)
+    }
+
+    /// Daily Mission Boost rewarded ad. Returns whether the boost was granted.
+    /// Pro users never see the ad. Grants a small flat miles top-up on reward.
+    func watchDailyMissionBoostAd() async -> Bool {
+        let earned = await ads.showRewarded(.dailyBoost, isPro: isPro)
+        if earned { grantMissionBoost() }
+        return earned
+    }
+
+    private func grantMissionBoost() {
+        var p = progress
+        p.totalFocusMiles += AdMobConfig.dailyBoostMiles
+        progress = p
+        persistAll()
+        haptics.rewardClaim()
+        uiSound.play(.claim)
+        analytics.log(.rewardClaimed, ["source": "daily_mission_boost", "miles": AdMobConfig.dailyBoostMiles])
     }
 
     // MARK: - Debug

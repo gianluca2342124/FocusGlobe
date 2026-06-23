@@ -25,6 +25,7 @@ struct PaywallView: View {
 
     private let benefits: [(String, String)] = [
         ("nosign", "No ads"),
+        ("paperplane.fill", "Long & Ultra journeys"),
         ("balloon.fill", "Exclusive skins"),
         ("gift.fill", "2x rewards"),
         ("music.note", "Focus sounds & music"),

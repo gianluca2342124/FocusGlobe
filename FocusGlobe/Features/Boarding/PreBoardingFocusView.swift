@@ -42,7 +42,11 @@ struct PreBoardingFocusView: View {
 
     var body: some View {
         GeometryReader { geo in
-            let w = min(geo.size.width * 0.62, geo.size.height * 0.30, 270)
+            // Cap interactive content to a phone-like width so on iPad / large
+            // screens the balloon, basket and token grid stay centred and fully
+            // on-screen (tokens never run off the edges); phones are unchanged.
+            let contentW = min(geo.size.width, 460)
+            let w = min(contentW * 0.62, geo.size.height * 0.30, 270)
             ZStack {
                 JourneyBackdropMap(origin: origin, destination: route, mode: .route,
                                    progress: 0.4, showsBalloon: false)
@@ -64,6 +68,8 @@ struct PreBoardingFocusView: View {
                 .padding(.horizontal, AppSpacing.screen)
                 .padding(.top, AppSpacing.xs)
                 .padding(.bottom, AppSpacing.lg)
+                .frame(maxWidth: contentW)
+                .frame(maxWidth: .infinity)
 
                 // Floating token that follows the finger while dragging.
                 if let d = dragging {

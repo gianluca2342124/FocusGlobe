@@ -39,12 +39,12 @@ struct LandingView: View {
                     if summary.streakIncreased { streakCelebration }
                     heroPostcard
                     statsStrip
-                    if let intention = summary.intention { intentionCard(intention) }
                     actions
                 }
                 .padding(AppSpacing.screen)
                 .padding(.top, AppSpacing.xl)
                 .padding(.bottom, AppSpacing.xxl)
+                .readableWidth(560)
             }
 
             // A premium, one-shot confetti burst when the landing appears.
@@ -138,21 +138,6 @@ struct LandingView: View {
 
     private var divider: some View {
         Rectangle().fill(AppColors.hairline).frame(width: 1, height: 28)
-    }
-
-    private func intentionCard(_ intention: String) -> some View {
-        AppGlassCard {
-            HStack(spacing: AppSpacing.sm) {
-                Image(systemName: "target")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(theme.accent)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("You focused on").font(AppTypography.micro).foregroundStyle(AppColors.textTertiary)
-                    Text(intention).font(AppTypography.callout).foregroundStyle(AppColors.textPrimary)
-                }
-                Spacer()
-            }
-        }
     }
 
     private var actions: some View {

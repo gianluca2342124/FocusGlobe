@@ -73,6 +73,17 @@ struct GlassBlurBackground: View {
     }
 }
 
+// MARK: - Responsive
+
+extension View {
+    /// Constrain content to a comfortable reading width and centre it on large
+    /// screens (iPad / Mac / landscape), leaving phones (narrower than `maxWidth`)
+    /// unchanged. Use on scrollable, content-heavy screens.
+    func readableWidth(_ maxWidth: CGFloat = 560) -> some View {
+        frame(maxWidth: maxWidth).frame(maxWidth: .infinity)
+    }
+}
+
 // MARK: - Buttons
 
 /// A secondary glass button (rounded-rect, translucent) for non-primary actions.

@@ -27,11 +27,11 @@ struct AppleBackdropMapView: UIViewRepresentable {
     var planetary: Bool = false
 
     /// Camera altitude (metres) for the planetary Home framing — far enough that
-    /// MapKit renders the curved 3D **globe** (a large portion of the round Earth
-    /// from space, not a regional map). This is the best native MapKit
+    /// MapKit renders the **full round Earth** as a small planet in space (not a
+    /// regional map and not cut off at the edges). This is the best native MapKit
     /// approximation of an "Apple Earth" view; exact globe rendering at this
     /// altitude is provided by the OS and may vary by device. Tunable.
-    static let planetaryDistance: CLLocationDistance = 38_000_000
+    static let planetaryDistance: CLLocationDistance = 60_000_000
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 

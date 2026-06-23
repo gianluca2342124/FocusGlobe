@@ -42,6 +42,9 @@ final class FocusSessionViewModel: ObservableObject {
     private weak var appModel: AppModel?
     private var cancellable: AnyCancellable?
     private var started = false
+    /// Set the instant the journey finishes so the completion → interstitial →
+    /// Landing transition can't be entered twice.
+    private var landing = false
     private var resumeAfterCancelDismiss = false
     /// The balloon skin asset captured at attach time so the map marker renders
     /// the user's selected skin (falls back to the default art if missing).
@@ -280,18 +283,30 @@ final class FocusSessionViewModel: ObservableObject {
     // MARK: - Landing
 
     private func land() {
-        guard !didLand, let appModel else { return }
+        guard !didLand, !landing, let appModel else { return }
+        landing = true
         appModel.sound.stop()
         appModel.clearResumableJourney()   // completed → no longer resumable
-        appModel.haptics.landing()
-        appModel.uiSound.play(.landing)
-        let summary = appModel.completeJourney(
+        // Bank the journey now (rewards/streak/history) regardless of any ad.
+        landingSummary = appModel.completeJourney(
             origin: origin,
             route: route,
             focusedSeconds: Int(timer.total.rounded()),
             intention: intention
         )
-        landingSummary = summary
+        // Free users: a single skippable interstitial at the natural completion
+        // transition, before Landing. Pro / not-loaded / no-presenter → straight
+        // to Landing — the completion always runs, so Landing never blocks.
+        appModel.ads.presentJourneyCompleteInterstitial(isPro: appModel.isPro) { [weak self] in
+            self?.revealLanding()
+        }
+    }
+
+    /// Reveal the Landing screen (after the optional completion interstitial).
+    private func revealLanding() {
+        guard let appModel else { return }
+        appModel.haptics.landing()
+        appModel.uiSound.play(.landing)
         withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
             didLand = true
         }

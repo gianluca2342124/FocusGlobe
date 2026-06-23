@@ -19,6 +19,24 @@ enum AnalyticsEvent: String {
     case settingsOpened = "settings_opened"
     case paywallOpened = "paywall_opened"
     case appearanceChanged = "appearance_changed"
+    // AdMob / UMP consent
+    case admobConsentRequested = "admob_consent_requested"
+    case admobConsentReady = "admob_consent_ready"
+    case admobConsentFailed = "admob_consent_failed"
+    case interstitialAdRequested = "interstitial_ad_requested"
+    case interstitialAdLoaded = "interstitial_ad_loaded"
+    case interstitialAdFailed = "interstitial_ad_failed"
+    case interstitialAdPresented = "interstitial_ad_presented"
+    case interstitialAdDismissed = "interstitial_ad_dismissed"
+    case rewardedAdRequested = "rewarded_ad_requested"
+    case rewardedAdLoaded = "rewarded_ad_loaded"
+    case rewardedAdFailed = "rewarded_ad_failed"
+    case rewardedAdPresented = "rewarded_ad_presented"
+    case rewardedAdCompleted = "rewarded_ad_completed"
+    case rewardedAdRewardGranted = "rewarded_ad_reward_granted"
+    case rewardedAdDismissed = "rewarded_ad_dismissed"
+    case adSkippedForPro = "ad_skipped_for_pro"
+    case adSkippedNotReady = "ad_skipped_not_ready"
 }
 
 /// A mock analytics sink. In DEBUG it prints events; in release it's a no-op.
