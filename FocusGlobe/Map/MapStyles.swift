@@ -1,13 +1,13 @@
 import Foundation
 
 /// User-selectable map presentation, surfaced as floating controls in the
-/// session. On Apple Maps the user-facing set is just Monochrome / Terra /
-/// Standard / Satellite (see `selectable`); the other cases are legacy values
-/// kept only so older persisted settings keep decoding (they map to the closest
-/// Apple style in `AppleMapStyle`).
+/// session. On Apple Maps the user-facing set is just Dark Earth / Standard /
+/// Satellite (see `selectable`); the other cases (including the legacy
+/// "monochrome") are decode-only values kept so older persisted settings keep
+/// decoding (they map to the closest Apple style in `AppleMapStyle`).
 enum MapDisplayStyle: String, CaseIterable, Codable, Identifiable {
-    case monochrome   // dark/graphite land, near-black sea — the FocusGlobe default
-    case terra        // dark/premium with a planet/terrain (realistic elevation) feel
+    case monochrome   // dark/graphite land, near-black sea — legacy, decode-only
+    case terra        // "Dark Earth": Apple Standard, but dark/premium (default)
     case standard     // native Apple standard (green/yellow land, blue sea)
     case satellite    // native Apple imagery (labels via the Labels toggle)
     // Legacy (not shown in the menu; decode-only):
@@ -18,17 +18,18 @@ enum MapDisplayStyle: String, CaseIterable, Codable, Identifiable {
 
     var id: String { rawValue }
 
-    /// The only styles shown to the user (Apple-appropriate).
-    static let selectable: [MapDisplayStyle] = [.monochrome, .terra, .standard, .satellite]
+    /// The only styles shown to the user (Apple-appropriate). "Dark Earth" is the
+    /// premium default; Monochrome is intentionally not user-selectable.
+    static let selectable: [MapDisplayStyle] = [.terra, .standard, .satellite]
 
     var displayName: String {
         switch self {
         case .monochrome: return "Monochrome"
-        case .terra:      return "Terra"
+        case .terra:      return "Dark Earth"
         case .standard:   return "Standard"
         case .satellite:  return "Satellite"
         case .graphite:   return "Monochrome"
-        case .terrain:    return "Terra"
+        case .terrain:    return "Dark Earth"
         case .hybrid:     return "Satellite"
         case .night:      return "Monochrome"
         }
@@ -37,11 +38,11 @@ enum MapDisplayStyle: String, CaseIterable, Codable, Identifiable {
     var systemImage: String {
         switch self {
         case .monochrome: return "circle.lefthalf.filled"
-        case .terra:      return "globe.europe.africa.fill"
+        case .terra:      return "moon.stars.fill"
         case .standard:   return "map.fill"
         case .satellite:  return "globe.americas.fill"
         case .graphite:   return "circle.lefthalf.filled"
-        case .terrain:    return "globe.europe.africa.fill"
+        case .terrain:    return "moon.stars.fill"
         case .hybrid:     return "globe.americas.fill"
         case .night:      return "moon.stars.fill"
         }

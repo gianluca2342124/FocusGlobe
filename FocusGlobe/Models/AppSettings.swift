@@ -9,8 +9,8 @@ struct AppSettings: Codable, Equatable {
     var soundEnabled: Bool = true
     var hapticsEnabled: Bool = true
     /// Default map presentation for backdrops (overridable live in-session).
-    /// Monochrome (dark/muted Apple Maps) by default — Standard/Satellite opt-in.
-    var mapStyle: MapDisplayStyle = .monochrome
+    /// "Dark Earth" (dark/premium Apple Standard) by default — Standard/Satellite opt-in.
+    var mapStyle: MapDisplayStyle = .terra
 
     /// A manually chosen starting city. Used only when real location is
     /// unavailable (and, in DEBUG, as a Simulator override). `nil` means "use my

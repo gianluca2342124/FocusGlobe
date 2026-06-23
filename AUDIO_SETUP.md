@@ -3,8 +3,10 @@
 FocusGlobe plays a **looping ambience during an active journey**. The code is
 already wired; you only need to add the audio files in Xcode and (once) enable
 the background-audio capability. **Missing audio files never crash** — if a
-file isn't found the app plays a built-in **procedural soft-wind loop** instead,
-so the feature works before you add anything.
+file isn't found the app plays a built-in **procedural loop that is distinct for
+each option** (wind, rain, ocean, focus pad, alpha pulse, relaxing pad, jazz
+texture), so the feature works — and each option already sounds different —
+before you add anything.
 
 ## Default vs premium
 
@@ -16,6 +18,12 @@ so the feature works before you add anything.
 - The rest require an **active** Pro subscription. If Pro lapses, a selected
   premium sound re-locks and falls back to **Wind**. Premium audio is never
   permanently unlocked.
+- **Procedural fallbacks are distinct per option** (not all Wind): Focus Music =
+  soft tonal bed, Alpha Waves = calm low-frequency pulse, Rain = soft airy hiss,
+  Ocean = gentle surging swell, Relaxing = warm pad, Jazz = subtle brushed
+  texture. A bundled file (above) overrides the procedural fallback when present.
+  Changing the selection mid-journey swaps the loop live; otherwise the chosen
+  option is used the next time a journey starts.
 
 ## Exact audio asset names
 

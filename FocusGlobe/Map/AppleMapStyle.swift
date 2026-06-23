@@ -4,53 +4,66 @@ import UIKit
 /// Applies a `MapDisplayStyle` to an `MKMapView` using **only MapKit-supported
 /// configurations** (no Google-style JSON — MapKit can't do that).
 ///
-/// The four user-facing styles are made deliberately distinct:
-///  • Monochrome — forced **dark** + **muted** emphasis, flat (desaturated
-///    graphite: grey land, near-black sea). The premium default for backdrops.
-///  • Terra — forced **dark** + **default** emphasis + **realistic elevation**
-///    (richer, terrain/earth relief; planetary at wide zooms). Distinct from
-///    Monochrome (saturated + 3D vs muted + flat).
-///  • Standard — forced **light** + default emphasis (green/yellow land, blue
-///    sea). Forcing light is what makes it clearly different from the dark styles
-///    (the app runs in dark appearance, so an unforced map would also be dark).
-///  • Satellite — Apple imagery; Hybrid (with labels) or Imagery (labels off).
+/// User-facing styles:
+///  • Dark Earth — forced **dark** + **default** emphasis + **realistic
+///    elevation**: Apple Standard, but dark/premium. The default backdrop and
+///    session style; reads as a planet at wide zooms.
+///  • Standard — forced **light** + default emphasis (the bright native Apple look).
+///  • Satellite — Apple imagery; Hybrid (with geographic labels) or Imagery
+///    (labels off).
+/// (`monochrome`/`graphite`/`night`/`terrain`/`hybrid` are decode-only legacy
+/// values mapped to the closest current style.)
 ///
-/// Labels: ON shows the default labels/POIs; OFF hides POIs via
-/// `pointOfInterestFilter = .excludingAll` (the most MapKit allows on the vector
-/// styles — base place/road/country labels can't be fully hidden; see
-/// APPLE_MAPS_MIGRATION.md) and, for Satellite, drops the label layer.
+/// **POIs/businesses are never shown.** Every configuration sets
+/// `pointOfInterestFilter = .excludingAll`, so shops, supermarkets, restaurants
+/// and business pins never appear — regardless of the Labels toggle.
+///
+/// Labels toggle: MapKit exposes no API to hide the base geographic labels
+/// (street/city/country names) on the vector styles, so on Dark Earth/Standard
+/// the toggle effectively governs only POIs (which we always hide) and the base
+/// labels remain. On Satellite it is meaningful: Hybrid (labels) vs Imagery
+/// (no labels). See APPLE_MAPS_MIGRATION.md.
 enum AppleMapStyle {
 
     static func apply(_ style: MapDisplayStyle, to map: MKMapView, labelsOn: Bool = true) {
-        let poi: MKPointOfInterestFilter? = labelsOn ? nil : .excludingAll
-
         switch style {
         case .monochrome, .graphite, .night:
             map.overrideUserInterfaceStyle = .dark
-            map.preferredConfiguration = standard(elevation: .flat, emphasis: .muted, poi: poi)
+            map.preferredConfiguration = standard(elevation: .flat, emphasis: .muted)
 
         case .terra, .terrain:
             map.overrideUserInterfaceStyle = .dark
-            map.preferredConfiguration = standard(elevation: .realistic, emphasis: .default, poi: poi)
+            map.preferredConfiguration = standard(elevation: .realistic, emphasis: .default)
 
         case .standard:
             map.overrideUserInterfaceStyle = .light   // force the bright Apple look
-            map.preferredConfiguration = standard(elevation: .flat, emphasis: .default, poi: poi)
+            map.preferredConfiguration = standard(elevation: .flat, emphasis: .default)
 
         case .satellite, .hybrid:
             map.overrideUserInterfaceStyle = .unspecified
-            map.preferredConfiguration = labelsOn
-                ? MKHybridMapConfiguration(elevationStyle: .realistic)   // imagery + labels
-                : MKImageryMapConfiguration(elevationStyle: .realistic)  // pure imagery
+            map.preferredConfiguration = labelsOn ? hybrid() : imagery()
         }
     }
 
+    /// Standard vector config — POIs and traffic always off.
     private static func standard(elevation: MKMapConfiguration.ElevationStyle,
-                                 emphasis: MKStandardMapConfiguration.EmphasisStyle,
-                                 poi: MKPointOfInterestFilter?) -> MKStandardMapConfiguration {
+                                 emphasis: MKStandardMapConfiguration.EmphasisStyle) -> MKStandardMapConfiguration {
         let cfg = MKStandardMapConfiguration(elevationStyle: elevation, emphasisStyle: emphasis)
-        cfg.pointOfInterestFilter = poi
+        cfg.pointOfInterestFilter = .excludingAll   // never show businesses/POIs
         cfg.showsTraffic = false
         return cfg
+    }
+
+    /// Satellite imagery + geographic labels — POIs and traffic always off.
+    private static func hybrid() -> MKHybridMapConfiguration {
+        let cfg = MKHybridMapConfiguration(elevationStyle: .realistic)
+        cfg.pointOfInterestFilter = .excludingAll   // never show businesses/POIs
+        cfg.showsTraffic = false
+        return cfg
+    }
+
+    /// Pure satellite imagery — no labels of any kind (and so no POIs).
+    private static func imagery() -> MKImageryMapConfiguration {
+        MKImageryMapConfiguration(elevationStyle: .realistic)
     }
 }

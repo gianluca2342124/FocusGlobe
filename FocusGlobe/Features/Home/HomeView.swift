@@ -90,21 +90,21 @@ struct HomeView: View {
             // Lift the origin/balloon into the upper half. The map's bottom inset
             // also lifts the Google attribution to just above the (compact) text
             // cluster, so it stays visible without colliding with the title.
-            // Planetary, satellite 3D framing: a far, top-down view so the Earth's
-            // curvature reads — an "Apple Earth" globe rather than a flat regional
-            // map. The balloon stays pinned over the origin on the globe.
+            // Planetary "Dark Earth" framing: a far, top-down view so the round
+            // Earth reads from space (a large portion of the globe, not a flat
+            // regional map). The balloon stays pinned over the origin on the globe.
             JourneyBackdropMap(origin: origin, mode: .origin, showsBalloon: true,
                                bottomInset: 330, originZoom: 4.3,
                                skinAssetName: appModel.selectedSkin.assetName,
-                               style: .satellite, planetary: true,
+                               style: .terra, planetary: true,
                                onOriginPoint: setOriginPoint)
                 .ignoresSafeArea()
         } else {
-            // No real/chosen origin yet — a calm planetary globe with no
-            // "you are here" halo, so we never imply a fake location.
+            // No real/chosen origin yet — a calm planetary "Dark Earth" globe with
+            // no "you are here" halo, so we never imply a fake location.
             JourneyBackdropMap(origin: .default, mode: .origin,
                                showsBalloon: false, showsOrigin: false,
-                               style: .satellite, planetary: true,
+                               style: .terra, planetary: true,
                                onOriginPoint: setOriginPoint)
                 .ignoresSafeArea()
         }

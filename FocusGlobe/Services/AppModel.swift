@@ -320,6 +320,7 @@ final class AppModel: ObservableObject {
     func selectJourneyAudio(_ option: JourneyAudioOption) {
         guard isAudioUnlocked(option) else { return }
         settings.selectedJourneyAudioID = option.id
+        sound.switchOption(option)   // live-swap if a journey is currently playing
         haptics.tap()
     }
 

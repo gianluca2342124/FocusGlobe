@@ -13,8 +13,8 @@ final class FocusSessionViewModel: ObservableObject {
 
     let timer: SessionTimerService
 
-    /// Active flight default is Standard Apple Maps (see APPLE_MAPS_MIGRATION.md).
-    @Published var mapStyle: MapDisplayStyle = .standard
+    /// Active flight default is "Dark Earth" (dark/premium Apple Standard).
+    @Published var mapStyle: MapDisplayStyle = .terra
     /// Whether map labels/POIs are shown (Labels toggle in the map controls).
     @Published var labelsOn: Bool = true
     /// Whether this session's journey audio is muted (volume only — pause/resume
@@ -64,10 +64,10 @@ final class FocusSessionViewModel: ObservableObject {
         guard self.appModel == nil else { return }
         self.appModel = appModel
         skinAssetName = appModel.selectedSkin.assetName
-        // The active flight defaults to Standard Apple Maps. A bottom scrim in
-        // FocusSessionView keeps readouts legible. The user can switch styles and
-        // toggle labels via the in-session menu.
-        mapStyle = .standard
+        // The active flight defaults to "Dark Earth" (dark/premium). A bottom
+        // scrim in FocusSessionView keeps readouts legible. The user can switch
+        // styles and toggle labels via the in-session menu.
+        mapStyle = .terra
     }
 
     func setMapStyle(_ style: MapDisplayStyle) {

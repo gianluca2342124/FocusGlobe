@@ -52,9 +52,9 @@ struct JourneyBackdropMap: View {
     /// The selected balloon skin asset name for the (optional) balloon marker.
     /// Defaults to the standard balloon; Home passes the user's selected skin.
     var skinAssetName: String = BalloonSkin.default.assetName
-    /// The Apple Maps base style for this backdrop. Monochrome by default; Home
-    /// uses Satellite for a planetary, premium look.
-    var style: MapDisplayStyle = .monochrome
+    /// The Apple Maps base style for this backdrop. "Dark Earth" (dark/premium)
+    /// by default — shared across Home, Choose Journey and Boarding.
+    var style: MapDisplayStyle = .terra
     /// When true (Home), the Apple renderer frames a far, top-down **planetary**
     /// camera so the curvature of the Earth reads — a 3D satellite globe rather
     /// than a flat regional map. Ignored by the Google fallback.
