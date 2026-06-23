@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7A67A3282FEB2A3900C4725D /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = 7A67A3272FEB2A3900C4725D /* GoogleMobileAds */; };
 		7AAFA3F02FE59EC3002F4953 /* GoogleMaps in Frameworks */ = {isa = PBXBuildFile; productRef = 7AAFA3EF2FE59EC3002F4953 /* GoogleMaps */; };
 		7AE8FE6E2FE865DB00CD10A8 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 7AE8FE6D2FE865DB00CD10A8 /* RevenueCat */; };
 		7AE8FE702FE865DB00CD10A8 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 7AE8FE6F2FE865DB00CD10A8 /* RevenueCatUI */; };
@@ -16,8 +17,18 @@
 		AA0000000000000000000003 /* FocusGlobe.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FocusGlobe.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		7A67A32A2FEB2AFB00C4725D /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = AA0000000000000000000002 /* FocusGlobe */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		AA0000000000000000000005 /* FocusGlobe */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = FocusGlobe; sourceTree = "<group>"; };
+		AA0000000000000000000005 /* FocusGlobe */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (7A67A32A2FEB2AFB00C4725D /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = FocusGlobe; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -25,6 +36,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7A67A3282FEB2A3900C4725D /* GoogleMobileAds in Frameworks */,
 				7AE8FE6E2FE865DB00CD10A8 /* RevenueCat in Frameworks */,
 				7AAFA3F02FE59EC3002F4953 /* GoogleMaps in Frameworks */,
 				7AE8FE702FE865DB00CD10A8 /* RevenueCatUI in Frameworks */,
@@ -73,6 +85,7 @@
 				7AAFA3EF2FE59EC3002F4953 /* GoogleMaps */,
 				7AE8FE6D2FE865DB00CD10A8 /* RevenueCat */,
 				7AE8FE6F2FE865DB00CD10A8 /* RevenueCatUI */,
+				7A67A3272FEB2A3900C4725D /* GoogleMobileAds */,
 			);
 			productName = FocusGlobe;
 			productReference = AA0000000000000000000003 /* FocusGlobe.app */;
@@ -106,6 +119,7 @@
 			packageReferences = (
 				7AAFA3EE2FE59EC3002F4953 /* XCRemoteSwiftPackageReference "ios-maps-sdk" */,
 				7AE8FE6C2FE865DB00CD10A8 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+				7A67A3262FEB2A3900C4725D /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
 			);
 			productRefGroup = AA0000000000000000000004 /* Products */;
 			projectDirPath = "";
@@ -267,6 +281,7 @@
 				DEVELOPMENT_TEAM = QN8S876767;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FocusGlobe/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = FocusGlobe;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "FocusGlobe begins each journey from where you are, so your focus route can start from your real city.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -296,6 +311,7 @@
 				DEVELOPMENT_TEAM = QN8S876767;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FocusGlobe/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = FocusGlobe;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "FocusGlobe begins each journey from where you are, so your focus route can start from your real city.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -339,6 +355,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		7A67A3262FEB2A3900C4725D /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/googleads/swift-package-manager-google-mobile-ads.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 13.5.0;
+			};
+		};
 		7AAFA3EE2FE59EC3002F4953 /* XCRemoteSwiftPackageReference "ios-maps-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/googlemaps/ios-maps-sdk";
@@ -358,6 +382,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		7A67A3272FEB2A3900C4725D /* GoogleMobileAds */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A67A3262FEB2A3900C4725D /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
+			productName = GoogleMobileAds;
+		};
 		7AAFA3EF2FE59EC3002F4953 /* GoogleMaps */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 7AAFA3EE2FE59EC3002F4953 /* XCRemoteSwiftPackageReference "ios-maps-sdk" */;
