@@ -37,6 +37,15 @@ enum AnalyticsEvent: String {
     case rewardedAdDismissed = "rewarded_ad_dismissed"
     case adSkippedForPro = "ad_skipped_for_pro"
     case adSkippedNotReady = "ad_skipped_not_ready"
+    // Journey-complete interstitial (dedicated, granular)
+    case interstitialJourneyCompleteRequested = "interstitial_journey_complete_requested"
+    case interstitialJourneyCompleteLoaded = "interstitial_journey_complete_loaded"
+    case interstitialJourneyCompleteNotReady = "interstitial_journey_complete_not_ready"
+    case interstitialJourneyCompletePresented = "interstitial_journey_complete_presented"
+    case interstitialJourneyCompleteFailed = "interstitial_journey_complete_failed"
+    case interstitialJourneyCompleteDismissed = "interstitial_journey_complete_dismissed"
+    case interstitialJourneyCompleteSkippedPro = "interstitial_journey_complete_skipped_pro"
+    case interstitialJourneyCompleteContinueToLanding = "interstitial_journey_complete_continue_to_landing"
 }
 
 /// A mock analytics sink. In DEBUG it prints events; in release it's a no-op.

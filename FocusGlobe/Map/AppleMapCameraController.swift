@@ -11,9 +11,9 @@ enum AppleMapCameraController {
     /// reveal streets/labels (when Labels are on). Never sluggish on long routes.
     static func followDistance(forRouteKm km: Double) -> CLLocationDistance {
         switch km {
-        case ..<120:  return 2_200
-        case ..<600:  return 3_400
-        default:      return 5_200
+        case ..<120:  return 1_700
+        case ..<600:  return 2_600
+        default:      return 4_000
         }
     }
 

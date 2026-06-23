@@ -55,6 +55,7 @@ final class AdService: NSObject {
     private var rewardContinuation: CheckedContinuation<Bool, Never>?
     private var rewardEarnedThisPresentation = false
     private var interstitialCompletion: (() -> Void)?
+    private var interstitialDidPresent = false
     #endif
 
     // MARK: Setup
@@ -104,10 +105,24 @@ final class AdService: NSObject {
         analytics?.log(.admobConsentReady, ["canRequestAds": canRequestAds])
         guard canRequestAds else { return }
         #if canImport(GoogleMobileAds)
-        MobileAds.shared.start(completionHandler: nil)
+        // Preload only AFTER SDK initialisation completes — loading before
+        // `start` finishes can silently fail (which is why the interstitial was
+        // never ready while the on-demand rewarded ad worked).
+        MobileAds.shared.start { [weak self] _ in
+            guard let self else { return }
+            self.loadInterstitial()
+            self.preloadRewarded(AdMobConfig.rewardedDoubleMilesID)
+            self.preloadRewarded(AdMobConfig.rewardedDailyBoostID)
+        }
+        #endif
+    }
+
+    /// Preload the journey-complete interstitial (call when a journey starts) so
+    /// it is ready by the time the journey ends. No-op for Pro / before consent.
+    func preloadInterstitial(isPro: Bool) {
+        guard !isPro else { return }
+        #if canImport(GoogleMobileAds)
         loadInterstitial()
-        preloadRewarded(AdMobConfig.rewardedDoubleMilesID)
-        preloadRewarded(AdMobConfig.rewardedDailyBoostID)
         #endif
     }
 
@@ -182,37 +197,68 @@ final class AdService: NSObject {
     /// immediately, so Landing is never blocked or delayed forever. Only one is
     /// presented per completed journey (the caller invokes this once).
     func presentJourneyCompleteInterstitial(isPro: Bool, completion: @escaping () -> Void) {
-        if isPro { analytics?.log(.adSkippedForPro); completion(); return }
+        analytics?.log(.interstitialJourneyCompleteRequested)
+        if isPro {
+            analytics?.log(.interstitialJourneyCompleteSkippedPro)
+            continueToLanding(completion)
+            return
+        }
         #if canImport(GoogleMobileAds)
         guard canRequestAds, let ad = interstitial, let vc = Self.topViewController() else {
-            analytics?.log(.adSkippedNotReady); completion(); return
+            analytics?.log(.interstitialJourneyCompleteNotReady)
+            continueToLanding(completion)
+            return
         }
         interstitial = nil
         interstitialCompletion = completion
+        interstitialDidPresent = false
         ad.fullScreenContentDelegate = self
-        analytics?.log(.interstitialAdPresented)
         ad.present(from: vc)
+        // Safety: if it never actually presents, continue to Landing instead of
+        // waiting — never block the user indefinitely.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in
+            guard let self, self.interstitialCompletion != nil, !self.interstitialDidPresent else { return }
+            self.analytics?.log(.interstitialJourneyCompleteFailed, ["reason": "present_timeout"])
+            self.finishInterstitial()
+        }
         #else
-        analytics?.log(.adSkippedNotReady)
-        completion()
+        analytics?.log(.interstitialJourneyCompleteNotReady)
+        continueToLanding(completion)
         #endif
     }
+
+    /// Immediate-skip path → Landing (Pro / not ready / no SDK).
+    private func continueToLanding(_ completion: @escaping () -> Void) {
+        analytics?.log(.interstitialJourneyCompleteContinueToLanding)
+        completion()
+    }
+
+    #if canImport(GoogleMobileAds)
+    /// Resolve a presented interstitial exactly once, then preload the next.
+    private func finishInterstitial() {
+        guard let completion = interstitialCompletion else { return }
+        interstitialCompletion = nil
+        analytics?.log(.interstitialJourneyCompleteContinueToLanding)
+        completion()
+        loadInterstitial()   // ready for the next journey
+    }
+    #endif
 
     // MARK: Loading
 
     #if canImport(GoogleMobileAds)
     private func loadInterstitial() {
         guard canRequestAds, interstitial == nil else { return }
-        analytics?.log(.interstitialAdRequested)
+        analytics?.log(.interstitialJourneyCompleteRequested)
         Task { [weak self] in
             guard let self else { return }
             do {
                 let ad = try await InterstitialAd.load(
                     with: AdMobConfig.interstitialJourneyCompleteID, request: Request())
                 self.interstitial = ad
-                self.analytics?.log(.interstitialAdLoaded)
+                self.analytics?.log(.interstitialJourneyCompleteLoaded)
             } catch {
-                self.analytics?.log(.interstitialAdFailed, ["error": error.localizedDescription])
+                self.analytics?.log(.interstitialJourneyCompleteFailed, ["error": error.localizedDescription])
             }
         }
     }
@@ -247,6 +293,14 @@ final class AdService: NSObject {
 
 #if canImport(GoogleMobileAds)
 extension AdService: FullScreenContentDelegate {
+    func adWillPresentFullScreenContent(_ ad: FullScreenPresentingAd) {
+        // Only relevant for the interstitial (rewarded logs its own present).
+        if interstitialCompletion != nil {
+            interstitialDidPresent = true
+            analytics?.log(.interstitialJourneyCompletePresented)
+        }
+    }
+
     func adDidDismissFullScreenContent(_ ad: FullScreenPresentingAd) {
         // Resolve whichever presentation was active (only one at a time).
         if let cont = rewardContinuation {
@@ -254,11 +308,9 @@ extension AdService: FullScreenContentDelegate {
             analytics?.log(.rewardedAdDismissed)
             cont.resume(returning: rewardEarnedThisPresentation)
         }
-        if let completion = interstitialCompletion {
-            interstitialCompletion = nil
-            analytics?.log(.interstitialAdDismissed)
-            completion()
-            loadInterstitial()   // ready for the next journey
+        if interstitialCompletion != nil {
+            analytics?.log(.interstitialJourneyCompleteDismissed)
+            finishInterstitial()        // → continue to Landing + preload next
         }
     }
 
@@ -268,11 +320,9 @@ extension AdService: FullScreenContentDelegate {
             analytics?.log(.rewardedAdFailed, ["error": error.localizedDescription])
             cont.resume(returning: false)
         }
-        if let completion = interstitialCompletion {
-            interstitialCompletion = nil
-            analytics?.log(.interstitialAdFailed, ["error": error.localizedDescription])
-            completion()             // never block Landing
-            loadInterstitial()
+        if interstitialCompletion != nil {
+            analytics?.log(.interstitialJourneyCompleteFailed, ["error": error.localizedDescription])
+            finishInterstitial()        // never block Landing
         }
     }
 }
