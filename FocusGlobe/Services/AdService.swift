@@ -71,8 +71,8 @@ final class AdService: NSObject {
         started = true
         analytics?.log(.admobConsentRequested)
         #if canImport(UserMessagingPlatform)
-        let params = UMPRequestParameters()
-        UMPConsentInformation.sharedInstance.requestConsentInfoUpdate(with: params) { [weak self] error in
+        let params = RequestParameters()
+        ConsentInformation.shared.requestConsentInfoUpdate(with: params) { [weak self] error in
             guard let self else { return }
             if let error {
                 self.analytics?.log(.admobConsentFailed, ["error": error.localizedDescription])
@@ -80,7 +80,7 @@ final class AdService: NSObject {
                 return
             }
             if let vc = Self.topViewController() {
-                UMPConsentForm.loadAndPresentIfRequired(from: vc) { [weak self] formError in
+                ConsentForm.loadAndPresentIfRequired(from: vc) { [weak self] formError in
                     if let formError {
                         self?.analytics?.log(.admobConsentFailed, ["error": formError.localizedDescription])
                     }
@@ -97,7 +97,7 @@ final class AdService: NSObject {
 
     private func finishConsent() {
         #if canImport(UserMessagingPlatform)
-        canRequestAds = UMPConsentInformation.sharedInstance.canRequestAds
+        canRequestAds = ConsentInformation.shared.canRequestAds
         #else
         canRequestAds = true
         #endif
@@ -116,13 +116,13 @@ final class AdService: NSObject {
     func presentPrivacyOptions() {
         #if canImport(UserMessagingPlatform)
         guard let vc = Self.topViewController() else { return }
-        UMPConsentForm.presentPrivacyOptionsForm(from: vc) { _ in }
+        ConsentForm.presentPrivacyOptionsForm(from: vc) { _ in }
         #endif
     }
 
     var privacyOptionsRequired: Bool {
         #if canImport(UserMessagingPlatform)
-        return UMPConsentInformation.sharedInstance.privacyOptionsRequirementStatus == .required
+        return ConsentInformation.shared.privacyOptionsRequirementStatus == .required
         #else
         return false
         #endif
