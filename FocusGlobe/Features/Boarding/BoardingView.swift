@@ -51,7 +51,6 @@ struct BoardingView: View {
                 topBar
                 Spacer(minLength: AppSpacing.xs)
                 ticketStack
-                focusSelector.opacity(focusIn ? 1 : 0)
                 Spacer()
             }
             .padding(.horizontal, AppSpacing.screen)
@@ -77,10 +76,11 @@ struct BoardingView: View {
         .allowsHitTesting(false)
     }
 
+    // Linear flow: focus is chosen in the pre-boarding ritual, so there is no
+    // back button or focus selector here — only the centred title.
     private var topBar: some View {
         HStack {
-            AppIconButton(systemImage: "chevron.left", size: 44, tint: .white,
-                          accessibilityLabel: "Back") { dismiss() }
+            Color.clear.frame(width: 44, height: 44)
             Spacer()
             Text("Check in").font(AppTypography.headline).foregroundStyle(.white)
             Spacer()
@@ -101,29 +101,6 @@ struct BoardingView: View {
                           canTear: focusIn && !torn, threshold: tearThreshold,
                           onCommit: commitTear)
                 .frame(maxWidth: 420)
-        }
-    }
-
-    // MARK: Focus (optional — you can take off without choosing)
-
-    private var focusSelector: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.xs) {
-            Text("What do you want to focus?")
-                .font(AppTypography.subhead)
-                .foregroundStyle(.white.opacity(0.75))
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: AppSpacing.xs) {
-                    ForEach(FocusPreset.all) { preset in
-                        FocusChip(preset: preset, selected: selectedPreset?.id == preset.id) {
-                            appModel.haptics.tap()
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                selectedPreset = preset
-                            }
-                        }
-                    }
-                }
-                .padding(.vertical, 2)
-            }
         }
     }
 
@@ -478,43 +455,6 @@ private struct TearFingerHint: View {
                 }
         }
         .allowsHitTesting(false)
-    }
-}
-
-// MARK: - Focus chip
-
-private struct FocusChip: View {
-    let preset: FocusPreset
-    let selected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 7) {
-                ZStack {
-                    Circle().fill(selected ? Color.white.opacity(0.25) : preset.accent.opacity(0.22))
-                        .frame(width: 26, height: 26)
-                    Image(systemName: preset.systemImage)
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(selected ? .white : preset.accent)
-                }
-                Text(preset.title)
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white)
-            }
-            .padding(.leading, 6).padding(.trailing, AppSpacing.sm)
-            .padding(.vertical, 7)
-            .background {
-                if selected {
-                    Capsule().fill(preset.accent)
-                } else {
-                    Capsule().fill(.ultraThinMaterial)
-                        .overlay(Capsule().fill(Color.black.opacity(0.25)))
-                        .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 1))
-                }
-            }
-        }
-        .buttonStyle(SoftPressStyle())
     }
 }
 

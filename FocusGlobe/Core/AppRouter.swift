@@ -47,6 +47,16 @@ final class AppRouter: ObservableObject {
     func openFocusLoadout(_ route: Route) { path.append(.focusLoadout(route)) }
     /// Open the boarding ticket, optionally pre-filled with the chosen focus.
     func openBoarding(_ route: Route, focus: FocusPreset? = nil) { path.append(.boarding(route, focus)) }
+    /// Proceed from the focus ritual into Boarding by **replacing** the loadout
+    /// step in the stack — so a back/swipe from Boarding returns straight to
+    /// Choose Journey (never a stale, lifted loadout screen).
+    func proceedToBoarding(_ route: Route, focus: FocusPreset?) {
+        if let last = path.indices.last, case .focusLoadout = path[last] {
+            path[last] = .boarding(route, focus)
+        } else {
+            path.append(.boarding(route, focus))
+        }
+    }
     func openPassport() { path.append(.passport) }
     func openHistory() { path.append(.history) }
     func openSettings() { path.append(.settings) }
