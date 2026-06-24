@@ -39,7 +39,7 @@ enum Layout {
                             minPad: CGFloat = 210,
                             spacing: CGFloat = AppSpacing.sm) -> [GridItem] {
         let minW = regular ? minPad : minPhone
-        let maxW = regular ? 360 : 260
+        let maxW: CGFloat = regular ? 360 : 260
         return [GridItem(.adaptive(minimum: minW, maximum: maxW), spacing: spacing)]
     }
 }
