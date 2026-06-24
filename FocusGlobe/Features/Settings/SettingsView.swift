@@ -125,6 +125,11 @@ struct SettingsView: View {
                 ToggleRow(systemImage: "iphone.radiowaves.left.and.right", title: "Haptics",
                           subtitle: "Gentle feedback on take-off & landing",
                           isOn: boolBinding(\.hapticsEnabled))
+                RowDivider()
+                ToggleRow(systemImage: "bell.badge.fill", title: "Reminders",
+                          subtitle: "Streak, focus & goal nudges",
+                          isOn: Binding(get: { appModel.notifications.isEnabled },
+                                        set: { appModel.setNotificationsEnabled($0) }))
             }
         }
     }

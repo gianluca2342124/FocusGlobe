@@ -107,7 +107,9 @@ struct PaywallView: View {
     /// smallest screens.
     private var heroHeight: CGFloat {
         let w = UIScreen.main.bounds.width
-        return min(max(w * 0.6, 210), 300)
+        // Sized so the benefits list is visible without scrolling on a normal
+        // iPhone, while the hero still reads as a premium illustration.
+        return min(max(w * 0.44, 150), 210)
     }
 
     private var balloonHero: some View {

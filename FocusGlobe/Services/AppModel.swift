@@ -49,6 +49,8 @@ final class AppModel: ObservableObject {
     /// One-shot premium UI earcons — separate from the ambient journey `sound`.
     let uiSound = UISoundService()
     let ads = AdService()
+    /// Tasteful local re-engagement / streak notifications.
+    let notifications = NotificationService()
     let purchases: PurchaseService
     let location = LocationService()
     /// RevenueCat-backed subscription state (inert until the SDK is linked).
@@ -119,6 +121,10 @@ final class AppModel: ObservableObject {
 
         // Publish the initial widget snapshot from the just-loaded state.
         syncWidgets()
+
+        // Schedule re-engagement reminders from the just-loaded state (no prompt
+        // at launch — permission is requested later, after the first landing).
+        refreshNotifications()
     }
 
     /// Decodes the journey catalogs once, off-main, at launch. Their `static let`
@@ -509,6 +515,11 @@ final class AppModel: ObservableObject {
             "route": route.id, "minutes": focusedSeconds / 60, "miles": baseMiles
         ])
 
+        // Re-engagement: reschedule reminders, and (tastefully, after a landing)
+        // request notification permission the first time.
+        refreshNotifications()
+        notifications.requestAuthorizationIfNeeded(state: notificationState())
+
         return LandingSummary(
             id: record.id,
             route: route,
@@ -661,6 +672,31 @@ final class AppModel: ObservableObject {
             analytics.log(.appearanceChanged, ["mode": settings.appearance.rawValue])
         }
         syncWidgets()
+    }
+
+    // MARK: - Notifications
+
+    /// Build the lightweight state the notification scheduler needs.
+    private func notificationState() -> NotificationState {
+        let cal = Calendar.current
+        let landedToday = history.contains { $0.completed && cal.isDateInToday($0.date) }
+        let remaining = dailyMissions.filter { !$0.isComplete }.count
+        return NotificationState(streak: progress.currentStreak,
+                                 landedToday: landedToday,
+                                 goalsRemaining: remaining,
+                                 allGoalsDoneToday: remaining == 0)
+    }
+
+    /// Reschedule reminders from the current progress (no-op unless authorised).
+    func refreshNotifications() {
+        notifications.refresh(state: notificationState())
+    }
+
+    /// Settings toggle entry point: enable/disable and (when enabling) prompt.
+    func setNotificationsEnabled(_ on: Bool) {
+        notifications.setEnabled(on)
+        if on { notifications.requestAuthorizationIfNeeded(state: notificationState()) }
+        refreshNotifications()
     }
 
     private func persistAll() {

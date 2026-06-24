@@ -18,6 +18,17 @@ struct JourneyAudioOption: Identifiable, Hashable {
     /// SF Symbol for the selection row.
     let systemImage: String
 
+    /// Preferred local loop file base name — drop `<name>.mp3` (or .m4a/.wav/.caf)
+    /// into the app bundle. Underscored variant of the id, e.g. `wind_loop`,
+    /// `focus_music_loop`, `rain_loop`, `jazz_loop`.
+    var loopFileName: String { "\(id.replacingOccurrences(of: "-", with: "_"))_loop" }
+
+    /// Accepted bundled file base names, in priority order: the `*_loop`
+    /// convention first, then the legacy `JourneyAudio…` name. The audio engine
+    /// plays the first one that exists, so a selected premium option plays its
+    /// own file (never silently falling back to Wind) when the file is present.
+    var assetCandidates: [String] { [loopFileName, assetName] }
+
     // MARK: Catalog
 
     /// All options in display order. `Wind` first (free), then the premium set.

@@ -61,7 +61,7 @@ final class SoundService {
         currentOptionID = option.id
         configureSession()
 
-        if let url = bundledURL(for: option.assetName),
+        if let url = bundledURL(forCandidates: option.assetCandidates),
            let p = try? AVAudioPlayer(contentsOf: url) {
             p.numberOfLoops = -1            // loop continuously
             p.volume = 0
@@ -165,6 +165,14 @@ final class SoundService {
         ["mp3", "m4a", "wav", "caf"].lazy
             .compactMap { Bundle.main.url(forResource: name, withExtension: $0) }
             .first
+    }
+
+    /// First bundled file found among `names`, searched in priority order.
+    private func bundledURL(forCandidates names: [String]) -> URL? {
+        for name in names {
+            if let url = bundledURL(for: name) { return url }
+        }
+        return nil
     }
 
     // MARK: - Interruptions & route changes

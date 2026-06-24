@@ -13,6 +13,7 @@ created safely from source alone. Everything below is the one-time wiring.
 | `FocusGlobe/Shared/WidgetSharedData.swift` | **App + Widget** | App Group id, `WidgetSnapshot`, `WidgetStore` (dependency-free) |
 | `FocusGlobeWidgets/FocusGlobeWidgetBundle.swift` | Widget | `@main` widget bundle |
 | `FocusGlobeWidgets/WidgetSupport.swift` | Widget | Theme, timeline provider, reusable views |
+| `FocusGlobeWidgets/StreakWidget.swift` | Widget | Focus streak (S/M + Lock Screen accessories) |
 | `FocusGlobeWidgets/StartJourneyWidget.swift` | Widget | Start Journey (S/M) |
 | `FocusGlobeWidgets/CurrentJourneyWidget.swift` | Widget | Current / Resume journey (M/L) |
 | `FocusGlobeWidgets/AroundEarthWidget.swift` | Widget | Around-Earth progress (S/M) |

@@ -27,15 +27,25 @@ before you add anything.
 
 ## Exact audio asset names
 
-| Sound | File name (no extension) | Type |
-|-------|--------------------------|------|
-| Wind | `JourneyAudioWind` | Free / default |
-| Focus Music | `JourneyAudioFocusMusic` | Premium |
-| Alpha Waves | `JourneyAudioAlphaWaves` | Premium |
-| Rain | `JourneyAudioRain` | Premium |
-| Ocean | `JourneyAudioOcean` | Premium |
-| Relaxing | `JourneyAudioRelaxing` | Premium |
-| Jazz | `JourneyAudioJazz` | Premium |
+Each option plays the **first** matching file found, in this priority order:
+the preferred `*_loop` name, then the legacy `JourneyAudio…` name. So you can
+drop in `wind_loop.mp3` (recommended) **or** `JourneyAudioWind.mp3`.
+
+| Sound | Preferred file name | Also accepted | Type |
+|-------|---------------------|---------------|------|
+| Wind | `wind_loop` | `JourneyAudioWind` | Free / default |
+| Focus Music | `focus_music_loop` | `JourneyAudioFocusMusic` | Premium |
+| Alpha Waves | `alpha_waves_loop` | `JourneyAudioAlphaWaves` | Premium |
+| Rain | `rain_loop` | `JourneyAudioRain` | Premium |
+| Ocean | `ocean_loop` | `JourneyAudioOcean` | Premium |
+| Relaxing | `relaxing_loop` | `JourneyAudioRelaxing` | Premium |
+| Jazz | `jazz_loop` | `JourneyAudioJazz` | Premium |
+
+Example: add `wind_loop.mp3`, `focus_music_loop.mp3`, `rain_loop.mp3`,
+`jazz_loop.mp3`, etc. A selected premium option plays **its own** file when
+present (it no longer falls back to Wind); only a missing file uses the distinct
+procedural fallback. Files loop continuously (`numberOfLoops = -1`) and switching
+the selection mid-journey swaps the loop live.
 
 ## Supported file extensions
 

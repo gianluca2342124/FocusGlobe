@@ -8,8 +8,10 @@ import SwiftUI
 enum AppColors {
 
     // MARK: Backgrounds
-    static let backgroundTop    = Color.dynamic(light: 0xF7F9FD, dark: 0x080B16)
-    static let backgroundBottom = Color.dynamic(light: 0xE9F0FB, dark: 0x0D1326)
+    // Dark mode is a neutral graphite/near-black (no blue tint), matching the
+    // elegant Streak-screen tone so every non-map screen feels cohesive.
+    static let backgroundTop    = Color.dynamic(light: 0xF7F9FD, dark: 0x0B0C10)
+    static let backgroundBottom = Color.dynamic(light: 0xE9F0FB, dark: 0x15161C)
 
     // MARK: Surfaces / glass
     /// A subtle tint layered over system material to give glass depth.

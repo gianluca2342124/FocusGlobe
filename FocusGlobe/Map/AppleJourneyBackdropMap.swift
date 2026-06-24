@@ -31,7 +31,7 @@ struct AppleBackdropMapView: UIViewRepresentable {
     /// regional map and not cut off at the edges). This is the best native MapKit
     /// approximation of an "Apple Earth" view; exact globe rendering at this
     /// altitude is provided by the OS and may vary by device. Tunable.
-    static let planetaryDistance: CLLocationDistance = 70_000_000
+    static let planetaryDistance: CLLocationDistance = 110_000_000
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -52,7 +52,7 @@ struct AppleBackdropMapView: UIViewRepresentable {
             // Lift MapKit's default camera zoom-out clamp so the far planetary
             // distance actually applies — otherwise the camera is capped and the
             // globe stays zoomed in / cut off no matter how large the distance.
-            if let range = MKMapView.CameraZoomRange(maxCenterCoordinateDistance: 250_000_000) {
+            if let range = MKMapView.CameraZoomRange(maxCenterCoordinateDistance: 400_000_000) {
                 map.cameraZoomRange = range
             }
             map.camera = MKMapCamera(lookingAtCenter: origin.coordinate.cl,
@@ -185,6 +185,10 @@ struct AppleBackdropMapView: UIViewRepresentable {
             } else if view.planetary {
                 // Far, top-down camera → MapKit renders the curved 3D globe in the
                 // satellite/imagery style: the best native "planetary Earth" view.
+                // Re-assert the lifted zoom-out clamp so the far distance applies.
+                if let range = MKMapView.CameraZoomRange(maxCenterCoordinateDistance: 400_000_000) {
+                    map.cameraZoomRange = range
+                }
                 map.setCamera(MKMapCamera(lookingAtCenter: view.origin.coordinate.cl,
                                           fromDistance: AppleBackdropMapView.planetaryDistance,
                                           pitch: 0, heading: 0), animated: false)

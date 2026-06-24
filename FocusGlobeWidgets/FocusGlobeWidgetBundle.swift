@@ -10,6 +10,7 @@ import WidgetKit
 @main
 struct FocusGlobeWidgetBundle: WidgetBundle {
     var body: some Widget {
+        StreakWidget()
         StartJourneyWidget()
         CurrentJourneyWidget()
         AroundEarthWidget()

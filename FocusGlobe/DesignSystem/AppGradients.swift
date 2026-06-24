@@ -32,24 +32,28 @@ enum AppGradients {
     }
 }
 
-/// A reusable full-screen calm background with two soft, blurred orbs of light.
+/// A reusable full-screen calm background: an elegant neutral graphite/near-black
+/// gradient with subtle, blurred depth (no blue tint) — the shared tone across
+/// every non-map screen, matching the Streak details look.
 struct AppBackground: View {
     var body: some View {
         ZStack {
             AppGradients.appBackground
                 .ignoresSafeArea()
 
+            // A soft neutral top glow for depth (replaces the old blue orb).
             Circle()
-                .fill(AppColors.brand.opacity(0.18))
-                .frame(width: 320, height: 320)
-                .blur(radius: 90)
-                .offset(x: -120, y: -200)
+                .fill(Color.white.opacity(0.05))
+                .frame(width: 340, height: 340)
+                .blur(radius: 110)
+                .offset(x: -120, y: -220)
 
+            // A faint warm accent low-down keeps it premium, never flat.
             Circle()
-                .fill(AppColors.gold.opacity(0.10))
-                .frame(width: 280, height: 280)
-                .blur(radius: 100)
-                .offset(x: 140, y: 260)
+                .fill(AppColors.gold.opacity(0.08))
+                .frame(width: 300, height: 300)
+                .blur(radius: 120)
+                .offset(x: 150, y: 280)
         }
         .ignoresSafeArea()
     }
