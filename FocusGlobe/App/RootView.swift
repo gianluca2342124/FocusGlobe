@@ -32,9 +32,13 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.4), value: appModel.needsOnboarding)
         .fullScreenCover(item: $router.activeJourney) { journey in
             FocusSessionContainerView(journey: journey)
+                .environmentObject(appModel)
+                .environmentObject(router)
         }
         .sheet(isPresented: $router.showPaywall) {
             PaywallView()
+                .environmentObject(appModel)
+                .environmentObject(router)
         }
         .preferredColorScheme(appModel.settings.appearance.colorScheme)
     }

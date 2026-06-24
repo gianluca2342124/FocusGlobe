@@ -20,11 +20,12 @@ struct StreakDetailsView: View {
                     goalsSection
                 }
                 .padding(AppSpacing.screen)
-                .frame(maxWidth: 540)
+                .frame(maxWidth: Layout.pad(540, 600))
                 .frame(maxWidth: .infinity)
             }
         }
-        .presentationDetents([.medium, .large])
+        // A full-height, readable sheet on iPad (not a short, compressed card).
+        .presentationDetents(Layout.isPadIdiom ? [.large] : [.medium, .large])
         .presentationDragIndicator(.visible)
         .preferredColorScheme(.dark)
     }
@@ -37,15 +38,15 @@ struct StreakDetailsView: View {
                 Circle()
                     .fill(RadialGradient(colors: [Color(hex: 0xFFB13C).opacity(0.5), .clear],
                                          center: .center, startRadius: 2, endRadius: 70))
-                    .frame(width: 130, height: 130)
+                    .frame(width: Layout.pad(130, 152), height: Layout.pad(130, 152))
                 Image(systemName: "flame.fill")
-                    .font(.system(size: 64, weight: .bold))
+                    .font(.system(size: Layout.pad(64, 76), weight: .bold))
                     .foregroundStyle(LinearGradient(colors: [Color(hex: 0xFFC24B), Color(hex: 0xF2643C)],
                                                     startPoint: .top, endPoint: .bottom))
                     .shadow(color: Color(hex: 0xF2643C).opacity(0.5), radius: 14, y: 4)
             }
             Text("\(streak)")
-                .font(.system(size: 54, weight: .heavy, design: .rounded))
+                .font(.system(size: Layout.pad(54, 66), weight: .heavy, design: .rounded))
                 .foregroundStyle(.white)
             Text("day streak")
                 .font(AppTypography.headline).foregroundStyle(.white.opacity(0.7))

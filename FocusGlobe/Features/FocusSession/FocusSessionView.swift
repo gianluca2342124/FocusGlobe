@@ -208,7 +208,7 @@ struct FocusSessionView: View {
                 .font(AppTypography.caption)
                 .foregroundStyle(.white.opacity(0.7))
             Text(value)
-                .font(.system(size: 36, weight: .bold, design: .rounded))
+                .font(.system(size: Layout.pad(36, 44), weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(.white)
                 .minimumScaleFactor(0.7)
@@ -220,7 +220,7 @@ struct FocusSessionView: View {
 
     private var centerCluster: some View {
         // No seconds countdown — calm and timeless. Just the pause control.
-        WhitePauseButton(isPaused: vm.isPaused, size: 60) { vm.togglePause() }
+        WhitePauseButton(isPaused: vm.isPaused, size: Layout.pad(60, 72)) { vm.togglePause() }
     }
 }
 

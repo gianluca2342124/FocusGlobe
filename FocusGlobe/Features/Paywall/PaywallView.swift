@@ -51,7 +51,7 @@ struct PaywallView: View {
                     VStack(spacing: AppSpacing.sm) {
                         balloonHero
                         Text("Unlock All Features")
-                            .font(.system(size: 26, weight: .bold, design: .rounded))
+                            .font(.system(size: Layout.pad(26, 34), weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
                             .multilineTextAlignment(.center)
                         benefitsCard
@@ -142,12 +142,12 @@ struct PaywallView: View {
             ForEach(benefits, id: \.1) { benefit in
                 HStack(spacing: AppSpacing.sm) {
                     Image(systemName: benefit.0)
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.system(size: Layout.pad(13, 16), weight: .bold))
                         .foregroundStyle(AppColors.gold)
-                        .frame(width: 24, height: 24)
+                        .frame(width: Layout.pad(24, 30), height: Layout.pad(24, 30))
                         .background(Circle().fill(AppColors.gold.opacity(0.16)))
                     Text(benefit.1)
-                        .font(AppTypography.callout)
+                        .font(.system(size: Layout.pad(15, 18), weight: .medium, design: .rounded))
                         .foregroundStyle(.white)
                     Spacer()
                     Image(systemName: "checkmark")

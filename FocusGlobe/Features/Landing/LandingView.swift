@@ -44,7 +44,7 @@ struct LandingView: View {
                 .padding(AppSpacing.screen)
                 .padding(.top, AppSpacing.xl)
                 .padding(.bottom, AppSpacing.xxl)
-                .readableWidth(560)
+                .contentMaxWidth(Layout.readable)   // wider centred column on iPad/Mac
             }
 
             // A premium, one-shot confetti burst when the landing appears.

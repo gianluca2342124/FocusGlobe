@@ -40,6 +40,7 @@ struct JourneyBannerAd: View {
     #if canImport(GoogleMobileAds)
     @State private var loaded = false
     @State private var failed = false
+    @State private var timedOut = false
     @State private var measuredWidth: CGFloat = 0
 
     var body: some View {
@@ -62,10 +63,18 @@ struct JourneyBannerAd: View {
 
     private var slot: some View {
         let w = min(measuredWidth, Layout.bannerMaxWidth)   // cap so it stays tasteful on iPad/Mac
+        let hasWidth = w >= 200
         return Group {
-            if w >= 200 {
+            if debugPlaceholderActive {
+                // DEBUG only: the real (test) banner failed or never called back —
+                // show a tasteful placeholder so the slot/layout is still proven.
+                debugPlaceholder(width: hasWidth ? w : Layout.bannerMaxWidth)
+            } else if hasWidth {
+                // Stays mounted across the not-loaded → loaded transition (same
+                // identity, so the ad is requested only once); height grows on load.
                 BannerRepresentable(width: w, loaded: $loaded, failed: $failed)
                     .frame(width: w, height: loaded ? Self.bannerHeight(for: w) : unloadedHeight)
+                    .overlay(loadingOverlay)
             } else {
                 // First layout pass: measure the container width before sizing the ad.
                 Color.clear.frame(height: 0)
@@ -73,14 +82,32 @@ struct JourneyBannerAd: View {
         }
         .frame(maxWidth: .infinity)              // centre the (capped-width) banner
         .background(widthReader)                 // measure the available container width
-        .opacity(loaded ? 1 : unloadedOpacity)
-        .overlay(debugOverlay)
-        .padding(.top, loaded ? AppSpacing.sm : 0)
+        .opacity(slotVisible ? 1 : 0)
+        .padding(.top, slotVisible ? AppSpacing.sm : 0)
         .animation(.easeInOut(duration: 0.25), value: loaded)
+        .animation(.easeInOut(duration: 0.25), value: timedOut)
         .accessibilityHidden(true)
         .onChange(of: loaded) { _, isLoaded in
             if isLoaded { JourneyBannerLog.event("journey_banner_visible") }
         }
+        .task {
+            // Fail-safe: if neither a load nor a fail callback arrives (e.g. the SDK
+            // never calls back), surface the DEBUG placeholder after a short wait so
+            // the slot is still visible/debuggable. No effect in RELEASE.
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            if !loaded && !failed { timedOut = true }
+        }
+    }
+
+    /// Whether the slot currently shows anything (a loaded ad, or — DEBUG only —
+    /// the placeholder). In RELEASE an unloaded/failed banner stays invisible.
+    private var slotVisible: Bool {
+        if loaded { return true }
+        #if DEBUG
+        return true   // DEBUG: the loading strip / placeholder is intentionally visible
+        #else
+        return false
+        #endif
     }
 
     /// Measures the available container width (no layout impact) so the adaptive
@@ -102,7 +129,7 @@ struct JourneyBannerAd: View {
     private func resetIfHidden() {
         // If we left the showable state, clear load flags so a later return
         // re-requests cleanly.
-        if isPro || !ads.canRequestAds { loaded = false; failed = false }
+        if isPro || !ads.canRequestAds { loaded = false; failed = false; timedOut = false }
     }
 
     private func logState() {
@@ -125,28 +152,50 @@ struct JourneyBannerAd: View {
         return h > 0 ? h : 50
     }
 
-    // MARK: DEBUG-only loading affordance (never in RELEASE)
+    // MARK: DEBUG-only loading affordance + placeholder (never in RELEASE)
 
-    /// While the slot is active but an ad hasn't loaded yet: in DEBUG reserve a
-    /// tiny visible strip so testers can confirm gating passed; in RELEASE keep
-    /// it fully collapsed (no blank box). Collapses on failure either way.
+    /// While the (test) ad is still loading: in DEBUG reserve a tiny strip so the
+    /// active slot is visible; in RELEASE keep it collapsed (no blank box).
     private var unloadedHeight: CGFloat {
         #if DEBUG
-        return failed ? 0 : 24
+        return 24
         #else
         return 0
         #endif
     }
-    private var unloadedOpacity: Double {
+
+    /// DEBUG: show the placeholder once the real test ad has failed or timed out
+    /// (and hasn't loaded). Always false in RELEASE — failures collapse cleanly.
+    private var debugPlaceholderActive: Bool {
         #if DEBUG
-        return failed ? 0 : 1
+        return (failed || timedOut) && !loaded
         #else
-        return 0
+        return false
         #endif
     }
-    @ViewBuilder private var debugOverlay: some View {
+
+    /// DEBUG-only: a tasteful placeholder occupying the exact banner slot, proving
+    /// the layout works even when the simulator/network can't fill a real ad.
+    @ViewBuilder private func debugPlaceholder(width: CGFloat) -> some View {
         #if DEBUG
-        if !loaded && !failed {
+        let w = min(max(width, 200), Layout.bannerMaxWidth)
+        Text("Test banner placeholder")
+            .font(.system(size: 12, weight: .semibold, design: .rounded))
+            .foregroundStyle(.white.opacity(0.7))
+            .frame(width: w, height: Self.bannerHeight(for: w))
+            .background(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.white.opacity(0.08)))
+            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .strokeBorder(.white.opacity(0.18), lineWidth: 1))
+        #else
+        EmptyView()
+        #endif
+    }
+
+    /// DEBUG-only: a faint "Ad loading…" label while the test ad is in flight.
+    @ViewBuilder private var loadingOverlay: some View {
+        #if DEBUG
+        if !loaded && !failed && !timedOut {
             Text("Ad loading…")
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(.white.opacity(0.5))

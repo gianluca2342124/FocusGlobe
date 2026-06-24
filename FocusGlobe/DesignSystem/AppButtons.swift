@@ -28,15 +28,16 @@ struct AppPrimaryButton: View {
                 } else {
                     if let systemImage {
                         Image(systemName: systemImage)
-                            .font(.system(size: 17, weight: .semibold))
+                            .font(.system(size: Layout.pad(17, 20), weight: .semibold))
                     }
+                    // Scales up on iPad/Mac; identical to AppTypography.headline on iPhone.
                     Text(title)
-                        .font(AppTypography.headline)
+                        .font(.system(size: Layout.pad(18, 21), weight: .semibold, design: .rounded))
                 }
             }
             .foregroundStyle(AppColors.ctaText)
             .frame(maxWidth: .infinity)
-            .frame(height: 56)
+            .frame(height: Layout.pad(56, 64))
             .background {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(AppColors.ctaFill)
@@ -60,14 +61,14 @@ struct AppSecondaryButton: View {
             HStack(spacing: AppSpacing.xs) {
                 if let systemImage {
                     Image(systemName: systemImage)
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: Layout.pad(16, 18), weight: .semibold))
                 }
                 Text(title)
-                    .font(AppTypography.callout)
+                    .font(.system(size: Layout.pad(15, 17), weight: .medium, design: .rounded))
             }
             .foregroundStyle(AppColors.textPrimary)
             .frame(maxWidth: .infinity)
-            .frame(height: 52)
+            .frame(height: Layout.pad(52, 60))
             .glassBackground(cornerRadius: 18, tintOpacity: 0.25, shadowRadius: 10, shadowY: 5)
         }
         .buttonStyle(SoftPressStyle())

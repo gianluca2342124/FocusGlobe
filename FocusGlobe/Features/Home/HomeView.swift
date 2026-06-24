@@ -49,8 +49,8 @@ struct HomeView: View {
         .onChange(of: appModel.currentOrigin) { _, newOrigin in
             if newOrigin != nil { maybeShowPremiumIntro() }
         }
-        .sheet(isPresented: $showCityPicker) { LocationPickerView() }
-        .sheet(isPresented: $showStreak) { StreakDetailsView() }
+        .sheet(isPresented: $showCityPicker) { LocationPickerView().environmentObject(appModel) }
+        .sheet(isPresented: $showStreak) { StreakDetailsView().environmentObject(appModel) }
         .sheet(isPresented: $showResume) {
             ResumeJourneySheet(
                 snapshot: appModel.resumableJourney,
@@ -198,16 +198,16 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(viewModel.greeting)
-                    .font(AppTypography.subhead)
+                    .font(.system(size: Layout.pad(14, 18), weight: .medium, design: .rounded))
                     .foregroundStyle(.white.opacity(0.55))
                 Text(bigTitle)
-                    .font(.system(size: 46, weight: .bold, design: .rounded))
+                    .font(.system(size: Layout.pad(46, 64), weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .lineLimit(1)
                     .minimumScaleFactor(0.55)
                 if !subtitle.isEmpty {
                     Text(subtitle)
-                        .font(AppTypography.subhead)
+                        .font(.system(size: Layout.pad(14, 18), weight: .medium, design: .rounded))
                         .foregroundStyle(.white.opacity(0.7))
                 }
             }

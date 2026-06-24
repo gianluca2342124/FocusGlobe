@@ -39,7 +39,7 @@ struct SettingsView: View {
             // prompt) — never after a journey, never at first launch.
             appModel.requestNotificationPermissionForEngagement()
         }
-        .sheet(isPresented: $showCityPicker) { LocationPickerView() }
+        .sheet(isPresented: $showCityPicker) { LocationPickerView().environmentObject(appModel) }
         #if canImport(RevenueCatUI)
         .sheet(isPresented: $showCustomerCenter) { CustomerCenterView() }
         #endif

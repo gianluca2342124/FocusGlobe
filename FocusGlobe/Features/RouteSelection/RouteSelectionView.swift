@@ -72,7 +72,7 @@ struct RouteSelectionView: View {
             .padding(.bottom, AppSpacing.lg)
         }
         .focusScreenChrome()
-        .sheet(isPresented: $showCityPicker) { LocationPickerView() }
+        .sheet(isPresented: $showCityPicker) { LocationPickerView().environmentObject(appModel) }
         .onAppear { viewModel.prepare(from: origin) }
         .onChange(of: origin) { _, newOrigin in viewModel.prepare(from: newOrigin) }
         .onChange(of: viewModel.selectedCategory) { _, _ in
@@ -304,7 +304,7 @@ private struct DestinationCard: View {
                 }
             }
             .padding(AppSpacing.sm + 2)
-            .frame(width: 144, alignment: .leading)
+            .frame(width: Layout.pad(144, 184), alignment: .leading)   // larger, easier to tap on iPad
             .background {
                 if isSelected {
                     RoundedRectangle(cornerRadius: 18, style: .continuous).fill(.white)

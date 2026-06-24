@@ -42,11 +42,11 @@ struct PreBoardingFocusView: View {
 
     var body: some View {
         GeometryReader { geo in
-            // Cap interactive content to a phone-like width so on iPad / large
-            // screens the balloon, basket and token grid stay centred and fully
-            // on-screen (tokens never run off the edges); phones are unchanged.
-            let contentW = min(geo.size.width, 460)
-            let w = min(contentW * 0.62, geo.size.height * 0.30, 270)
+            // Cap interactive content to a comfortable width and centre it, so the
+            // balloon, basket and token grid stay fully on-screen. Wider on iPad/Mac
+            // (a larger balloon + roomier token grid); unchanged on iPhone.
+            let contentW = min(geo.size.width, Layout.pad(460, 680))
+            let w = min(contentW * 0.62, geo.size.height * 0.30, Layout.pad(270, 380))
             ZStack {
                 JourneyBackdropMap(origin: origin, destination: route, mode: .route,
                                    progress: 0.4, showsBalloon: false)

@@ -1,53 +1,68 @@
 import SwiftUI
+import UIKit
 
-/// Centralised responsive layout tokens + helpers, so every screen adapts cleanly
-/// from a compact iPhone up through iPad (portrait & landscape), resizable Stage
-/// Manager windows and Apple Silicon Mac — without hard-coded, phone-only sizing.
+/// Centralised responsive layout tokens + helpers so FocusGlobe reads as a real
+/// iPad/Mac app — not a phone UI centred on a big screen — while leaving the
+/// premium iPhone-portrait layout unchanged.
 ///
-/// Design intent: **the premium iPhone-portrait layout is unchanged.** Every max
-/// width below is larger than an iPhone-portrait content width, so on a phone the
-/// `…MaxWidth` modifiers are no-ops (content stays full-width) and the adaptive
-/// grids resolve to the same 2 columns. On wider displays the same modifiers
-/// centre content within a comfortable band and the grids gain columns — so a
-/// screen never stretches into one ugly full-width sheet or a lonely phone column.
+/// Two signals are used deliberately:
+///  • **Horizontal size class** (`RegularMaxWidth`) drives content **centering**.
+///    It correctly stays compact in narrow iPad multitasking / Slide Over windows,
+///    so those don't get an over-wide centred column.
+///  • **Idiom** (`Layout.isPadIdiom` / `Layout.pad(_:_:)`) drives **scale** of
+///    fonts, controls and panels. Unlike the size class it is reliable inside
+///    sheets/covers (where iPad reports a compact width), and reports `.pad` for
+///    Mac "Designed for iPad" — so tablet sizing applies there too.
 enum Layout {
-    // Comfortable maximum content widths (centred on large displays; no-ops on
-    // phones narrower than the value). Tuned to read as intentional panels.
-    /// General scrollable, content-heavy screens (e.g. Passport).
-    static let content: CGFloat = 700
-    /// Text-led single column (e.g. Landing).
-    static let readable: CGFloat = 560
-    /// Settings list.
-    static let settings: CGFloat = 620
-    /// Paywall purchase panel.
-    static let paywall: CGFloat = 540
-    /// Home / Route-selection bottom control clusters.
-    static let cluster: CGFloat = 560
-    /// Active-journey bottom readouts band.
-    static let journeyReadouts: CGFloat = 620
+    // Tablet (regular) maximum content widths — generous, so panels feel
+    // intentionally designed for a tablet rather than a narrow phone column.
+    static let content: CGFloat = 900      // Passport / general scroll screens
+    static let readable: CGFloat = 720      // Landing single column
+    static let settings: CGFloat = 760
+    static let paywall: CGFloat = 700
+    static let cluster: CGFloat = 720       // Home / Route bottom clusters
+    static let journeyReadouts: CGFloat = 780
     /// Tasteful cap for the in-journey banner so it never spans a huge window.
-    static let bannerMaxWidth: CGFloat = 480
+    static let bannerMaxWidth: CGFloat = 520
 
-    /// Adaptive card-grid columns: ~2 on a phone, more on iPad/Mac, reflowing in
-    /// resizable windows. `minWidth` sets the smallest acceptable tile and the
-    /// `maximum` keeps tiles from ballooning on very wide displays.
-    static func cardColumns(minWidth: CGFloat = 158,
-                            maxWidth: CGFloat = 260,
+    /// True on iPad and on Mac running the app "Designed for iPad". Reliable in
+    /// sheets/covers (unlike the size class), so it's used to scale up sizing.
+    static var isPadIdiom: Bool { UIDevice.current.userInterfaceIdiom == .pad }
+
+    /// Pick a phone vs tablet value (font size, padding, height, …).
+    static func pad<T>(_ phone: T, _ tablet: T) -> T { isPadIdiom ? tablet : phone }
+
+    /// Adaptive card-grid columns, scaled by layout: ~2 columns on a phone, more
+    /// and larger tiles on iPad/Mac (so cards feel tablet-native, not shrunken).
+    static func cardColumns(regular: Bool,
+                            minPhone: CGFloat = 158,
+                            minPad: CGFloat = 210,
                             spacing: CGFloat = AppSpacing.sm) -> [GridItem] {
-        [GridItem(.adaptive(minimum: minWidth, maximum: maxWidth), spacing: spacing)]
+        let minW = regular ? minPad : minPhone
+        let maxW = regular ? 360 : 260
+        return [GridItem(.adaptive(minimum: minW, maximum: maxW), spacing: spacing)]
+    }
+}
+
+/// Caps width to `regular` ONLY when the horizontal size class is regular (iPad /
+/// Mac / wide multitasking) and centres it. On compact (iPhone, and narrow iPad
+/// multitasking) it is a no-op — full width, exactly as before on iPhone.
+private struct RegularMaxWidth: ViewModifier {
+    @Environment(\.horizontalSizeClass) private var hSize
+    let regular: CGFloat
+    func body(content: Content) -> some View {
+        content
+            .frame(maxWidth: hSize == .regular ? regular : .infinity)
+            .frame(maxWidth: .infinity)
     }
 }
 
 extension View {
-    /// Centre content within a max width on large screens (a no-op on phones
-    /// narrower than `width`). Built on the existing `readableWidth`.
+    /// Centre content within a tablet max width on iPad/Mac (no-op on iPhone).
     func contentMaxWidth(_ width: CGFloat = Layout.content) -> some View {
-        readableWidth(width)
+        modifier(RegularMaxWidth(regular: width))
     }
-    /// Centre a Settings list within a comfortable width on iPad/Mac.
-    func settingsMaxWidth() -> some View { readableWidth(Layout.settings) }
-    /// Centre the paywall purchase panel within a premium width on iPad/Mac.
-    func paywallMaxWidth() -> some View { readableWidth(Layout.paywall) }
-    /// Centre a bottom control cluster (Home / Route selection) on wide screens.
-    func clusterMaxWidth() -> some View { readableWidth(Layout.cluster) }
+    func settingsMaxWidth() -> some View { modifier(RegularMaxWidth(regular: Layout.settings)) }
+    func paywallMaxWidth() -> some View { modifier(RegularMaxWidth(regular: Layout.paywall)) }
+    func clusterMaxWidth() -> some View { modifier(RegularMaxWidth(regular: Layout.cluster)) }
 }

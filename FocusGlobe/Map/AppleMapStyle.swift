@@ -25,7 +25,13 @@ import UIKit
 /// (no labels). See APPLE_MAPS_MIGRATION.md.
 enum AppleMapStyle {
 
-    static func apply(_ style: MapDisplayStyle, to map: MKMapView, labelsOn: Bool = true) {
+    static func apply(_ style: MapDisplayStyle, to map: MKMapView, labelsOn: Bool = true,
+                      preferFlatElevation: Bool = false) {
+        // Flat elevation skips 3D terrain/building extrusion, which is far lighter
+        // to render. Requested on iPad/Mac for the *live journey* so the map shows
+        // immediately instead of progressively streaming in 3D buildings. iPhone
+        // and the (far) Home globe keep realistic elevation (default = false).
+        let elevation: MKMapConfiguration.ElevationStyle = preferFlatElevation ? .flat : .realistic
         switch style {
         case .monochrome, .graphite, .night:
             map.overrideUserInterfaceStyle = .dark
@@ -33,7 +39,7 @@ enum AppleMapStyle {
 
         case .terra, .terrain:
             map.overrideUserInterfaceStyle = .dark
-            map.preferredConfiguration = standard(elevation: .realistic, emphasis: .default)
+            map.preferredConfiguration = standard(elevation: elevation, emphasis: .default)
 
         case .standard:
             map.overrideUserInterfaceStyle = .light   // force the bright Apple look
@@ -41,7 +47,7 @@ enum AppleMapStyle {
 
         case .satellite, .hybrid:
             map.overrideUserInterfaceStyle = .unspecified
-            map.preferredConfiguration = labelsOn ? hybrid() : imagery()
+            map.preferredConfiguration = labelsOn ? hybrid(elevation: elevation) : imagery(elevation: elevation)
         }
     }
 
@@ -55,15 +61,15 @@ enum AppleMapStyle {
     }
 
     /// Satellite imagery + geographic labels — POIs and traffic always off.
-    private static func hybrid() -> MKHybridMapConfiguration {
-        let cfg = MKHybridMapConfiguration(elevationStyle: .realistic)
+    private static func hybrid(elevation: MKMapConfiguration.ElevationStyle = .realistic) -> MKHybridMapConfiguration {
+        let cfg = MKHybridMapConfiguration(elevationStyle: elevation)
         cfg.pointOfInterestFilter = .excludingAll   // never show businesses/POIs
         cfg.showsTraffic = false
         return cfg
     }
 
     /// Pure satellite imagery — no labels of any kind (and so no POIs).
-    private static func imagery() -> MKImageryMapConfiguration {
-        MKImageryMapConfiguration(elevationStyle: .realistic)
+    private static func imagery(elevation: MKMapConfiguration.ElevationStyle = .realistic) -> MKImageryMapConfiguration {
+        MKImageryMapConfiguration(elevationStyle: elevation)
     }
 }

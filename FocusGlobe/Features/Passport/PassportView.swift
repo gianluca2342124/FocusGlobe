@@ -4,9 +4,11 @@ struct PassportView: View {
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
 
-    // Adaptive: 2 columns on an iPhone, more on iPad/Mac, reflowing in resizable
-    // windows (paired with a centred max content width below).
-    private let cardColumns = Layout.cardColumns()
+    @Environment(\.horizontalSizeClass) private var hSize
+
+    // Adaptive: 2 columns on an iPhone, more and larger tiles on iPad/Mac
+    // (paired with a centred max content width below).
+    private var cardColumns: [GridItem] { Layout.cardColumns(regular: hSize == .regular) }
 
     private var progress: UserProgress { appModel.progress }
 
@@ -374,7 +376,7 @@ private struct JourneySoundCard: View {
                     .foregroundStyle(.white.opacity(0.85))
             }
             .padding(AppSpacing.md)
-            .frame(height: 118, alignment: .topLeading)
+            .frame(height: Layout.pad(118, 142), alignment: .topLeading)   // roomier on iPad
             .frame(maxWidth: .infinity)
             .background(cardBackground)
             .overlay(

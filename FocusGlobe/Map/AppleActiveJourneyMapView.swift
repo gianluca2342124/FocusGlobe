@@ -29,7 +29,10 @@ struct AppleActiveJourneyMapView: UIViewRepresentable {
         map.showsUserLocation = false
         map.isAccessibilityElement = false
         map.accessibilityElementsHidden = true
-        AppleMapStyle.apply(data.style, to: map, labelsOn: data.labelsOn)
+        // iPad/Mac: flat elevation so the live map appears immediately instead of
+        // streaming in heavy 3D buildings. iPhone keeps the realistic 3D look.
+        AppleMapStyle.apply(data.style, to: map, labelsOn: data.labelsOn,
+                            preferFlatElevation: Layout.isPadIdiom)
 
         // Detect manual panning so the session can pause following.
         let pan = UIPanGestureRecognizer(target: context.coordinator,
@@ -89,7 +92,8 @@ struct AppleActiveJourneyMapView: UIViewRepresentable {
             guard lastStyle != style || lastLabelsOn != labelsOn else { return }
             lastStyle = style
             lastLabelsOn = labelsOn
-            AppleMapStyle.apply(style, to: map, labelsOn: labelsOn)
+            AppleMapStyle.apply(style, to: map, labelsOn: labelsOn,
+                                preferFlatElevation: Layout.isPadIdiom)
         }
 
         // MARK: Configure (once)
