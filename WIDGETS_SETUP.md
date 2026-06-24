@@ -10,8 +10,9 @@ created safely from source alone. Everything below is the one-time wiring.
 
 | File | Target | Purpose |
 |------|--------|---------|
-| `FocusGlobe/Shared/WidgetSharedData.swift` | **App + Widget** | App Group id, `WidgetSnapshot`, `WidgetStore` (dependency-free) |
-| `FocusGlobeWidgets/FocusGlobeWidgetBundle.swift` | Widget | `@main` widget bundle |
+| `FocusGlobe/Shared/WidgetSharedData.swift` | **App** | App Group id, `WidgetSnapshot`, `WidgetGoal`, `WidgetStore` (the app writes the snapshot) |
+| `FocusGlobeWidgets/WidgetData.swift` | **Widget** | Mirror of those models, compiled into the widget target (same types, same App-Group JSON) |
+| `FocusGlobeWidgets/FocusGlobeWidgetBundle.swift` | Widget | The **single** `@main` widget bundle (registers all widgets) |
 | `FocusGlobeWidgets/WidgetSupport.swift` | Widget | Theme, timeline provider, reusable views |
 | `FocusGlobeWidgets/StreakWidget.swift` | Widget | Focus streak (S/M + Lock Screen accessories) |
 | `FocusGlobeWidgets/StartJourneyWidget.swift` | Widget | Start Journey (S/M) |
@@ -24,6 +25,29 @@ created safely from source alone. Everything below is the one-time wiring.
 The app writes a `WidgetSnapshot` into the App Group whenever data changes
 (`AppModel.syncWidgets()`), and calls `WidgetCenter.reloadAllTimelines()`.
 The widgets read that snapshot — they never touch heavy app state.
+
+## Widget-extension build errors — already fixed in-repo
+
+The two earlier errors are resolved in the repository; just pull and build:
+
+1. **`'main' attribute can only apply to one type`** — the Xcode Widget Extension
+   template added its own `@main` bundle (`FocusGlobeWidgetsBundle.swift`) plus
+   sample widgets (`FocusGlobeWidgets.swift`, `…Control.swift`,
+   `…LiveActivity.swift`, `AppIntent.swift`). Those boilerplate files have been
+   **removed**, leaving exactly one `@main`: `FocusGlobeWidgetBundle.swift`
+   (it registers all seven FocusGlobe widgets). `Info.plist` and `Assets.xcassets`
+   were kept.
+
+2. **`Cannot find type 'WidgetSnapshot' / 'WidgetGoal'`** — the widget target now
+   has its own copy of the models in **`FocusGlobeWidgets/WidgetData.swift`**
+   (a faithful mirror of the app's `FocusGlobe/Shared/WidgetSharedData.swift`).
+   Because `FocusGlobeWidgets/` is the widget target's file-system-synchronised
+   group, it compiles automatically. **Do NOT** also add the app's
+   `WidgetSharedData.swift` to the widget target — that would redefine the types.
+
+3. **App Group** (the one remaining manual step) — enable
+   `group.com.focusglobe.app` on **both** targets (next section). Until then the
+   widgets show placeholder data; they never crash.
 
 ## App Group
 

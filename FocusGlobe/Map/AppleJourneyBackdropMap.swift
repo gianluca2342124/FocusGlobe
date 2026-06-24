@@ -26,12 +26,12 @@ struct AppleBackdropMapView: UIViewRepresentable {
     /// Far, top-down planetary framing (Home) so Earth curvature reads.
     var planetary: Bool = false
 
-    /// Camera altitude (metres) for the planetary Home framing — far enough that
-    /// MapKit renders the **full round Earth** as a small planet in space (not a
-    /// regional map and not cut off at the edges). This is the best native MapKit
-    /// approximation of an "Apple Earth" view; exact globe rendering at this
-    /// altitude is provided by the OS and may vary by device. Tunable.
-    static let planetaryDistance: CLLocationDistance = 110_000_000
+    /// Home-only planetary framing inset. The Home globe is rendered by fitting
+    /// the ENTIRE world (`MKMapRect.world`) into the view minus this padding, so
+    /// the full Earth sphere shows with margin (floating in space) and is never
+    /// cut off — reliable regardless of MapKit's camera-distance clamp. The larger
+    /// bottom inset lifts the globe above the Home title/CTA. Tunable.
+    static let planetaryInset = UIEdgeInsets(top: 100, left: 80, bottom: 180, right: 80)
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -49,14 +49,14 @@ struct AppleBackdropMapView: UIViewRepresentable {
         // Start near the origin so the first frame isn't the default world map;
         // precise framing is applied in updateUIView once laid out.
         if planetary {
-            // Lift MapKit's default camera zoom-out clamp so the far planetary
-            // distance actually applies — otherwise the camera is capped and the
-            // globe stays zoomed in / cut off no matter how large the distance.
+            // Home only: frame the ENTIRE world so MapKit renders the full Earth
+            // sphere (3D satellite) with margin — reliable regardless of any
+            // camera-distance clamp. Edge padding keeps the planet floating in
+            // space and never cut off; the bottom inset lifts it above the text.
             if let range = MKMapView.CameraZoomRange(maxCenterCoordinateDistance: 400_000_000) {
                 map.cameraZoomRange = range
             }
-            map.camera = MKMapCamera(lookingAtCenter: origin.coordinate.cl,
-                                     fromDistance: Self.planetaryDistance, pitch: 0, heading: 0)
+            map.setVisibleMapRect(.world, edgePadding: Self.planetaryInset, animated: false)
         } else {
             map.setRegion(MKCoordinateRegion(center: origin.coordinate.cl,
                                              span: MKCoordinateSpan(latitudeDelta: 12, longitudeDelta: 12)),
@@ -183,15 +183,13 @@ struct AppleBackdropMapView: UIViewRepresentable {
                 map.setVisibleMapRect(rect, edgePadding: UIEdgeInsets(top: 80, left: 60, bottom: 80, right: 60),
                                       animated: false)
             } else if view.planetary {
-                // Far, top-down camera → MapKit renders the curved 3D globe in the
-                // satellite/imagery style: the best native "planetary Earth" view.
-                // Re-assert the lifted zoom-out clamp so the far distance applies.
+                // Home only: frame the WHOLE world → MapKit shows the full Earth
+                // sphere (3D satellite) with margin, reliably (no camera-distance
+                // clamp guessing). This is the actual Home globe path.
                 if let range = MKMapView.CameraZoomRange(maxCenterCoordinateDistance: 400_000_000) {
                     map.cameraZoomRange = range
                 }
-                map.setCamera(MKMapCamera(lookingAtCenter: view.origin.coordinate.cl,
-                                          fromDistance: AppleBackdropMapView.planetaryDistance,
-                                          pitch: 0, heading: 0), animated: false)
+                map.setVisibleMapRect(.world, edgePadding: AppleBackdropMapView.planetaryInset, animated: false)
             } else {
                 let zoom = Double(view.showsOrigin ? view.originZoom : 4.0)
                 let w = Double(map.bounds.width)
