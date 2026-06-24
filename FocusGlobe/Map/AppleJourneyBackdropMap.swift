@@ -26,12 +26,32 @@ struct AppleBackdropMapView: UIViewRepresentable {
     /// Far, top-down planetary framing (Home) so Earth curvature reads.
     var planetary: Bool = false
 
-    /// Home-only planetary framing inset. The Home globe is rendered by fitting
-    /// the ENTIRE world (`MKMapRect.world`) into the view minus this padding, so
-    /// the full Earth sphere shows with margin (floating in space) and is never
-    /// cut off — reliable regardless of MapKit's camera-distance clamp. The larger
-    /// bottom inset lifts the globe above the Home title/CTA. Tunable.
-    static let planetaryInset = UIEdgeInsets(top: 100, left: 80, bottom: 180, right: 80)
+    /// Home-only planetary camera distance (metres from the origin coordinate).
+    /// Large enough that the satellite map renders the whole Earth as a small 3D
+    /// globe floating in space — clearly "zoomed out", never a close regional
+    /// view — while the camera stays **centred on the current origin** so the
+    /// balloon is always visible at the centre. The matching `cameraZoomRange`
+    /// lift (below) stops MapKit clamping this far distance down to a regional
+    /// view (the bug that made earlier `.world`/large-distance attempts unreliable
+    /// or off-centre). Tunable: larger = smaller globe / more space around it.
+    static let homePlanetCameraDistance: CLLocationDistance = 42_000_000
+
+    /// Apply the Home planetary camera: a far, **origin-centred**, top-down
+    /// camera so the satellite map shows the full Earth as a small 3D globe in
+    /// space, always centred on `origin` (so the balloon never drifts off
+    /// screen). Lifts `cameraZoomRange` first so MapKit honours the far distance
+    /// instead of clamping it to a close regional view. Used by both the initial
+    /// `makeUIView` and every `applyCamera` pass, so no later update overrides it.
+    static func applyPlanetaryCamera(to map: MKMapView, origin: GeoCoordinate) {
+        if let range = MKMapView.CameraZoomRange(minCenterCoordinateDistance: 12_000_000,
+                                                 maxCenterCoordinateDistance: 90_000_000) {
+            map.cameraZoomRange = range
+        }
+        map.setCamera(MKMapCamera(lookingAtCenter: origin.cl,
+                                  fromDistance: homePlanetCameraDistance,
+                                  pitch: 0, heading: 0),
+                      animated: false)
+    }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -49,14 +69,12 @@ struct AppleBackdropMapView: UIViewRepresentable {
         // Start near the origin so the first frame isn't the default world map;
         // precise framing is applied in updateUIView once laid out.
         if planetary {
-            // Home only: frame the ENTIRE world so MapKit renders the full Earth
-            // sphere (3D satellite) with margin — reliable regardless of any
-            // camera-distance clamp. Edge padding keeps the planet floating in
-            // space and never cut off; the bottom inset lifts it above the text.
-            if let range = MKMapView.CameraZoomRange(maxCenterCoordinateDistance: 400_000_000) {
-                map.cameraZoomRange = range
-            }
-            map.setVisibleMapRect(.world, edgePadding: Self.planetaryInset, animated: false)
+            // Home only: a far, origin-centred camera so the satellite map shows
+            // the whole Earth as a small 3D globe in space, centred on the user's
+            // current origin (the balloon sits at the centre and is always
+            // visible). Origin-centred — never `.world` framing, which off-centred
+            // the balloon and could drop it off screen.
+            Self.applyPlanetaryCamera(to: map, origin: origin.coordinate)
         } else {
             map.setRegion(MKCoordinateRegion(center: origin.coordinate.cl,
                                              span: MKCoordinateSpan(latitudeDelta: 12, longitudeDelta: 12)),
@@ -183,13 +201,11 @@ struct AppleBackdropMapView: UIViewRepresentable {
                 map.setVisibleMapRect(rect, edgePadding: UIEdgeInsets(top: 80, left: 60, bottom: 80, right: 60),
                                       animated: false)
             } else if view.planetary {
-                // Home only: frame the WHOLE world → MapKit shows the full Earth
-                // sphere (3D satellite) with margin, reliably (no camera-distance
-                // clamp guessing). This is the actual Home globe path.
-                if let range = MKMapView.CameraZoomRange(maxCenterCoordinateDistance: 400_000_000) {
-                    map.cameraZoomRange = range
-                }
-                map.setVisibleMapRect(.world, edgePadding: AppleBackdropMapView.planetaryInset, animated: false)
+                // Home only: a far, **origin-centred** camera → MapKit shows the
+                // full Earth as a small 3D globe in space, always centred on the
+                // current origin so the balloon stays in view. Re-applied on every
+                // update (cheap, stable) so nothing overrides the Home camera.
+                AppleBackdropMapView.applyPlanetaryCamera(to: map, origin: view.origin.coordinate)
             } else {
                 let zoom = Double(view.showsOrigin ? view.originZoom : 4.0)
                 let w = Double(map.bounds.width)

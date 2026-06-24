@@ -57,8 +57,10 @@ configured once at launch from `AppModel.init()` (non-blocking).
   - **Lifetime** ("Pay once."). Button: **"Continue"**.
   - **Monthly**. Button: **"Continue"**.
 - A gold purchase button (loading state, double-tap-proof) and a footer with
-  **Privacy · Terms · Restore**. Privacy/Terms URLs are placeholders in
-  `PaywallView` — replace `privacyURL` / `termsURL`.
+  **Privacy · Terms · Restore**. Privacy/Terms URLs are centralised placeholders
+  in `LegalLinks` (`FocusGlobe/Services/LegalLinks.swift`) — replace
+  `LegalLinks.privacy` / `LegalLinks.terms` before release. See
+  APP_STORE_READINESS.md.
 - All prices are the App Store **localized** prices from RevenueCat. The expected
   EU base prices (18,99 € / 35,99 € / 3,99 € → 1,58 €/month) only appear as
   disabled placeholders when products can't load.

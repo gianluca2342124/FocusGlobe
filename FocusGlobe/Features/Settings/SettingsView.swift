@@ -32,7 +32,12 @@ struct SettingsView: View {
             }
         }
         .focusScreenChrome()
-        .onAppear { appModel.analytics.log(.settingsOpened) }
+        .onAppear {
+            appModel.analytics.log(.settingsOpened)
+            // Calm moment to ask for notification permission (provisional, no
+            // prompt) — never after a journey, never at first launch.
+            appModel.requestNotificationPermissionForEngagement()
+        }
         .sheet(isPresented: $showCityPicker) { LocationPickerView() }
         #if canImport(RevenueCatUI)
         .sheet(isPresented: $showCustomerCenter) { CustomerCenterView() }
@@ -54,7 +59,7 @@ struct SettingsView: View {
     private func appearanceOption(_ mode: AppearanceMode) -> some View {
         let selected = appModel.settings.appearance == mode
         return Button {
-            appModel.haptics.tap()
+            appModel.tapFeedback()
             appModel.settings.appearance = mode
         } label: {
             VStack(spacing: 5) {
@@ -91,7 +96,7 @@ struct SettingsView: View {
                 }
                 if appModel.allowsManualOrigin {
                     RowDivider()
-                    Button { showCityPicker = true } label: {
+                    Button { appModel.tapFeedback(); showCityPicker = true } label: {
                         SettingsRow(systemImage: "mappin.and.ellipse", title: "Choose starting city",
                                     subtitle: "Browse and search world cities", tint: AppColors.gold,
                                     trailing: AnyView(Image(systemName: "chevron.right")
@@ -129,7 +134,7 @@ struct SettingsView: View {
                 ToggleRow(systemImage: "bell.badge.fill", title: "Reminders",
                           subtitle: "Streak, focus & goal nudges",
                           isOn: Binding(get: { appModel.notifications.isEnabled },
-                                        set: { appModel.setNotificationsEnabled($0) }))
+                                        set: { appModel.tapFeedback(); appModel.setNotificationsEnabled($0) }))
             }
         }
     }
@@ -144,7 +149,7 @@ struct SettingsView: View {
                     #if canImport(RevenueCatUI)
                     if appModel.subscriptions.isAvailable {
                         RowDivider()
-                        Button { showCustomerCenter = true } label: {
+                        Button { appModel.tapFeedback(); showCustomerCenter = true } label: {
                             SettingsRow(systemImage: "person.crop.circle", title: "Manage subscription",
                                         subtitle: "Billing, restore & support", tint: AppColors.brand,
                                         trailing: AnyView(Image(systemName: "chevron.right")
@@ -156,6 +161,7 @@ struct SettingsView: View {
                     #endif
                 } else {
                     Button {
+                        appModel.tapFeedback()
                         router.presentPaywall()
                     } label: {
                         SettingsRow(systemImage: "sparkles", title: "Remove ads & go Pro",
@@ -168,6 +174,7 @@ struct SettingsView: View {
                 }
                 RowDivider()
                 Button {
+                    appModel.tapFeedback()
                     Task {
                         let ok = await appModel.restorePurchases()
                         restoreMessage = ok ? "Purchases restored." : "Nothing to restore."
@@ -213,7 +220,7 @@ struct SettingsView: View {
     private func boolBinding(_ keyPath: WritableKeyPath<AppSettings, Bool>) -> Binding<Bool> {
         Binding(
             get: { appModel.settings[keyPath: keyPath] },
-            set: { appModel.settings[keyPath: keyPath] = $0 }
+            set: { appModel.tapFeedback(); appModel.settings[keyPath: keyPath] = $0 }
         )
     }
 }

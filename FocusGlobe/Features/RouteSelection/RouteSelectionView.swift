@@ -127,7 +127,7 @@ struct RouteSelectionView: View {
             Spacer()
             // The crown only opens the paywall — hide it once the user is Pro.
             if !appModel.isPro {
-                CrownButton(size: 44) { appModel.haptics.tap(); router.presentPaywall() }
+                CrownButton(size: 44) { appModel.tapFeedback(); router.presentPaywall() }
             } else {
                 Color.clear.frame(width: 44, height: 44)   // keep the title centered
             }
@@ -221,7 +221,7 @@ struct RouteSelectionView: View {
                 .font(AppTypography.caption).foregroundStyle(.white.opacity(0.8))
                 .multilineTextAlignment(.center)
             AppPrimaryButton(title: "Choose starting city", systemImage: "mappin.and.ellipse") {
-                appModel.haptics.tap()
+                appModel.tapFeedback()
                 showCityPicker = true
             }
             .padding(.top, AppSpacing.xs)
@@ -237,7 +237,7 @@ struct RouteSelectionView: View {
                     DestinationCard(journey: journey,
                                     isSelected: journey.id == current?.id,
                                     isLocked: locked(journey)) {
-                        appModel.haptics.tap()
+                        appModel.tapFeedback()
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { selectedID = journey.id }
                     }
                 }
@@ -256,7 +256,7 @@ struct RouteSelectionView: View {
             appModel.analytics.log(.routeSelected, ["route": journey.id, "source": "discovery"])
             router.openFocusLoadout(journey.route)
         } else {
-            appModel.haptics.tap()
+            appModel.tapFeedback()
             router.presentPaywall()
         }
     }

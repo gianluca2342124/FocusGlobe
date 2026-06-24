@@ -279,6 +279,20 @@ final class AppModel: ObservableObject {
         launchPaywallShown = true
     }
 
+    // MARK: - UI feedback
+
+    /// Shared, premium tap feedback for meaningful UI interactions — a soft
+    /// haptic plus the same subtle earcon the crown button uses (`.modal`).
+    /// Centralised so primary taps across the app (Start Journey, navigation,
+    /// journey/skin/sound selection, paywall open/close, rewards, major toggles)
+    /// feel consistent and high-end. Respects the master Sound setting (the
+    /// earcon is silent when Sound is off) and is a one-shot — never looped or
+    /// played per-frame, so it never feels spammy.
+    func tapFeedback() {
+        haptics.tap()
+        uiSound.play(.modal)
+    }
+
     // MARK: - Balloon skins
 
     /// The selected skin — resolved defensively so a locked skin is never
@@ -311,7 +325,7 @@ final class AppModel: ObservableObject {
     func selectSkin(_ skin: BalloonSkin) {
         guard isSkinUnlocked(skin) else { return }
         settings.selectedSkinID = skin.id
-        haptics.tap()
+        tapFeedback()
     }
 
     // MARK: - Journey audio
@@ -333,7 +347,7 @@ final class AppModel: ObservableObject {
         guard isAudioUnlocked(option) else { return }
         settings.selectedJourneyAudioID = option.id
         sound.switchOption(option)   // live-swap if a journey is currently playing
-        haptics.tap()
+        tapFeedback()
     }
 
     // MARK: - Premium reconciliation
@@ -515,10 +529,11 @@ final class AppModel: ObservableObject {
             "route": route.id, "minutes": focusedSeconds / 60, "miles": baseMiles
         ])
 
-        // Re-engagement: reschedule reminders, and (tastefully, after a landing)
-        // request notification permission the first time.
+        // Re-engagement: reschedule reminders from the new progress. Permission
+        // is NOT requested here — landing is not the moment to interrupt the
+        // reward. It's requested later, calmly, when the user opens Passport or
+        // Settings (see `requestNotificationPermissionForEngagement`).
         refreshNotifications()
-        notifications.requestAuthorizationIfNeeded(state: notificationState())
 
         return LandingSummary(
             id: record.id,
@@ -690,6 +705,15 @@ final class AppModel: ObservableObject {
     /// Reschedule reminders from the current progress (no-op unless authorised).
     func refreshNotifications() {
         notifications.refresh(state: notificationState())
+    }
+
+    /// Ask for notification permission at a calm, user-initiated moment — called
+    /// when the user opens the Passport or Settings. Uses provisional auth (no
+    /// prompt, quiet delivery) so it's never aggressive, only acts while the
+    /// permission is still undecided, and never prompts twice. Never called after
+    /// a journey completes.
+    func requestNotificationPermissionForEngagement() {
+        notifications.requestProvisionalAuthorizationIfNeeded(state: notificationState())
     }
 
     /// Settings toggle entry point: enable/disable and (when enabling) prompt.

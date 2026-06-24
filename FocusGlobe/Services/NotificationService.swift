@@ -14,9 +14,13 @@ struct NotificationState {
 /// the pending set and re-creates only the relevant reminders, so the user is
 /// never spammed and reminders always reflect the latest progress.
 ///
-/// Permission is requested only at a positive moment (after a landing), never
-/// aggressively at first launch. The enabled flag and "asked" state live in
-/// `UserDefaults` so nothing in the app's settings model changes.
+/// Permission is requested only at a calm, user-initiated moment — when the user
+/// opens the Passport or Settings — never after a journey completes and never
+/// aggressively at first launch. That request uses **provisional** authorization,
+/// which iOS grants *without a prompt* and delivers quietly, so the user is never
+/// interrupted; the explicit Reminders toggle in Settings still does a normal
+/// opt-in prompt. The enabled flag lives in `UserDefaults` so nothing in the
+/// app's settings model changes.
 @MainActor
 final class NotificationService {
     private let center = UNUserNotificationCenter.current()
@@ -44,13 +48,31 @@ final class NotificationService {
 
     // MARK: Permission
 
-    /// Request permission only when it hasn't been decided yet — call this at a
-    /// positive moment (e.g. just after the first landing). Reschedules on grant.
+    /// Request a normal, prompting permission — used only for an **explicit**
+    /// opt-in (the Settings → Reminders toggle). Requests once, when undecided.
     func requestAuthorizationIfNeeded(state: NotificationState) {
         guard isEnabled else { return }
         center.getNotificationSettings { [weak self] settings in
             guard let self, settings.authorizationStatus == .notDetermined else { return }
             self.center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+                guard granted else { return }
+                Task { @MainActor in self.reschedule(state: state) }
+            }
+        }
+    }
+
+    /// Request **provisional** authorization (no prompt, quiet delivery) the first
+    /// time the user reaches a calm, relevant surface (Passport / Settings). iOS
+    /// grants this silently — the user is never interrupted — and reminders begin
+    /// arriving quietly in Notification Center; the user can promote them to
+    /// prominent alerts any time in iOS Settings. Only acts while undecided, so it
+    /// never overrides an explicit choice and never prompts twice. Safe/graceful
+    /// if denied (nothing is scheduled). Reschedules on grant.
+    func requestProvisionalAuthorizationIfNeeded(state: NotificationState) {
+        guard isEnabled else { return }
+        center.getNotificationSettings { [weak self] settings in
+            guard let self, settings.authorizationStatus == .notDetermined else { return }
+            self.center.requestAuthorization(options: [.alert, .sound, .badge, .provisional]) { granted, _ in
                 guard granted else { return }
                 Task { @MainActor in self.reschedule(state: state) }
             }

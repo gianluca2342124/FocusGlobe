@@ -20,7 +20,7 @@ struct PassportView: View {
                         Spacer()
                         // The crown only opens the paywall — hide it once Pro.
                         if !appModel.isPro {
-                            CrownButton { appModel.haptics.tap(); router.presentPaywall() }
+                            CrownButton { appModel.tapFeedback(); router.presentPaywall() }
                         }
                     }
                     statsGrid
@@ -35,7 +35,12 @@ struct PassportView: View {
             }
         }
         .focusScreenChrome()
-        .onAppear { appModel.analytics.log(.passportOpened) }
+        .onAppear {
+            appModel.analytics.log(.passportOpened)
+            // Calm moment to ask for notification permission (provisional, no
+            // prompt) — never after a journey, never at first launch.
+            appModel.requestNotificationPermissionForEngagement()
+        }
     }
 
     private var statsGrid: some View {
@@ -180,7 +185,7 @@ struct PassportView: View {
         if appModel.isSkinUnlocked(skin) {
             appModel.selectSkin(skin)
         } else if skin.isPremium {
-            appModel.haptics.tap()
+            appModel.tapFeedback()
             router.presentPaywall()
         } else {
             appModel.haptics.tap()   // locked milestone — keep going to unlock
@@ -204,7 +209,7 @@ struct PassportView: View {
                         if appModel.isAudioUnlocked(option) {
                             appModel.selectJourneyAudio(option)
                         } else {
-                            appModel.haptics.tap()
+                            appModel.tapFeedback()
                             router.presentPaywall()
                         }
                     }

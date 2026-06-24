@@ -145,7 +145,7 @@ struct HomeView: View {
             HStack(spacing: AppSpacing.xs) {
                 // The crown only opens the paywall — hide it once the user is Pro.
                 if !appModel.isPro {
-                    CrownButton { appModel.haptics.tap(); appModel.uiSound.play(.modal); router.presentPaywall() }
+                    CrownButton { appModel.tapFeedback(); router.presentPaywall() }
                 }
                 streakButton
                 Spacer()
@@ -173,8 +173,7 @@ struct HomeView: View {
     // Tapping opens the Streak Details sheet (shown even at 0).
     private var streakButton: some View {
         Button {
-            appModel.haptics.tap()
-            appModel.uiSound.play(.transition)
+            appModel.tapFeedback()
             showStreak = true
         } label: {
             HStack(spacing: 6) {
@@ -215,8 +214,7 @@ struct HomeView: View {
 
             if let origin {
                 AppPrimaryButton(title: "Start Journey", systemImage: "paperplane.fill") {
-                    appModel.haptics.tap()
-                    appModel.uiSound.play(.transition)
+                    appModel.tapFeedback()
                     #if DEBUG
                     let started = Date()
                     #endif
@@ -230,7 +228,7 @@ struct HomeView: View {
                 }
             } else {
                 AppPrimaryButton(title: "Choose starting city", systemImage: "mappin.and.ellipse") {
-                    appModel.haptics.tap()
+                    appModel.tapFeedback()
                     showCityPicker = true
                 }
             }
@@ -238,8 +236,8 @@ struct HomeView: View {
             missionsCard
 
             HStack(spacing: AppSpacing.xs) {
-                compactNav(title: "Passport", systemImage: "globe.europe.africa") { router.openPassport() }
-                compactNav(title: "Settings", systemImage: "gearshape") { router.openSettings() }
+                compactNav(title: "Passport", systemImage: "globe.europe.africa") { appModel.tapFeedback(); router.openPassport() }
+                compactNav(title: "Settings", systemImage: "gearshape") { appModel.tapFeedback(); router.openSettings() }
             }
         }
     }
@@ -249,7 +247,7 @@ struct HomeView: View {
     private var missionsCard: some View {
         let missions = appModel.dailyMissions
         let done = missions.filter { $0.isComplete }.count
-        return Button { router.openPassport() } label: {
+        return Button { appModel.tapFeedback(); router.openPassport() } label: {
             HStack(spacing: AppSpacing.sm) {
                 Image(systemName: "target")
                     .font(.system(size: 16, weight: .semibold))

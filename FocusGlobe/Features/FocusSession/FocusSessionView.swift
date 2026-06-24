@@ -1,13 +1,17 @@
 import SwiftUI
 
-/// Hosts the take-off ritual, the live focus session and, on completion, the
-/// Landing screen — all inside the same full-screen cover so the journey stays
-/// seamless from take-off to landing.
+/// Hosts the live focus session and, on completion, the Landing screen — both
+/// inside the same full-screen cover so the journey stays seamless to landing.
+///
+/// There is no separate "Taking off" waiting screen: the cover opens straight
+/// into the live journey. The take-off haptic + earcon fire inside the session's
+/// `start()`, and the map plays its route-overview → zoom-in → follow intro, so
+/// the take-off feeling happens *inside* the Active Journey without delaying the
+/// user.
 struct FocusSessionContainerView: View {
     let journey: Journey
     @EnvironmentObject private var appModel: AppModel
     @StateObject private var vm: FocusSessionViewModel
-    @State private var showTakeoff = true
 
     init(journey: Journey) {
         self.journey = journey
@@ -19,18 +23,15 @@ struct FocusSessionContainerView: View {
             if vm.didLand, let summary = vm.landingSummary {
                 LandingView(summary: summary)
                     .transition(.opacity)
-            } else if showTakeoff {
-                TakeoffView(route: journey.route) {
-                    withAnimation(.easeInOut(duration: 0.55)) { showTakeoff = false }
-                    vm.startIfNeeded()
-                }
-                .transition(.opacity)
             } else {
                 FocusSessionView(vm: vm)
                     .transition(.opacity)
             }
         }
-        .onAppear { vm.attach(appModel: appModel) }
+        .onAppear {
+            vm.attach(appModel: appModel)
+            vm.startIfNeeded()   // straight into the live journey — no takeoff screen
+        }
         .onDisappear { vm.tearDown() }
     }
 }
@@ -170,7 +171,7 @@ struct FocusSessionView: View {
     // MARK: - Bottom readouts (no card — floating typography on the map)
 
     private var bottomReadouts: some View {
-        VStack {
+        VStack(spacing: 0) {
             Spacer()
             HStack(alignment: .bottom) {
                 readout(label: "Time Remaining", value: vm.remainingMinutesText, alignment: .leading)
@@ -180,8 +181,17 @@ struct FocusSessionView: View {
                 readout(label: "Distance Remaining", value: vm.remainingDistanceText, alignment: .trailing)
             }
             .padding(.horizontal, AppSpacing.lg)
-            .padding(.bottom, AppSpacing.md)
+
+            // Free users only: a small adaptive banner *below* the time/distance
+            // readouts. It reserves space only once an ad actually loads, so it
+            // never covers the balloon, the corner controls or the pause button —
+            // and it never appears for Pro users (see `vm.showsJourneyBanner`).
+            if vm.showsJourneyBanner {
+                JourneyBannerAd()
+                    .padding(.top, AppSpacing.sm)
+            }
         }
+        .padding(.bottom, AppSpacing.md)
         .transition(.opacity)
     }
 

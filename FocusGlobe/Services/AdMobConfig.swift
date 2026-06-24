@@ -20,6 +20,9 @@ enum AdMobConfig {
     static let ADMOB_REWARDED_DOUBLE_MILES_ID        = "ca-app-pub-2780304092271589/2338881545"
     static let ADMOB_REWARDED_DAILY_BOOST_ID         = "ca-app-pub-2780304092271589/1025799876"
     static let ADMOB_INTERSTITIAL_JOURNEY_COMPLETE_ID = "ca-app-pub-2780304092271589/3081117578"
+    /// AdMob dashboard unit "iOS Banner - Journey" — the small adaptive banner
+    /// shown during an active journey for free users only.
+    static let ADMOB_BANNER_JOURNEY_ID               = "ca-app-pub-2780304092271589/6065307904"
 
     // MARK: Active ad unit IDs (test in DEBUG, production in RELEASE)
 
@@ -29,10 +32,12 @@ enum AdMobConfig {
     static let rewardedDoubleMilesID         = "ca-app-pub-3940256099942544/1712485313"  // test rewarded
     static let rewardedDailyBoostID          = "ca-app-pub-3940256099942544/1712485313"  // test rewarded
     static let interstitialJourneyCompleteID = "ca-app-pub-3940256099942544/4411468910"  // test interstitial
+    static let bannerJourneyID               = "ca-app-pub-3940256099942544/2934735716"  // test banner
     #else
     static let rewardedDoubleMilesID         = ADMOB_REWARDED_DOUBLE_MILES_ID
     static let rewardedDailyBoostID          = ADMOB_REWARDED_DAILY_BOOST_ID
     static let interstitialJourneyCompleteID = ADMOB_INTERSTITIAL_JOURNEY_COMPLETE_ID
+    static let bannerJourneyID               = ADMOB_BANNER_JOURNEY_ID
     #endif
 
     /// Reward amounts granted on a successful rewarded callback.

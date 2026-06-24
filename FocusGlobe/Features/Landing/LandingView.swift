@@ -155,6 +155,7 @@ struct LandingView: View {
                     sharePostcard()
                 }
                 AppSecondaryButton(title: "Passport", systemImage: "globe.europe.africa") {
+                    appModel.tapFeedback()
                     router.finishToPassport()
                 }
             }
@@ -165,6 +166,7 @@ struct LandingView: View {
     // badge keeps it transparent, and the final doubled total is shown up front.
     private var doubleReward: some View {
         Button {
+            appModel.tapFeedback()
             Task { await watchAdToDouble() }
         } label: {
             HStack(spacing: AppSpacing.sm) {

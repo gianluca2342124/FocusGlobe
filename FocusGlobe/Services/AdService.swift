@@ -17,8 +17,10 @@ import UserMessagingPlatform
 /// app builds and runs with zero ad dependencies and Landing never blocks.
 ///
 /// Guarantees (see ADMOB_SETUP.md):
-///  • Never shows ads to Pro users.
-///  • No banners / app-open / native ads; no ads during journeys/ritual/boarding.
+///  • Never shows ads to Pro users (rewarded, interstitial, and the banner).
+///  • The only banner is the small in-journey banner (`JourneyBannerAd`, free
+///    users only, below the readouts); no app-open / native ads; no ads during
+///    the focus ritual or boarding, and none on Home/Choose/Passport/Settings/Landing.
 ///  • No ad request before UMP consent is resolved or safely allowed.
 ///  • Fails silently and gracefully everywhere.
 ///
@@ -142,6 +144,12 @@ final class AdService: NSObject {
         return false
         #endif
     }
+
+    /// Whether ad requests are currently permitted — i.e. UMP consent has been
+    /// resolved and allows ads (or there's no UMP, in which case it's allowed
+    /// once `start()` finishes). The in-journey banner reads this so it never
+    /// loads before consent. Pro gating is handled separately by the caller.
+    var adsAllowed: Bool { canRequestAds }
 
     // MARK: Rewarded
 

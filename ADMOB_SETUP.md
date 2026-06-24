@@ -62,6 +62,7 @@ helpers.
 | iOS Rewarded - Double Miles Landing | Rewarded | `…/2338881545` |
 | iOS Rewarded - Daily Mission Boost | Rewarded | `…/1025799876` |
 | iOS Interstitial - Journey Complete | Interstitial | `…/3081117578` |
+| iOS Banner - Journey | Banner | `…/6065307904` |
 
 ## 5. Reward settings
 
@@ -86,8 +87,13 @@ just the dashboard metadata.)
 - **Journey Complete interstitial** — shown once, skippably, **after** a journey
   finishes and **before** Landing, for free users only. If not loaded / no
   presenter / Pro → Landing appears immediately.
-- **Never:** banners, app-open, native, ads during a journey / focus ritual /
-  boarding, or any ad for Pro users.
+- **Journey banner** — a small **adaptive banner** during an active journey, free
+  users only, placed below the time/distance readouts (`JourneyBannerAd`). It
+  reserves space only once an ad loads, so it never covers the balloon, the map
+  controls or the pause button, and it never appears for Pro users. Loads only
+  after UMP consent allows ads. DEBUG uses Google's test banner unit.
+- **Never:** app-open or native ads; banners anywhere except during a journey;
+  any ad for Pro users; ads during the focus ritual or boarding.
 
 ## 7. Testing with test ad IDs
 

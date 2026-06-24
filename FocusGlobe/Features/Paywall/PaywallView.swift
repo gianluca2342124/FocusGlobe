@@ -20,9 +20,8 @@ struct PaywallView: View {
     @State private var shineX: CGFloat = -0.5
     private let shineTimer = Timer.publish(every: 3.6, on: .main, in: .common).autoconnect()
 
-    // TODO: replace with your real policy URLs (placeholders for now).
-    private static let privacyURL = URL(string: "https://focusglobe.app/privacy")!
-    private static let termsURL = URL(string: "https://focusglobe.app/terms")!
+    // Privacy / Terms links are centralised and configurable in `LegalLinks`
+    // (replace the placeholder URLs there before release — see APP_STORE_READINESS.md).
 
     private let benefits: [(String, String)] = [
         ("nosign", "No ads"),
@@ -96,7 +95,9 @@ struct PaywallView: View {
     private var closeRow: some View {
         HStack {
             Spacer()
-            AppIconButton(systemImage: "xmark", size: 36, tint: .white, accessibilityLabel: "Close") { dismiss() }
+            AppIconButton(systemImage: "xmark", size: 36, tint: .white, accessibilityLabel: "Close") {
+                appModel.tapFeedback(); dismiss()
+            }
         }
         .padding(.top, AppSpacing.xs)
     }
@@ -107,9 +108,10 @@ struct PaywallView: View {
     /// smallest screens.
     private var heroHeight: CGFloat {
         let w = UIScreen.main.bounds.width
-        // Sized so the benefits list is visible without scrolling on a normal
-        // iPhone, while the hero still reads as a premium illustration.
-        return min(max(w * 0.44, 150), 210)
+        // Trimmed a little more so the full benefits list sits comfortably above
+        // the fold on a normal iPhone, while the hero still reads as a premium
+        // illustration (not a thumbnail).
+        return min(max(w * 0.34, 120), 170)
     }
 
     private var balloonHero: some View {
@@ -171,7 +173,7 @@ struct PaywallView: View {
             Label("You're a Pro member", systemImage: "checkmark.seal.fill")
                 .font(AppTypography.headline)
                 .foregroundStyle(AppColors.gold)
-            Button { dismiss() } label: {
+            Button { appModel.tapFeedback(); dismiss() } label: {
                 Text("Close")
                     .font(AppTypography.headline)
                     .foregroundStyle(Color(hex: 0x14181F))
@@ -206,7 +208,7 @@ struct PaywallView: View {
         let plan = subs.plan(kind)
         let selected = selectedKind == kind
         return Button {
-            appModel.haptics.tap()
+            appModel.tapFeedback()
             withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { selectedKind = kind }
         } label: {
             HStack(spacing: AppSpacing.sm) {
@@ -323,9 +325,9 @@ struct PaywallView: View {
 
     private var footer: some View {
         HStack(spacing: AppSpacing.sm) {
-            Link("Privacy", destination: Self.privacyURL)
+            Link("Privacy", destination: LegalLinks.privacy)
             Text("·").foregroundStyle(.white.opacity(0.4))
-            Link("Terms", destination: Self.termsURL)
+            Link("Terms", destination: LegalLinks.terms)
             Text("·").foregroundStyle(.white.opacity(0.4))
             Button("Restore") { restore() }
         }
@@ -347,7 +349,7 @@ struct PaywallView: View {
     }
 
     private func restore() {
-        appModel.haptics.tap()
+        appModel.tapFeedback()
         Task {
             let ok = await appModel.restorePurchases()
             if ok { dismiss() }
