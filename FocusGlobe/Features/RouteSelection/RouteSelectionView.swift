@@ -57,13 +57,16 @@ struct RouteSelectionView: View {
                 topBar
                 categoryChips
                 Spacer()
-                if let current {
-                    bottomCluster(current)
-                } else if viewModel.selectedCategory != nil {
-                    emptyState
-                } else {
-                    preparingState
+                Group {
+                    if let current {
+                        bottomCluster(current)
+                    } else if viewModel.selectedCategory != nil {
+                        emptyState
+                    } else {
+                        preparingState
+                    }
                 }
+                .clusterMaxWidth()   // centred band on iPad/Mac; full-width on iPhone
             }
             .padding(.top, AppSpacing.xs)
             .padding(.bottom, AppSpacing.lg)

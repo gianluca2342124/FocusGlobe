@@ -174,22 +174,29 @@ struct FocusSessionView: View {
     private var bottomReadouts: some View {
         VStack(spacing: 0) {
             Spacer()
-            HStack(alignment: .bottom) {
-                readout(label: "Time Remaining", value: vm.remainingMinutesText, alignment: .leading)
-                Spacer(minLength: AppSpacing.sm)
-                centerCluster
-                Spacer(minLength: AppSpacing.sm)
-                readout(label: "Distance Remaining", value: vm.remainingDistanceText, alignment: .trailing)
-            }
-            .padding(.horizontal, AppSpacing.lg)
+            // Readouts + banner live in a centred band so on iPad/Mac/landscape the
+            // time and distance don't spread to opposite screen edges. On iPhone
+            // portrait the cap exceeds the width, so the immersive layout is unchanged.
+            VStack(spacing: 0) {
+                HStack(alignment: .bottom) {
+                    readout(label: "Time Remaining", value: vm.remainingMinutesText, alignment: .leading)
+                    Spacer(minLength: AppSpacing.sm)
+                    centerCluster
+                    Spacer(minLength: AppSpacing.sm)
+                    readout(label: "Distance Remaining", value: vm.remainingDistanceText, alignment: .trailing)
+                }
+                .padding(.horizontal, AppSpacing.lg)
 
-            // Free users only (Pro is excluded inside `JourneyBannerAd`): a small
-            // adaptive banner *below* the time/distance readouts. It reserves
-            // height only once an ad actually loads — so it never covers the
-            // balloon, the corner controls or the pause button — and appears
-            // reactively once UMP consent allows ads. It manages its own top
-            // spacing, so the readouts lift only when a banner is present.
-            JourneyBannerAd(ads: appModel.ads, isPro: appModel.isPro)
+                // Free users only (Pro is excluded inside `JourneyBannerAd`): a small
+                // adaptive banner *below* the time/distance readouts. It reserves
+                // height only once an ad actually loads — so it never covers the
+                // balloon, the corner controls or the pause button — and appears
+                // reactively once UMP consent allows ads. It manages its own top
+                // spacing, so the readouts lift only when a banner is present.
+                JourneyBannerAd(ads: appModel.ads, isPro: appModel.isPro)
+            }
+            .frame(maxWidth: Layout.journeyReadouts)
+            .frame(maxWidth: .infinity)
         }
         .padding(.bottom, AppSpacing.md)
         .transition(.opacity)

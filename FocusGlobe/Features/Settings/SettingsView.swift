@@ -29,6 +29,7 @@ struct SettingsView: View {
                 .padding(AppSpacing.screen)
                 .padding(.top, AppSpacing.xs)
                 .padding(.bottom, AppSpacing.xxl)
+                .settingsMaxWidth()   // centred list on iPad/Mac; full-width on iPhone
             }
         }
         .focusScreenChrome()

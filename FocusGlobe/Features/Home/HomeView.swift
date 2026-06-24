@@ -35,6 +35,7 @@ struct HomeView: View {
             VStack {
                 Spacer()
                 bottomCluster
+                    .clusterMaxWidth()   // centred band on iPad/Mac; full-width on iPhone
             }
             .padding(.horizontal, AppSpacing.screen)
             .padding(.bottom, AppSpacing.lg)

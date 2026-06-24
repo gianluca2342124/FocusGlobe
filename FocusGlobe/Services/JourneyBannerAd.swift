@@ -40,6 +40,7 @@ struct JourneyBannerAd: View {
     #if canImport(GoogleMobileAds)
     @State private var loaded = false
     @State private var failed = false
+    @State private var measuredWidth: CGFloat = 0
 
     var body: some View {
         content
@@ -60,17 +61,42 @@ struct JourneyBannerAd: View {
     }
 
     private var slot: some View {
-        BannerRepresentable(width: Self.bannerWidth, loaded: $loaded, failed: $failed)
-            .frame(height: loaded ? Self.bannerHeight : unloadedHeight)
-            .frame(maxWidth: .infinity)
-            .opacity(loaded ? 1 : unloadedOpacity)
-            .overlay(debugOverlay)
-            .padding(.top, loaded ? AppSpacing.sm : 0)
-            .animation(.easeInOut(duration: 0.25), value: loaded)
-            .accessibilityHidden(true)
-            .onChange(of: loaded) { _, isLoaded in
-                if isLoaded { JourneyBannerLog.event("journey_banner_visible") }
+        let w = min(measuredWidth, Layout.bannerMaxWidth)   // cap so it stays tasteful on iPad/Mac
+        return Group {
+            if w >= 200 {
+                BannerRepresentable(width: w, loaded: $loaded, failed: $failed)
+                    .frame(width: w, height: loaded ? Self.bannerHeight(for: w) : unloadedHeight)
+            } else {
+                // First layout pass: measure the container width before sizing the ad.
+                Color.clear.frame(height: 0)
             }
+        }
+        .frame(maxWidth: .infinity)              // centre the (capped-width) banner
+        .background(widthReader)                 // measure the available container width
+        .opacity(loaded ? 1 : unloadedOpacity)
+        .overlay(debugOverlay)
+        .padding(.top, loaded ? AppSpacing.sm : 0)
+        .animation(.easeInOut(duration: 0.25), value: loaded)
+        .accessibilityHidden(true)
+        .onChange(of: loaded) { _, isLoaded in
+            if isLoaded { JourneyBannerLog.event("journey_banner_visible") }
+        }
+    }
+
+    /// Measures the available container width (no layout impact) so the adaptive
+    /// banner is sized only once a valid width is known — and re-measures if a
+    /// window resizes (iPad Stage Manager / Mac).
+    private var widthReader: some View {
+        GeometryReader { proxy in
+            Color.clear
+                .onAppear { updateWidth(proxy.size.width) }
+                .onChange(of: proxy.size.width) { _, w in updateWidth(w) }
+        }
+    }
+
+    private func updateWidth(_ w: CGFloat) {
+        guard w > 0 else { JourneyBannerLog.event("journey_banner_width_invalid"); return }
+        if abs(w - measuredWidth) > 0.5 { measuredWidth = w }
     }
 
     private func resetIfHidden() {
@@ -91,19 +117,11 @@ struct JourneyBannerAd: View {
 
     // MARK: Sizing
 
-    /// Banner width — the screen width (anchored adaptive banners derive their
-    /// height from the available width). Guarded so an invalid width is logged
-    /// and falls back to a standard size instead of producing a zero-size banner.
-    static var bannerWidth: CGFloat {
-        let w = UIScreen.main.bounds.width
-        guard w > 0 else { JourneyBannerLog.event("journey_banner_width_invalid"); return 320 }
-        return w
-    }
-
-    /// The loaded banner height for the current width, with a standard-banner
-    /// fallback so a loaded ad always gets a real, visible height.
-    static var bannerHeight: CGFloat {
-        let h = currentOrientationAnchoredAdaptiveBanner(width: bannerWidth).size.height
+    /// The loaded banner height for `width` (anchored adaptive banners derive
+    /// their height from the available width), with a standard-banner fallback so
+    /// a loaded ad always gets a real, visible height.
+    static func bannerHeight(for width: CGFloat) -> CGFloat {
+        let h = currentOrientationAnchoredAdaptiveBanner(width: width).size.height
         return h > 0 ? h : 50
     }
 

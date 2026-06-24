@@ -62,6 +62,7 @@ struct PaywallView: View {
             }
             .padding(.horizontal, AppSpacing.screen)
             .padding(.bottom, AppSpacing.md)
+            .paywallMaxWidth()   // premium centred panel on iPad/Mac; full-width on iPhone
         }
         .onAppear {
             appModel.analytics.log(.paywallOpened)

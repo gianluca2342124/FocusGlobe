@@ -4,8 +4,9 @@ struct PassportView: View {
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
 
-    private let cardColumns = [GridItem(.flexible(), spacing: AppSpacing.sm),
-                               GridItem(.flexible(), spacing: AppSpacing.sm)]
+    // Adaptive: 2 columns on an iPhone, more on iPad/Mac, reflowing in resizable
+    // windows (paired with a centred max content width below).
+    private let cardColumns = Layout.cardColumns()
 
     private var progress: UserProgress { appModel.progress }
 
@@ -32,6 +33,7 @@ struct PassportView: View {
                 .padding(AppSpacing.screen)
                 .padding(.top, AppSpacing.xs)
                 .padding(.bottom, AppSpacing.xxl)
+                .contentMaxWidth()   // centred column on iPad/Mac; full-width on iPhone
             }
         }
         .focusScreenChrome()
