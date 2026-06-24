@@ -178,6 +178,10 @@ private struct BannerRepresentable: UIViewRepresentable {
             self.failed = failed
         }
 
+        // Main-actor isolated: only ever called from `makeUIView`/`updateUIView`
+        // (UIViewRepresentable is `@MainActor`), so the main-actor-isolated
+        // `AdService.topViewController()` can be called directly and safely.
+        @MainActor
         func loadIfNeeded(_ banner: BannerView) {
             guard !didRequest else { return }
             guard let root = AdService.topViewController() else { return }   // wait for a presenter
