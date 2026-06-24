@@ -44,6 +44,7 @@
 		7AE3B1D92FEBE265008A59DA /* FocusGlobeWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FocusGlobeWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		7AE3B1DB2FEBE265008A59DA /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		7AE3B1DD2FEBE265008A59DA /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		7AE3B3052FEBE9F3008A59DA /* FocusGlobeWidgetsExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FocusGlobeWidgetsExtension.entitlements; sourceTree = "<group>"; };
 		AA0000000000000000000003 /* FocusGlobe.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FocusGlobe.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -114,6 +115,7 @@
 		AA0000000000000000000006 = {
 			isa = PBXGroup;
 			children = (
+				7AE3B3052FEBE9F3008A59DA /* FocusGlobeWidgetsExtension.entitlements */,
 				AA0000000000000000000005 /* FocusGlobe */,
 				7AE3B1DF2FEBE265008A59DA /* FocusGlobeWidgets */,
 				7AE3B1DA2FEBE265008A59DA /* Frameworks */,
@@ -265,6 +267,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = FocusGlobeWidgetsExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = QN8S876767;
@@ -296,6 +299,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = FocusGlobeWidgetsExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = QN8S876767;
