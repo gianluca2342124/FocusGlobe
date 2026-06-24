@@ -1,5 +1,6 @@
 import Combine
 import SwiftUI
+import UIKit
 
 /// The custom FocusGlobe premium paywall — a dark/gold luxury screen that drives
 /// RevenueCat purchases underneath (via `AppModel.subscriptions`). This is the
@@ -100,24 +101,34 @@ struct PaywallView: View {
         .padding(.top, AppSpacing.xs)
     }
 
+    /// Responsive hero height — a large premium visual on phones (~2x the old
+    /// size), with a sensible cap so it stays elegant (not huge) on iPad. The
+    /// hero lives in a ScrollView, so larger sizes scroll and never clip on the
+    /// smallest screens.
+    private var heroHeight: CGFloat {
+        let w = UIScreen.main.bounds.width
+        return min(max(w * 0.6, 210), 300)
+    }
+
     private var balloonHero: some View {
-        ZStack {
+        let h = heroHeight
+        return ZStack {
             // Soft, diffused golden atmosphere behind the balloon. A radial that
             // fades fully to clear (no hard circle edge) and is heavily blurred, so
             // it reads as premium light rather than a disc and never looks cut off.
             RadialGradient(colors: [AppColors.gold.opacity(0.42),
                                     AppColors.gold.opacity(0.16),
                                     .clear],
-                           center: .center, startRadius: 0, endRadius: 130)
-                .frame(width: 260, height: 240)
-                .blur(radius: 28)
+                           center: .center, startRadius: 0, endRadius: h * 0.95)
+                .frame(width: h * 1.6, height: h * 1.5)
+                .blur(radius: 30)
                 .allowsHitTesting(false)
             // Paywall hero balloon — uses `PaywallBalloonHero` (swap in Xcode),
             // falling back to the default skin / vector if the asset is missing.
-            BalloonView(height: 108, showBurner: true, showGlow: false,
+            BalloonView(height: h, showBurner: true, showGlow: false,
                         assetName: Self.heroAssetName)
         }
-        .frame(height: 168)
+        .frame(height: h * 1.08)
         .frame(maxWidth: .infinity)
     }
 
