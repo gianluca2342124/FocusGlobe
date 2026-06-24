@@ -19,13 +19,13 @@ struct StreakDetailsView: View {
                     weekRow
                     goalsSection
                 }
-                .padding(AppSpacing.screen)
-                .frame(maxWidth: Layout.pad(540, 600))
+                .padding(Layout.pad(AppSpacing.screen, AppSpacing.xl))
+                .frame(maxWidth: Layout.pad(540, 760))   // fills the iPad modal panel
                 .frame(maxWidth: .infinity)
             }
         }
-        // A full-height, readable sheet on iPad (not a short, compressed card).
-        .presentationDetents(Layout.isPadIdiom ? [.large] : [.medium, .large])
+        // iPhone keeps a draggable sheet; on iPad the adaptive modal panel sizes it.
+        .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
         .preferredColorScheme(.dark)
     }

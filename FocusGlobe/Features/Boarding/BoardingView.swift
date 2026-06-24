@@ -91,7 +91,7 @@ struct BoardingView: View {
     private var ticketStack: some View {
         VStack(spacing: AppSpacing.xs) {
             PrinterSlot()
-                .frame(maxWidth: 340)
+                .frame(maxWidth: Layout.pad(340, 460))
                 .opacity(printed < 1 ? 1 : 0)
 
             JourneyTicket(origin: origin, route: route, distanceKm: distanceKm,
@@ -100,7 +100,7 @@ struct BoardingView: View {
                           tearX: $tearX, torn: torn,
                           canTear: focusIn && !torn, threshold: tearThreshold,
                           onCommit: commitTear)
-                .frame(maxWidth: 420)
+                .frame(maxWidth: Layout.pad(420, 560))   // larger premium ticket on iPad/Mac
         }
     }
 
@@ -225,7 +225,7 @@ private struct JourneyTicket: View {
                             destCode: route.destinationCode, destCity: route.destinationName,
                             duration: route.durationLabel, category: route.category,
                             ink: ink, inkSoft: inkSoft)
-                .frame(height: 116)
+                .frame(height: Layout.pad(116, 142))
 
             VStack(spacing: AppSpacing.sm) {
                 HStack(spacing: 0) {
@@ -284,8 +284,8 @@ private struct JourneyTicket: View {
         HStack(spacing: AppSpacing.sm) {
             BarcodeStrip(seed: origin.code + route.id + route.destinationCode,
                          barColor: ink, scanIn: barcodeIn)
-                .frame(height: 40)
-            QRBlock(seed: route.id, color: ink).frame(width: 40, height: 40)
+                .frame(height: Layout.pad(40, 52))
+            QRBlock(seed: route.id, color: ink).frame(width: Layout.pad(40, 52), height: Layout.pad(40, 52))
         }
         .padding(.horizontal, AppSpacing.md)
         .padding(.vertical, AppSpacing.sm)
@@ -393,7 +393,7 @@ private struct TicketSkyHeader: View {
     private func codeBlock(_ code: String, _ city: String, _ align: HorizontalAlignment) -> some View {
         VStack(alignment: align, spacing: 1) {
             Text(code)
-                .font(.system(size: 32, weight: .heavy, design: .rounded))
+                .font(.system(size: Layout.pad(32, 40), weight: .heavy, design: .rounded))
                 .foregroundStyle(ink)               // both codes share the same colour
                 .minimumScaleFactor(0.7).lineLimit(1)
             Text(city)

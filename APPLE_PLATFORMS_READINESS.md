@@ -70,6 +70,35 @@ Silicon Macs as "Designed for iPad"; no Catalyst is required for that.
   nothing (real ad or placeholder). DEBUG uses Google's test banner unit; RELEASE
   uses `ca-app-pub-2780304092271589/6065307904`.
 
+## Tablet scale system & adaptive modals
+
+- **Uniform type scale**: `AppTypography` multiplies every size by
+  `Layout.fontScale` — **1.0 on iPhone** (byte-identical) and **~1.15 on iPad/Mac**
+  — so *all* text that uses `AppTypography` grows uniformly on tablet with no
+  per-call-site edits. Bespoke `.system(size:)` sizes use `Layout.pad(phone, tablet)`
+  and `Layout.controlScale` / `activeJourneyHUDScale` for the same effect.
+- **Scale knobs** in `Layout`: `isTabletOrMac`, `fontScale`, `controlScale`,
+  `visualScale`, `activeJourneyHUDScale`, plus panel widths (`paywallPanelWidth`,
+  `streakPanelWidth`, `resumePanelWidth`, `homePanelWidth`, `passportContentWidth`,
+  `modalMaxWidth`). Scale is conservative (≈1.12–1.22), never "huge".
+- **Adaptive modals** (`.adaptiveModal(isPresented:width:)`): on **iPhone** a
+  normal `.sheet`; on **iPad/Mac** a large **centred premium panel** (720–760 pt)
+  over a dimmed backdrop (tap-outside to dismiss), with internal scrolling and the
+  content's own glass/gold background — instead of the tiny ~540 pt system
+  form-sheet that looked compressed. Applied to **Paywall, Streak, and Continue
+  Journey**. Environment objects are injected into the panel content (Mac-safe).
+- Screens with explicit tablet sizing: shared CTA/secondary buttons, Home
+  title/cluster/badges, Passport grids + cards + sound cards, Settings/Landing
+  panels, Route destination cards, **Boarding ticket** (wider ticket, larger
+  codes/barcode/header), focus-ritual balloon/tokens, and the Active-Journey
+  readouts/pause/**map control buttons**.
+
+### How to test modals on iPad/Mac
+Open Paywall (crown), Streak (Home flame badge), and Continue Journey (relaunch
+with an unfinished journey). Each must be a **large centred panel**, not a small
+mid-screen card; tapping outside the panel dismisses it; the paywall X and
+purchase/restore still work; nothing is clipped (content scrolls if tall).
+
 ## Test matrix
 
 Per screen check: no clipped content, no off-screen cards, controls usable, text

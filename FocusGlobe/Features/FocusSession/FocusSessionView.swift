@@ -108,7 +108,7 @@ struct FocusSessionView: View {
     private var topControls: some View {
         VStack {
             HStack(alignment: .top) {
-                AppIconButton(systemImage: "xmark", size: 46, tint: AppColors.textPrimary,
+                AppIconButton(systemImage: "xmark", size: Layout.pad(46, 56), tint: AppColors.textPrimary,
                               accessibilityLabel: "End journey") { vm.requestCancel() }
                 Spacer()
                 statusPill
@@ -116,18 +116,18 @@ struct FocusSessionView: View {
                 VStack(spacing: AppSpacing.xs) {
                     mapStyleMenu
                     AppIconButton(systemImage: vm.showsRecenter ? "location.fill" : "arrow.up.left.and.arrow.down.right",
-                                  size: 46, tint: AppColors.textPrimary,
+                                  size: Layout.pad(46, 56), tint: AppColors.textPrimary,
                                   accessibilityLabel: vm.showsRecenter ? "Recenter on balloon" : "View full route") {
                         vm.showsRecenter ? vm.recenter() : vm.showFullRoute()
                     }
                     // Shows the action it will switch TO: "2D" while 3D is active,
                     // "3D" while 2D is active. Active state is a glass highlight,
                     // never a coloured/yellow tint.
-                    GlassTextButton(text: vm.tilted ? "2D" : "3D", size: 46, active: vm.tilted,
+                    GlassTextButton(text: vm.tilted ? "2D" : "3D", size: Layout.pad(46, 56), active: vm.tilted,
                                     accessibilityLabel: vm.tilted ? "Switch to 2D" : "Switch to 3D") {
                         vm.toggleTilt()
                     }
-                    AppIconButton(systemImage: vm.muteIconName, size: 46,
+                    AppIconButton(systemImage: vm.muteIconName, size: Layout.pad(46, 56),
                                   tint: AppColors.textPrimary,
                                   accessibilityLabel: vm.isAudioMuted ? "Unmute journey audio" : "Mute journey audio") {
                         vm.toggleMute()
@@ -153,7 +153,7 @@ struct FocusSessionView: View {
                 Label(vm.labelsOn ? "Hide labels" : "Show labels", systemImage: "textformat")
             }
         } label: {
-            GlassCircle(systemImage: vm.mapStyle.systemImage)
+            GlassCircle(systemImage: vm.mapStyle.systemImage, size: Layout.pad(46, 56))
         }
         .accessibilityLabel("Map style")
     }

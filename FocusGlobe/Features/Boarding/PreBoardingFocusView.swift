@@ -317,16 +317,16 @@ struct PreBoardingFocusView: View {
     private func tokenCard(_ preset: FocusPreset, compact: Bool, active: Bool = false) -> some View {
         VStack(spacing: 5) {
             Image(systemName: preset.systemImage)
-                .font(.system(size: 19, weight: .bold))
+                .font(.system(size: Layout.pad(19, 24), weight: .bold))
                 .foregroundStyle(.white)
             Text(preset.title)
-                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .font(.system(size: Layout.pad(12, 15), weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
                 .lineLimit(1).minimumScaleFactor(0.7)
         }
         .shadow(color: .black.opacity(0.35), radius: 3, y: 1)   // legibility on bright accents
         .frame(maxWidth: compact ? nil : .infinity)
-        .frame(height: 62)
+        .frame(height: Layout.pad(62, 78))
         .padding(.horizontal, compact ? 18 : 4)
         .background(
             ZStack {

@@ -35,7 +35,10 @@ struct RootView: View {
                 .environmentObject(appModel)
                 .environmentObject(router)
         }
-        .sheet(isPresented: $router.showPaywall) {
+        // iPhone: a sheet. iPad/Mac: a large centred premium panel (not a tiny
+        // compressed form-sheet). Env objects are injected explicitly so the
+        // modal never crashes on Mac.
+        .adaptiveModal(isPresented: $router.showPaywall, width: Layout.paywallPanelWidth) {
             PaywallView()
                 .environmentObject(appModel)
                 .environmentObject(router)

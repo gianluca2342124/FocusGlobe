@@ -50,8 +50,10 @@ struct HomeView: View {
             if newOrigin != nil { maybeShowPremiumIntro() }
         }
         .sheet(isPresented: $showCityPicker) { LocationPickerView().environmentObject(appModel) }
-        .sheet(isPresented: $showStreak) { StreakDetailsView().environmentObject(appModel) }
-        .sheet(isPresented: $showResume) {
+        .adaptiveModal(isPresented: $showStreak, width: Layout.streakPanelWidth) {
+            StreakDetailsView().environmentObject(appModel)
+        }
+        .adaptiveModal(isPresented: $showResume, width: Layout.resumePanelWidth) {
             ResumeJourneySheet(
                 snapshot: appModel.resumableJourney,
                 onContinue: { showResume = false; continueResumableJourney() },
@@ -146,7 +148,7 @@ struct HomeView: View {
             HStack(spacing: AppSpacing.xs) {
                 // The crown only opens the paywall — hide it once the user is Pro.
                 if !appModel.isPro {
-                    CrownButton { appModel.tapFeedback(); router.presentPaywall() }
+                    CrownButton(size: Layout.pad(44, 52)) { appModel.tapFeedback(); router.presentPaywall() }
                 }
                 streakButton
                 Spacer()
@@ -179,15 +181,15 @@ struct HomeView: View {
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: "flame.fill")
-                    .font(.system(size: 15, weight: .bold))
+                    .font(.system(size: Layout.pad(15, 18), weight: .bold))
                     .foregroundStyle(LinearGradient(colors: [Color(hex: 0xFFB13C), Color(hex: 0xF2643C)],
                                                     startPoint: .top, endPoint: .bottom))
                 Text("\(appModel.progress.currentStreak)")
-                    .font(.system(size: 16, weight: .heavy, design: .rounded))
+                    .font(.system(size: Layout.pad(16, 20), weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
             }
-            .padding(.horizontal, 13)
-            .padding(.vertical, 9)
+            .padding(.horizontal, Layout.pad(13, 16))
+            .padding(.vertical, Layout.pad(9, 11))
             .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.18, shadowRadius: 7, shadowY: 4)
         }
         .buttonStyle(SoftPressStyle())
