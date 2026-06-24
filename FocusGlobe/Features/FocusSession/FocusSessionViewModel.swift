@@ -199,14 +199,6 @@ final class FocusSessionViewModel: ObservableObject {
         )
     }
 
-    /// Whether to show the small in-journey banner ad: **free users only**, and
-    /// only once UMP consent allows ads. Pro users — and the no-SDK / no-consent
-    /// paths — show nothing. Read by `FocusSessionView`.
-    var showsJourneyBanner: Bool {
-        guard let appModel else { return false }
-        return !appModel.isPro && appModel.ads.adsAllowed
-    }
-
     // MARK: - Controls
 
     func togglePause() { isPaused ? resume() : pause() }

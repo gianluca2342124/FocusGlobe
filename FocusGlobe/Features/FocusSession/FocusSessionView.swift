@@ -43,6 +43,7 @@ struct FocusSessionContainerView: View {
 struct FocusSessionView: View {
     @ObservedObject var vm: FocusSessionViewModel
     @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var appModel: AppModel
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -182,14 +183,13 @@ struct FocusSessionView: View {
             }
             .padding(.horizontal, AppSpacing.lg)
 
-            // Free users only: a small adaptive banner *below* the time/distance
-            // readouts. It reserves space only once an ad actually loads, so it
-            // never covers the balloon, the corner controls or the pause button —
-            // and it never appears for Pro users (see `vm.showsJourneyBanner`).
-            if vm.showsJourneyBanner {
-                JourneyBannerAd()
-                    .padding(.top, AppSpacing.sm)
-            }
+            // Free users only (Pro is excluded inside `JourneyBannerAd`): a small
+            // adaptive banner *below* the time/distance readouts. It reserves
+            // height only once an ad actually loads — so it never covers the
+            // balloon, the corner controls or the pause button — and appears
+            // reactively once UMP consent allows ads. It manages its own top
+            // spacing, so the readouts lift only when a banner is present.
+            JourneyBannerAd(ads: appModel.ads, isPro: appModel.isPro)
         }
         .padding(.bottom, AppSpacing.md)
         .transition(.opacity)

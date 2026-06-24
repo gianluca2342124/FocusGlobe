@@ -12,8 +12,8 @@ Connect / AdMob / RevenueCat.
 
 | Area | Guarantee | Where |
 |------|-----------|-------|
-| **Ads gated by consent** | No ad (rewarded, interstitial **or** the new banner) is requested before UMP consent is resolved and `canRequestAds` is true. | `AdService.finishConsent()` / `adsAllowed`; banner gated by `vm.showsJourneyBanner` |
-| **Pro sees no ads** | Rewarded, interstitial and the in-journey **banner** are all suppressed for Pro. | `showRewarded(isPro:)`, `presentJourneyCompleteInterstitial(isPro:)`, `FocusSessionViewModel.showsJourneyBanner` (`!isPro`) |
+| **Ads gated by consent** | No ad (rewarded, interstitial **or** the banner) is requested before UMP consent is resolved and `canRequestAds` is true. The banner observes `AdService` (`@Published canRequestAds`) and appears reactively once ads are allowed. | `AdService.finishConsent()` / `canRequestAds`; `JourneyBannerAd` |
+| **Pro sees no ads** | Rewarded, interstitial and the in-journey **banner** are all suppressed for Pro. | `showRewarded(isPro:)`, `presentJourneyCompleteInterstitial(isPro:)`, `JourneyBannerAd` (`!isPro` at the call site + re-checked) |
 | **Banner placement** | Small adaptive banner shows **only during an active journey, free users only**, below the time/distance readouts — never over the balloon, controls or pause. Zero height until an ad loads. | `JourneyBannerAd`, `FocusSessionView.bottomReadouts` |
 | **No ads elsewhere** | No banners on Home/Choose/Boarding/Passport/Settings/Landing; no app-open/native ads. | (only `JourneyBannerAd`, inside the journey) |
 | **Test vs prod ad IDs** | DEBUG builds use Google's official **test** ad units (rewarded, interstitial, **banner**); RELEASE uses the real units. | `AdMobConfig` (`#if DEBUG`) |

@@ -29,7 +29,7 @@ import UserMessagingPlatform
 /// > version, a few type names (`MobileAds`, `InterstitialAd`, `RewardedAd`,
 /// > `Request`) may need a minor adjustment — the non-SDK fallback is unaffected.
 @MainActor
-final class AdService: NSObject {
+final class AdService: NSObject, ObservableObject {
 
     enum Placement {
         case doubleMiles, dailyBoost
@@ -49,7 +49,10 @@ final class AdService: NSObject {
 
     private var analytics: AnalyticsService?
     private var started = false
-    private var canRequestAds = false
+    /// Published so reactive surfaces (the in-journey banner) appear as soon as
+    /// UMP consent resolves and allows ads — even if that happens a moment after
+    /// a journey has already started.
+    @Published private(set) var canRequestAds = false
 
     #if canImport(GoogleMobileAds)
     private var interstitial: InterstitialAd?
