@@ -27,6 +27,11 @@ final class AppModel: ObservableObject {
     @Published private(set) var isPro: Bool {
         didSet {
             guard oldValue != isPro else { return }
+            // Persist the local Pro mirror so a returning Pro user isn't briefly
+            // un-Pro at cold launch before RevenueCat re-resolves the entitlement.
+            // RevenueCat remains the source of truth and corrects this if it ever
+            // disagrees (e.g. a lapse detected once back online).
+            persistence.setBool(isPro, for: .isPro)
             // When Pro lapses, premium skins/audio must re-lock immediately and
             // any premium selection falls back to its free default. Premium
             // content is never permanently unlocked. (didSet doesn't fire during
@@ -616,6 +621,13 @@ final class AppModel: ObservableObject {
         let ok = await purchases.restore()
         isPro = purchases.isPro
         return ok
+    }
+
+    /// Re-check the RevenueCat entitlement (Pro) — call when the app returns to the
+    /// foreground so renewals / expirations / restores made elsewhere are reflected.
+    /// No-op when RevenueCat isn't linked; RevenueCat stays the source of truth.
+    func refreshSubscriptionStatus() {
+        subscriptions.refreshCustomerInfo()
     }
 
     /// Double-miles rewarded ad (Landing). Pro users never reach this (the button

@@ -29,10 +29,12 @@ struct FocusGlobeApp: App {
                 .onAppear { appModel.analytics.log(.appOpened) }
                 .onOpenURL { router.handleDeepLink($0) }   // widget deep links
                 .onChange(of: scenePhase) { _, phase in
-                    // Returning to the foreground rebuilds the notification plan, so
-                    // the comeback sequence is pushed out and never fires for an
-                    // active user (and never stacks duplicates).
-                    if phase == .active { appModel.refreshNotifications() }
+                    guard phase == .active else { return }
+                    // Rebuild the notification plan (pushes the comeback sequence out
+                    // for active users) and re-check the RevenueCat Pro entitlement so
+                    // renewals / expirations / restores made elsewhere are reflected.
+                    appModel.refreshNotifications()
+                    appModel.refreshSubscriptionStatus()
                 }
         }
     }

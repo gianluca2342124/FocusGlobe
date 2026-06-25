@@ -1,5 +1,12 @@
 # Privacy Notes — FocusGlobe (MVP)
 
+> **Superseded for the shipping app.** This is an early-MVP snapshot. The data model
+> below (local-first, no backend, no login, focus history on device) is still
+> accurate, but the shipping app now uses **real** location (to set the starting
+> city), **AdMob** ads (free users only; Pro is ad-free), and **RevenueCat + Apple**
+> purchases. For the current model see **PERSISTENCE_MODEL.md** and
+> **APP_STORE_FINAL_CHECKLIST.md** (privacy nutrition labels, ATT, consent).
+
 FocusGlobe is built privacy-first. In the MVP:
 
 - **No login.** There is no account system and no sign-in.
