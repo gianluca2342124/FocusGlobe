@@ -24,6 +24,7 @@ struct SettingsView: View {
                     experienceSection
                     proSection
                     privacySection
+                    legalSection
                     versionFooter
                 }
                 .padding(AppSpacing.screen)
@@ -202,6 +203,30 @@ struct SettingsView: View {
                 Spacer(minLength: 0)
             }
         }
+    }
+
+    // Legal links at the bottom of Settings — open the real hosted pages in the
+    // browser (same `LegalLinks` used by the paywall footer).
+    private var legalSection: some View {
+        SettingsCard(title: "Legal") {
+            VStack(spacing: 0) {
+                Link(destination: LegalLinks.privacy) {
+                    SettingsRow(systemImage: "hand.raised.fill", title: "Privacy Policy",
+                                tint: AppColors.brand, trailing: AnyView(legalChevron))
+                }
+                RowDivider()
+                Link(destination: LegalLinks.terms) {
+                    SettingsRow(systemImage: "doc.text.fill", title: "Terms of Use",
+                                tint: AppColors.brand, trailing: AnyView(legalChevron))
+                }
+            }
+        }
+    }
+
+    private var legalChevron: some View {
+        Image(systemName: "arrow.up.right")
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(AppColors.textTertiary)
     }
 
     private var versionFooter: some View {

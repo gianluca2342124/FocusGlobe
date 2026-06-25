@@ -201,6 +201,17 @@ struct PaywallView: View {
                     .multilineTextAlignment(.center)
             }
 
+            // Restore on its own subtle row — separate from the legal links, so the
+            // footer holds only Privacy / Terms. RevenueCat restore logic unchanged.
+            Button { restore() } label: {
+                Text("Restore Purchases")
+                    .font(AppTypography.callout)
+                    .foregroundStyle(.white.opacity(0.8))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, AppSpacing.xs)
+            }
+            .buttonStyle(SoftPressStyle())
+
             footer
         }
     }
@@ -324,13 +335,13 @@ struct PaywallView: View {
                        startPoint: .topLeading, endPoint: .bottomTrailing)
     }
 
+    /// Legal-only footer — Restore lives on its own row above (App Store-safe,
+    /// not mixed with the legal links).
     private var footer: some View {
         HStack(spacing: AppSpacing.sm) {
             Link("Privacy", destination: LegalLinks.privacy)
             Text("·").foregroundStyle(.white.opacity(0.4))
             Link("Terms", destination: LegalLinks.terms)
-            Text("·").foregroundStyle(.white.opacity(0.4))
-            Button("Restore") { restore() }
         }
         .font(AppTypography.caption)
         .foregroundStyle(.white.opacity(0.65))

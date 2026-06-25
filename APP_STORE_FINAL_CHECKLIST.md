@@ -38,8 +38,8 @@ AUDIO_SETUP.md, NOTIFICATIONS_STRATEGY.md.
 
 ## D. Privacy / legal
 
-- [ ] **Privacy Policy URL** — ⚠️ PLACEHOLDER in `LegalLinks.privacy` (`https://focusglobe.app/privacy`). **Replace with a real, reachable URL before submission.**
-- [ ] **Terms of Use (EULA) URL** — ⚠️ PLACEHOLDER in `LegalLinks.terms` (`https://focusglobe.app/terms`). **Replace** (Apple's standard EULA link is acceptable).
+- [x] **Privacy Policy URL** — set in `LegalLinks.privacy` to the real hosted page (Notion). Shown on the paywall footer and at the bottom of Settings. Confirm it loads publicly.
+- [x] **Terms of Use URL** — set in `LegalLinks.terms` to the real hosted page (Notion). Shown on the paywall footer and at the bottom of Settings. Confirm it loads publicly.
 - [ ] App Store **Privacy "nutrition" labels** filled (AdMob: Identifiers / Usage Data for Third-Party Advertising; app stores focus history on-device; location not collected/transmitted).
 - [ ] **Location usage string** present (`NSLocationWhenInUseUsageDescription`, already in build settings).
 - [ ] **Notifications**: provisional, no first-launch prompt; copy is warm/non-manipulative (see NOTIFICATIONS_STRATEGY.md).
@@ -72,6 +72,6 @@ AUDIO_SETUP.md, NOTIFICATIONS_STRATEGY.md.
 - [ ] Age rating questionnaire.
 - [ ] Support URL (required) and marketing URL (optional).
 
-> Do not invent legal URLs. The two ⚠️ items in section D are the only hard
-> placeholders left in code; everything else is configuration in App Store Connect /
-> RevenueCat / AdMob.
+> The Privacy/Terms URLs in `LegalLinks` now point to the real hosted pages, so no
+> legal-URL placeholders remain in code; everything else is configuration in App
+> Store Connect / RevenueCat / AdMob.

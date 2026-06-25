@@ -2,19 +2,16 @@ import Foundation
 
 /// The single, **configurable** place for the app's legal / policy links.
 ///
-/// These power the Privacy and Terms links on the paywall (and anywhere else the
-/// app links out). They are **placeholders** — replace both URLs with your real,
-/// publicly reachable pages before submitting to the App Store:
-///  • App Review requires working Privacy Policy and Terms links.
-///  • Auto-renewable subscriptions require a Terms of Use (EULA) link in the
-///    purchase flow (the paywall already shows it).
+/// These power the Privacy and Terms links on the paywall and at the bottom of
+/// Settings (and anywhere else the app links out). They point to the real, hosted
+/// policy pages — App Review requires working Privacy Policy and Terms links, and
+/// auto-renewable subscriptions require a Terms of Use link in the purchase flow.
 ///
-/// No legal text is bundled inside the app — these simply point to your hosted
-/// pages, so updating policy never requires an app update. See
-/// APP_STORE_READINESS.md for the full pre-submission checklist.
+/// No legal text is bundled inside the app — these simply point to the hosted
+/// pages, so updating policy never requires an app update.
 enum LegalLinks {
-    /// TODO: replace with your real Privacy Policy URL before release.
-    static let privacy = URL(string: "https://focusglobe.app/privacy")!
-    /// TODO: replace with your real Terms of Use (EULA) URL before release.
-    static let terms = URL(string: "https://focusglobe.app/terms")!
+    /// FocusGlobe Privacy Policy (hosted).
+    static let privacy = URL(string: "https://app.notion.com/p/Privacy-Policy-38a87f11a2a0802489aaf7bbeec65578?source=copy_link")!
+    /// FocusGlobe Terms of Use (hosted).
+    static let terms = URL(string: "https://app.notion.com/p/Terms-of-Use-38a87f11a2a0806e9a5ed32eebf1b4c9?source=copy_link")!
 }

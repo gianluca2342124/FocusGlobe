@@ -29,15 +29,13 @@ Connect / AdMob / RevenueCat.
 
 ## 2. Manual steps before you submit
 
-### 2.1 Legal links (required)
-Replace the placeholders in **`FocusGlobe/Services/LegalLinks.swift`**:
-- `LegalLinks.privacy` → your real, reachable **Privacy Policy** URL.
-- `LegalLinks.terms` → your real **Terms of Use (EULA)** URL.
-
-App Review rejects dead links, and auto-renewable subscriptions require a working
-Terms/EULA link in the purchase flow. (Apple's standard EULA is acceptable — link
-to `https://www.apple.com/legal/internet-services/itunes/dev/stdeula/` if you have
-no custom terms.) **Do not** ship the `focusglobe.app/...` placeholders.
+### 2.1 Legal links (done)
+`FocusGlobe/Services/LegalLinks.swift` now points `LegalLinks.privacy` and
+`LegalLinks.terms` at the real hosted Privacy Policy and Terms of Use pages. They
+appear on the **paywall footer** and at the **bottom of Settings** (Legal section).
+Just confirm both URLs load publicly before submission — App Review rejects dead
+links, and auto-renewable subscriptions require a working Terms link in the
+purchase flow.
 
 ### 2.2 App Store Connect — subscriptions & IAP
 - Create the subscription group and products that back RevenueCat:

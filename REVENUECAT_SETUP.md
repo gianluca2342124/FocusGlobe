@@ -56,11 +56,10 @@ configured once at launch from `AppModel.init()` (non-blocking).
     **"Start 7 days free trial"**.
   - **Lifetime** ("Pay once."). Button: **"Continue"**.
   - **Monthly**. Button: **"Continue"**.
-- A gold purchase button (loading state, double-tap-proof) and a footer with
-  **Privacy · Terms · Restore**. Privacy/Terms URLs are centralised placeholders
-  in `LegalLinks` (`FocusGlobe/Services/LegalLinks.swift`) — replace
-  `LegalLinks.privacy` / `LegalLinks.terms` before release. See
-  APP_STORE_READINESS.md.
+- A gold purchase button (loading state, double-tap-proof), a **Restore Purchases**
+  row, and a legal-only footer with **Privacy · Terms**. The Privacy/Terms URLs are
+  centralised in `LegalLinks` (`FocusGlobe/Services/LegalLinks.swift`) and point to
+  the real hosted pages. Restore also remains in **Settings ▸ FocusGlobe Pro**.
 - All prices are the App Store **localized** prices from RevenueCat. The expected
   EU base prices (18,99 € / 35,99 € / 3,99 € → 1,58 €/month) only appear as
   disabled placeholders when products can't load.
