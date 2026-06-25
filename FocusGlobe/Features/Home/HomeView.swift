@@ -20,12 +20,13 @@ struct HomeView: View {
     var body: some View {
         ZStack {
             map
-            if let originPoint {
-                // Full-bleed container so `.position` shares the map's projection
-                // coordinate space exactly (no safe-area offset).
-                ZStack(alignment: .topLeading) {
-                    Color.clear
-                    RadarPulse().position(originPoint)
+            if originPoint != nil {
+                // The Home globe uses a planetary camera centred on the origin, so
+                // the balloon/origin is always at the exact view centre. Pin the
+                // radar to the geometric centre (reliable on iPad/Mac) rather than a
+                // reported map point, which can drift across coordinate spaces.
+                GeometryReader { geo in
+                    RadarPulse().position(x: geo.size.width / 2, y: geo.size.height / 2)
                 }
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
@@ -50,10 +51,12 @@ struct HomeView: View {
             if newOrigin != nil { maybeShowPremiumIntro() }
         }
         .sheet(isPresented: $showCityPicker) { LocationPickerView().environmentObject(appModel) }
-        .adaptiveModal(isPresented: $showStreak, width: Layout.streakPanelWidth) {
+        .adaptiveModal(isPresented: $showStreak,
+                       width: Layout.streakPanelWidth, height: Layout.streakPanelHeight) {
             StreakDetailsView().environmentObject(appModel)
         }
-        .adaptiveModal(isPresented: $showResume, width: Layout.resumePanelWidth) {
+        .adaptiveModal(isPresented: $showResume,
+                       width: Layout.resumePanelWidth, height: Layout.resumePanelHeight) {
             ResumeJourneySheet(
                 snapshot: appModel.resumableJourney,
                 onContinue: { showResume = false; continueResumableJourney() },

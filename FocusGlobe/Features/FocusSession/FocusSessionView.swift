@@ -132,6 +132,16 @@ struct FocusSessionView: View {
                                   accessibilityLabel: vm.isAudioMuted ? "Unmute journey audio" : "Mute journey audio") {
                         vm.toggleMute()
                     }
+                    // iPad/Mac: the pause control joins the side controls (the bottom-
+                    // centre pause is omitted there) so the control set reads as one
+                    // unified group. Same gray glass circle as the other buttons.
+                    if Layout.isPadIdiom {
+                        AppIconButton(systemImage: vm.isPaused ? "play.fill" : "pause.fill",
+                                      size: Layout.pad(46, 56), tint: AppColors.textPrimary,
+                                      accessibilityLabel: vm.isPaused ? "Resume" : "Pause") {
+                            vm.togglePause()
+                        }
+                    }
                 }
             }
             Spacer()
@@ -181,11 +191,16 @@ struct FocusSessionView: View {
                 HStack(alignment: .bottom) {
                     readout(label: "Time Remaining", value: vm.remainingMinutesText, alignment: .leading)
                     Spacer(minLength: AppSpacing.sm)
-                    centerCluster
-                    Spacer(minLength: AppSpacing.sm)
+                    // iPhone keeps the white pause in the centre; on iPad/Mac the
+                    // pause moved to the side controls, so the readouts spread to
+                    // the wide band's left/right edges.
+                    if !Layout.isPadIdiom {
+                        centerCluster
+                        Spacer(minLength: AppSpacing.sm)
+                    }
                     readout(label: "Distance Remaining", value: vm.remainingDistanceText, alignment: .trailing)
                 }
-                .padding(.horizontal, AppSpacing.lg)
+                .padding(.horizontal, Layout.pad(AppSpacing.lg, AppSpacing.xl))
 
                 // Free users only (Pro is excluded inside `JourneyBannerAd`): a small
                 // adaptive banner *below* the time/distance readouts. It reserves
@@ -195,7 +210,7 @@ struct FocusSessionView: View {
                 // spacing, so the readouts lift only when a banner is present.
                 JourneyBannerAd(ads: appModel.ads, isPro: appModel.isPro)
             }
-            .frame(maxWidth: Layout.journeyReadouts)
+            .frame(maxWidth: Layout.pad(Layout.journeyReadouts, 1120))   // wider, edge-anchored band on iPad
             .frame(maxWidth: .infinity)
         }
         .padding(.bottom, AppSpacing.md)
@@ -208,7 +223,7 @@ struct FocusSessionView: View {
                 .font(AppTypography.caption)
                 .foregroundStyle(.white.opacity(0.7))
             Text(value)
-                .font(.system(size: Layout.pad(36, 44), weight: .bold, design: .rounded))
+                .font(.system(size: Layout.pad(36, 54), weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(.white)
                 .minimumScaleFactor(0.7)

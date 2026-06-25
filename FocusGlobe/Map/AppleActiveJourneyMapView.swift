@@ -119,9 +119,10 @@ struct AppleActiveJourneyMapView: UIViewRepresentable {
             map.addAnnotation(AppleMapAnnotationRenderer.dot(at: data.destination.cl, fill: UIColor(theme.accent),
                                                              ring: .white, diameter: 13))
 
-            // The balloon (selected skin) — the protagonist.
+            // The balloon (selected skin) — the protagonist. Slightly larger on
+            // iPad/Mac to suit the bigger canvas; unchanged on iPhone.
             let b = AppleMapAnnotationRenderer.balloon(at: data.vehicle.cl, skinAssetName: data.skinAssetName,
-                                                       theme: theme, height: 72)
+                                                       theme: theme, height: Layout.pad(72, 88))
             map.addAnnotation(b)
             balloon = b
 

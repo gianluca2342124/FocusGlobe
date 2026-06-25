@@ -9,17 +9,17 @@ struct AppChip: View {
     var accent: Color = AppColors.brand
 
     var body: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: Layout.pad(5, 7)) {
             if let systemImage {
                 Image(systemName: systemImage)
-                    .font(.system(size: 11.5, weight: .semibold))
+                    .font(.system(size: Layout.pad(11.5, 14), weight: .semibold))
             }
             Text(title)
                 .font(AppTypography.caption)
         }
         .foregroundStyle(isSelected ? Color.white : AppColors.textSecondary)
-        .padding(.horizontal, AppSpacing.sm)
-        .padding(.vertical, 7)
+        .padding(.horizontal, Layout.pad(AppSpacing.sm, AppSpacing.md + 2))
+        .padding(.vertical, Layout.pad(7, 11))
         .background {
             Capsule(style: .continuous)
                 .fill(isSelected ? AnyShapeStyle(accent) : AnyShapeStyle(.ultraThinMaterial))

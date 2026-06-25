@@ -69,7 +69,9 @@ struct RouteSelectionView: View {
                 .clusterMaxWidth()   // centred band on iPad/Mac; full-width on iPhone
             }
             .padding(.top, AppSpacing.xs)
-            .padding(.bottom, AppSpacing.lg)
+            // Let the content-rich destination area extend lower into the bottom
+            // space on iPad/Mac (unlike the centred pop-up modals).
+            .padding(.bottom, Layout.pad(AppSpacing.lg, AppSpacing.sm))
         }
         .focusScreenChrome()
         .sheet(isPresented: $showCityPicker) { LocationPickerView().environmentObject(appModel) }
@@ -163,7 +165,7 @@ struct RouteSelectionView: View {
     }
 
     private func bottomCluster(_ journey: PlannedJourney) -> some View {
-        VStack(spacing: AppSpacing.md) {
+        VStack(spacing: Layout.pad(AppSpacing.md, AppSpacing.lg)) {
             VStack(spacing: 3) {
                 if journey.isReturn {
                     HStack(spacing: 5) {
@@ -246,7 +248,7 @@ struct RouteSelectionView: View {
                 }
             }
             .padding(.horizontal, AppSpacing.screen)
-            .padding(.vertical, 2)
+            .padding(.vertical, Layout.pad(2, 10))
         }
     }
 
@@ -303,8 +305,9 @@ private struct DestinationCard: View {
                         .foregroundStyle(isSelected ? Color(hex: 0x14181F).opacity(0.65) : .white.opacity(0.7))
                 }
             }
-            .padding(AppSpacing.sm + 2)
-            .frame(width: Layout.pad(144, 184), alignment: .leading)   // larger, easier to tap on iPad
+            .padding(.horizontal, Layout.pad(AppSpacing.sm + 2, AppSpacing.md))
+            .padding(.vertical, Layout.pad(AppSpacing.sm + 2, AppSpacing.lg))   // taller cards on iPad
+            .frame(width: Layout.pad(144, 184), alignment: .leading)           // wider + easier to tap on iPad
             .background {
                 if isSelected {
                     RoundedRectangle(cornerRadius: 18, style: .continuous).fill(.white)

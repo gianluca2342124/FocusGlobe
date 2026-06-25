@@ -19,9 +19,11 @@ import UIKit
 enum Layout {
     // MARK: Scale
 
-    /// True on iPad and on Mac running "Designed for iPad".
+    /// True on iPad and on Mac running "Designed for iPad". Cached (the idiom
+    /// never changes at runtime) so the hot `AppTypography`/`pad(_:_:)` paths
+    /// don't re-query `UIDevice` on every access.
     static var isTabletOrMac: Bool { isPadIdiom }
-    static var isPadIdiom: Bool { UIDevice.current.userInterfaceIdiom == .pad }
+    static let isPadIdiom: Bool = UIDevice.current.userInterfaceIdiom == .pad
 
     /// Uniform type scale (drives `AppTypography`). iPhone 1.0; iPad/Mac larger.
     static var fontScale: CGFloat { isPadIdiom ? 1.15 : 1.0 }
@@ -51,9 +53,13 @@ enum Layout {
     // MARK: Premium modal panel sizing (iPad/Mac centred modals)
 
     static let modalMaxWidth: CGFloat = 900
+    static let modalMaxHeight: CGFloat = 900
     static let paywallPanelWidth: CGFloat = 760
+    static let paywallPanelHeight: CGFloat = 860   // ≈ content; avoids giant empty space
     static let streakPanelWidth: CGFloat = 720
+    static let streakPanelHeight: CGFloat = 660
     static let resumePanelWidth: CGFloat = 600
+    static let resumePanelHeight: CGFloat = 500
     static let homePanelWidth: CGFloat = 760       // == cluster
     static let passportContentWidth: CGFloat = 900 // == content
 
@@ -101,11 +107,12 @@ extension View {
     @ViewBuilder
     func adaptiveModal<C: View>(isPresented: Binding<Bool>,
                                width: CGFloat,
+                               height: CGFloat,
                                onDismiss: (() -> Void)? = nil,
                                @ViewBuilder content: @escaping () -> C) -> some View {
         if Layout.isPadIdiom {
             fullScreenCover(isPresented: isPresented, onDismiss: onDismiss) {
-                AdaptiveModalPanel(width: width, isPresented: isPresented, content: content)
+                AdaptiveModalPanel(width: width, height: height, isPresented: isPresented, content: content)
             }
         } else {
             sheet(isPresented: isPresented, onDismiss: onDismiss, content: content)
@@ -117,11 +124,13 @@ extension View {
 /// (tap outside to dismiss). The presenting app shows through, dimmed.
 private struct AdaptiveModalPanel<C: View>: View {
     let width: CGFloat
+    let height: CGFloat
     @Binding var isPresented: Bool
     let content: () -> C
 
-    init(width: CGFloat, isPresented: Binding<Bool>, @ViewBuilder content: @escaping () -> C) {
+    init(width: CGFloat, height: CGFloat, isPresented: Binding<Bool>, @ViewBuilder content: @escaping () -> C) {
         self.width = width
+        self.height = height
         self._isPresented = isPresented
         self.content = content
     }
@@ -134,8 +143,11 @@ private struct AdaptiveModalPanel<C: View>: View {
                     .contentShape(Rectangle())
                     .onTapGesture { isPresented = false }
                 content()
-                    .frame(maxWidth: min(width, geo.size.width - 64),
-                           maxHeight: geo.size.height - 96)
+                    // Size to the content's natural height (capped to the window)
+                    // rather than stretching to fill — so a short modal stays a
+                    // snug panel with no giant empty space; taller content scrolls.
+                    .frame(width: min(width, geo.size.width - 48),
+                           height: min(height, geo.size.height - 64))
                     .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 32, style: .continuous)
                         .strokeBorder(.white.opacity(0.12), lineWidth: 1))

@@ -180,6 +180,9 @@ private struct JourneyTicket: View {
     private let inkSoft = Color(hex: 0xAEB7CC)
 
     private var effTear: CGFloat { torn ? 620 : tearX }
+    /// 0…1 progress of the tear, used to grow the strip's lift shadow as it peels
+    /// (zero when attached, so the ticket reads as one connected piece at rest).
+    private var tearLift: CGFloat { min(1, effTear / max(1, threshold)) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -193,11 +196,15 @@ private struct JourneyTicket: View {
                 }
             perforation
                 .opacity(perforationIn ? 1 : 0)
-            // The barcode strip tears along the perforation: it curls + sags as it
-            // separates (pivoting from the top edge) rather than sliding flat.
+            // Paper-tear peel: at rest the strip sits flush under the body (one
+            // connected ticket). As it's pulled it pivots from the perforation (its
+            // top edge), bending out in 3D and sliding sideways — a believable peel,
+            // not a rigid block flying off flat.
             barcodeStrip
-                .rotationEffect(.degrees(Double(min(14, effTear * 0.06))), anchor: .topLeading)
-                .offset(x: effTear * 0.7, y: effTear * 0.22)
+                .rotation3DEffect(.degrees(Double(min(26, effTear * 0.10))),
+                                  axis: (x: 0.2, y: 1, z: 0), anchor: .top, perspective: 0.7)
+                .rotationEffect(.degrees(Double(min(8, effTear * 0.04))), anchor: .top)
+                .offset(x: effTear * 0.72, y: effTear * 0.16)
                 .opacity(torn ? 0 : (barcodeIn ? 1 : 0))
                 .overlay { if canTear && tearX == 0 { TearFingerHint() } }
                 .gesture(tearGesture)
@@ -275,7 +282,7 @@ private struct JourneyTicket: View {
             // Horizontal shimmer hinting the swipe gesture.
             if barcodeIn && !torn { PerforationShimmer() }
         }
-        .frame(height: 14)
+        .frame(height: 8)   // tight seam so the body + stub read as one ticket at rest
     }
 
     // MARK: Barcode strip (the detachable part)
@@ -298,7 +305,9 @@ private struct JourneyTicket: View {
         .overlay(alignment: .topLeading) { notch.offset(x: -9, y: -9) }
         .overlay(alignment: .topTrailing) { notch.offset(x: 9, y: -9) }
         .compositingGroup()
-        .shadow(color: .black.opacity(0.5), radius: 14, x: 0, y: 8)
+        // No resting shadow → the stub looks attached to the body. The lift shadow
+        // grows only as the strip peels away.
+        .shadow(color: .black.opacity(0.5 * Double(tearLift)), radius: 8 + 10 * tearLift, x: 0, y: 4 + 8 * tearLift)
     }
 
     private var graphite: LinearGradient {

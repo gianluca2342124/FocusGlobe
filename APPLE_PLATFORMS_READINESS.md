@@ -99,6 +99,30 @@ with an unfinished journey). Each must be a **large centred panel**, not a small
 mid-screen card; tapping outside the panel dismisses it; the paywall X and
 purchase/restore still work; nothing is clipped (content scrolls if tall).
 
+### Final polish pass (modals, HUD, boarding, radar, perf)
+
+- **Modals fit their content** on iPad/Mac: each adaptive panel takes a natural
+  height (`paywallPanelHeight`/`streakPanelHeight`/`resumePanelHeight`, capped to
+  the window) instead of stretching full-height — no giant empty space; taller
+  content still scrolls.
+- **Active Journey HUD (iPad/Mac only)**: the pause control moves into the gray
+  side-control column (the bottom-centre white pause is iPhone-only), so the
+  controls read as one group; Time/Distance readouts are larger and spread to the
+  left/right edges of a wider band; the balloon is slightly larger. iPhone HUD is
+  unchanged. Banner behaviour unchanged (Free-only, Pro-never, DEBUG placeholder).
+- **Route Selection (iPad/Mac)**: the filter chips are larger (more padding,
+  bigger text) and the destination area is taller and extends lower into the
+  bottom space (it's content-rich/scrollable, unlike the centred modals).
+- **Boarding ticket (all devices)**: the stub sits flush under the body at rest
+  (tight 8 pt seam, no resting stub shadow) so it reads as one ticket; the tear is
+  a 3D **peel** that pivots from the perforation and bends out as it's pulled, with
+  a lift shadow that grows with the drag — not a rigid block. Flow/CTA unchanged.
+- **Home radar** is pinned to the exact view centre (where the planetary camera
+  always places the origin/balloon), so it no longer drifts on iPad/Mac.
+- **Performance**: `Layout.isPadIdiom` is cached (`static let`) and `AppTypography`
+  fonts are stored `static let`s computed once — no per-render `UIDevice`/Font work.
+  No map reinitialisation; flat-elevation iPad/Mac live map retained.
+
 ## Test matrix
 
 Per screen check: no clipped content, no off-screen cards, controls usable, text
