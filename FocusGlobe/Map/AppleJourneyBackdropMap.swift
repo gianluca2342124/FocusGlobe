@@ -144,10 +144,11 @@ struct AppleBackdropMapView: UIViewRepresentable {
 
             guard view.mode == .route, let dest = view.destination else {
                 // Origin-only (Home): optional small balloon over "you are here".
+                // Slightly larger on iPad/Mac to suit the bigger globe; iPhone unchanged.
                 if view.showsBalloon {
                     map.addAnnotation(AppleMapAnnotationRenderer.balloon(at: originCoord,
                                                                          skinAssetName: view.skinAssetName,
-                                                                         theme: view.theme, height: 58))
+                                                                         theme: view.theme, height: Layout.pad(58, 72)))
                 }
                 if view.showsCodeTags && view.showsOrigin {
                     map.addAnnotation(AppleMapAnnotationRenderer.tag(at: originCoord, code: view.origin.code,

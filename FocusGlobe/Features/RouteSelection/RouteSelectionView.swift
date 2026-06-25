@@ -57,16 +57,16 @@ struct RouteSelectionView: View {
                 topBar
                 categoryChips
                 Spacer()
-                Group {
-                    if let current {
-                        bottomCluster(current)
-                    } else if viewModel.selectedCategory != nil {
-                        emptyState
-                    } else {
-                        preparingState
-                    }
+                // No whole-cluster cap here: the destination carousel inside spans
+                // the full width on iPad/Mac (more cards visible), while the title
+                // and CTA are centred individually below.
+                if let current {
+                    bottomCluster(current)
+                } else if viewModel.selectedCategory != nil {
+                    emptyState.clusterMaxWidth()
+                } else {
+                    preparingState.clusterMaxWidth()
                 }
-                .clusterMaxWidth()   // centred band on iPad/Mac; full-width on iPhone
             }
             .padding(.top, AppSpacing.xs)
             // Let the content-rich destination area extend lower into the bottom
@@ -140,16 +140,28 @@ struct RouteSelectionView: View {
         .padding(.horizontal, AppSpacing.screen)
     }
 
+    @ViewBuilder private var chipItems: some View {
+        chip(title: "All", systemImage: "square.grid.2x2", category: nil)
+        ForEach(viewModel.categories) { category in
+            chip(title: category.displayName, systemImage: category.systemImage, category: category)
+        }
+    }
+
     private var categoryChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: AppSpacing.xs) {
-                chip(title: "All", systemImage: "square.grid.2x2", category: nil)
-                ForEach(viewModel.categories) { category in
-                    chip(title: category.displayName, systemImage: category.systemImage, category: category)
+        Group {
+            if Layout.isPadIdiom {
+                // iPad/Mac: a centred row of larger chips (they fit without scrolling).
+                HStack(spacing: AppSpacing.sm) { chipItems }
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, AppSpacing.screen)
+                    .padding(.vertical, 4)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: AppSpacing.xs) { chipItems }
+                        .padding(.horizontal, AppSpacing.screen)
+                        .padding(.vertical, 2)
                 }
             }
-            .padding(.horizontal, AppSpacing.screen)
-            .padding(.vertical, 2)
         }
     }
 
@@ -191,14 +203,16 @@ struct RouteSelectionView: View {
             }
             .shadow(color: .black.opacity(0.4), radius: 8, y: 2)
             .padding(.horizontal, AppSpacing.screen)
+            .clusterMaxWidth()   // centred title block on iPad/Mac
 
-            destinationStrip
+            destinationStrip     // full-width carousel (uses the whole screen on iPad/Mac)
 
             AppPrimaryButton(title: locked(journey) ? "Unlock with Pro" : "Book Journey",
                              systemImage: locked(journey) ? "lock.fill" : "paperplane.fill") {
                 select(journey)
             }
             .padding(.horizontal, AppSpacing.screen)
+            .clusterMaxWidth()   // centred, tasteful CTA width on iPad/Mac
         }
     }
 

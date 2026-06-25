@@ -185,7 +185,7 @@ private struct JourneyTicket: View {
     private var tearLift: CGFloat { min(1, effTear / max(1, threshold)) }
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 0) {   // spacing 0 → the stub touches the ticket's bottom edge
             body_
                 .mask(alignment: .top) {
                     GeometryReader { g in
@@ -194,17 +194,19 @@ private struct JourneyTicket: View {
                             .frame(maxHeight: .infinity, alignment: .top)
                     }
                 }
-            perforation
-                .opacity(perforationIn ? 1 : 0)
-            // Paper-tear peel: at rest the strip sits flush under the body (one
-            // connected ticket). As it's pulled it pivots from the perforation (its
-            // top edge), bending out in 3D and sliding sideways — a believable peel,
-            // not a rigid block flying off flat.
+                // The perforation is drawn ON the seam (no vertical gap), so the body
+                // and the barcode stub read as one continuous ticket before tearing.
+                .overlay(alignment: .bottom) {
+                    perforation.opacity(perforationIn && !torn ? 1 : 0)
+                }
+            // Barcode stub — flush to the ticket's bottom edge. It tears as a paper
+            // peel: pivoting from the top-left of the perforation, bending out in 3D
+            // and following the finger sideways — never a rigid block flying off flat.
             barcodeStrip
-                .rotation3DEffect(.degrees(Double(min(26, effTear * 0.10))),
-                                  axis: (x: 0.2, y: 1, z: 0), anchor: .top, perspective: 0.7)
-                .rotationEffect(.degrees(Double(min(8, effTear * 0.04))), anchor: .top)
-                .offset(x: effTear * 0.72, y: effTear * 0.16)
+                .rotation3DEffect(.degrees(Double(min(30, effTear * 0.12))),
+                                  axis: (x: 0.18, y: 1, z: 0), anchor: .topLeading, perspective: 0.8)
+                .rotationEffect(.degrees(Double(min(10, effTear * 0.05))), anchor: .topLeading)
+                .offset(x: effTear * 0.8, y: effTear * 0.12)
                 .opacity(torn ? 0 : (barcodeIn ? 1 : 0))
                 .overlay { if canTear && tearX == 0 { TearFingerHint() } }
                 .gesture(tearGesture)
@@ -276,13 +278,14 @@ private struct JourneyTicket: View {
     private var perforation: some View {
         ZStack {
             DashLine()
-                .stroke(inkSoft.opacity(0.5), style: StrokeStyle(lineWidth: 1.2, dash: [4, 5]))
+                .stroke(inkSoft.opacity(0.45), style: StrokeStyle(lineWidth: 1.2, dash: [4, 5]))
                 .frame(height: 1)
                 .padding(.horizontal, AppSpacing.md)
             // Horizontal shimmer hinting the swipe gesture.
             if barcodeIn && !torn { PerforationShimmer() }
         }
-        .frame(height: 8)   // tight seam so the body + stub read as one ticket at rest
+        .frame(height: 12)
+        .offset(y: 6)   // centre the dashed line on the seam (the ticket's bottom edge)
     }
 
     // MARK: Barcode strip (the detachable part)

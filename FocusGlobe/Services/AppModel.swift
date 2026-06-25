@@ -696,10 +696,15 @@ final class AppModel: ObservableObject {
         let cal = Calendar.current
         let landedToday = history.contains { $0.completed && cal.isDateInToday($0.date) }
         let remaining = dailyMissions.filter { !$0.isComplete }.count
+        let resumable = resumableJourney
         return NotificationState(streak: progress.currentStreak,
                                  landedToday: landedToday,
                                  goalsRemaining: remaining,
-                                 allGoalsDoneToday: remaining == 0)
+                                 allGoalsDoneToday: remaining == 0,
+                                 hasUnfinishedJourney: resumable != nil,
+                                 unfinishedOrigin: resumable?.origin.city,
+                                 unfinishedDestination: resumable?.route.destinationName,
+                                 originCity: currentOrigin?.city)
     }
 
     /// Reschedule reminders from the current progress (no-op unless authorised).

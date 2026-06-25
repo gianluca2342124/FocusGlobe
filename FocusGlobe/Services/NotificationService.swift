@@ -7,32 +7,43 @@ struct NotificationState {
     var landedToday: Bool
     var goalsRemaining: Int
     var allGoalsDoneToday: Bool
+    /// An unfinished, resumable journey (for a "continue your journey" reminder).
+    var hasUnfinishedJourney: Bool = false
+    var unfinishedOrigin: String? = nil
+    var unfinishedDestination: String? = nil
+    /// The user's current origin city, for warm, personalised copy.
+    var originCity: String? = nil
 }
 
-/// Centralised, tasteful **local** notification scheduling for re-engagement and
-/// streak retention. No remote push, no analytics SDK. Every reschedule clears
-/// the pending set and re-creates only the relevant reminders, so the user is
-/// never spammed and reminders always reflect the latest progress.
+/// Centralised, tasteful **local** notification strategy for retention — streak
+/// protection, a daily focus / study nudge, unfinished-journey reminders and a
+/// gentle comeback sequence. Duolingo-inspired but never manipulative: warm,
+/// concise copy, **at most one notification per day**, with no guilt, shame or
+/// fake urgency.
 ///
-/// Permission is requested only at a calm, user-initiated moment — when the user
-/// opens the Passport or Settings — never after a journey completes and never
-/// aggressively at first launch. That request uses **provisional** authorization,
-/// which iOS grants *without a prompt* and delivers quietly, so the user is never
-/// interrupted; the explicit Reminders toggle in Settings still does a normal
-/// opt-in prompt. The enabled flag lives in `UserDefaults` so nothing in the
-/// app's settings model changes.
+/// No backend / no push. Every reschedule clears the pending set and rebuilds the
+/// plan from the latest state, so opening the app or completing a journey
+/// naturally pushes the comeback messages out and prevents duplicates. Stable
+/// per-day identifiers mean a notification is *replaced*, never stacked. Calendar
+/// triggers fire at the right wall-clock time in the user's current time zone.
+///
+/// Permission is requested **provisionally** (no prompt, quiet delivery) only when
+/// the user opens Passport or Settings — never at first launch and never after a
+/// journey. The Settings → Reminders toggle is the explicit on/off.
+/// See NOTIFICATIONS_STRATEGY.md.
 @MainActor
 final class NotificationService {
     private let center = UNUserNotificationCenter.current()
     private let defaults = UserDefaults.standard
     private let enabledKey = "fg.notifications.enabled"
 
+    /// Stable identifiers — one slot per upcoming day, so a reschedule *replaces*
+    /// (never stacks) and we keep at most one notification per day.
     private enum ID {
-        static let streak   = "fg.notif.streak_protection"
-        static let focus    = "fg.notif.daily_focus"
-        static let goals    = "fg.notif.goal_progress"
-        static let comeback1 = "fg.notif.comeback_1"
-        static let comeback2 = "fg.notif.comeback_2"
+        static let today = "fg.notif.day0"
+        static let day1  = "fg.notif.day1"
+        static let day2  = "fg.notif.day2"
+        static let day3  = "fg.notif.day3"
     }
 
     /// User-facing toggle (defaults ON; only schedules once authorised).
@@ -43,13 +54,16 @@ final class NotificationService {
 
     func setEnabled(_ on: Bool) {
         isEnabled = on
-        if !on { center.removeAllPendingNotificationRequests() }
+        if !on {
+            center.removeAllPendingNotificationRequests()
+            log("disabled → cleared all pending")
+        }
     }
 
     // MARK: Permission
 
-    /// Request a normal, prompting permission — used only for an **explicit**
-    /// opt-in (the Settings → Reminders toggle). Requests once, when undecided.
+    /// Normal, prompting permission — only for an **explicit** opt-in (the Settings
+    /// → Reminders toggle). Requests once, when undecided.
     func requestAuthorizationIfNeeded(state: NotificationState) {
         guard isEnabled else { return }
         center.getNotificationSettings { [weak self] settings in
@@ -61,13 +75,10 @@ final class NotificationService {
         }
     }
 
-    /// Request **provisional** authorization (no prompt, quiet delivery) the first
-    /// time the user reaches a calm, relevant surface (Passport / Settings). iOS
-    /// grants this silently — the user is never interrupted — and reminders begin
-    /// arriving quietly in Notification Center; the user can promote them to
-    /// prominent alerts any time in iOS Settings. Only acts while undecided, so it
-    /// never overrides an explicit choice and never prompts twice. Safe/graceful
-    /// if denied (nothing is scheduled). Reschedules on grant.
+    /// **Provisional** authorization (no prompt, quiet delivery) the first time the
+    /// user reaches a calm surface (Passport / Settings). iOS grants it silently;
+    /// the user can promote it to prominent alerts in iOS Settings. Only acts while
+    /// undecided, so it never prompts twice. Graceful if denied (nothing schedules).
     func requestProvisionalAuthorizationIfNeeded(state: NotificationState) {
         guard isEnabled else { return }
         center.getNotificationSettings { [weak self] settings in
@@ -79,8 +90,9 @@ final class NotificationService {
         }
     }
 
-    /// Reschedule from the latest state (only if enabled + authorised). Safe to
-    /// call on launch, after a landing, and when settings change.
+    /// Rebuild the plan from the latest state (only if enabled + authorised). Safe
+    /// to call on launch, when the app returns to the foreground, after a landing,
+    /// and when settings change.
     func refresh(state: NotificationState) {
         guard isEnabled else { center.removeAllPendingNotificationRequests(); return }
         center.getNotificationSettings { [weak self] settings in
@@ -94,84 +106,130 @@ final class NotificationService {
         }
     }
 
-    // MARK: Scheduling
+    // MARK: The strategic plan (≤ 1 per day, no duplicates)
 
     private func reschedule(state: NotificationState) {
         center.removeAllPendingNotificationRequests()
         let cal = Calendar.current
         let now = Date()
+        var scheduled = 0
 
-        // A. Streak protection — tonight ~20:00, only with a live streak not yet
-        //    continued today (the highest-priority reminder).
-        if state.streak > 0, !state.landedToday,
-           let fire = cal.date(bySettingHour: 20, minute: 0, second: 0, of: now), fire > now {
-            schedule(ID.streak,
-                     title: "Protect your \(state.streak)-day streak 🔥",
-                     body: pick(Self.streakBodies), at: fire)
+        func plan(dayOffset: Int, hour: Int, id: String, title: String, body: String) {
+            guard let dayStart = cal.date(byAdding: .day, value: dayOffset, to: cal.startOfDay(for: now)),
+                  let fire = cal.date(bySettingHour: hour, minute: 0, second: 0, of: dayStart),
+                  fire > now else { return }
+            schedule(id, title: title, body: body, at: fire)
+            scheduled += 1
         }
 
-        // B. Daily focus — a calm morning nudge at ~10:00 (tomorrow if past, or if
-        //    already flown today).
-        if let base = cal.date(bySettingHour: 10, minute: 0, second: 0, of: now) {
-            let fire = (base > now && !state.landedToday) ? base
-                     : (cal.date(byAdding: .day, value: 1, to: base) ?? base)
-            schedule(ID.focus, title: "Time to take off ✈️", body: pick(Self.focusBodies), at: fire)
+        // TODAY — one best-fit reminder, only if it'd still fire later today and the
+        // user hasn't already focused. Priority: unfinished journey → streak → focus.
+        // (Never a streak-loss message once today's journey is done — `landedToday`.)
+        if state.hasUnfinishedJourney {
+            plan(dayOffset: 0, hour: 19, id: ID.today,
+                 title: "Your balloon is still waiting", body: unfinishedBody(state))
+        } else if state.streak > 0 && !state.landedToday {
+            plan(dayOffset: 0, hour: 20, id: ID.today,
+                 title: "Your \(state.streak)-day streak is waiting 🔥", body: pick(Self.streakBodies))
+        } else if !state.landedToday {
+            plan(dayOffset: 0, hour: 17, id: ID.today,
+                 title: "Ready for one focused journey?", body: dailyBody(state, offset: 0))
         }
 
-        // C. Goal progress — early evening ~18:00 if goals remain today.
-        if state.goalsRemaining > 0, !state.allGoalsDoneToday,
-           let fire = cal.date(bySettingHour: 18, minute: 0, second: 0, of: now), fire > now {
-            let n = state.goalsRemaining
-            schedule(ID.goals,
-                     title: "\(n) goal\(n == 1 ? "" : "s") left today",
-                     body: pick(Self.goalBodies), at: fire)
-        }
+        // TOMORROW — a calm daily focus / study nudge (alternating, personalised).
+        plan(dayOffset: 1, hour: 10, id: ID.day1,
+             title: dailyTitle(offset: 1), body: dailyBody(state, offset: 1))
 
-        // D. Comeback — fires only if the app isn't reopened (each refresh pushes
-        //    these out), so they reach genuinely inactive users at +2 and +3 days.
-        schedule(ID.comeback1, title: "Your balloon is waiting",
-                 body: pick(Self.comebackBodies), at: now.addingTimeInterval(2 * 86_400))
-        schedule(ID.comeback2, title: "Keep your momentum",
-                 body: pick(Self.comebackBodies, offset: 1), at: now.addingTimeInterval(3 * 86_400))
+        // +2 / +3 days — gentle comeback. Only reaches genuinely inactive users:
+        // opening the app reschedules and pushes these later.
+        plan(dayOffset: 2, hour: 11, id: ID.day2,
+             title: "Your passport has been quiet", body: pick(Self.comebackBodies))
+        plan(dayOffset: 3, hour: 11, id: ID.day3,
+             title: "A new journey is waiting", body: pick(Self.comebackBodies, offset: 1))
+
+        log("rescheduled \(scheduled) reminder(s); streak=\(state.streak) landedToday=\(state.landedToday) unfinished=\(state.hasUnfinishedJourney)")
     }
 
     private func schedule(_ id: String, title: String, body: String, at date: Date) {
-        let interval = date.timeIntervalSinceNow
-        guard interval > 0 else { return }
+        // Calendar trigger → fires at this wall-clock time in the user's current
+        // time zone (robust if they travel after scheduling).
+        let comps = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: date)
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
         content.sound = .default
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
+        let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
         center.add(UNNotificationRequest(identifier: id, content: content, trigger: trigger))
+        log("scheduled \(id) — \"\(title)\"")
+    }
+
+    private func log(_ msg: String) {
+        #if DEBUG
+        print("[Notifications] \(msg)")
+        #endif
+    }
+
+    // MARK: Copy (warm, concise, personalised — no guilt, no fake urgency)
+
+    private func unfinishedBody(_ s: NotificationState) -> String {
+        if let o = s.unfinishedOrigin, let d = s.unfinishedDestination {
+            return "Continue your journey from \(o) to \(d)."
+        }
+        return "Pick up the route you started whenever you're ready."
+    }
+
+    private func dailyTitle(offset: Int) -> String {
+        Self.dailyTitles[abs(dayIndex() + offset) % Self.dailyTitles.count]
+    }
+
+    /// Alternates calm focus copy with light study/work motivation, personalised
+    /// with the user's current city when available.
+    private func dailyBody(_ s: NotificationState, offset: Int) -> String {
+        let useFocus = (dayIndex() + offset).isMultiple(of: 2)
+        let pool = useFocus ? Self.focusBodies : Self.studyBodies
+        var base = pool[abs(dayIndex() + offset) % pool.count]
+        if base.contains("{city}") {
+            if let city = s.originCity {
+                base = base.replacingOccurrences(of: "{city}", with: city)
+            } else {
+                base = "Pick a destination and give yourself 25 minutes."   // city-free fallback
+            }
+        }
+        return base
     }
 
     /// Deterministic, day-rotating pick so copy varies without feeling random.
     private func pick(_ options: [String], offset: Int = 0) -> String {
-        let day = Calendar.current.ordinality(of: .day, in: .era, for: Date()) ?? 0
-        return options[(day + offset) % options.count]
+        options[abs(dayIndex() + offset) % options.count]
     }
 
-    // MARK: Copy (English for now; varied so it never feels robotic)
+    private func dayIndex() -> Int {
+        Calendar.current.ordinality(of: .day, in: .era, for: Date()) ?? 0
+    }
 
+    private static let dailyTitles = [
+        "Ready for one focused journey?",
+        "Time to take off ✈️",
+        "Your next deep-work block awaits",
+    ]
     private static let streakBodies = [
-        "A quick focus journey keeps your streak alive before midnight.",
-        "Don't let your streak slip — take off for a short flight tonight.",
-        "Five calm minutes is all it takes to protect your streak.",
+        "One short journey keeps your focus streak alive.",
+        "A few calm minutes protects your streak tonight.",
+        "Don't let the chain break — take a quick flight.",
     ]
     private static let focusBodies = [
-        "Pick a destination and drift into focus.",
-        "Start a calm journey and make today count.",
-        "Your next destination is one take-off away.",
+        "Pick a destination and give yourself 25 minutes.",
+        "Lift off from {city} and find your focus.",
+        "Your mind deserves a clean runway.",
     ]
-    private static let goalBodies = [
-        "Finish strong — wrap up today's goals.",
-        "You're close. Complete today's goals and earn your miles.",
-        "A short journey can close out today's goals.",
+    private static let studyBodies = [
+        "Need to study? Start with one calm journey.",
+        "One focused session before distractions win.",
+        "Turn your next destination into a deep-work block.",
     ]
     private static let comebackBodies = [
-        "Your balloon misses you — take off for a quick journey.",
-        "Come back and drift somewhere new today.",
-        "A calm focus flight is waiting whenever you're ready.",
+        "A new journey is waiting when you are.",
+        "Come back for one calm focus trip.",
+        "Your balloon is ready whenever you are.",
     ]
 }

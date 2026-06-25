@@ -200,7 +200,7 @@ struct FocusSessionView: View {
                     }
                     readout(label: "Distance Remaining", value: vm.remainingDistanceText, alignment: .trailing)
                 }
-                .padding(.horizontal, Layout.pad(AppSpacing.lg, AppSpacing.xl))
+                .padding(.horizontal, Layout.pad(AppSpacing.lg, 44))
 
                 // Free users only (Pro is excluded inside `JourneyBannerAd`): a small
                 // adaptive banner *below* the time/distance readouts. It reserves
@@ -210,7 +210,10 @@ struct FocusSessionView: View {
                 // spacing, so the readouts lift only when a banner is present.
                 JourneyBannerAd(ads: appModel.ads, isPro: appModel.isPro)
             }
-            .frame(maxWidth: Layout.pad(Layout.journeyReadouts, 1120))   // wider, edge-anchored band on iPad
+            // iPad/Mac: span the full width (with a safe-area margin via the inner
+            // padding) so Time anchors to the left edge and Distance to the right.
+            // iPhone keeps the centred band.
+            .frame(maxWidth: Layout.pad(Layout.journeyReadouts, .infinity))
             .frame(maxWidth: .infinity)
         }
         .padding(.bottom, AppSpacing.md)
