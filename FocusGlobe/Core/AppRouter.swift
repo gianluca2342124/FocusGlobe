@@ -74,10 +74,16 @@ final class AppRouter: ObservableObject {
         switch target {
         case "choose", "journey", "start":
             path = [.routeSelection]
-        case "passport", "stats", "goals", "missions":
+        case "passport", "stats", "goals", "missions", "collection":
             path = [.passport]
-        case "resume", "current", "home", "":
-            path.removeAll()   // Home auto-offers resume when a journey is saved
+        case "streak", "resume", "current", "home", "":
+            // Home is where the live streak lives and it auto-offers a resume
+            // when an unfinished journey is saved.
+            path.removeAll()
+        case "pro", "paywall":
+            // A locked (non-Pro) widget taps straight into the paywall.
+            path.removeAll()
+            presentPaywall()
         default:
             path.removeAll()
         }

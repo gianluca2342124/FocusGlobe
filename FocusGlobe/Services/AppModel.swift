@@ -766,15 +766,20 @@ final class AppModel: ObservableObject {
         snap.totalFocusMiles = progress.totalFocusMiles
         snap.landings = progress.landings
         snap.currentStreak = progress.currentStreak
+        snap.longestStreak = progress.longestStreak
         snap.bestFocusMinutes = progress.bestFocusMinutes
         snap.postcardCount = progress.postcards.count
+        snap.selectedSkinName = selectedSkin.name
 
         if let r = resumableJourney {
             let total = max(1, r.route.durationMinutes * 60)
             snap.hasResumable = r.elapsedSeconds > 0 && r.elapsedSeconds < total
             snap.resumeOriginCity = r.origin.city
+            snap.resumeOriginCode = r.origin.code
             snap.resumeDestinationCity = r.route.destinationName
+            snap.resumeDestinationCode = r.route.destinationCode
             snap.resumeRemainingSeconds = max(0, total - r.elapsedSeconds)
+            snap.resumeRouteKm = Int(r.route.approximateDistanceKm.rounded())
             snap.resumeProgress = min(1, Double(r.elapsedSeconds) / Double(total))
         }
 

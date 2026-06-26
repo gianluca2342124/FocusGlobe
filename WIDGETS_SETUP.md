@@ -13,14 +13,19 @@ created safely from source alone. Everything below is the one-time wiring.
 | `FocusGlobe/Shared/WidgetSharedData.swift` | **App** | App Group id, `WidgetSnapshot`, `WidgetGoal`, `WidgetStore` (the app writes the snapshot) |
 | `FocusGlobeWidgets/WidgetData.swift` | **Widget** | Mirror of those models, compiled into the widget target (same types, same App-Group JSON) |
 | `FocusGlobeWidgets/FocusGlobeWidgetBundle.swift` | Widget | The **single** `@main` widget bundle (registers all widgets) |
-| `FocusGlobeWidgets/WidgetSupport.swift` | Widget | Theme, timeline provider, reusable views |
-| `FocusGlobeWidgets/StreakWidget.swift` | Widget | Focus streak (S/M + Lock Screen accessories) |
-| `FocusGlobeWidgets/StartJourneyWidget.swift` | Widget | Start Journey (S/M) |
-| `FocusGlobeWidgets/CurrentJourneyWidget.swift` | Widget | Current / Resume journey (M/L) |
-| `FocusGlobeWidgets/AroundEarthWidget.swift` | Widget | Around-Earth progress (S/M) |
-| `FocusGlobeWidgets/LongestRouteWidget.swift` | Widget | Longest route (M) |
-| `FocusGlobeWidgets/DailyGoalsWidget.swift` | Widget | Daily goals (M/L) |
-| `FocusGlobeWidgets/PassportWidget.swift` | Widget | Passport stats (S/M) |
+| `FocusGlobeWidgets/WidgetSupport.swift` | Widget | Theme, timeline provider, reusable views, deep-link helpers |
+| `FocusGlobeWidgets/WidgetVisuals.swift` | Widget | **Premium visual system** — vector starfield, space backdrop, glass cards, flame, globe, balloon, stylized map (see WIDGETS_DESIGN_SYSTEM.md) |
+| `FocusGlobeWidgets/StreakWidget.swift` | Widget | Focus streak — fire-only (S/M + Lock Screen accessories) |
+| `FocusGlobeWidgets/StartJourneyWidget.swift` | Widget | Start Journey — balloon launcher (S/M/L) |
+| `FocusGlobeWidgets/CurrentJourneyWidget.swift` | Widget | Current / Resume journey on the stylized map (S/M/L) |
+| `FocusGlobeWidgets/AroundEarthWidget.swift` | Widget | Around-Earth progress — illustrated globe (S/M/L) |
+| `FocusGlobeWidgets/LongestRouteWidget.swift` | Widget | Longest route — landed on the map (M/L) |
+| `FocusGlobeWidgets/DailyGoalsWidget.swift` | Widget | Daily goals — glass mission cards (S/M/L) |
+| `FocusGlobeWidgets/PassportWidget.swift` | Widget | Passport / collection (S/M/L) |
+
+> **Design:** the look and the shared component library are documented in
+> **WIDGETS_DESIGN_SYSTEM.md**. All widget art is pure SwiftUI vector (no bundled
+> images, no MapKit) so the extension stays lightweight and App Store-safe.
 
 The app writes a `WidgetSnapshot` into the App Group whenever data changes
 (`AppModel.syncWidgets()`), and calls `WidgetCenter.reloadAllTimelines()`.
@@ -103,19 +108,23 @@ The two earlier errors are resolved in the repository; just pull and build:
 | Host | Opens |
 |------|-------|
 | `choose` / `journey` / `start` | Choose Journey |
-| `passport` / `stats` | Passport |
+| `passport` / `stats` / `collection` | Passport |
 | `goals` / `missions` | Passport (daily goals) |
+| `streak` | Home (the live streak) |
 | `resume` / `current` | Home (auto-offers Resume if a journey is saved) |
+| `pro` / `paywall` | FocusGlobe Pro paywall (a locked widget taps here) |
 | `home` (or unknown) | Home |
 
 ## Premium gating (safe, no entitlement changes)
 
 The paywall promises "All widgets unlocked", so:
 
-- **Start Journey** is available to everyone (it's a launcher, no private data).
+- **Start Journey** and **Streak** are available to everyone (launchers / public
+  motivation, no private data).
 - The data widgets (**Current Journey, Around Earth, Longest Route, Daily Goals,
   Passport**) read `snapshot.isPro`. Non-Pro users see a tasteful **locked
-  teaser** ("Unlock with FocusGlobe Pro"); Pro users see the real content.
+  teaser** ("Unlock with FocusGlobe Pro") that **deep-links straight to the
+  paywall** (`focusglobe://pro`); Pro users see the real content.
 
 No subscription/pricing/entitlement logic was changed — widgets only *read* the
 Pro flag the app already mirrors into the shared snapshot.

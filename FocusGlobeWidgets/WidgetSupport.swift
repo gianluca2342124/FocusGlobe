@@ -21,15 +21,11 @@ enum WTheme {
 }
 
 extension View {
-    /// The standard dark, premium widget container background (iOS 17+).
-    func fgWidgetBackground() -> some View {
+    /// The standard dark, premium "deep space" widget container background
+    /// (iOS 17+). Pass a `glow` to tint each widget's signature corner light.
+    func fgWidgetBackground(glow: Color = WTheme.indigo) -> some View {
         containerBackground(for: .widget) {
-            ZStack {
-                LinearGradient(colors: [WTheme.bgTop, WTheme.bgBottom],
-                               startPoint: .top, endPoint: .bottom)
-                RadialGradient(colors: [WTheme.indigo.opacity(0.18), .clear],
-                               center: .topTrailing, startRadius: 4, endRadius: 220)
-            }
+            WSpace(glow: glow)
         }
     }
 }
@@ -40,6 +36,16 @@ enum FGLink {
     static func url(_ path: String) -> URL {
         URL(string: "\(FocusGlobeShared.urlScheme)://\(path)") ?? URL(string: "\(FocusGlobeShared.urlScheme)://home")!
     }
+}
+
+extension WidgetSnapshot {
+    /// Deep-link host for a Pro-gated widget: the paywall when locked, otherwise
+    /// `open`. Tapping a locked widget should sell Pro, not dead-end.
+    func gatedLink(_ open: String) -> String { isPro ? open : "pro" }
+
+    /// Deep-link host for the current-journey widget: paywall when locked, resume
+    /// when a flight is paused, otherwise choose a new destination.
+    func journeyLink() -> String { isPro ? (hasResumable ? "resume" : "choose") : "pro" }
 }
 
 // MARK: - Timeline
@@ -200,9 +206,48 @@ extension Int {
     }
 }
 
+extension String {
+    /// A 3-letter, airport-style code derived from a city name — a widget-side
+    /// fallback for when the snapshot only carries a city name (e.g. the longest
+    /// route). E.g. "Reykjavík" → "REY".
+    var fgCityCode: String {
+        let letters = uppercased().filter { $0.isLetter }
+        return letters.isEmpty ? "FLY" : String(letters.prefix(3))
+    }
+}
+
 /// Seconds → compact duration, e.g. 900 → "15m", 3720 → "1h 02m".
 func fgDuration(_ seconds: Int) -> String {
     let m = max(0, seconds) / 60
     if m < 60 { return "\(m)m" }
     return "\(m / 60)h \(String(format: "%02d", m % 60))m"
 }
+
+// MARK: - Preview states
+
+#if DEBUG
+extension WidgetSnapshot {
+    /// Preview-only: the "ready for takeoff" state (Pro, no active journey).
+    static var previewIdle: WidgetSnapshot {
+        var s = WidgetSnapshot.placeholder
+        s.hasResumable = false
+        return s
+    }
+
+    /// Preview-only: a locked (non-Pro) snapshot for the gated widgets.
+    static var previewLocked: WidgetSnapshot {
+        var s = WidgetSnapshot.placeholder
+        s.isPro = false
+        return s
+    }
+
+    /// Preview-only: a fresh account (zero stats) — exercises empty/ember states.
+    static var previewEmpty: WidgetSnapshot {
+        var s = WidgetSnapshot()
+        s.isPro = true
+        s.originCity = "San Francisco"
+        s.originCode = "SFO"
+        return s
+    }
+}
+#endif

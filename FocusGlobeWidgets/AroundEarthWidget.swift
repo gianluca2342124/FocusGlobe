@@ -1,17 +1,18 @@
 import SwiftUI
 import WidgetKit
 
-/// Cumulative "around the Earth" progress from total focus miles.
+/// Cumulative "around the Earth" progress from total focus miles, shown as an
+/// illustrated globe wrapped by a progress ring with an orbiting balloon.
 struct AroundEarthWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "FGAroundEarth", provider: FGProvider()) { entry in
             AroundEarthView(entry: entry)
-                .fgWidgetBackground()
-                .widgetURL(FGLink.url("passport"))
+                .fgWidgetBackground(glow: WTheme.teal)
+                .widgetURL(FGLink.url(entry.snapshot.gatedLink("passport")))
         }
         .configurationDisplayName("Around Earth")
         .description("How far you've travelled around the planet.")
-        .supportedFamilies([.systemSmall, .systemMedium])
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
 
@@ -22,49 +23,49 @@ private struct AroundEarthView: View {
     private var s: WidgetSnapshot { entry.snapshot }
     private var laps: Double { s.aroundEarthLaps }
     private var lapText: String { String(format: "%.2f×", laps) }
-    private var ringFraction: Double { laps >= 1 ? 1 : laps.truncatingRemainder(dividingBy: 1) }
+    private var ringFraction: Double { laps >= 1 ? laps.truncatingRemainder(dividingBy: 1) : laps }
 
     var body: some View {
         if !s.isPro {
             LockedTeaser(icon: "globe.europe.africa.fill", title: "Around Earth", accent: WTheme.teal)
-        } else if family == .systemMedium {
-            medium
         } else {
-            small
-        }
-    }
-
-    private var ring: some View {
-        ZStack {
-            WRing(fraction: ringFraction, tint: WTheme.teal)
-            VStack(spacing: 0) {
-                Text(lapText).font(.system(size: 15, weight: .heavy, design: .rounded)).foregroundStyle(WTheme.ink)
-                Text("laps").font(.system(size: 9, weight: .bold, design: .rounded)).foregroundStyle(WTheme.inkSoft)
+            switch family {
+            case .systemLarge:  large
+            case .systemMedium: medium
+            default:            small
             }
         }
     }
 
+    private func earth(_ size: CGFloat, orbit: Bool = true) -> some View {
+        // WEarth caps its own layout box; the atmosphere glow bleeds softly. The
+        // orbiting balloon is dropped in the medium layout where the globe sits
+        // beside the text (so it never crowds it).
+        WEarth(size: size, ringFraction: ringFraction, ringTint: WTheme.teal, orbitBalloon: orbit)
+    }
+
     private var small: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            WHeader(icon: "globe.europe.africa.fill", title: "Around Earth", tint: WTheme.teal)
-            ring.frame(width: 60, height: 60)
+        VStack(spacing: 7) {
+            Spacer(minLength: 0)
+            earth(68)
             Spacer(minLength: 0)
             Text("\(s.totalFocusMiles.fgGrouped) km")
-                .font(.system(size: 14, weight: .heavy, design: .rounded)).foregroundStyle(WTheme.ink)
-            Text("flown").font(.system(size: 9, weight: .bold, design: .rounded)).foregroundStyle(WTheme.inkSoft)
+                .font(.system(size: 16, weight: .heavy, design: .rounded)).foregroundStyle(WTheme.ink)
+                .minimumScaleFactor(0.7).lineLimit(1)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(14)
     }
 
     private var medium: some View {
-        HStack(spacing: 16) {
-            ring.frame(width: 92, height: 92)
+        HStack(spacing: 18) {
+            earth(84, orbit: false)
             VStack(alignment: .leading, spacing: 5) {
                 WHeader(icon: "globe.europe.africa.fill", title: "Around Earth", tint: WTheme.teal)
                 Text(lapText + " around")
-                    .font(.system(size: 22, weight: .heavy, design: .rounded)).foregroundStyle(WTheme.ink)
-                Text("Flown \(s.totalFocusMiles.fgGrouped) km")
+                    .font(.system(size: 24, weight: .heavy, design: .rounded)).foregroundStyle(WTheme.ink)
+                    .minimumScaleFactor(0.7).lineLimit(1)
+                Text("\(s.totalFocusMiles.fgGrouped) km flown")
                     .font(.system(size: 13, weight: .semibold, design: .rounded)).foregroundStyle(WTheme.inkSoft)
                 Text("\(s.landings) landings · \(s.currentStreak)-day streak")
                     .font(.system(size: 11, weight: .medium, design: .rounded)).foregroundStyle(WTheme.inkSoft)
@@ -72,6 +73,44 @@ private struct AroundEarthView: View {
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .padding(14)
+        .padding(16)
     }
+
+    private var large: some View {
+        VStack(spacing: 0) {
+            WHeader(icon: "globe.europe.africa.fill", title: "Around Earth", tint: WTheme.teal)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Spacer(minLength: 0)
+            earth(140)
+            Text(lapText + " around the world")
+                .font(.system(size: 18, weight: .heavy, design: .rounded)).foregroundStyle(WTheme.ink)
+                .padding(.top, 14)
+            Spacer(minLength: 0)
+            HStack(spacing: 0) {
+                WStat(value: "\(s.totalFocusMiles.fgGrouped)", caption: "km flown", tint: WTheme.gold)
+                WStat(value: "\(s.landings)", caption: "landings")
+                WStat(value: "\(s.currentStreak)", caption: "day streak", tint: WTheme.coral)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(18)
+    }
+}
+
+#Preview("Earth · small", as: .systemSmall) {
+    AroundEarthWidget()
+} timeline: {
+    FGEntry(date: .now, snapshot: .placeholder)
+}
+
+#Preview("Earth · medium", as: .systemMedium) {
+    AroundEarthWidget()
+} timeline: {
+    FGEntry(date: .now, snapshot: .placeholder)
+}
+
+#Preview("Earth · large", as: .systemLarge) {
+    AroundEarthWidget()
+} timeline: {
+    FGEntry(date: .now, snapshot: .placeholder)
 }

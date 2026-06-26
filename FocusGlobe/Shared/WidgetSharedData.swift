@@ -47,14 +47,21 @@ struct WidgetSnapshot: Codable, Hashable {
     var totalFocusMiles = 0
     var landings = 0
     var currentStreak = 0
+    var longestStreak = 0
     var bestFocusMinutes = 0
     var postcardCount = 0
+
+    // Collection
+    var selectedSkinName: String?
 
     // Resume / current journey
     var hasResumable = false
     var resumeOriginCity: String?
+    var resumeOriginCode: String?
     var resumeDestinationCity: String?
+    var resumeDestinationCode: String?
     var resumeRemainingSeconds: Int?
+    var resumeRouteKm: Int?
     var resumeProgress: Double?
 
     // Longest completed route
@@ -79,11 +86,14 @@ struct WidgetSnapshot: Codable, Hashable {
     /// Rich sample data for previews / the widget gallery.
     static let placeholder = WidgetSnapshot(
         isPro: true,
-        originCity: "Barcelona", originCode: "BCN",
-        totalFocusMiles: 12_022, landings: 18, currentStreak: 4,
+        originCity: "San Francisco", originCode: "SFO",
+        totalFocusMiles: 12_022, landings: 18, currentStreak: 4, longestStreak: 9,
         bestFocusMinutes: 90, postcardCount: 12,
-        hasResumable: true, resumeOriginCity: "Paris",
-        resumeDestinationCity: "Rome", resumeRemainingSeconds: 900, resumeProgress: 0.55,
+        selectedSkinName: "King",
+        hasResumable: true,
+        resumeOriginCity: "San Francisco", resumeOriginCode: "SFO",
+        resumeDestinationCity: "Los Angeles", resumeDestinationCode: "LAX",
+        resumeRemainingSeconds: 2_520, resumeRouteKm: 559, resumeProgress: 0.55,
         longestRouteOrigin: "Lisbon", longestRouteDestination: "Reykjavík",
         longestRouteKm: 2_480, longestRouteDurationMinutes: 50,
         goals: [
@@ -94,6 +104,47 @@ struct WidgetSnapshot: Codable, Hashable {
         ],
         goalsCompleted: 2, goalsTotal: 4, canClaimReward: false,
         updatedAt: Date())
+}
+
+extension WidgetSnapshot {
+    /// A resilient decoder: every field falls back to its default when missing or
+    /// malformed, so a snapshot written by an older (or newer) app version always
+    /// decodes — it never throws, never crashes, never wipes the widget as the
+    /// schema evolves. Encoding stays synthesized (always writes the full schema).
+    init(from decoder: Decoder) throws {
+        self.init()
+        guard let c = try? decoder.container(keyedBy: CodingKeys.self) else { return }
+        func v<T: Decodable>(_ key: CodingKeys, _ def: T) -> T {
+            (try? c.decode(T.self, forKey: key)) ?? def
+        }
+        isPro = v(.isPro, isPro)
+        originCity = v(.originCity, originCity)
+        originCode = v(.originCode, originCode)
+        totalFocusMiles = v(.totalFocusMiles, totalFocusMiles)
+        landings = v(.landings, landings)
+        currentStreak = v(.currentStreak, currentStreak)
+        longestStreak = v(.longestStreak, longestStreak)
+        bestFocusMinutes = v(.bestFocusMinutes, bestFocusMinutes)
+        postcardCount = v(.postcardCount, postcardCount)
+        selectedSkinName = v(.selectedSkinName, selectedSkinName)
+        hasResumable = v(.hasResumable, hasResumable)
+        resumeOriginCity = v(.resumeOriginCity, resumeOriginCity)
+        resumeOriginCode = v(.resumeOriginCode, resumeOriginCode)
+        resumeDestinationCity = v(.resumeDestinationCity, resumeDestinationCity)
+        resumeDestinationCode = v(.resumeDestinationCode, resumeDestinationCode)
+        resumeRemainingSeconds = v(.resumeRemainingSeconds, resumeRemainingSeconds)
+        resumeRouteKm = v(.resumeRouteKm, resumeRouteKm)
+        resumeProgress = v(.resumeProgress, resumeProgress)
+        longestRouteOrigin = v(.longestRouteOrigin, longestRouteOrigin)
+        longestRouteDestination = v(.longestRouteDestination, longestRouteDestination)
+        longestRouteKm = v(.longestRouteKm, longestRouteKm)
+        longestRouteDurationMinutes = v(.longestRouteDurationMinutes, longestRouteDurationMinutes)
+        goals = v(.goals, goals)
+        goalsCompleted = v(.goalsCompleted, goalsCompleted)
+        goalsTotal = v(.goalsTotal, goalsTotal)
+        canClaimReward = v(.canClaimReward, canClaimReward)
+        updatedAt = v(.updatedAt, updatedAt)
+    }
 }
 
 /// Tiny read/write façade over the App Group `UserDefaults`. Safe before the App

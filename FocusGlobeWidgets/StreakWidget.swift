@@ -1,13 +1,15 @@
 import SwiftUI
 import WidgetKit
 
-/// A focus-streak widget — the flame, the day count, and today's momentum.
-/// Home Screen (small/medium) + Lock Screen accessories.
+/// The focus-streak widget — a single, iconic glowing flame. The number lives
+/// inside the flame; there is almost no text. At zero it becomes a calm "ember"
+/// (an invitation, never guilt); when the streak is active but nothing's been
+/// done today it warms with a gentle urgency.
 struct StreakWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "FGStreak", provider: FGProvider()) { entry in
             StreakWidgetView(entry: entry)
-                .widgetURL(FGLink.url("home"))
+                .widgetURL(FGLink.url("streak"))
         }
         .configurationDisplayName("Streak")
         .description("Keep your focus streak alive.")
@@ -21,10 +23,20 @@ private struct StreakWidgetView: View {
     let entry: FGEntry
     private var s: WidgetSnapshot { entry.snapshot }
 
+    /// Active streak, but nothing finished today → a gentle "don't lose it" nudge.
+    private var atRisk: Bool { s.currentStreak > 0 && s.goalsCompleted == 0 }
+
+    private var headline: String {
+        if s.currentStreak == 0 { return "Light your flame" }
+        if atRisk { return "Keep it alive" }
+        return "You're on fire"
+    }
+
     private var microcopy: String {
-        if s.currentStreak == 0 { return "Fly today to start your streak" }
-        if s.goalsTotal > 0 && s.goalsCompleted >= s.goalsTotal { return "All goals done today" }
-        return "Take a quick flight to keep it going"
+        if s.currentStreak == 0 { return "Take one flight today to begin" }
+        if atRisk { return "A quick flight keeps the streak" }
+        if s.goalsTotal > 0 && s.goalsCompleted >= s.goalsTotal { return "Every goal done today" }
+        return "\(s.currentStreak) days of focus and counting"
     }
 
     var body: some View {
@@ -32,71 +44,40 @@ private struct StreakWidgetView: View {
         case .accessoryCircular:    accessoryCircular
         case .accessoryRectangular: accessoryRectangular
         case .accessoryInline:      accessoryInline
-        case .systemMedium:         medium.fgWidgetBackground()
-        default:                    small.fgWidgetBackground()
+        case .systemMedium:         medium.fgWidgetBackground(glow: WTheme.coral)
+        default:                    small.fgWidgetBackground(glow: WTheme.coral)
         }
     }
 
     // MARK: Home Screen
 
-    private var flame: some View {
-        Image(systemName: "flame.fill")
-            .font(.system(size: 26, weight: .bold))
-            .foregroundStyle(LinearGradient(colors: [WTheme.gold, WTheme.coral],
-                                            startPoint: .top, endPoint: .bottom))
-            .shadow(color: WTheme.coral.opacity(0.5), radius: 8, y: 2)
-    }
-
     private var small: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack { WHeader(icon: "flame.fill", title: "Streak", tint: WTheme.coral); Spacer() }
+        VStack(spacing: 8) {
             Spacer(minLength: 0)
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text("\(s.currentStreak)")
-                    .font(.system(size: 44, weight: .heavy, design: .rounded))
-                    .foregroundStyle(WTheme.ink)
-                Text(s.currentStreak == 1 ? "day" : "days")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundStyle(WTheme.inkSoft)
-            }
-            Text(microcopy)
-                .font(.system(size: 10, weight: .semibold, design: .rounded))
+            WFlame(streak: s.currentStreak, size: 74, atRisk: atRisk)
+            Spacer(minLength: 0)
+            Text(s.currentStreak == 0 ? "START TODAY" : "DAY STREAK")
+                .font(.system(size: 10, weight: .heavy, design: .rounded)).tracking(1.4)
                 .foregroundStyle(WTheme.inkSoft)
-                .lineLimit(2)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(14)
     }
 
     private var medium: some View {
         HStack(spacing: 16) {
-            VStack(spacing: 2) {
-                flame
-                Text("\(s.currentStreak)")
-                    .font(.system(size: 34, weight: .heavy, design: .rounded))
-                    .foregroundStyle(WTheme.ink)
-                Text(s.currentStreak == 1 ? "day" : "days")
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .foregroundStyle(WTheme.inkSoft)
-            }
-            .frame(width: 92)
-            VStack(alignment: .leading, spacing: 8) {
+            WFlame(streak: s.currentStreak, size: 76, atRisk: atRisk)
+                .frame(width: 92)
+            VStack(alignment: .leading, spacing: 10) {
                 WHeader(icon: "flame.fill", title: "Focus streak", tint: WTheme.coral)
-                Text(microcopy)
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundStyle(WTheme.ink)
-                    .lineLimit(2)
-                if s.goalsTotal > 0 {
-                    HStack(spacing: 6) {
-                        ForEach(0..<min(s.goalsTotal, 6), id: \.self) { i in
-                            Circle()
-                                .fill(i < s.goalsCompleted ? WTheme.gold : WTheme.hair)
-                                .frame(width: 8, height: 8)
-                        }
-                        Text("\(s.goalsCompleted)/\(s.goalsTotal) goals")
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            .foregroundStyle(WTheme.inkSoft)
-                    }
+                WDayDots(streak: s.currentStreak)
+                Text(headline)
+                    .font(.system(size: 18, weight: .heavy, design: .rounded))
+                    .foregroundStyle(WTheme.ink).lineLimit(1).minimumScaleFactor(0.7)
+                if s.longestStreak > s.currentStreak {
+                    Text("Best · \(s.longestStreak) days")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundStyle(WTheme.gold.opacity(0.9))
                 }
             }
             Spacer(minLength: 0)
@@ -134,4 +115,22 @@ private struct StreakWidgetView: View {
         Label("\(s.currentStreak)-day streak", systemImage: "flame.fill")
             .containerBackground(.clear, for: .widget)
     }
+}
+
+#Preview("Streak · on fire", as: .systemSmall) {
+    StreakWidget()
+} timeline: {
+    FGEntry(date: .now, snapshot: .placeholder)
+}
+
+#Preview("Streak · ember", as: .systemSmall) {
+    StreakWidget()
+} timeline: {
+    FGEntry(date: .now, snapshot: WidgetSnapshot())
+}
+
+#Preview("Streak · medium", as: .systemMedium) {
+    StreakWidget()
+} timeline: {
+    FGEntry(date: .now, snapshot: .placeholder)
 }
