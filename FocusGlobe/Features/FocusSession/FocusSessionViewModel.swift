@@ -132,11 +132,19 @@ final class FocusSessionViewModel: ObservableObject {
         appModel.ads.preloadInterstitial(isPro: appModel.isPro)
         appModel.sound.startJourney(option: appModel.selectedJourneyAudio)
         timer.start()
+        // Focus Shield: block the user's chosen apps for the remaining journey
+        // time (handles resume — shields last until this journey actually lands).
+        appModel.focusShield.applyForJourney(durationSeconds: Int(timer.remaining.rounded()))
     }
 
     func tearDown() {
         cancellable?.cancel()
-        if !didLand { timer.stop() }
+        if !didLand {
+            timer.stop()
+            // Backstop: the journey view went away without landing — make sure no
+            // shields are left behind (idempotent; a no-op if already cleared).
+            appModel?.focusShield.clear(reason: .cancel)
+        }
         appModel?.sound.stop()
     }
 
@@ -263,6 +271,9 @@ final class FocusSessionViewModel: ObservableObject {
         saveResumeSnapshot()
         timer.stop()
         appModel?.sound.stop()
+        // Leaving before landing → drop the shields (a paused/resumable journey
+        // is not "in flight").
+        appModel?.focusShield.clear(reason: .cancel)
     }
 
     // MARK: - Resume snapshot
@@ -288,6 +299,7 @@ final class FocusSessionViewModel: ObservableObject {
         guard !didLand, !landing, let appModel else { return }
         landing = true
         appModel.sound.stop()
+        appModel.focusShield.clear(reason: .landing)   // journey complete → unblock apps
         appModel.clearResumableJourney()   // completed → no longer resumable
         // Bank the journey now (rewards/streak/history) regardless of any ad.
         landingSummary = appModel.completeJourney(

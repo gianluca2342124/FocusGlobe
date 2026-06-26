@@ -26,7 +26,12 @@ struct FocusGlobeApp: App {
                 .environmentObject(router)
                 .tint(AppColors.brand)
                 .preferredColorScheme(appModel.settings.appearance.colorScheme)
-                .onAppear { appModel.analytics.log(.appOpened) }
+                .onAppear {
+                    appModel.analytics.log(.appOpened)
+                    // Clear any shields left behind by a previous run (e.g. the app
+                    // was killed mid-journey). No journey is in flight at cold launch.
+                    appModel.focusShield.reconcile(activeJourneyInFlight: router.activeJourney != nil)
+                }
                 .onOpenURL { router.handleDeepLink($0) }   // widget deep links
                 .onChange(of: scenePhase) { _, phase in
                     guard phase == .active else { return }
@@ -35,6 +40,8 @@ struct FocusGlobeApp: App {
                     // renewals / expirations / restores made elsewhere are reflected.
                     appModel.refreshNotifications()
                     appModel.refreshSubscriptionStatus()
+                    // Drop stale shields if the journey ended while backgrounded.
+                    appModel.focusShield.reconcile(activeJourneyInFlight: router.activeJourney != nil)
                 }
         }
     }

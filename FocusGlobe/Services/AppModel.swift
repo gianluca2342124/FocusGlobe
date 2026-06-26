@@ -60,6 +60,9 @@ final class AppModel: ObservableObject {
     let location = LocationService()
     /// RevenueCat-backed subscription state (inert until the SDK is linked).
     let subscriptions = SubscriptionManager()
+    /// Screen Time app-blocking ("Focus Shield") during journeys. A safe no-op on
+    /// unsupported platforms (Mac Designed for iPad, missing FamilyControls).
+    let focusShield = FocusShieldService()
 
     private let persistence: PersistenceService
     private var cancellables: Set<AnyCancellable> = []

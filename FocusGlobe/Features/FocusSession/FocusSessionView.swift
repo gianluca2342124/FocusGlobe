@@ -132,6 +132,9 @@ struct FocusSessionView: View {
                                   accessibilityLabel: vm.isAudioMuted ? "Unmute journey audio" : "Mute journey audio") {
                         vm.toggleMute()
                     }
+                    // Focus Shield — view/disable blocking or change blocked apps
+                    // mid-journey. Hidden on unsupported platforms.
+                    FocusShieldControl(service: appModel.focusShield, size: Layout.pad(46, 56))
                     // iPad/Mac: the pause control joins the side controls (the bottom-
                     // centre pause is omitted there) so the control set reads as one
                     // unified group. Same gray glass circle as the other buttons.

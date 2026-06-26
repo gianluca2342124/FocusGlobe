@@ -22,6 +22,7 @@ struct SettingsView: View {
                     appearanceSection
                     locationSection
                     experienceSection
+                    FocusShieldSettingsSection(service: appModel.focusShield)
                     proSection
                     privacySection
                     legalSection

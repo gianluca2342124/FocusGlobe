@@ -163,6 +163,7 @@ private struct PrinterSlot: View {
 // MARK: - Ticket
 
 private struct JourneyTicket: View {
+    @EnvironmentObject private var appModel: AppModel
     let origin: JourneyOrigin
     let route: Route
     let distanceKm: Double
@@ -260,6 +261,9 @@ private struct JourneyTicket: View {
                     }
                     Spacer()
                 }
+                // Focus Shield — block distracting apps for this journey. Renders
+                // its own divider; hides itself on unsupported platforms.
+                FocusShieldBoardingRow(service: appModel.focusShield, ink: ink, inkSoft: inkSoft)
             }
             .padding(AppSpacing.md)
         }
