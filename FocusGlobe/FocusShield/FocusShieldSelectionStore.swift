@@ -1,3 +1,6 @@
+// PARKED for v1.0 distribution — compiles only with the `FOCUS_SHIELD_ENABLED`
+// Swift flag (intentionally unset). See FOCUS_SHIELD_PARKED.md.
+#if FOCUS_SHIELD_ENABLED
 import Foundation
 import os
 #if canImport(FamilyControls)
@@ -187,5 +190,7 @@ enum FocusShieldEngine {
         s.clearAllSettings()
     }
 }
+
+#endif
 
 #endif

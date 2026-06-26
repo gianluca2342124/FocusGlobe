@@ -1,3 +1,6 @@
+// Full Focus Shield Settings section — compiles only with `FOCUS_SHIELD_ENABLED`
+// (intentionally unset for v1.0). The parked "Soon…" card is in the #else branch.
+#if FOCUS_SHIELD_ENABLED
 import SwiftUI
 
 /// The reusable "Focus Shield" Settings section — shows authorization / selection
@@ -80,3 +83,57 @@ struct FocusShieldSettingsSection: View {
         .contentShape(Rectangle())
     }
 }
+
+#else
+
+import SwiftUI
+
+/// PARKED Settings section (Focus Shield disabled for v1.0): a premium, dimmed
+/// "Soon…" card in place of the live control. Tapping it only reveals a brief
+/// "Coming soon" note — it never opens a system picker or requests permission.
+struct FocusShieldSettingsSection: View {
+    @EnvironmentObject private var appModel: AppModel
+    @ObservedObject var service: FocusShieldService
+    @State private var showSoon = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            SectionLabel(text: "Focus Shield")
+            Button {
+                appModel.tapFeedback()
+                withAnimation(.easeInOut(duration: 0.2)) { showSoon = true }
+            } label: {
+                HStack(spacing: AppSpacing.sm) {
+                    Image(systemName: "shield.lefthalf.filled")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(AppColors.textSecondary)
+                        .frame(width: 34, height: 34)
+                        .background(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(AppColors.glassTint.opacity(0.5)))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Block distracting apps")
+                            .font(AppTypography.callout).foregroundStyle(AppColors.textPrimary)
+                        Text(showSoon
+                             ? "Coming soon ✨"
+                             : "Soon… keep social, video and games out of your focus journeys")
+                            .font(AppTypography.caption).foregroundStyle(AppColors.textTertiary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                    Text("SOON")
+                        .font(.system(size: 10, weight: .heavy, design: .rounded)).tracking(0.6)
+                        .foregroundStyle(AppColors.gold)
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(Capsule().fill(AppColors.gold.opacity(0.15)))
+                }
+                .padding(AppSpacing.md)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .glassBackground(cornerRadius: AppSpacing.cardRadius)
+                .opacity(0.85)   // gently dimmed → reads as "planned, not yet available"
+            }
+            .buttonStyle(SoftPressStyle())
+        }
+    }
+}
+
+#endif

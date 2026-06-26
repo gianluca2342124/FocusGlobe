@@ -163,7 +163,6 @@ private struct PrinterSlot: View {
 // MARK: - Ticket
 
 private struct JourneyTicket: View {
-    @EnvironmentObject private var appModel: AppModel
     let origin: JourneyOrigin
     let route: Route
     let distanceKm: Double
@@ -261,9 +260,33 @@ private struct JourneyTicket: View {
                     }
                     Spacer()
                 }
-                // Focus Shield — block distracting apps for this journey. Renders
-                // its own divider; hides itself on unsupported platforms.
-                FocusShieldBoardingRow(service: appModel.focusShield, ink: ink, inkSoft: inkSoft)
+                // App blocking — planned for a future update. Focus Shield is parked
+                // for v1.0 (see FOCUS_SHIELD_PARKED.md): a static, disabled "Soon…"
+                // teaser that never opens a picker or requests any permission.
+                Rectangle().fill(ink.opacity(0.08)).frame(height: 1)
+                HStack(spacing: AppSpacing.sm) {
+                    ZStack {
+                        Circle().fill(inkSoft.opacity(0.16)).frame(width: 34, height: 34)
+                        Image(systemName: "shield.lefthalf.filled")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(inkSoft)
+                    }
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("APP BLOCKING")
+                            .font(.system(size: 9, weight: .semibold, design: .rounded)).tracking(0.5)
+                            .foregroundStyle(inkSoft)
+                        Text("Soon…")
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundStyle(inkSoft)
+                    }
+                    Spacer()
+                    Text("SOON")
+                        .font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(0.5)
+                        .foregroundStyle(ink.opacity(0.85))
+                        .padding(.horizontal, 7).padding(.vertical, 3)
+                        .background(Capsule().fill(inkSoft.opacity(0.18)))
+                }
+                .opacity(0.9)
             }
             .padding(AppSpacing.md)
         }

@@ -1,3 +1,15 @@
+// ============================================================================
+//  Focus Shield is PARKED for v1.0 distribution.
+//
+//  The full Screen Time implementation below compiles ONLY when the
+//  `FOCUS_SHIELD_ENABLED` Swift flag is set (it is intentionally NOT set in any
+//  build configuration). Until Apple grants the Family Controls **Distribution**
+//  entitlement, the app ships with the no-op stub in the `#else` branch — no
+//  FamilyControls / ManagedSettings / DeviceActivity usage, no authorization, no
+//  picker, no shields. See FOCUS_SHIELD_PARKED.md to re-enable.
+// ============================================================================
+
+#if FOCUS_SHIELD_ENABLED
 import Foundation
 import SwiftUI
 #if canImport(FamilyControls)
@@ -210,3 +222,45 @@ final class FocusShieldService: ObservableObject {
         #endif
     }
 }
+
+#else
+
+import Foundation
+
+/// PARKED no-op stub of `FocusShieldService` (Focus Shield disabled for v1.0).
+///
+/// Same public surface the app calls (`applyForJourney`, `clear`, `reconcile`,
+/// …) so journey/lifecycle code compiles unchanged — but it does nothing, never
+/// touches Family Controls, and reports `isSupported == false`. The Settings
+/// section shows a "Soon…" card instead. See FOCUS_SHIELD_PARKED.md.
+@MainActor
+final class FocusShieldService: ObservableObject {
+
+    enum AuthState: Equatable { case notDetermined, denied, approved, unavailable }
+
+    enum ClearReason: String {
+        case landing, cancel, expired
+        case noActiveJourney = "no_active_journey"
+        case userDisabled = "user_disabled"
+    }
+
+    @Published private(set) var authState: AuthState = .unavailable
+    @Published private(set) var isEnabled: Bool = false
+    @Published private(set) var selectionCount: Int = 0
+    @Published private(set) var isShieldActive: Bool = false
+
+    /// Always false while parked — the feature is unavailable in this build.
+    static var isSupported: Bool { false }
+    var isSupported: Bool { false }
+
+    init() {}
+
+    func refreshAuthorization() {}
+    func setEnabled(_ on: Bool) {}
+    func applyForJourney(durationSeconds: Int) {}
+    func clear(reason: ClearReason) {}
+    func disableForActiveJourney() {}
+    func reconcile(activeJourneyInFlight: Bool) {}
+}
+
+#endif

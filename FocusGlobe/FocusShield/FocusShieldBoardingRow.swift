@@ -1,3 +1,7 @@
+// PARKED for v1.0 distribution — compiles only with `FOCUS_SHIELD_ENABLED`
+// (intentionally unset) and is no longer placed on the boarding pass.
+// See FOCUS_SHIELD_PARKED.md.
+#if FOCUS_SHIELD_ENABLED
 import SwiftUI
 
 /// The Focus Shield row on the boarding pass — mirrors the ticket's "FOCUS" row
@@ -71,3 +75,5 @@ struct FocusShieldBoardingRow: View {
         }
     }
 }
+
+#endif
