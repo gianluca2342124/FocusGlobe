@@ -26,16 +26,20 @@ Add both products to the **FocusGlobe** app target:
 
 ## 2. Info.plist keys (app target)
 
-The project uses a generated Info.plist — add these via the target's **Info** tab
-(custom keys) or an `Info.plist`:
+`FocusGlobe/Info.plist` already contains the production AdMob keys:
 
-- **`GADApplicationIdentifier`** (String) = `ca-app-pub-2780304092271589~4583163289`
-- **`SKAdNetworkItems`** — paste Google's current SKAdNetwork identifiers list
-  (from the AdMob docs) so attribution works.
-- **`NSUserTrackingUsageDescription`** (String) — *only if you decide to request
-  ATT* (see §8), e.g. "FocusGlobe uses this to show more relevant ads." Rewarded
-  and the journey-complete interstitial work without ATT (non-personalised ads),
-  so ATT is optional.
+- **`GADApplicationIdentifier`** (String) = `ca-app-pub-2780304092271589~4583163289` — ✅ already set, exactly.
+- **`SKAdNetworkItems`** — ✅ present, currently containing **only Google's primary
+  identifier** `cstr6suwn9.skadnetwork`. That is valid and must not be removed.
+  > **TODO before final release:** periodically refresh `SKAdNetworkItems` from
+  > Google's current official list (AdMob docs → *"Update your SKAdNetwork items"*),
+  > and add the identifiers for any mediation/demand partners you enable, so
+  > attribution coverage stays complete. **Never delete** `cstr6suwn9.skadnetwork`
+  > or any existing identifier — only add.
+- **`NSUserTrackingUsageDescription`** — *intentionally not set*: the app does **not**
+  request ATT/IDFA tracking. Rewarded, interstitial and banner all serve without ATT
+  (non-personalised when consent isn't granted). Add this key only if you later add
+  an ATT prompt via UMP (see §8).
 
 ## 3. IDs — where they live
 
@@ -122,4 +126,48 @@ just the dashboard metadata.)
 
 All ad lifecycle events are logged through the existing `AnalyticsService`
 (`admob_consent_*`, `interstitial_ad_*`, `rewarded_ad_*`, `ad_skipped_for_pro`,
-`ad_skipped_not_ready`). No new analytics SDK was added.
+`ad_skipped_not_ready`). `AnalyticsService` only **prints in DEBUG** and is a no-op
+in Release, so no ad telemetry is emitted in production builds. The in-journey
+banner's `JourneyBannerLog` is likewise compiled out of Release entirely.
+
+## 10. Production readiness (TestFlight / App Store)
+
+**Build-configuration safety (verified in code):**
+
+- **Real IDs in Release.** `FocusGlobe/Services/AdMobConfig.swift` is the single
+  source of truth. It uses Google's **test** ad unit IDs only inside `#if DEBUG`,
+  and the **real FocusGlobe** unit IDs in every other configuration — Release,
+  Archive, TestFlight and App Store. No `ca-app-pub-3940256099942544` (test) ID can
+  reach a Release code path.
+- **No "Test banner placeholder" in Release.** Every banner debug affordance
+  (`debugPlaceholder`, the "Ad loading…" overlay, the reserved unloaded strip) is
+  inside `#if DEBUG`. In Release a banner that hasn't loaded stays invisible at zero
+  height and a failed banner collapses cleanly — no debug text, no fake container.
+- **Pro users see no ads** — rewarded, interstitial and banner are all gated on the
+  Pro flag (and the banner re-checks it). Never break this.
+- **Rewards are callback-gated** — `showRewarded` returns `true` (and the app grants
+  miles) **only** after Google's reward callback fires; dismissing early, a failed
+  load, or "ads not ready" all grant nothing.
+- **Landing is never blocked** — the journey-complete interstitial falls straight
+  through to Landing for Pro / not-loaded / no-presenter, with a present-timeout
+  safety net.
+
+**Manual steps still required before shipping (cannot be done in code):**
+
+- **App Store Connect → App Privacy:** declare **AdMob's data collection** in the
+  privacy questionnaire. The Google Mobile Ads SDK typically collects *Device ID /
+  Identifiers*, *Usage Data*, *Diagnostics* and possibly *Coarse Location* (for
+  advertising/measurement). Match Google's current **"Data disclosure"** guidance
+  for the Mobile Ads SDK. (The app's own data stays on-device; this is about the SDK.)
+- **AdMob console → Privacy & messaging:** configure a **GDPR (EEA/UK) consent**
+  message and any other regional messages you require. The app already calls UMP at
+  launch (`AdService.start()`) and will not request ads until `canRequestAds` is
+  true; with no message configured, UMP simply reports "ads allowed".
+- **SKAdNetwork:** keep `SKAdNetworkItems` up to date (see §2 TODO).
+- **Fill expectations:** for a brand-new app and freshly created ad units, real ads
+  may return **low or no fill** at first — especially before the App Store listing is
+  live and for the first hours/days after each unit is created. Empty fill in
+  TestFlight is normal; all flows degrade gracefully to "no ad".
+- **ATT:** not requested by this app. Only add an ATT prompt (UMP ATT message +
+  `NSUserTrackingUsageDescription`) if you deliberately decide to — it is *not* part
+  of this production-readiness pass.
