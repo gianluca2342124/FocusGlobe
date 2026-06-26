@@ -228,7 +228,7 @@ func fgDuration(_ seconds: Int) -> String {
 #if DEBUG
 extension WidgetSnapshot {
     /// Preview-only: the "ready for takeoff" state (Pro, no active journey).
-    static var previewIdle: WidgetSnapshot {
+    static var preview: WidgetSnapshot {
         var s = WidgetSnapshot.placeholder
         s.hasResumable = false
         return s

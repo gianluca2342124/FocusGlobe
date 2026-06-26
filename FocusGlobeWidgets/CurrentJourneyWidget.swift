@@ -199,5 +199,5 @@ private struct CurrentJourneyView: View {
 #Preview("Journey · ready", as: .systemMedium) {
     CurrentJourneyWidget()
 } timeline: {
-    FGEntry(date: .now, snapshot: .previewIdle)
+    FGEntry(date: .now, snapshot: .placeholder)
 }
