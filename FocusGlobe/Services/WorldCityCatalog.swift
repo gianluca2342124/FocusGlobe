@@ -49,6 +49,15 @@ enum WorldCityCatalog {
             }
     }
 
+    /// The single nearest known city to `coordinate`. Used as a display fallback
+    /// when reverse geocoding yields no city name (common in the Simulator or
+    /// offline) so the UI shows a real city + code (e.g. "San Francisco" / "SFO")
+    /// instead of a generic "Current Location". Coordinate-based, so it's correct
+    /// anywhere on Earth and never hardcodes a city.
+    static func nearestCity(to coordinate: GeoCoordinate) -> CityEntry? {
+        sortedByDistance(from: coordinate, excludingOriginWithinKm: 0).first?.entry
+    }
+
     /// Real cities within a distance band, nearest first.
     static func nearestCities(to coordinate: GeoCoordinate,
                               excludingOriginWithinKm: Double = 5,

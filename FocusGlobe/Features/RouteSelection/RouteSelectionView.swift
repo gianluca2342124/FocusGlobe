@@ -167,7 +167,7 @@ struct RouteSelectionView: View {
 
     private func chip(title: String, systemImage: String, category: RouteCategory?) -> some View {
         Button {
-            appModel.haptics.tap()
+            appModel.selectFeedback()   // choosing a category filter → soft selection
             withAnimation(.snappy(duration: 0.25)) { viewModel.selectedCategory = category }
         } label: {
             AppChip(title: title, systemImage: systemImage,
@@ -270,7 +270,7 @@ struct RouteSelectionView: View {
 
     private func select(_ journey: PlannedJourney) {
         if appModel.isUnlocked(journey.route) {
-            appModel.haptics.tap()
+            appModel.haptics.select()   // choosing a route → soft selection tick
             appModel.uiSound.play(.transition)
             appModel.analytics.log(.routeSelected, ["route": journey.id, "source": "discovery"])
             router.openFocusLoadout(journey.route)

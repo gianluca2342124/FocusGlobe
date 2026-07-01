@@ -46,6 +46,8 @@ struct AppleActiveJourneyMapView: UIViewRepresentable {
         map.setCamera(MKMapCamera(lookingAtCenter: mid.cl,
                                   fromDistance: AppleMapCameraController.overviewDistance(forRouteKm: data.routeDistanceKm),
                                   pitch: 0, heading: 0), animated: false)
+        // Fade in once tiles render so take-off doesn't flash blank grey tiles.
+        context.coordinator.reveal.arm(map)
         return map
     }
 
@@ -73,6 +75,8 @@ struct AppleActiveJourneyMapView: UIViewRepresentable {
 
         private var balloon: MapImageAnnotation?
         private var routeOverlay: MKGeodesicPolyline?
+        /// Fades the map in once tiles render (no blank-grey flash on take-off).
+        let reveal = MapReveal()
 
         // MARK: Gestures — detect manual panning
 
@@ -214,6 +218,14 @@ struct AppleActiveJourneyMapView: UIViewRepresentable {
 
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
             AppleMapAnnotationRenderer.view(for: annotation, on: mapView)
+        }
+
+        func mapViewDidFinishRenderingMap(_ mapView: MKMapView, fullyRendered: Bool) {
+            reveal.reveal(mapView)
+        }
+
+        func mapViewDidFinishLoadingMap(_ mapView: MKMapView) {
+            reveal.reveal(mapView)
         }
     }
 }

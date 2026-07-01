@@ -301,6 +301,22 @@ final class AppModel: ObservableObject {
         uiSound.play(.modal)
     }
 
+    /// Feedback for *choosing* something — a route/category, focus type, balloon
+    /// skin or journey sound. A soft selection haptic plus a very subtle click,
+    /// distinct from a button `tapFeedback()`. Respects the Sound/Haptics
+    /// settings (both services are gated) and is always a one-shot.
+    func selectFeedback() {
+        haptics.select()
+        uiSound.play(.tap)
+    }
+
+    /// Feedback for an action that couldn't complete — an unavailable Pro action
+    /// or a failed/empty restore. A gentle warning haptic only (no earcon), so it
+    /// stays quiet and premium. Respects the Haptics setting.
+    func warningFeedback() {
+        haptics.warning()
+    }
+
     // MARK: - Balloon skins
 
     /// The selected skin — resolved defensively so a locked skin is never
@@ -333,7 +349,7 @@ final class AppModel: ObservableObject {
     func selectSkin(_ skin: BalloonSkin) {
         guard isSkinUnlocked(skin) else { return }
         settings.selectedSkinID = skin.id
-        tapFeedback()
+        selectFeedback()   // choosing a skin → soft selection feel
     }
 
     // MARK: - Journey audio
@@ -355,7 +371,7 @@ final class AppModel: ObservableObject {
         guard isAudioUnlocked(option) else { return }
         settings.selectedJourneyAudioID = option.id
         sound.switchOption(option)   // live-swap if a journey is currently playing
-        tapFeedback()
+        selectFeedback()   // choosing an ambience → soft selection feel
     }
 
     // MARK: - Premium reconciliation

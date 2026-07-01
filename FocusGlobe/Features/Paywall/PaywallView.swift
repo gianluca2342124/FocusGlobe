@@ -356,6 +356,9 @@ struct PaywallView: View {
             if ok {
                 appModel.haptics.rewardClaim()
                 dismiss()
+            } else if subs.errorMessage != nil {
+                // A real failure (not a user cancel, which leaves errorMessage nil).
+                appModel.warningFeedback()
             }
         }
     }
@@ -365,6 +368,7 @@ struct PaywallView: View {
         Task { @MainActor in
             let ok = await appModel.restorePurchases()
             if ok { dismiss() }
+            else { appModel.warningFeedback() }   // nothing to restore / failed
         }
     }
 }
