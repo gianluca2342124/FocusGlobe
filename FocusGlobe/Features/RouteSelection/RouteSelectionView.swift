@@ -73,10 +73,6 @@ struct RouteSelectionView: View {
             // space on iPad/Mac (unlike the centred pop-up modals).
             .padding(.bottom, Layout.pad(AppSpacing.lg, AppSpacing.sm))
         }
-        // Choose Journey is built on the dark globe map (same as Home), so lock its
-        // over-map content to the dark rendering — its white-on-map text and cards
-        // stay readable in Light Mode instead of washing out.
-        .environment(\.colorScheme, .dark)
         .focusScreenChrome()
         .sheet(isPresented: $showCityPicker) { LocationPickerView().environmentObject(appModel) }
         .onAppear { viewModel.prepare(from: origin) }

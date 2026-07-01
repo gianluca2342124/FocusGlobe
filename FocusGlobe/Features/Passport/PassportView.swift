@@ -28,8 +28,10 @@ struct PassportView: View {
                     }
                     statsGrid
                     skinsSection
+                    WidgetsGallerySection()
                     missionsSection
                     postcardsSection
+                    VisitedPlacesSection()
                     journeySoundSection
                 }
                 .padding(AppSpacing.screen)

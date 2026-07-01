@@ -233,12 +233,13 @@ private struct JourneyTicket: View {
 
     private var body_: some View {
         VStack(spacing: 0) {
-            // The sky header stays a night sky in both modes, so it uses fixed
-            // light ink (never the appearance-adaptive body ink) to stay readable.
+            // The sky header adapts too: a night sky (white ink) in Dark Mode and a
+            // soft day sky (dark ink) in Light Mode, so the whole pass reads as one
+            // coherent light ticket in Light Mode instead of a dark top band.
             TicketSkyHeader(originCode: origin.code, originCity: origin.city,
                             destCode: route.destinationCode, destCity: route.destinationName,
                             duration: route.durationLabel, category: route.category,
-                            ink: Color(hex: 0xF1F4FB), inkSoft: Color(hex: 0xAEB7CC))
+                            ink: ink, inkSoft: inkSoft)
                 .frame(height: Layout.pad(116, 142))
 
             VStack(spacing: AppSpacing.sm) {
@@ -364,9 +365,11 @@ private struct TicketSkyHeader: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(colors: [Color(hex: 0x273141), Color(hex: 0x161D2A)],
+            // Night sky in Dark Mode; a soft day sky in Light Mode.
+            LinearGradient(colors: [Color.dynamic(light: 0xE9EEF6, dark: 0x273141),
+                                    Color.dynamic(light: 0xF4F7FB, dark: 0x161D2A)],
                            startPoint: .top, endPoint: .bottom)
-            // Faint moon glow.
+            // Faint moon glow (only reads on the dark night sky).
             Circle()
                 .fill(RadialGradient(colors: [Color.white.opacity(0.16), .clear],
                                      center: .center, startRadius: 1, endRadius: 60))
@@ -389,7 +392,7 @@ private struct TicketSkyHeader: View {
                     }
                     .foregroundStyle(ink)
                     .padding(.horizontal, 7).padding(.vertical, 3)
-                    .background(Capsule().fill(Color.white.opacity(0.12)))
+                    .background(Capsule().fill(ink.opacity(0.14)))
                 }
                 Spacer()
                 HStack(alignment: .center) {

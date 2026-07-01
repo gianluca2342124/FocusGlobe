@@ -25,9 +25,9 @@ struct StreakDetailsView: View {
             }
         }
         // iPhone keeps a draggable sheet; on iPad the adaptive modal panel sizes it.
+        // Appearance-adaptive (light card + dark text in Light Mode); no forced dark.
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
-        .preferredColorScheme(.dark)
     }
 
     // MARK: Header
@@ -47,13 +47,13 @@ struct StreakDetailsView: View {
             }
             Text("\(streak)")
                 .font(.system(size: Layout.pad(54, 66), weight: .heavy, design: .rounded))
-                .foregroundStyle(.white)
+                .foregroundStyle(AppColors.textPrimary)
             Text("day streak")
-                .font(AppTypography.headline).foregroundStyle(.white.opacity(0.7))
+                .font(AppTypography.headline).foregroundStyle(AppColors.textSecondary)
             Text(message)
                 .font(AppTypography.callout)
                 .multilineTextAlignment(.center)
-                .foregroundStyle(.white.opacity(0.85))
+                .foregroundStyle(AppColors.textSecondary)
                 .padding(.horizontal, AppSpacing.md)
             if best > 0 {
                 Text("Best: \(best) days")
@@ -80,25 +80,25 @@ struct StreakDetailsView: View {
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
                 Text("THIS WEEK")
                     .font(.system(size: 12, weight: .bold, design: .rounded)).tracking(0.6)
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(AppColors.textTertiary)
                 HStack(spacing: 0) {
                     ForEach(days, id: \.date) { day in
                         VStack(spacing: 6) {
                             Text(day.label)
                                 .font(.system(size: 11, weight: .semibold, design: .rounded))
-                                .foregroundStyle(.white.opacity(0.6))
+                                .foregroundStyle(AppColors.textTertiary)
                             ZStack {
                                 Circle()
                                     .fill(day.active
                                           ? AnyShapeStyle(LinearGradient(colors: [Color(hex: 0xFFB13C), Color(hex: 0xF2643C)],
                                                                          startPoint: .top, endPoint: .bottom))
-                                          : AnyShapeStyle(Color.white.opacity(0.10)))
+                                          : AnyShapeStyle(AppColors.textPrimary.opacity(0.10)))
                                     .frame(width: 30, height: 30)
                                 if day.active {
                                     Image(systemName: "flame.fill").font(.system(size: 13, weight: .bold))
                                         .foregroundStyle(.white)
                                 } else if day.isToday {
-                                    Circle().strokeBorder(.white.opacity(0.5), lineWidth: 1.5).frame(width: 30, height: 30)
+                                    Circle().strokeBorder(AppColors.textPrimary.opacity(0.4), lineWidth: 1.5).frame(width: 30, height: 30)
                                 }
                             }
                         }
@@ -118,7 +118,7 @@ struct StreakDetailsView: View {
                 HStack {
                     Text("TODAY'S GOALS")
                         .font(.system(size: 12, weight: .bold, design: .rounded)).tracking(0.6)
-                        .foregroundStyle(.white.opacity(0.6))
+                        .foregroundStyle(AppColors.textTertiary)
                     Spacer()
                     Text("\(missions.filter { $0.isComplete }.count)/\(missions.count)")
                         .font(.system(size: 12, weight: .heavy, design: .rounded))
@@ -128,15 +128,15 @@ struct StreakDetailsView: View {
                     HStack(spacing: AppSpacing.sm) {
                         Image(systemName: mission.isComplete ? "checkmark.circle.fill" : mission.systemImage)
                             .font(.system(size: 16, weight: .bold))
-                            .foregroundStyle(mission.isComplete ? AppColors.success : .white.opacity(0.6))
+                            .foregroundStyle(mission.isComplete ? AppColors.success : AppColors.textTertiary)
                             .frame(width: 22)
                         VStack(alignment: .leading, spacing: 4) {
                             Text(mission.title)
                                 .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(AppColors.textPrimary)
                             GeometryReader { g in
                                 ZStack(alignment: .leading) {
-                                    Capsule().fill(.white.opacity(0.12))
+                                    Capsule().fill(AppColors.textPrimary.opacity(0.12))
                                     Capsule().fill(mission.isComplete ? AppColors.success : AppColors.gold)
                                         .frame(width: max(5, g.size.width * mission.fraction))
                                 }
@@ -145,7 +145,7 @@ struct StreakDetailsView: View {
                         }
                         Text(mission.progressText)
                             .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.6))
+                            .foregroundStyle(AppColors.textTertiary)
                     }
                 }
             }

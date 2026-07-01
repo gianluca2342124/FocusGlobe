@@ -41,12 +41,6 @@ struct HomeView: View {
             .padding(.horizontal, AppSpacing.screen)
             .padding(.bottom, AppSpacing.lg)
         }
-        // Home is built on the dark globe map. Its floating glass HUD (streak,
-        // continue-journey, missions) is designed light-on-dark, so lock the
-        // over-map content to the dark rendering — in Light Mode the cards stay
-        // readable and premium instead of turning into white-text-on-light-glass.
-        // (The white Start Journey CTA is mode-independent and unaffected.)
-        .environment(\.colorScheme, .dark)
         .focusScreenChrome()
         .onAppear {
             appModel.requestLocation()
@@ -195,7 +189,7 @@ struct HomeView: View {
                                                     startPoint: .top, endPoint: .bottom))
                 Text("\(appModel.progress.currentStreak)")
                     .font(.system(size: Layout.pad(16, 20), weight: .heavy, design: .rounded))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(AppColors.textPrimary)
             }
             .padding(.horizontal, Layout.pad(13, 16))
             .padding(.vertical, Layout.pad(9, 11))
@@ -266,20 +260,20 @@ struct HomeView: View {
                     .foregroundStyle(AppColors.gold)
                     .frame(width: 24)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Daily goals").font(AppTypography.callout).foregroundStyle(.white)
+                    Text("Daily goals").font(AppTypography.callout).foregroundStyle(AppColors.textPrimary)
                     Text("\(done) of \(missions.count) complete")
-                        .font(AppTypography.caption).foregroundStyle(.white.opacity(0.7))
+                        .font(AppTypography.caption).foregroundStyle(AppColors.textSecondary)
                 }
                 Spacer()
                 HStack(spacing: 5) {
                     ForEach(missions) { mission in
                         Circle()
-                            .fill(mission.isComplete ? AppColors.gold : Color.white.opacity(0.25))
+                            .fill(mission.isComplete ? AppColors.gold : AppColors.textPrimary.opacity(0.25))
                             .frame(width: 7, height: 7)
                     }
                 }
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(AppColors.textPrimary)
             .padding(.horizontal, AppSpacing.md)
             .padding(.vertical, 13)
             .glassBackground(cornerRadius: 16, tintOpacity: 0.16, shadowRadius: 8, shadowY: 4)
@@ -293,7 +287,7 @@ struct HomeView: View {
                 Image(systemName: systemImage).font(.system(size: 15, weight: .semibold))
                 Text(title).font(AppTypography.callout)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(AppColors.textPrimary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 13)
             .glassBackground(cornerRadius: 16, tintOpacity: 0.16, shadowRadius: 8, shadowY: 4)
@@ -332,14 +326,14 @@ private struct ResumeJourneySheet: View {
                 VStack(spacing: 6) {
                     Text("Continue your journey?")
                         .font(AppTypography.title2)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(AppColors.textPrimary)
                     if let s = snapshot {
                         Text("\(s.origin.city) → \(s.route.destinationName)")
                             .font(AppTypography.headline)
-                            .foregroundStyle(.white.opacity(0.9))
+                            .foregroundStyle(AppColors.textSecondary)
                         Text(progressText(s))
                             .font(AppTypography.caption)
-                            .foregroundStyle(.white.opacity(0.65))
+                            .foregroundStyle(AppColors.textTertiary)
                     }
                 }
                 .multilineTextAlignment(.center)
@@ -349,7 +343,7 @@ private struct ResumeJourneySheet: View {
                     Button(action: onStartNew) {
                         Text("Start a new journey")
                             .font(AppTypography.headline)
-                            .foregroundStyle(.white.opacity(0.85))
+                            .foregroundStyle(AppColors.textPrimary)
                             .frame(maxWidth: .infinity).frame(height: 52)
                             .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.18,
                                              shadowRadius: 8, shadowY: 4)
