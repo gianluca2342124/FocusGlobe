@@ -176,8 +176,11 @@ private struct JourneyTicket: View {
     let threshold: CGFloat
     let onCommit: () -> Void
 
-    private let ink = Color(hex: 0xF1F4FB)
-    private let inkSoft = Color(hex: 0xAEB7CC)
+    // Ticket body ink adapts to appearance: near-white on the dark ticket in Dark
+    // Mode, near-black on the white ticket in Light Mode. (The sky header is always
+    // a night sky, so it keeps its own fixed light ink — passed in below.)
+    private var ink: Color { Color.dynamic(light: 0x14181F, dark: 0xF1F4FB) }
+    private var inkSoft: Color { Color.dynamic(light: 0x5A6474, dark: 0xAEB7CC) }
 
     private var effTear: CGFloat { torn ? 620 : tearX }
     /// 0…1 progress of the tear, used to grow the strip's lift shadow as it peels
@@ -230,10 +233,12 @@ private struct JourneyTicket: View {
 
     private var body_: some View {
         VStack(spacing: 0) {
+            // The sky header stays a night sky in both modes, so it uses fixed
+            // light ink (never the appearance-adaptive body ink) to stay readable.
             TicketSkyHeader(originCode: origin.code, originCity: origin.city,
                             destCode: route.destinationCode, destCity: route.destinationName,
                             duration: route.durationLabel, category: route.category,
-                            ink: ink, inkSoft: inkSoft)
+                            ink: Color(hex: 0xF1F4FB), inkSoft: Color(hex: 0xAEB7CC))
                 .frame(height: Layout.pad(116, 142))
 
             VStack(spacing: AppSpacing.sm) {
@@ -260,33 +265,6 @@ private struct JourneyTicket: View {
                     }
                     Spacer()
                 }
-                // App blocking — planned for a future update. Focus Shield is parked
-                // for v1.0 (see FOCUS_SHIELD_PARKED.md): a static, disabled "Soon…"
-                // teaser that never opens a picker or requests any permission.
-                Rectangle().fill(ink.opacity(0.08)).frame(height: 1)
-                HStack(spacing: AppSpacing.sm) {
-                    ZStack {
-                        Circle().fill(inkSoft.opacity(0.16)).frame(width: 34, height: 34)
-                        Image(systemName: "shield.lefthalf.filled")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(inkSoft)
-                    }
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("APP BLOCKING")
-                            .font(.system(size: 9, weight: .semibold, design: .rounded)).tracking(0.5)
-                            .foregroundStyle(inkSoft)
-                        Text("Soon…")
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-                            .foregroundStyle(inkSoft)
-                    }
-                    Spacer()
-                    Text("SOON")
-                        .font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(0.5)
-                        .foregroundStyle(ink.opacity(0.85))
-                        .padding(.horizontal, 7).padding(.vertical, 3)
-                        .background(Capsule().fill(inkSoft.opacity(0.18)))
-                }
-                .opacity(0.9)
             }
             .padding(AppSpacing.md)
         }
@@ -318,13 +296,13 @@ private struct JourneyTicket: View {
     // MARK: Barcode strip (the detachable part)
 
     private var barcodeStrip: some View {
-        HStack(spacing: AppSpacing.sm) {
-            BarcodeStrip(seed: origin.code + route.id + route.destinationCode,
-                         barColor: ink, scanIn: barcodeIn)
-                .frame(height: Layout.pad(40, 52))
-            QRBlock(seed: route.id, color: ink).frame(width: Layout.pad(40, 52), height: Layout.pad(40, 52))
-        }
-        .padding(.horizontal, AppSpacing.md)
+        // Single full-width horizontal barcode (no QR square). Taller and clearer,
+        // responsive: slightly taller on iPhone, noticeably taller on iPad.
+        BarcodeStrip(seed: origin.code + route.id + route.destinationCode,
+                     barColor: ink, scanIn: barcodeIn)
+            .frame(maxWidth: .infinity)
+            .frame(height: Layout.pad(58, 84))
+            .padding(.horizontal, AppSpacing.md)
         .padding(.vertical, AppSpacing.sm)
         .frame(maxWidth: .infinity)
         .background(graphite)
@@ -340,8 +318,11 @@ private struct JourneyTicket: View {
         .shadow(color: .black.opacity(0.5 * Double(tearLift)), radius: 8 + 10 * tearLift, x: 0, y: 4 + 8 * tearLift)
     }
 
+    // The ticket card surface: dark graphite in Dark Mode, clean near-white in
+    // Light Mode (a real "printed" boarding pass) so the ticket reads as white.
     private var graphite: LinearGradient {
-        LinearGradient(colors: [Color(hex: 0x1E2531), Color(hex: 0x12161F)],
+        LinearGradient(colors: [Color.dynamic(light: 0xFFFFFF, dark: 0x1E2531),
+                                Color.dynamic(light: 0xF3F5F9, dark: 0x12161F)],
                        startPoint: .top, endPoint: .bottom)
     }
 
@@ -554,29 +535,3 @@ private struct BarcodeStrip: View {
     }
 }
 
-/// A small deterministic QR-like block (premium ticket detail; not a real code).
-private struct QRBlock: View {
-    let seed: String
-    let color: Color
-
-    var body: some View {
-        Canvas { ctx, size in
-            let n = 7
-            let cell = size.width / CGFloat(n)
-            let scalars = Array(seed.unicodeScalars.map { Int($0.value) })
-            guard !scalars.isEmpty else { return }
-            for r in 0..<n {
-                for c in 0..<n {
-                    let v = scalars[(r * n + c) % scalars.count] &+ r &* 7 &+ c &* 13
-                    let corner = (r < 2 && c < 2) || (r < 2 && c >= n - 2) || (r >= n - 2 && c < 2)
-                    if corner || abs(v) % 2 == 0 {
-                        ctx.fill(Path(CGRect(x: CGFloat(c) * cell, y: CGFloat(r) * cell,
-                                             width: cell - 1, height: cell - 1)),
-                                 with: .color(color.opacity(0.88)))
-                    }
-                }
-            }
-        }
-        .accessibilityHidden(true)
-    }
-}

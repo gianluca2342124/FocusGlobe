@@ -30,9 +30,13 @@ enum AppColors {
 
     // MARK: Primary CTA (FocusFlight-style restraint)
     /// Solid, high-contrast button surface: near-black in Light, white in Dark.
-    static let ctaFill = Color.dynamic(light: 0x14181F, dark: 0xFFFFFF)
-    /// The label colour on `ctaFill` (the inverse).
-    static let ctaText = Color.dynamic(light: 0xFFFFFF, dark: 0x14181F)
+    // A clean white pill with dark text in BOTH modes. The primary CTA (e.g. Start
+    // Journey) sits over the dark map on Home and over light surfaces elsewhere, so
+    // white-with-dark-text reads well everywhere and never collapses into a
+    // low-contrast near-black button in Light Mode (the reported bug).
+    static let ctaFill = Color.dynamic(light: 0xFFFFFF, dark: 0xFFFFFF)
+    /// The label colour on `ctaFill`.
+    static let ctaText = Color.dynamic(light: 0x14181F, dark: 0x14181F)
 
     // MARK: Accents / status
     static let gold    = Color.dynamic(light: 0xE0A23E, dark: 0xF2C879)
@@ -41,7 +45,12 @@ enum AppColors {
 
     // MARK: Lines & separators (alpha-based so they adapt automatically)
     static var hairline: Color { Color.primary.opacity(0.07) }
-    static var glassStroke: Color { Color.white.opacity(0.18) }
+    // Card / pill hairline. Dark Mode keeps the original soft white edge (white
+    // 0.18); Light Mode uses a subtle dark hairline so white glass cards read
+    // cleanly against light backgrounds instead of a borderless white-on-white.
+    static var glassStroke: Color {
+        Color.dynamic(light: 0x1B2230, lightAlpha: 0.12, dark: 0xFFFFFF, darkAlpha: 0.18)
+    }
 
     /// Soft shadow used under floating elements.
     static var shadow: Color { Color.black.opacity(0.16) }

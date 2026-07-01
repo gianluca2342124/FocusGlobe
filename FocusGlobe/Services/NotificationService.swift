@@ -182,20 +182,12 @@ final class NotificationService {
         Self.dailyTitles[abs(dayIndex() + offset) % Self.dailyTitles.count]
     }
 
-    /// Alternates calm focus copy with light study/work motivation, personalised
-    /// with the user's current city when available.
+    /// Alternates calm focus copy with light study/work motivation. No location
+    /// data (no city name, no coordinates) ever appears in notification text.
     private func dailyBody(_ s: NotificationState, offset: Int) -> String {
         let useFocus = (dayIndex() + offset).isMultiple(of: 2)
         let pool = useFocus ? Self.focusBodies : Self.studyBodies
-        var base = pool[abs(dayIndex() + offset) % pool.count]
-        if base.contains("{city}") {
-            if let city = s.originCity {
-                base = base.replacingOccurrences(of: "{city}", with: city)
-            } else {
-                base = "Pick a destination and give yourself 25 minutes."   // city-free fallback
-            }
-        }
-        return base
+        return pool[abs(dayIndex() + offset) % pool.count]
     }
 
     /// Deterministic, day-rotating pick so copy varies without feeling random.
@@ -207,20 +199,24 @@ final class NotificationService {
         Calendar.current.ordinality(of: .day, in: .era, for: Date()) ?? 0
     }
 
+    // Warm, premium, slightly playful. No guilt, no "you failed", no fake urgency,
+    // and never any location data.
     private static let dailyTitles = [
         "Ready for one focused journey?",
-        "Time to take off ✈️",
+        "One focus flight before the day ends?",
         "Your next deep-work block awaits",
     ]
     private static let streakBodies = [
         "One short journey keeps your focus streak alive.",
-        "A few calm minutes protects your streak tonight.",
-        "Don't let the chain break — take a quick flight.",
+        "Your streak is too good to lose now.",
+        "A 20-minute journey is enough to protect your streak.",
+        "Take off for one short session and keep your streak alive.",
     ]
     private static let focusBodies = [
         "Pick a destination and give yourself 25 minutes.",
-        "Lift off from {city} and find your focus.",
-        "Your mind deserves a clean runway.",
+        "Your balloon hasn't taken off yet today.",
+        "Land one journey today and keep your momentum.",
+        "Your passport is missing today's stamp.",
     ]
     private static let studyBodies = [
         "Need to study? Start with one calm journey.",
@@ -228,8 +224,9 @@ final class NotificationService {
         "Turn your next destination into a deep-work block.",
     ]
     private static let comebackBodies = [
-        "A new journey is waiting when you are.",
-        "Come back for one calm focus trip.",
+        "The globe is ready when you are.",
         "Your balloon is ready whenever you are.",
+        "Come back for one calm focus trip.",
+        "A new journey is waiting when you are.",
     ]
 }

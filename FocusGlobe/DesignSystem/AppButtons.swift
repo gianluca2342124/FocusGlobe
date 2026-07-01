@@ -41,6 +41,13 @@ struct AppPrimaryButton: View {
             .background {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(AppColors.ctaFill)
+                    // Subtle adaptive edge so the white pill separates cleanly from
+                    // light surfaces in Light Mode; invisible over dark surfaces and
+                    // in Dark Mode (so Dark Mode is unchanged).
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .strokeBorder(AppColors.hairline, lineWidth: 1)
+                    )
             }
             .shadow(color: Color.black.opacity(0.22), radius: 18, x: 0, y: 10)
             .opacity(isEnabled ? 1 : 0.5)

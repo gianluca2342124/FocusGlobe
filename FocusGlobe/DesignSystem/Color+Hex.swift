@@ -17,4 +17,16 @@ extension Color {
                 : UIColor(Color(hex: light))
         })
     }
+
+    /// Like `dynamic(light:dark:)` but with a per-mode alpha, so a token can be, for
+    /// example, a subtle dark hairline in Light Mode and a soft white one in Dark
+    /// Mode without changing the Dark value.
+    static func dynamic(light: UInt, lightAlpha: Double,
+                        dark: UInt, darkAlpha: Double) -> Color {
+        Color(UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(Color(hex: dark, alpha: darkAlpha))
+                : UIColor(Color(hex: light, alpha: lightAlpha))
+        })
+    }
 }

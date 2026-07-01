@@ -15,7 +15,10 @@ struct SettingsView: View {
     var body: some View {
         ZStack {
             AppBackground()
-            ScrollView {
+            // Vertical-only scroll. The content is clamped to the viewport width
+            // and horizontal bounce is disabled, so the page can never drift
+            // sideways (matches Passport and the other screens).
+            ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
                     ScreenHeader(title: "Settings")
 
@@ -28,11 +31,13 @@ struct SettingsView: View {
                     legalSection
                     versionFooter
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(AppSpacing.screen)
                 .padding(.top, AppSpacing.xs)
                 .padding(.bottom, AppSpacing.xxl)
                 .settingsMaxWidth()   // centred list on iPad/Mac; full-width on iPhone
             }
+            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
         }
         .focusScreenChrome()
         .onAppear {

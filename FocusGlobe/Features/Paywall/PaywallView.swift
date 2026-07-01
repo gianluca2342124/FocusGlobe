@@ -64,6 +64,10 @@ struct PaywallView: View {
             .padding(.bottom, AppSpacing.md)
             .paywallMaxWidth()   // premium centred panel on iPad/Mac; full-width on iPhone
         }
+        // The paywall is a fixed dark/gold luxury surface. Lock it to the dark
+        // rendering so it looks identical in Light Mode — materials, tints and the
+        // gold never lighten. (This is the one screen exempt from Light Mode.)
+        .environment(\.colorScheme, .dark)
         .onAppear {
             appModel.analytics.log(.paywallOpened)
             subs.loadOfferings()
@@ -192,7 +196,7 @@ struct PaywallView: View {
             ForEach(PlanKind.allCases) { kind in planCard(kind) }
 
             purchaseButton
-                .padding(.top, AppSpacing.xs)
+                .padding(.top, 2)
 
             if let message = subs.errorMessage {
                 Text(message)
@@ -201,18 +205,20 @@ struct PaywallView: View {
                     .multilineTextAlignment(.center)
             }
 
-            // Restore on its own subtle row — separate from the legal links, so the
-            // footer holds only Privacy / Terms. RevenueCat restore logic unchanged.
-            Button { restore() } label: {
-                Text("Restore Purchases")
-                    .font(AppTypography.callout)
-                    .foregroundStyle(.white.opacity(0.8))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, AppSpacing.xs)
+            // Compact bottom legal cluster: Restore sits low with Privacy / Terms
+            // (small and quiet) instead of a tall row right under the CTA, so the
+            // feature/benefit area above gets more vertical breathing room.
+            // RevenueCat restore/purchase logic and the CTA behaviour are unchanged.
+            VStack(spacing: 6) {
+                Button { restore() } label: {
+                    Text("Restore Purchases")
+                        .font(AppTypography.caption)
+                        .foregroundStyle(.white.opacity(0.75))
+                }
+                .buttonStyle(SoftPressStyle())
+                footer
             }
-            .buttonStyle(SoftPressStyle())
-
-            footer
+            .padding(.top, 2)
         }
     }
 

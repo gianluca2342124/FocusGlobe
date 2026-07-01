@@ -41,6 +41,12 @@ struct HomeView: View {
             .padding(.horizontal, AppSpacing.screen)
             .padding(.bottom, AppSpacing.lg)
         }
+        // Home is built on the dark globe map. Its floating glass HUD (streak,
+        // continue-journey, missions) is designed light-on-dark, so lock the
+        // over-map content to the dark rendering — in Light Mode the cards stay
+        // readable and premium instead of turning into white-text-on-light-glass.
+        // (The white Start Journey CTA is mode-independent and unaffected.)
+        .environment(\.colorScheme, .dark)
         .focusScreenChrome()
         .onAppear {
             appModel.requestLocation()

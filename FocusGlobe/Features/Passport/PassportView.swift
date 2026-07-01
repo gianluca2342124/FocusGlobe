@@ -296,8 +296,10 @@ private struct SkinTile: View {
             VStack(spacing: AppSpacing.xs) {
                 // Fixed frame + no glow/burner so every skin renders at the same
                 // visual size (selection is shown by the ring + shadow + check).
-                BalloonView(height: 52, showBurner: false, showGlow: false, skin: skin)
-                    .frame(width: 84, height: 58)
+                // Larger, more prominent balloon preview (responsive: bigger on
+                // iPad). Selection/locked logic is unchanged — only the size grows.
+                BalloonView(height: Layout.pad(72, 88), showBurner: false, showGlow: false, skin: skin)
+                    .frame(width: Layout.pad(112, 138), height: Layout.pad(80, 96))
                     .opacity(unlocked ? 1 : 0.42)
                     .grayscale(unlocked ? 0 : 0.7)
                     .overlay(alignment: .topTrailing) {
@@ -305,11 +307,11 @@ private struct SkinTile: View {
                             PremiumBadge(compact: true)
                         } else if !unlocked {
                             Image(systemName: "lock.fill")
-                                .font(.system(size: 11, weight: .bold))
+                                .font(.system(size: 12, weight: .bold))
                                 .foregroundStyle(AppColors.textTertiary)
                         } else if selected {
                             Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 14, weight: .bold))
+                                .font(.system(size: 17, weight: .bold))
                                 .foregroundStyle(AppColors.success)
                         }
                     }
@@ -326,13 +328,13 @@ private struct SkinTile: View {
                         .padding(.horizontal, 4)
                 }
             }
-            .frame(width: 116)
+            .frame(width: Layout.pad(150, 184))
             .padding(.vertical, AppSpacing.sm)
-            .padding(.horizontal, 6)
-            .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.25, shadowRadius: 8, shadowY: 4)
-            .overlay(RoundedRectangle(cornerRadius: AppSpacing.pillRadius, style: .continuous)
-                .strokeBorder(selected ? skin.theme.accent : Color.clear, lineWidth: 2.5))
-            .shadow(color: selected ? skin.theme.accent.opacity(0.45) : .clear, radius: 12, y: 2)
+            .padding(.horizontal, AppSpacing.xs)
+            .glassBackground(cornerRadius: AppSpacing.cardRadius, tintOpacity: 0.25, shadowRadius: 8, shadowY: 4)
+            .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
+                .strokeBorder(selected ? skin.theme.accent : Color.clear, lineWidth: 3))
+            .shadow(color: selected ? skin.theme.accent.opacity(0.5) : .clear, radius: 14, y: 3)
         }
         .buttonStyle(SoftPressStyle())
     }
