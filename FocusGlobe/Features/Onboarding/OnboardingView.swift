@@ -45,6 +45,7 @@ struct OnboardingView: View {
         }
         .focusScreenChrome()
         .onAppear {
+            LaunchLog.mark("Onboarding onAppear + requestLocation")
             appModel.requestLocation()
             // Safety net: if a fix is slow, quietly offer the manual picker so the
             // user is never stuck on the resolving screen.

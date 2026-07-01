@@ -10,6 +10,7 @@ struct FocusGlobeApp: App {
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
+        LaunchLog.mark("FocusGlobeApp.init")
         // Google Maps is the temporary MVP provider. Keep all business logic
         // provider-independent so we can migrate to Apple Maps / MapKit later.
         #if canImport(GoogleMaps)
@@ -27,6 +28,7 @@ struct FocusGlobeApp: App {
                 .tint(AppColors.brand)
                 .preferredColorScheme(appModel.settings.appearance.colorScheme)
                 .onAppear {
+                    LaunchLog.mark("RootView onAppear")
                     appModel.analytics.log(.appOpened)
                     // Clear any shields left behind by a previous run (e.g. the app
                     // was killed mid-journey). No journey is in flight at cold launch.

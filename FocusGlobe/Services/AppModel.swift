@@ -70,6 +70,7 @@ final class AppModel: ObservableObject {
     // MARK: Init
 
     init(persistence: PersistenceService = PersistenceService()) {
+        LaunchLog.mark("AppModel.init begin")
         self.persistence = persistence
         self.purchases = PurchaseService(persistence: persistence)
 
@@ -79,6 +80,7 @@ final class AppModel: ObservableObject {
         self.history = persistence.load([FocusSessionRecord].self, for: .history) ?? []
         self.isPro = persistence.bool(for: .isPro)
         self.resumableJourney = persistence.load(ResumableJourney.self, for: .resumableJourney)
+        LaunchLog.mark("AppModel.init persistence loaded")
 
         haptics.isEnabled = loadedSettings.hapticsEnabled
         sound.isEnabled = loadedSettings.soundEnabled
@@ -106,6 +108,7 @@ final class AppModel: ObservableObject {
         // RevenueCat: configure once (non-blocking) and let it drive Pro state
         // when it's the source of truth. When the SDK isn't linked it stays inert
         // and the local/mock Pro flag is used instead.
+        LaunchLog.mark("subscriptions.configure")
         subscriptions.configure()
         subscriptions.$isPro
             .receive(on: RunLoop.main)
@@ -115,42 +118,49 @@ final class AppModel: ObservableObject {
             }
             .store(in: &cancellables)
 
-        // Warm the journey catalogs off the main thread so the first journey plan
-        // — and the first Start Journey tap — is instant rather than paying a
-        // one-time JSON-decode cost on the main thread. DEBUG also validates that
-        // the planner gives universal coverage across representative origins.
         // AdMob: configure analytics + resolve UMP consent and initialise the SDK
         // (safe no-op without the Google Mobile Ads package). No ad is requested
         // before consent is resolved/allowed; ads never show for Pro users.
+        LaunchLog.mark("ads.configure + start")
         ads.configure(analytics: analytics)
         ads.start()
 
+        // Warm the journey catalogs shortly after launch so the first Start Journey
+        // tap is instant. Runs on the main actor (not off-main) — see the function.
         Self.warmJourneyEngine()
 
         // Publish the initial widget snapshot from the just-loaded state.
+        LaunchLog.mark("syncWidgets")
         syncWidgets()
 
         // Schedule re-engagement reminders from the just-loaded state (no prompt
         // at launch — permission is requested later, after the first landing).
+        LaunchLog.mark("refreshNotifications")
         refreshNotifications()
+        LaunchLog.mark("AppModel.init end")
     }
 
-    /// Decodes the journey catalogs once, off-main, at launch. Their `static let`
-    /// storage then stays cached in memory for the app's lifetime, so planning is
-    /// pure in-memory math (<50 ms) from then on.
+    /// Warms the journey catalogs shortly after launch so the first plan is fast.
+    /// Their `static let` storage then stays cached for the app's lifetime.
+    ///
+    /// LAUNCH-STABILITY (build 5): this deliberately runs on the **main actor**
+    /// (`Task { @MainActor }`), never a detached/background task. An earlier
+    /// `Task.detached(.utility)` here was the *only* non-main-actor Task in the
+    /// whole app — i.e. the only code that could run on the Swift cooperative
+    /// pool, which is exactly the executor the App Review launch crash faulted on
+    /// (`com.apple.root.user-initiated-qos.cooperative`). Keeping every launch
+    /// task on the main actor removes that entire class of off-main launch crash.
+    /// The decode is a one-time in-memory cost and is non-blocking (it runs after
+    /// `init` returns), so it never delays the first frame.
     private static func warmJourneyEngine() {
-        Task.detached(priority: .utility) {
-            #if DEBUG
-            let started = Date()
-            let nodes = TravelNetworkCatalog.allNodes.count
-            _ = WorldCityCatalog.allCities.count
-            let ms = Int(Date().timeIntervalSince(started) * 1000)
-            print("[Performance] TravelNetwork loaded in \(ms) ms (\(nodes) nodes)")
-            await MainActor.run { JourneyPlanner.validateCoverage() }
-            #else
+        Task { @MainActor in
+            LaunchLog.mark("warmJourneyEngine begin")
             _ = TravelNetworkCatalog.allNodes.count
             _ = WorldCityCatalog.allCities.count
+            #if DEBUG
+            JourneyPlanner.validateCoverage()
             #endif
+            LaunchLog.mark("warmJourneyEngine end")
         }
     }
 

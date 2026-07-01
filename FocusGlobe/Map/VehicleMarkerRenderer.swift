@@ -24,8 +24,17 @@ enum VehicleMarkerRenderer {
         if let balloon = BalloonSkinImage.image(named: assetName) {
             return resized(balloon, targetHeight: targetHeight)
         }
-        // Fallback: the crafted vector (only when the asset is unavailable).
-        // ImageRenderer / UIScreen are main-actor-isolated.
+        // Last-resort vector fallback (effectively unreachable — the bundled
+        // `BalloonSkin_Default` asset always satisfies the branch above).
+        //
+        // LAUNCH-STABILITY (build 5): `ImageRenderer` / `UIScreen.main` are
+        // main-actor-only. This method is `nonisolated`, so if it were ever
+        // invoked off the main actor, `MainActor.assumeIsolated` would *trap*
+        // (`_assertionFailure`) — a latent launch-crash landmine. Guard on the
+        // main thread and return `nil` off-main instead (the caller simply shows
+        // no marker image — a graceful degrade, never a crash). On the main
+        // thread the assumption is guaranteed correct.
+        guard Thread.isMainThread else { return nil }
         return MainActor.assumeIsolated {
             let padded = BalloonMark(size: targetHeight * 0.62, glow: glow, showGlow: true,
                                      showBurner: true, burnerAnimated: false)
