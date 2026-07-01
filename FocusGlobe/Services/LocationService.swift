@@ -108,27 +108,10 @@ final class LocationService: NSObject, ObservableObject {
             let country = place?.country
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                let origin: JourneyOrigin
-                if let city, !city.isEmpty {
-                    // Real reverse-geocoded city (the normal path).
-                    origin = JourneyOrigin(city: city,
-                                           country: country ?? "",
-                                           coordinate: coordinate)
-                } else if let nearest = WorldCityCatalog.nearestCity(to: coordinate) {
-                    // Reverse geocoding gave no name (common in the Simulator or
-                    // offline). Fall back to the nearest known city + code so the
-                    // UI shows a real place (e.g. "San Francisco" / "SFO") instead
-                    // of a generic "Current Location".
-                    origin = JourneyOrigin(city: nearest.city.name,
-                                           country: country?.isEmpty == false ? country! : nearest.country,
-                                           coordinate: coordinate,
-                                           code: nearest.city.code)
-                } else {
-                    origin = JourneyOrigin(city: "Current Location",
-                                           country: country ?? "",
-                                           coordinate: coordinate)
-                }
-                self.state = .resolved(origin)
+                let name = (city?.isEmpty == false) ? city! : "Current Location"
+                self.state = .resolved(JourneyOrigin(city: name,
+                                                     country: country ?? "",
+                                                     coordinate: coordinate))
             }
         }
     }

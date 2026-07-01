@@ -77,23 +77,17 @@ struct JourneyBackdropMap: View {
         }
     }
 
-    /// Apple Maps (MapKit) backdrop — the default for the normal app path. A
-    /// subtle dark "space" gradient sits behind it so that while MapKit streams
-    /// tiles (the map fades in once rendered) the first frame reads as a premium
-    /// dark globe backdrop rather than a blank grey/black flash.
+    /// Apple Maps (MapKit) backdrop — the default for the normal app path.
     private var appleBackdrop: some View {
-        ZStack {
-            MapSpaceBackdrop()
-            AppleBackdropMapView(origin: origin, destination: destination,
-                                 mode: mode, progress: progress,
-                                 showsCodeTags: showsCodeTags, showsBalloon: showsBalloon,
-                                 showsOrigin: showsOrigin, bottomInset: bottomInset,
-                                 nearby: nearby, onOriginPoint: onOriginPoint,
-                                 originZoom: originZoom, theme: theme,
-                                 skinAssetName: skinAssetName, style: style,
-                                 planetary: planetary)
-        }
-        .allowsHitTesting(false)
+        AppleBackdropMapView(origin: origin, destination: destination,
+                             mode: mode, progress: progress,
+                             showsCodeTags: showsCodeTags, showsBalloon: showsBalloon,
+                             showsOrigin: showsOrigin, bottomInset: bottomInset,
+                             nearby: nearby, onOriginPoint: onOriginPoint,
+                             originZoom: originZoom, theme: theme,
+                             skinAssetName: skinAssetName, style: style,
+                             planetary: planetary)
+            .allowsHitTesting(false)
     }
 
     /// Google Maps backdrop — kept as a migration-phase fallback (DEBUG override).
@@ -154,21 +148,6 @@ struct JourneyBackdropMap: View {
             }
         } else {
             FallbackJourneyMapView(data: fallbackData)
-        }
-    }
-}
-
-/// A calm, dark "deep space" gradient shown behind the Apple Maps backdrop while
-/// its tiles stream in. Purely decorative and non-interactive — once the map has
-/// rendered it fades in on top and fully covers this, so this only ever shows for
-/// the brief load window (removing the jarring blank grey/black flash). Fixed
-/// dark tones because the map backdrop is always dark, independent of appearance.
-private struct MapSpaceBackdrop: View {
-    var body: some View {
-        ZStack {
-            Color(hex: 0x0B0C10)
-            RadialGradient(colors: [Color(hex: 0x1A2238).opacity(0.55), .clear],
-                           center: .center, startRadius: 6, endRadius: 460)
         }
     }
 }

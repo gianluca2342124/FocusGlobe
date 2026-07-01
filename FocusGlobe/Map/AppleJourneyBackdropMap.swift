@@ -80,9 +80,6 @@ struct AppleBackdropMapView: UIViewRepresentable {
                                              span: MKCoordinateSpan(latitudeDelta: 12, longitudeDelta: 12)),
                           animated: false)
         }
-        // Start hidden and fade in once tiles render, so appearing on Home /
-        // Choose Journey / Boarding never flashes blank grey while MapKit loads.
-        context.coordinator.reveal.arm(map)
         return map
     }
 
@@ -95,12 +92,6 @@ struct AppleBackdropMapView: UIViewRepresentable {
     final class Coordinator: NSObject, MKMapViewDelegate {
         var theme: RouteTheme = .teal
         private var lastKey = ""
-        /// Separate from `lastKey` (annotations/overlays): the camera is only
-        /// re-applied when a camera-affecting input actually changes, so idle
-        /// SwiftUI update passes don't repeatedly re-frame the map.
-        private var lastCameraKey = ""
-        /// Fades the map in once tiles render (no blank-grey flash on appear).
-        let reveal = MapReveal()
 
         func configure(map: MKMapView, view: AppleBackdropMapView) {
             theme = view.theme
@@ -122,34 +113,11 @@ struct AppleBackdropMapView: UIViewRepresentable {
             }
             // Apply the camera + report the origin point after layout so the
             // projection (radar) is exact even on the first pass (bounds valid).
-            // The camera is throttled: only re-framed when a camera-affecting
-            // input (origin, mode, destination, framing or the view's own size)
-            // changes, so repeated idle update passes don't keep re-animating it.
             DispatchQueue.main.async { [weak map] in
                 guard let map else { return }
-                let cameraKey = self.cameraKey(map: map, view: view)
-                if cameraKey != self.lastCameraKey {
-                    self.lastCameraKey = cameraKey
-                    self.applyCamera(map: map, view: view)
-                }
+                self.applyCamera(map: map, view: view)
                 self.reportOrigin(map: map, view: view)
             }
-        }
-
-        /// A stable fingerprint of everything that affects the camera framing.
-        /// Includes the view's pixel size so a real layout (0×0 → sized, or a
-        /// rotation) re-frames, while identical repeat passes are skipped.
-        private func cameraKey(map: MKMapView, view: AppleBackdropMapView) -> String {
-            [
-                view.mode == .origin ? "o" : "r",
-                view.destination?.id ?? "-",
-                String(format: "%.3f,%.3f", view.origin.coordinate.latitude, view.origin.coordinate.longitude),
-                view.planetary ? "p" : "_",
-                view.showsOrigin ? "s" : "_",
-                String(format: "%.0f", view.bottomInset),
-                String(format: "%.1f", view.originZoom),
-                "\(Int(map.bounds.width))x\(Int(map.bounds.height))"
-            ].joined(separator: "|")
         }
 
         private func rebuild(map: MKMapView, view: AppleBackdropMapView) {
@@ -279,14 +247,6 @@ struct AppleBackdropMapView: UIViewRepresentable {
 
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
             AppleMapAnnotationRenderer.view(for: annotation, on: mapView)
-        }
-
-        func mapViewDidFinishRenderingMap(_ mapView: MKMapView, fullyRendered: Bool) {
-            reveal.reveal(mapView)
-        }
-
-        func mapViewDidFinishLoadingMap(_ mapView: MKMapView) {
-            reveal.reveal(mapView)
         }
     }
 }
