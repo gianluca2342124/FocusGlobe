@@ -351,7 +351,7 @@ struct PaywallView: View {
     // MARK: Actions
 
     private func purchase() {
-        Task {
+        Task { @MainActor in
             let ok = await subs.purchase(selectedKind)
             if ok {
                 appModel.haptics.rewardClaim()
@@ -362,7 +362,7 @@ struct PaywallView: View {
 
     private func restore() {
         appModel.tapFeedback()
-        Task {
+        Task { @MainActor in
             let ok = await appModel.restorePurchases()
             if ok { dismiss() }
         }

@@ -85,7 +85,7 @@ final class SubscriptionManager: ObservableObject {
         Purchases.logLevel = .warn
         Purchases.configure(withAPIKey: apiKey)
         isAvailable = true
-        Task { [weak self] in
+        Task { @MainActor [weak self] in
             for await info in Purchases.shared.customerInfoStream {
                 self?.apply(info)
             }
@@ -101,7 +101,7 @@ final class SubscriptionManager: ObservableObject {
         #if canImport(RevenueCat)
         guard isAvailable else { return }
         isLoading = true
-        Task { [weak self] in
+        Task { @MainActor [weak self] in
             do {
                 let offerings = try await Purchases.shared.offerings()
                 self?.applyOfferings(offerings)
@@ -115,7 +115,7 @@ final class SubscriptionManager: ObservableObject {
     func refreshCustomerInfo() {
         #if canImport(RevenueCat)
         guard isAvailable else { return }
-        Task { [weak self] in
+        Task { @MainActor [weak self] in
             if let info = try? await Purchases.shared.customerInfo() { self?.apply(info) }
         }
         #endif

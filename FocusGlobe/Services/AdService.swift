@@ -261,7 +261,7 @@ final class AdService: NSObject, ObservableObject {
     private func loadInterstitial() {
         guard canRequestAds, interstitial == nil else { return }
         analytics?.log(.interstitialJourneyCompleteRequested)
-        Task { [weak self] in
+        Task { @MainActor [weak self] in
             guard let self else { return }
             do {
                 let ad = try await InterstitialAd.load(
@@ -276,7 +276,7 @@ final class AdService: NSObject, ObservableObject {
 
     private func preloadRewarded(_ unitID: String) {
         guard canRequestAds, rewardedAds[unitID] == nil else { return }
-        Task { [weak self] in
+        Task { @MainActor [weak self] in
             guard let self else { return }
             do {
                 let ad = try await RewardedAd.load(with: unitID, request: Request())

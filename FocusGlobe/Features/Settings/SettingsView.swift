@@ -178,7 +178,7 @@ struct SettingsView: View {
                 RowDivider()
                 Button {
                     appModel.tapFeedback()
-                    Task {
+                    Task { @MainActor in
                         let ok = await appModel.restorePurchases()
                         restoreMessage = ok ? "Purchases restored." : "Nothing to restore."
                     }
