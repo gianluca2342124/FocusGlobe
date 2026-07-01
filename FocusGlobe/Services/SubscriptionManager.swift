@@ -4,6 +4,38 @@ import Foundation
 import RevenueCat
 #endif
 
+/// RevenueCat public SDK API keys and the rule for which one to use.
+///
+/// CRITICAL (build 6): Release / TestFlight / App Store builds MUST use the
+/// **Apple App Store** public SDK key (`appl_…`). RevenueCat *intentionally*
+/// `fatalError`s a Release build configured with a **Test Store** key (`test_…`)
+/// via `checkForSimulatedStoreAPIKeyInRelease` — that was the exact App Review /
+/// TestFlight launch crash for 1.0 (builds 2–5). The Apple key also works for
+/// Debug, the Simulator, and Sandbox/TestFlight purchases, so it is used for
+/// every configuration by default. The Test Store key is available only in DEBUG
+/// and only when a developer explicitly sets the `USE_REVENUECAT_TEST_STORE`
+/// compilation flag locally — that flag is never defined for Release, so a Test
+/// Store key can never reach a distribution build again.
+enum RevenueCatKeys {
+    /// Apple App Store public SDK key (RevenueCat dashboard → the Apple app).
+    /// Used for Release, TestFlight, App Store — and Debug by default.
+    static let applePublicSDKKey = "appl_HRfoahxaDYjLOSvdldxaBLhqHdx"
+
+    /// RevenueCat Test Store key — DEBUG-only, opt-in via `USE_REVENUECAT_TEST_STORE`.
+    /// Never used in Release.
+    static let testStoreKey = "test_vXvOIAnCJOPeiUjLfuLuFbLNcoo"
+
+    /// The key actually handed to `Purchases.configure`. Resolves to the Apple key
+    /// everywhere unless a developer opts into the Test Store locally in DEBUG.
+    static var activeKey: String {
+        #if DEBUG && USE_REVENUECAT_TEST_STORE
+        return testStoreKey
+        #else
+        return applePublicSDKKey
+        #endif
+    }
+}
+
 /// The three plans shown on the custom paywall.
 enum PlanKind: String, CaseIterable, Identifiable {
     case annual, lifetime, monthly
@@ -44,8 +76,11 @@ final class SubscriptionManager: ObservableObject {
     /// entitlement as Pro, since FocusGlobe ships a single entitlement.
     static let entitlementID = "FocusGlobe Pro"
 
-    /// Public RevenueCat API key. Paste your real key here before release.
-    static let apiKey = "test_vXvOIAnCJOPeiUjLfuLuFbLNcoo"
+    /// The RevenueCat public SDK key handed to `Purchases.configure`. Resolves via
+    /// `RevenueCatKeys.activeKey` — the Apple App Store key (`appl_…`) for
+    /// Release / TestFlight / App Store (and Debug by default). Never a Test Store
+    /// key in Release, which would make RevenueCat `fatalError` on launch.
+    static let apiKey = RevenueCatKeys.activeKey
 
     /// Dashboard product identifiers (used only to map packages to plans;
     /// purchases use the SDK `Package`, never these strings).
@@ -82,6 +117,21 @@ final class SubscriptionManager: ObservableObject {
         configured = true
         #if canImport(RevenueCat)
         guard !apiKey.isEmpty, !apiKey.contains("PASTE_") else { return }
+        // Release safety net: never hand RevenueCat a non-Apple key in a
+        // Release / TestFlight / App Store build. A Test Store key (`test_…`)
+        // makes RevenueCat itself call `fatalError` (its
+        // `checkForSimulatedStoreAPIKeyInRelease` check) — the exact launch crash
+        // this build fixes. Rather than crash or bypass RevenueCat's check, we
+        // decline to configure and log; the app simply behaves as "not Pro" for
+        // that launch. This must never trigger now that `activeKey` is the
+        // `appl_` key — it exists only to guarantee we can never ship the crash
+        // again. (No bypass flag is used.)
+        #if !DEBUG
+        guard apiKey.hasPrefix("appl_") else {
+            NSLog("[RevenueCat] Skipping configure in Release: expected an Apple App Store key (prefix \"appl_\"). Purchases unavailable this launch.")
+            return
+        }
+        #endif
         Purchases.logLevel = .warn
         Purchases.configure(withAPIKey: apiKey)
         isAvailable = true
