@@ -117,6 +117,15 @@ final class AppModel: ObservableObject {
                 self.isPro = pro
             }
             .store(in: &cancellables)
+        // Bridge the nested SubscriptionManager's own @Published changes (plans,
+        // isLoading, isPurchasing, errorMessage) up to AppModel, so SwiftUI views
+        // that observe `appModel` (the Paywall, Settings) re-render when offerings
+        // and prices finish loading — otherwise the paywall can keep showing the
+        // initial disabled fallback plans even after real packages arrive.
+        subscriptions.objectWillChange
+            .receive(on: RunLoop.main)
+            .sink { [weak self] in self?.objectWillChange.send() }
+            .store(in: &cancellables)
 
         // AdMob: configure analytics + resolve UMP consent and initialise the SDK
         // (safe no-op without the Google Mobile Ads package). No ad is requested

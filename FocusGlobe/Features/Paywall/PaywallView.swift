@@ -71,7 +71,12 @@ struct PaywallView: View {
         .onAppear {
             appModel.analytics.log(.paywallOpened)
             subs.loadOfferings()
+            syncSelection()
         }
+        // When offerings/prices finish loading, move the selection onto a plan that
+        // actually has a package, so the CTA becomes enabled instead of sitting on
+        // an unavailable default.
+        .onChange(of: subs.plans) { _, _ in syncSelection() }
     }
 
     // MARK: Background
@@ -225,6 +230,10 @@ struct PaywallView: View {
     private func planCard(_ kind: PlanKind) -> some View {
         let plan = subs.plan(kind)
         let selected = selectedKind == kind
+        // Only dim/disable an unavailable plan when *other* plans are purchasable,
+        // so a partial offering clearly shows which plans can be bought. Before any
+        // package loads, cards stay as neutral previews (no sad all-dimmed state).
+        let dimmed = subs.hasAnyPackage && !(plan?.available ?? false)
         return Button {
             appModel.tapFeedback()
             withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { selectedKind = kind }
@@ -264,6 +273,8 @@ struct PaywallView: View {
             .shadow(color: selected ? AppColors.gold.opacity(0.35) : .clear, radius: 12, y: 0)
         }
         .buttonStyle(SoftPressStyle(scale: 0.99))
+        .opacity(dimmed ? 0.45 : 1)
+        .disabled(dimmed)
     }
 
     private func planSubtitle(_ kind: PlanKind, _ plan: PlanOption?) -> String? {
@@ -355,6 +366,19 @@ struct PaywallView: View {
     }
 
     // MARK: Actions
+
+    /// Keep the selection on a purchasable plan. Once offerings load, if the
+    /// current selection has no package but another plan does, move to the
+    /// preferred available one (annual → monthly → lifetime). This ensures the CTA
+    /// is enabled whenever any package exists, instead of sitting disabled on an
+    /// unavailable default. No-op until at least one package is available, so the
+    /// user's manual choice is never overridden once real plans are on screen.
+    private func syncSelection() {
+        guard subs.hasAnyPackage else { return }
+        if subs.plan(selectedKind)?.available != true, let preferred = subs.preferredKind {
+            selectedKind = preferred
+        }
+    }
 
     private func purchase() {
         Task { @MainActor in

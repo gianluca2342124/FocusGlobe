@@ -103,6 +103,24 @@ final class SubscriptionManager: ObservableObject {
 
     func plan(_ kind: PlanKind) -> PlanOption? { plans.first { $0.kind == kind } }
 
+    /// The plan kinds that have a real, purchasable package loaded (display order).
+    var availableKinds: [PlanKind] { plans.filter { $0.available }.map { $0.kind } }
+
+    /// `true` once at least one real package is loaded — i.e. the CTA can buy.
+    var hasAnyPackage: Bool { !availableKinds.isEmpty }
+
+    /// The best default selection when packages load: annual → monthly → lifetime,
+    /// restricted to what's actually available. `nil` if nothing is purchasable.
+    var preferredKind: PlanKind? {
+        for k in [PlanKind.annual, .monthly, .lifetime] where availableKinds.contains(k) { return k }
+        return availableKinds.first
+    }
+
+    /// Lightweight, PII-free diagnostics (offering / package / product identifiers
+    /// and prices — never user data). Visible in Console on TestFlight/Release so a
+    /// "Products unavailable" paywall can be diagnosed without a debugger.
+    private func rcLog(_ message: String) { NSLog("[RevenueCat] \(message)") }
+
     private var configured = false
 
     #if canImport(RevenueCat)
@@ -223,17 +241,29 @@ final class SubscriptionManager: ObservableObject {
 
     #if canImport(RevenueCat)
     private func applyOfferings(_ offerings: Offerings) {
-        // Prefer the current offering; fall back to the "default" offering.
-        let offering = offerings.current ?? offerings.all["default"]
+        // Pick the offering robustly: the dashboard **Current** offering, then a
+        // literal "default", then **any** configured offering. The last fallback
+        // fixes the most common cause of a disabled paywall — an offering that
+        // exists (with real products/prices) but was never marked "Current" and
+        // isn't named "default", which previously resolved to `nil` and left every
+        // plan on the disabled fallback (hence "Products unavailable").
+        let offering = offerings.current
+            ?? offerings.all["default"]
+            ?? offerings.all.values.first
+        rcLog("offerings: current=\(offerings.current?.identifier ?? "nil") all=[\(offerings.all.keys.sorted().joined(separator: ","))] → using=\(offering?.identifier ?? "nil"), packages=\(offering?.availablePackages.count ?? 0)")
+
         var byKind: [PlanKind: Package] = [:]
         for package in offering?.availablePackages ?? [] {
             let pid = package.storeProduct.productIdentifier
+            rcLog("package pkgID=\(package.identifier) type=\(package.packageType.rawValue) product=\(pid) price=\(package.storeProduct.localizedPriceString)")
             if pid == Self.annualProductID || package.packageType == .annual {
                 byKind[.annual] = package
             } else if pid == Self.lifetimeProductID || package.packageType == .lifetime {
                 byKind[.lifetime] = package
             } else if pid == Self.monthlyProductID || package.packageType == .monthly {
                 byKind[.monthly] = package
+            } else {
+                rcLog("⚠️ unmapped package product=\(pid) type=\(package.packageType.rawValue) — check product IDs / package types")
             }
         }
         packagesByKind = byKind
@@ -248,6 +278,10 @@ final class SubscriptionManager: ObservableObject {
                 localizedPrice: product.localizedPriceString,
                 monthlyEquivalent: kind == .annual ? monthlyEquivalent(for: product) : nil,
                 available: true)
+        }
+        rcLog("plans mapped available=[\(availableKinds.map { $0.rawValue }.joined(separator: ","))] preferred=\(preferredKind?.rawValue ?? "none")")
+        if !hasAnyPackage {
+            rcLog("⚠️ no purchasable packages — paywall will show fallback. Check: (1) an offering is marked Current in RevenueCat, (2) it contains packages for subscription_annually/_monthly/_lifetime, (3) those IAPs are Ready to Submit/Approved in App Store Connect and the ASC API key is uploaded to RevenueCat.")
         }
         isLoading = false
     }
