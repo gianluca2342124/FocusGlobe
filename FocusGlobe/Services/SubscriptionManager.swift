@@ -83,10 +83,23 @@ final class SubscriptionManager: ObservableObject {
     static let apiKey = RevenueCatKeys.activeKey
 
     /// Dashboard product identifiers (used only to map packages to plans;
-    /// purchases use the SDK `Package`, never these strings).
-    static let annualProductID = "subscription_annually"
-    static let lifetimeProductID = "subscription_lifetime"
-    static let monthlyProductID = "subscription_monthly"
+    /// purchases use the SDK `Package`, never these strings). These are the clean
+    /// products created for the 1.0 resubmission. The legacy `subscription_*`
+    /// identifiers are retired and must never be referenced again — the old
+    /// products/offering caused the "Products unavailable" App Review rejection.
+    static let annualProductID = "focusglobe_pro_annual"
+    static let lifetimeProductID = "focusglobe_pro_lifetime"
+    static let monthlyProductID = "focusglobe_pro_monthly"
+
+    /// The RevenueCat offering that ships the current products (dashboard
+    /// **identifier**, not the display name "Default1"). It is requested
+    /// explicitly; the code never falls back to the legacy "default" offering.
+    static let offeringID = "default1"
+
+    /// The retired legacy offering identifier. It is never loaded — even if the
+    /// dashboard still marks it "Current" — because its old `subscription_*`
+    /// products are exactly what caused the "Products unavailable" rejection.
+    static let retiredOfferingID = "default"
 
     @Published private(set) var isPro = false
     @Published private(set) var isAvailable = false      // RC configured
@@ -241,35 +254,61 @@ final class SubscriptionManager: ObservableObject {
 
     #if canImport(RevenueCat)
     private func applyOfferings(_ offerings: Offerings) {
-        // Pick the offering robustly: the dashboard **Current** offering, then a
-        // literal "default", then **any** configured offering. The last fallback
-        // fixes the most common cause of a disabled paywall — an offering that
-        // exists (with real products/prices) but was never marked "Current" and
-        // isn't named "default", which previously resolved to `nil` and left every
-        // plan on the disabled fallback (hence "Products unavailable").
-        let offering = offerings.current
-            ?? offerings.all["default"]
-            ?? offerings.all.values.first
-        rcLog("offerings: current=\(offerings.current?.identifier ?? "nil") all=[\(offerings.all.keys.sorted().joined(separator: ","))] → using=\(offering?.identifier ?? "nil"), packages=\(offering?.availablePackages.count ?? 0)")
+        // Resolve the offering deterministically for the 1.0 resubmission:
+        //   1. The clean "default1" offering that ships the current products.
+        //   2. Only if that is missing/empty, fall back to `offerings.current` —
+        //      and only when it has packages AND is not the retired legacy
+        //      "default" offering (whose old subscription_* products caused the
+        //      App Review rejection and must never load again).
+        // If neither yields real packages, `offering` is nil and the paywall
+        // stays honestly "unavailable" — we never fake prices as if real
+        // products loaded.
+        let requested = offerings.all[Self.offeringID]
+        let requestedUsable = (requested?.availablePackages.isEmpty == false) ? requested : nil
+        let currentUsable: Offering? = {
+            guard let current = offerings.current,
+                  !current.availablePackages.isEmpty,
+                  current.identifier != Self.retiredOfferingID else { return nil }
+            return current
+        }()
+        let offering = requestedUsable ?? currentUsable
+
+        rcLog("key prefix=\(String(Self.apiKey.prefix(5)))  requested offering=\(Self.offeringID)")
+        rcLog("offerings returned all=[\(offerings.all.keys.sorted().joined(separator: ","))]  current=\(offerings.current?.identifier ?? "nil")")
+        rcLog("selected offering=\(offering?.identifier ?? "nil")  packages=\(offering?.availablePackages.count ?? 0)")
+        if requested == nil || (requested?.availablePackages.isEmpty ?? true) {
+            rcLog("default1 offering missing or empty")
+        }
 
         var byKind: [PlanKind: Package] = [:]
         for package in offering?.availablePackages ?? [] {
             let pid = package.storeProduct.productIdentifier
-            rcLog("package pkgID=\(package.identifier) type=\(package.packageType.rawValue) product=\(pid) price=\(package.storeProduct.localizedPriceString)")
+            // Map by the new product identifier first, then by RevenueCat package
+            // type as a fallback. Old product IDs are never matched — they no
+            // longer exist in App Store Connect or RevenueCat.
+            let mapped: PlanKind?
             if pid == Self.annualProductID || package.packageType == .annual {
-                byKind[.annual] = package
+                mapped = .annual
             } else if pid == Self.lifetimeProductID || package.packageType == .lifetime {
-                byKind[.lifetime] = package
+                mapped = .lifetime
             } else if pid == Self.monthlyProductID || package.packageType == .monthly {
-                byKind[.monthly] = package
+                mapped = .monthly
             } else {
-                rcLog("⚠️ unmapped package product=\(pid) type=\(package.packageType.rawValue) — check product IDs / package types")
+                mapped = nil
+            }
+            rcLog("package pkgID=\(package.identifier) type=\(package.packageType.rawValue) product=\(pid) price=\(package.storeProduct.localizedPriceString) → \(mapped?.rawValue ?? "UNMAPPED")")
+            if let mapped {
+                byKind[mapped] = package
+            } else {
+                rcLog("⚠️ unmapped package product=\(pid) type=\(package.packageType.rawValue) — expected focusglobe_pro_monthly / focusglobe_pro_annual / focusglobe_pro_lifetime")
             }
         }
         packagesByKind = byKind
 
         plans = PlanKind.allCases.map { kind in
             guard let product = byKind[kind]?.storeProduct else {
+                // Visual placeholder only — always `available: false`, so it can
+                // never be purchased or block a real plan, and carries no product ID.
                 return Self.fallbackPlans.first { $0.kind == kind }
                     ?? PlanOption(kind: kind, localizedPrice: "—", monthlyEquivalent: nil, available: false)
             }
@@ -281,8 +320,12 @@ final class SubscriptionManager: ObservableObject {
         }
         rcLog("plans mapped available=[\(availableKinds.map { $0.rawValue }.joined(separator: ","))] preferred=\(preferredKind?.rawValue ?? "none")")
         if !hasAnyPackage {
-            rcLog("⚠️ no purchasable packages — paywall will show fallback. Check: (1) an offering is marked Current in RevenueCat, (2) it contains packages for subscription_annually/_monthly/_lifetime, (3) those IAPs are Ready to Submit/Approved in App Store Connect and the ASC API key is uploaded to RevenueCat.")
+            rcLog("⚠️ no purchasable packages loaded. RevenueCat offering default1 must contain focusglobe_pro_monthly, focusglobe_pro_annual, focusglobe_pro_lifetime (and those IAPs must be Ready to Submit / Approved in App Store Connect).")
         }
+        #if DEBUG
+        // App Review diagnostics — DEBUG console only, never shown in the UI.
+        rcLog("[AppReview] selected=\(offering?.identifier ?? "nil") packageCount=\(offering?.availablePackages.count ?? 0) mapped=[\(byKind.keys.map { $0.rawValue }.sorted().joined(separator: ","))]")
+        #endif
         isLoading = false
     }
 

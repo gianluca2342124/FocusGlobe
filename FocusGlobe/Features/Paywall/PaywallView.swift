@@ -294,14 +294,20 @@ struct PaywallView: View {
     }
 
     private var purchaseButton: some View {
-        let available = subs.plan(selectedKind)?.available ?? false
+        // Drive the CTA from the plan it will actually buy (`effectiveKind`): the
+        // user's selection when it has a package, otherwise the preferred available
+        // plan. So the CTA is enabled and shows real copy whenever ANY real package
+        // is loaded — it can only read "Products unavailable" when zero packages
+        // exist, never while a purchasable plan is on screen.
+        let kind = effectiveKind
+        let available = kind != nil
         let working = subs.isPurchasing
         return Button { purchase() } label: {
             ZStack {
                 if working {
                     ProgressView().tint(Color(hex: 0x14181F))
                 } else {
-                    Text(available ? buttonTitle : "Products unavailable")
+                    Text(available ? buttonTitle(for: kind) : "Products unavailable")
                         .font(AppTypography.headline)
                         .foregroundStyle(Color(hex: 0x14181F))
                 }
@@ -343,8 +349,18 @@ struct PaywallView: View {
         withAnimation(.easeInOut(duration: 1.05)) { shineX = 1.5 }
     }
 
-    private var buttonTitle: String {
-        selectedKind == .annual ? "Start 7 days free trial" : "Continue"
+    /// The plan the CTA actually purchases: the current selection when it has a
+    /// loaded package, else the preferred available plan (annual → monthly →
+    /// lifetime). `nil` only when no real package exists — so the CTA stays enabled
+    /// and truthful even for the brief partial-offering frame before
+    /// `syncSelection` moves the highlighted card onto an available plan.
+    private var effectiveKind: PlanKind? {
+        if subs.plan(selectedKind)?.available == true { return selectedKind }
+        return subs.preferredKind
+    }
+
+    private func buttonTitle(for kind: PlanKind?) -> String {
+        kind == .annual ? "Start 7 days free trial" : "Continue"
     }
 
     private var goldGradient: LinearGradient {
@@ -381,8 +397,12 @@ struct PaywallView: View {
     }
 
     private func purchase() {
+        // Buy the plan the CTA is actually offering (the selection, or the
+        // preferred available plan if the selection has no package yet). Guarded so
+        // a tap with zero packages loaded is a no-op rather than a failed purchase.
+        guard let kind = effectiveKind else { return }
         Task { @MainActor in
-            let ok = await subs.purchase(selectedKind)
+            let ok = await subs.purchase(kind)
             if ok {
                 appModel.haptics.rewardClaim()
                 dismiss()

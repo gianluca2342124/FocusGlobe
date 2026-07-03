@@ -12,8 +12,12 @@ the app behaves as "not Pro").
 
 ## Dashboard configuration
 
-- **Offering:** `default` (the code uses `offerings.current`, falling back to
-  `offerings.all["default"]`).
+- **Offering:** display name **`Default1`**, identifier **`default1`**
+  (REST API id `ofrng23801aad6e`). The code requests this offering explicitly
+  (`offerings.all["default1"]`) and only falls back to `offerings.current` when
+  `default1` is missing/empty. The legacy `default` offering (old `subscription_*`
+  products) is **retired** and never referenced — it caused the "Products
+  unavailable" App Review rejection.
 - **Entitlement (identifier checked in code):** `FocusGlobe Pro`
   - REST API ID (reference only): `entldabe1bce7f`
   - The code checks `customerInfo.entitlements["FocusGlobe Pro"]`. As a safety
@@ -22,18 +26,19 @@ the app behaves as "not Pro").
     differs from the display name. **Verify** the entitlement *identifier* in the
     dashboard matches `SubscriptionManager.entitlementID` — change that one
     constant if it differs.
-- **Products** (mapped to the `FocusGlobe Pro` entitlement):
+- **Products** (mapped to the `FocusGlobe Pro` entitlement, attached to the
+  `default1` offering):
 
-  | Plan     | Product identifier        | REST API ID (reference) |
-  |----------|---------------------------|-------------------------|
-  | Annual   | `subscription_annually`   | `prod546ae7419f`        |
-  | Lifetime | `subscription_lifetime`   | `prodfd0bad48c5`        |
-  | Monthly  | `subscription_monthly`*   | —                       |
+  | Plan     | Product identifier         | Package  | REST API ID (reference) |
+  |----------|----------------------------|----------|-------------------------|
+  | Annual   | `focusglobe_pro_annual`    | `$rc_annual`   | `prodeda191de8a`  |
+  | Lifetime | `focusglobe_pro_lifetime`  | `$rc_lifetime` | `prod277808f70d`  |
+  | Monthly  | `focusglobe_pro_monthly`*  | `$rc_monthly`  | `prod3756b91d04`  |
 
-  *Monthly is matched by product identifier `subscription_monthly` **or** by
-  RevenueCat `packageType == .monthly`, so a differently-named monthly product in
-  the `default` offering still maps correctly. If your monthly product uses a
-  different identifier, set `SubscriptionManager.monthlyProductID`.
+  *Each plan is matched by its product identifier above **or** by the RevenueCat
+  `packageType` (`.annual` / `.lifetime` / `.monthly`) as a fallback. Old
+  `subscription_*` identifiers are never matched. If a product uses a different
+  identifier, set the matching `SubscriptionManager.*ProductID` constant.
 
 Purchases use the SDK `Package`/`StoreProduct` from the fetched offering — **no
 REST API IDs are passed to purchase calls**. The IDs above are for debugging.
@@ -86,7 +91,7 @@ shows a **Manage subscription** row that presents `CustomerCenterView`.
 
 1. Sign into a **Sandbox tester** (App Store Connect) on the device.
 2. Ensure the three products are **Ready to Submit** and attached to the
-   `default` offering + the `FocusGlobe Pro` entitlement.
+   `default1` offering + the `FocusGlobe Pro` entitlement.
 3. Run, open any crown / Ultra journey → the custom paywall appears with live
    localized prices.
 4. Purchase → Pro unlocks immediately (Ultra + premium skins).
@@ -94,7 +99,7 @@ shows a **Manage subscription** row that presents `CustomerCenterView`.
 
 ## Verify in App Store Connect / RevenueCat
 
-- The three products exist, are approved/Ready, and are in the `default`
+- The three products exist, are approved/Ready, and are in the `default1`
   offering as packages.
 - The annual product has the **7-day free trial** introductory offer (the button
   copy promises it).
