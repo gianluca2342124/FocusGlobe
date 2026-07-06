@@ -9,7 +9,7 @@ struct HistoryView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpacing.md) {
                     ScreenHeader(title: "History",
-                                 subtitle: "Every journey you've taken")
+                                 subtitle: "Every expedition you've taken")
                         .padding(.bottom, AppSpacing.xs)
 
                     if appModel.history.isEmpty {
@@ -33,10 +33,10 @@ struct HistoryView: View {
         VStack(spacing: AppSpacing.sm) {
             BalloonView(height: 92, showBurner: true, showGlow: true)
                 .padding(.bottom, AppSpacing.xs)
-            Text("No journeys yet")
+            Text("No expeditions yet")
                 .font(AppTypography.headline)
                 .foregroundStyle(AppColors.textPrimary)
-            Text("Take off on your first route and it will appear here.")
+            Text("Complete your first expedition and it will appear here.")
                 .font(AppTypography.subhead)
                 .foregroundStyle(AppColors.textSecondary)
                 .multilineTextAlignment(.center)

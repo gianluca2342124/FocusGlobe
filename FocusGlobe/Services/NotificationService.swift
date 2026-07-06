@@ -133,7 +133,7 @@ final class NotificationService {
                  title: "Your \(state.streak)-day streak is waiting 🔥", body: pick(Self.streakBodies))
         } else if !state.landedToday {
             plan(dayOffset: 0, hour: 17, id: ID.today,
-                 title: "Ready for one focused journey?", body: dailyBody(state, offset: 0))
+                 title: "Ready for one focused expedition?", body: dailyBody(state, offset: 0))
         }
 
         // TOMORROW — a calm daily focus / study nudge (alternating, personalised).
@@ -143,9 +143,9 @@ final class NotificationService {
         // +2 / +3 days — gentle comeback. Only reaches genuinely inactive users:
         // opening the app reschedules and pushes these later.
         plan(dayOffset: 2, hour: 11, id: ID.day2,
-             title: "Your passport has been quiet", body: pick(Self.comebackBodies))
+             title: "Your journal has been quiet", body: pick(Self.comebackBodies))
         plan(dayOffset: 3, hour: 11, id: ID.day3,
-             title: "A new journey is waiting", body: pick(Self.comebackBodies, offset: 1))
+             title: "A new expedition is waiting", body: pick(Self.comebackBodies, offset: 1))
 
         log("rescheduled \(scheduled) reminder(s); streak=\(state.streak) landedToday=\(state.landedToday) unfinished=\(state.hasUnfinishedJourney)")
     }
@@ -173,7 +173,7 @@ final class NotificationService {
 
     private func unfinishedBody(_ s: NotificationState) -> String {
         if let o = s.unfinishedOrigin, let d = s.unfinishedDestination {
-            return "Continue your journey from \(o) to \(d)."
+            return "Continue your expedition from \(o) to \(d)."
         }
         return "Pick up the route you started whenever you're ready."
     }
@@ -202,24 +202,24 @@ final class NotificationService {
     // Warm, premium, slightly playful. No guilt, no "you failed", no fake urgency,
     // and never any location data.
     private static let dailyTitles = [
-        "Ready for one focused journey?",
-        "One focus flight before the day ends?",
+        "Ready for one focused expedition?",
+        "One focused drift before the day ends?",
         "Your next deep-work block awaits",
     ]
     private static let streakBodies = [
-        "One short journey keeps your focus streak alive.",
+        "One short expedition keeps your focus streak alive.",
         "Your streak is too good to lose now.",
-        "A 20-minute journey is enough to protect your streak.",
-        "Take off for one short session and keep your streak alive.",
+        "A 20-minute expedition is enough to protect your streak.",
+        "Set off on one short session and keep your streak alive.",
     ]
     private static let focusBodies = [
         "Pick a destination and give yourself 25 minutes.",
         "Your balloon hasn't taken off yet today.",
-        "Land one journey today and keep your momentum.",
-        "Your passport is missing today's stamp.",
+        "Complete one expedition today and keep your momentum.",
+        "Your journal is missing today's stamp.",
     ]
     private static let studyBodies = [
-        "Need to study? Start with one calm journey.",
+        "Need to study? Start with one calm expedition.",
         "One focused session before distractions win.",
         "Turn your next destination into a deep-work block.",
     ]
@@ -227,6 +227,6 @@ final class NotificationService {
         "The globe is ready when you are.",
         "Your balloon is ready whenever you are.",
         "Come back for one calm focus trip.",
-        "A new journey is waiting when you are.",
+        "A new expedition is waiting when you are.",
     ]
 }

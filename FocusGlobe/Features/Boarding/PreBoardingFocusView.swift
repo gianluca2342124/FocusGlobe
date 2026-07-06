@@ -113,8 +113,8 @@ struct PreBoardingFocusView: View {
     }
 
     private var headline: some View {
-        Text("What do you want to focus?")
-            .font(.system(size: 23, weight: .bold, design: .rounded))
+        Text("What are you bringing aboard?")
+            .font(.system(size: 23, weight: .semibold, design: .serif))
             .foregroundStyle(.white)
             .multilineTextAlignment(.center)
             .shadow(color: .black.opacity(0.5), radius: 8, y: 2)
@@ -255,7 +255,7 @@ struct PreBoardingFocusView: View {
     @ViewBuilder private var confirmArea: some View {
         ZStack {
             if selected != nil && !lift {
-                AppPrimaryButton(title: "Confirm focus", systemImage: "checkmark") { confirm() }
+                ExpeditionButton(title: "Board the balloon", systemImage: "location.north.line.fill") { confirm() }
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
