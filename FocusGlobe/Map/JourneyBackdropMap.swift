@@ -67,6 +67,11 @@ struct JourneyBackdropMap: View {
     private var mood: RouteMood { destination?.mood ?? .calm }
 
     var body: some View {
+        mapContent
+            .overlay { WarmMapGrade() }   // warm expedition-chart grade (day/night)
+    }
+
+    @ViewBuilder private var mapContent: some View {
         switch FocusGlobeMapProvider.current {
         case .apple:
             appleBackdrop
@@ -149,6 +154,35 @@ struct JourneyBackdropMap: View {
         } else {
             FallbackJourneyMapView(data: fallbackData)
         }
+    }
+}
+
+/// A warm, non-interactive grade laid over the (forced-light) map so it reads as
+/// an aged **chart**, not a flight-radar screen. Day = a light sepia wash; night =
+/// a deeper warm amber/brown wash. A soft vignette frames the edges in both, and a
+/// faint golden radial keeps it feeling *lit* rather than merely tinted. Tuned so
+/// geographic labels stay legible; adjust the opacities if they read too heavy.
+struct WarmMapGrade: View {
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        let dark = scheme == .dark
+        ZStack {
+            // Overall warm wash — multiply keeps the map's structure while tinting
+            // it toward sepia (day) / warm brown (night).
+            (dark ? Color(hex: 0x2A1E0F) : Color(hex: 0x9A6A2E))
+                .opacity(dark ? 0.44 : 0.20)
+                .blendMode(.multiply)
+            // A touch of lantern light at the centre so it feels golden-hour.
+            RadialGradient(colors: [Color(hex: 0xE8A94B).opacity(dark ? 0.10 : 0.14), .clear],
+                           center: .center, startRadius: 20, endRadius: 520)
+                .blendMode(.plusLighter)
+            // Vignette — frames the chart inside the journal.
+            RadialGradient(colors: [.clear, .black.opacity(dark ? 0.55 : 0.30)],
+                           center: .center, startRadius: 170, endRadius: 640)
+        }
+        .allowsHitTesting(false)
+        .ignoresSafeArea()
     }
 }
 

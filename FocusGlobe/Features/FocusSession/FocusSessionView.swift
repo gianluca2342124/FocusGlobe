@@ -87,6 +87,12 @@ struct FocusSessionView: View {
             if !vm.mapStyle.isDark {
                 Color.black.opacity(0.22).ignoresSafeArea()
             }
+            // Subtle warm expedition grade so the live flyover reads golden-hour,
+            // not cold — kept light so the 3D map and white readouts stay crisp.
+            Color(hex: 0x2A1E0F).opacity(0.16).blendMode(.multiply).ignoresSafeArea()
+            RadialGradient(colors: [Color(hex: 0xE8A94B).opacity(0.07), .clear],
+                           center: .center, startRadius: 40, endRadius: 520)
+                .blendMode(.plusLighter).ignoresSafeArea()
             RadialGradient(colors: [.clear, .black.opacity(0.28)],
                            center: .center, startRadius: 220, endRadius: 580)
             VStack(spacing: 0) {

@@ -33,20 +33,24 @@ enum AppleMapStyle {
         // and the (far) Home globe keep realistic elevation (default = false).
         let elevation: MKMapConfiguration.ElevationStyle = preferFlatElevation ? .flat : .realistic
         switch style {
+        // Every vector style is forced to **light** so Apple's cold navy dark map
+        // never renders; our warm sepia/amber grade overlay (in `JourneyBackdropMap`)
+        // supplies the day/night expedition mood on top. (Guideline 4.3(a): the map
+        // must read as an old chart, not a flight-radar screen.)
         case .monochrome, .graphite, .night:
-            map.overrideUserInterfaceStyle = .dark
+            map.overrideUserInterfaceStyle = .light
             map.preferredConfiguration = standard(elevation: .flat, emphasis: .muted)
 
         case .terra, .terrain:
-            map.overrideUserInterfaceStyle = .dark
-            map.preferredConfiguration = standard(elevation: elevation, emphasis: .default)
+            map.overrideUserInterfaceStyle = .light
+            map.preferredConfiguration = standard(elevation: elevation, emphasis: .muted)
 
         case .standard:
             map.overrideUserInterfaceStyle = .light   // force the bright Apple look
-            map.preferredConfiguration = standard(elevation: .flat, emphasis: .default)
+            map.preferredConfiguration = standard(elevation: .flat, emphasis: .muted)
 
         case .satellite, .hybrid:
-            map.overrideUserInterfaceStyle = .unspecified
+            map.overrideUserInterfaceStyle = .light
             map.preferredConfiguration = labelsOn ? hybrid(elevation: elevation) : imagery(elevation: elevation)
         }
     }

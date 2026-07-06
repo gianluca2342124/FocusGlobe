@@ -65,7 +65,12 @@ struct AppleBackdropMapView: UIViewRepresentable {
         map.showsUserLocation = false
         map.isAccessibilityElement = false
         map.accessibilityElementsHidden = true
-        AppleMapStyle.apply(style, to: map, labelsOn: true)   // dark premium backdrop
+        // Own the night (Guideline 4.3(a)): force the map to LIGHT so Apple's cold
+        // navy dark map never renders. Our warm expedition grade — a translucent
+        // sepia/amber overlay in the SwiftUI wrapper (`JourneyBackdropMap`) — supplies
+        // the day/night mood so the map reads as an old chart, not a flight-radar.
+        map.overrideUserInterfaceStyle = .light
+        AppleMapStyle.apply(style, to: map, labelsOn: true)   // muted, warm-graded backdrop
         // Start near the origin so the first frame isn't the default world map;
         // precise framing is applied in updateUIView once laid out.
         if planetary {
