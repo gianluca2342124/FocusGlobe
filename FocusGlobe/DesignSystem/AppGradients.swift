@@ -32,28 +32,33 @@ enum AppGradients {
     }
 }
 
-/// A reusable full-screen calm background: an elegant neutral graphite/near-black
-/// gradient with subtle, blurred depth (no blue tint) — the shared tone across
-/// every non-map screen, matching the Streak details look.
+/// A reusable full-screen **expedition paper** background: a warm aged-paper
+/// gradient (deep navy paper in Dark) with soft lantern/terracotta stains and a
+/// tactile grain — the shared page tone across every non-map screen.
 struct AppBackground: View {
     var body: some View {
         ZStack {
             AppGradients.appBackground
                 .ignoresSafeArea()
 
-            // A soft neutral top glow for depth (replaces the old blue orb).
+            // A warm lantern glow high up (replaces the old cold white orb) —
+            // golden-hour light falling across the page.
             Circle()
-                .fill(Color.white.opacity(0.05))
+                .fill(AppColors.lantern.opacity(0.10))
                 .frame(width: 340, height: 340)
-                .blur(radius: 110)
+                .blur(radius: 120)
                 .offset(x: -120, y: -220)
 
-            // A faint warm accent low-down keeps it premium, never flat.
+            // A faint terracotta stain low-down so the page never looks flat.
             Circle()
-                .fill(AppColors.gold.opacity(0.08))
+                .fill(AppColors.terracotta.opacity(0.07))
                 .frame(width: 300, height: 300)
-                .blur(radius: 120)
+                .blur(radius: 130)
                 .offset(x: 150, y: 280)
+
+            // Tactile paper grain over the whole page (subtle, deterministic).
+            PaperGrain(intensity: 0.9)
+                .ignoresSafeArea()
         }
         .ignoresSafeArea()
     }
