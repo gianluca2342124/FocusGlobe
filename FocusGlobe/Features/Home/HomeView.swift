@@ -224,19 +224,21 @@ struct HomeView: View {
             }
             .shadow(color: .black.opacity(0.5), radius: 12, y: 3)
 
+            paperPanel
+        }
+    }
+
+    /// One cohesive **warm paper panel** anchoring the bottom of Home — Begin
+    /// Expedition, Today's Log, the last discovery, and the Field Journal / Settings
+    /// links — so the bottom reads as a page, not floating dark cards.
+    private var paperPanel: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
             if let origin {
                 ExpeditionButton(title: "Begin Expedition", systemImage: "location.north.line.fill") {
                     appModel.tapFeedback()
-                    #if DEBUG
-                    let started = Date()
-                    #endif
-                    // Plan is cached (and catalogs are warmed at launch), so this
-                    // fills the cache for this origin before Route Selection renders.
+                    // Fill the plan cache for this origin before Route Selection renders.
                     _ = JourneyPlanner.plan(from: origin)
                     router.openRouteSelection()
-                    #if DEBUG
-                    print("[Performance] Start Journey tap-to-navigation \(Int(Date().timeIntervalSince(started) * 1000)) ms")
-                    #endif
                 }
             } else {
                 ExpeditionButton(title: "Choose starting city", systemImage: "mappin.and.ellipse", showSeal: false) {
@@ -247,11 +249,58 @@ struct HomeView: View {
 
             missionsCard
 
+            if let disc = lastDiscovery {
+                Rectangle().fill(AppColors.hairline).frame(height: 1)
+                lastDiscoveryStrip(disc)
+            }
+
             HStack(spacing: AppSpacing.xs) {
                 compactNav(title: "Field Journal", systemImage: "book.closed") { appModel.tapFeedback(); router.openPassport() }
                 compactNav(title: "Settings", systemImage: "gearshape") { appModel.tapFeedback(); router.openSettings() }
             }
         }
+        .padding(AppSpacing.md)
+        .background {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(AppColors.paper)
+                .overlay(PaperGrain(intensity: 0.55).clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous)))
+                .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(AppColors.glassStroke, lineWidth: 1))
+                .shadow(color: .black.opacity(0.35), radius: 20, y: 10)
+        }
+    }
+
+    /// The most recently discovered place (from landed history), surfaced on Home.
+    private var lastDiscovery: VisitedPlace? {
+        VisitedPlace.derive(from: appModel.history).first
+    }
+
+    private func lastDiscoveryStrip(_ place: VisitedPlace) -> some View {
+        Button { appModel.tapFeedback(); router.openPassport() } label: {
+            HStack(spacing: AppSpacing.sm) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(place.theme.accent.opacity(0.2))
+                    Image(systemName: "photo.fill")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(place.theme.accent)
+                }
+                .frame(width: 42, height: 32)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Last discovery")
+                        .font(AppTypography.caption).foregroundStyle(AppColors.textTertiary)
+                    Text(place.name)
+                        .font(.system(size: 15, weight: .semibold, design: .serif))
+                        .foregroundStyle(AppColors.textPrimary).lineLimit(1)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(AppColors.textTertiary)
+            }
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(SoftPressStyle(scale: 0.99))
     }
 
     // A calm Missions / Daily Goals summary (replaces the old History row).

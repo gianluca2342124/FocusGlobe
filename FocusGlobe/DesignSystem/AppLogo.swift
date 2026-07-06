@@ -8,7 +8,7 @@ struct BrandGlyph: View {
     var body: some View {
         ZStack {
             LinearGradient(
-                colors: [Color(hex: 0x141B33), Color(hex: 0x2A3A72)],
+                colors: [Color(hex: 0x2A2015), Color(hex: 0x4A3A20)],
                 startPoint: .topLeading, endPoint: .bottomTrailing
             )
 
