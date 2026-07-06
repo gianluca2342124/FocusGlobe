@@ -126,8 +126,10 @@ struct RouteSelectionView: View {
                           accessibilityLabel: "Back") { dismiss() }
             Spacer()
             VStack(spacing: 1) {
-                Text("Choose a journey").font(AppTypography.headline).foregroundStyle(.white)
-                Text("from \(origin.city)").font(AppTypography.caption).foregroundStyle(.white.opacity(0.7))
+                Text("Chart your course")
+                    .font(.system(size: Layout.pad(19, 22), weight: .semibold, design: .serif))
+                    .foregroundStyle(.white)
+                Text("from \(origin.city)").font(AppTypography.serifCaption).foregroundStyle(.white.opacity(0.75))
             }
             Spacer()
             // The crown only opens the paywall — hide it once the user is Pro.
@@ -187,7 +189,7 @@ struct RouteSelectionView: View {
                     .foregroundStyle(AppColors.brand)
                 }
                 Text(journey.name)
-                    .font(AppTypography.title2).foregroundStyle(.white)
+                    .font(AppTypography.destination).foregroundStyle(.white)
                 Text(journey.subtitle)
                     .font(AppTypography.caption).foregroundStyle(.white.opacity(0.78))
                     .lineLimit(1)
@@ -207,8 +209,9 @@ struct RouteSelectionView: View {
 
             destinationStrip     // full-width carousel (uses the whole screen on iPad/Mac)
 
-            AppPrimaryButton(title: locked(journey) ? "Unlock with Pro" : "Book Journey",
-                             systemImage: locked(journey) ? "lock.fill" : "paperplane.fill") {
+            ExpeditionButton(title: locked(journey) ? "Unlock with Pro" : "Prepare Expedition",
+                             systemImage: locked(journey) ? "lock.fill" : "location.north.line.fill",
+                             showSeal: !locked(journey)) {
                 select(journey)
             }
             .padding(.horizontal, AppSpacing.screen)
@@ -233,13 +236,14 @@ struct RouteSelectionView: View {
             Image(systemName: "map")
                 .font(.system(size: 28, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.85))
-            Text("Journeys are being prepared for your area")
-                .font(AppTypography.headline).foregroundStyle(.white)
+            Text("Expeditions are being charted for your region")
+                .font(.system(size: Layout.pad(18, 21), weight: .semibold, design: .serif))
+                .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
             Text("Choose a starting city to begin exploring.")
-                .font(AppTypography.caption).foregroundStyle(.white.opacity(0.8))
+                .font(AppTypography.serifCaption).foregroundStyle(.white.opacity(0.8))
                 .multilineTextAlignment(.center)
-            AppPrimaryButton(title: "Choose starting city", systemImage: "mappin.and.ellipse") {
+            ExpeditionButton(title: "Choose starting city", systemImage: "mappin.and.ellipse", showSeal: false) {
                 appModel.tapFeedback()
                 showCityPicker = true
             }
@@ -281,65 +285,64 @@ struct RouteSelectionView: View {
     }
 }
 
-/// A compact destination card for the horizontal strip. Selected = white card;
-/// otherwise dark glass. Mirrors the FocusFlight destination cards.
+/// A little **postcard** for the destination strip — cream card stock, a mood
+/// "stamp", the place name in serif italic (like a hand-lettered map) and the
+/// trip length in ink. No airport codes. Selected = wax-red border + a seal dot.
 private struct DestinationCard: View {
     let journey: PlannedJourney
     let isSelected: Bool
     let isLocked: Bool
     let action: () -> Void
 
+    private let paper = Color(hex: 0xF5EFE2)
+    private let ink   = Color(hex: 0x2B2620)
+    private let sepia = Color(hex: 0x8A6F4D)
+    private let wax   = Color(hex: 0x9B3324)
+    private let terra = Color(hex: 0xC4633F)
+
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                HStack(spacing: 5) {
-                    HStack(spacing: 3) {
-                        Image(systemName: journey.isReturn ? "arrow.uturn.backward" : "location.fill")
-                            .font(.system(size: 8, weight: .bold))
-                        Text(journey.code)
-                            .font(.system(size: 13, weight: .heavy, design: .rounded))
+            VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                HStack(spacing: 6) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(terra.opacity(0.16))
+                        Image(systemName: journey.isReturn ? "arrow.uturn.backward" : journey.mood.systemImage)
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(terra)
                     }
-                    .foregroundStyle(isSelected ? Color(hex: 0x14181F) : .white)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 4)
-                    .overlay(Capsule().strokeBorder(journey.isReturn ? AppColors.brand : AppColors.gold, lineWidth: 1.5))
+                    .frame(width: 34, height: 34)
                     Spacer()
                     if isLocked {
                         PremiumBadge(compact: true)
+                    } else if isSelected {
+                        Circle().fill(wax).frame(width: 11, height: 11)
+                            .overlay(Circle().strokeBorder(.white.opacity(0.3), lineWidth: 0.5))
                     }
                 }
-
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(journey.name)
-                        .font(AppTypography.callout)
-                        .foregroundStyle(isSelected ? Color(hex: 0x14181F) : .white)
-                        .lineLimit(1)
-                    Text(Formatters.durationLabel(minutes: journey.durationMinutes))
-                        .font(AppTypography.caption)
-                        .foregroundStyle(isSelected ? Color(hex: 0x14181F).opacity(0.65) : .white.opacity(0.7))
-                }
+                Spacer(minLength: 2)
+                Text(journey.name)
+                    .font(.system(size: Layout.pad(16, 19), weight: .semibold, design: .serif))
+                    .italic()
+                    .foregroundStyle(ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Text("\(Formatters.durationLabel(minutes: journey.durationMinutes)) · \(journey.mood.displayName)")
+                    .font(.system(size: 11.5, weight: .regular, design: .serif))
+                    .foregroundStyle(sepia)
+                    .lineLimit(1)
             }
-            .padding(.horizontal, Layout.pad(AppSpacing.sm + 2, AppSpacing.md))
-            .padding(.vertical, Layout.pad(AppSpacing.sm + 2, AppSpacing.lg))   // taller cards on iPad
-            .frame(width: Layout.pad(144, 184), alignment: .leading)           // wider + easier to tap on iPad
+            .padding(Layout.pad(AppSpacing.sm + 2, AppSpacing.md))
+            .frame(width: Layout.pad(150, 190), height: Layout.pad(116, 140), alignment: .leading)
             .background {
-                if isSelected {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous).fill(.white)
-                } else {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(Color.black.opacity(0.25)))
-                }
+                RoundedRectangle(cornerRadius: 14, style: .continuous).fill(paper)
             }
             .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .strokeBorder(isSelected ? Color.clear
-                                  : (isLocked ? AppColors.gold.opacity(0.55) : AppColors.glassStroke),
-                                  lineWidth: isLocked && !isSelected ? 1.5 : 1)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(isSelected ? wax : (isLocked ? AppColors.gold.opacity(0.6) : ink.opacity(0.28)),
+                                  lineWidth: isSelected ? 2 : 1)
             )
-            .shadow(color: (isLocked && !isSelected ? AppColors.gold.opacity(0.25) : .black.opacity(0.3)),
-                    radius: 10, y: 5)
+            .shadow(color: .black.opacity(0.3), radius: 9, y: 5)
         }
         .buttonStyle(SoftPressStyle(scale: 0.97))
     }

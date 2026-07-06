@@ -160,7 +160,7 @@ struct HomeView: View {
                 #if DEBUG
                 HStack(spacing: 6) {
                     Image(systemName: "location.fill").font(.system(size: 12, weight: .bold))
-                    Text(origin?.code ?? "—")
+                    Text(origin?.city ?? "—")
                         .font(.system(size: 13, weight: .heavy, design: .rounded))
                 }
                 .foregroundStyle(.white.opacity(0.9))
@@ -201,25 +201,31 @@ struct HomeView: View {
 
     private var bottomCluster: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(viewModel.greeting)
-                    .font(.system(size: Layout.pad(14, 18), weight: .medium, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.55))
+                    .font(.system(size: Layout.pad(15, 19), weight: .regular, design: .serif))
+                    .foregroundStyle(.white.opacity(0.72))
                 Text(bigTitle)
-                    .font(.system(size: Layout.pad(46, 64), weight: .bold, design: .rounded))
+                    .font(.system(size: Layout.pad(44, 62), weight: .semibold, design: .serif))
                     .foregroundStyle(.white)
                     .lineLimit(1)
                     .minimumScaleFactor(0.55)
                 if !subtitle.isEmpty {
                     Text(subtitle)
-                        .font(.system(size: Layout.pad(14, 18), weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.7))
+                        .font(.system(size: Layout.pad(14, 18), weight: .regular, design: .serif))
+                        .foregroundStyle(.white.opacity(0.72))
+                } else {
+                    // A journal-style dateline written under the destination.
+                    Text(dateLine)
+                        .font(.system(size: Layout.pad(13, 16), weight: .regular, design: .serif))
+                        .italic()
+                        .foregroundStyle(.white.opacity(0.6))
                 }
             }
-            .shadow(color: .black.opacity(0.45), radius: 12, y: 3)
+            .shadow(color: .black.opacity(0.5), radius: 12, y: 3)
 
             if let origin {
-                AppPrimaryButton(title: "Start Journey", systemImage: "paperplane.fill") {
+                ExpeditionButton(title: "Begin Expedition", systemImage: "location.north.line.fill") {
                     appModel.tapFeedback()
                     #if DEBUG
                     let started = Date()
@@ -233,7 +239,7 @@ struct HomeView: View {
                     #endif
                 }
             } else {
-                AppPrimaryButton(title: "Choose starting city", systemImage: "mappin.and.ellipse") {
+                ExpeditionButton(title: "Choose starting city", systemImage: "mappin.and.ellipse", showSeal: false) {
                     appModel.tapFeedback()
                     showCityPicker = true
                 }
@@ -242,7 +248,7 @@ struct HomeView: View {
             missionsCard
 
             HStack(spacing: AppSpacing.xs) {
-                compactNav(title: "Passport", systemImage: "globe.europe.africa") { appModel.tapFeedback(); router.openPassport() }
+                compactNav(title: "Field Journal", systemImage: "book.closed") { appModel.tapFeedback(); router.openPassport() }
                 compactNav(title: "Settings", systemImage: "gearshape") { appModel.tapFeedback(); router.openSettings() }
             }
         }
@@ -260,7 +266,7 @@ struct HomeView: View {
                     .foregroundStyle(AppColors.gold)
                     .frame(width: 24)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Daily goals").font(AppTypography.callout).foregroundStyle(AppColors.textPrimary)
+                    Text("Today's Log").font(AppTypography.callout).foregroundStyle(AppColors.textPrimary)
                     Text("\(done) of \(missions.count) complete")
                         .font(AppTypography.caption).foregroundStyle(AppColors.textSecondary)
                 }
@@ -304,6 +310,13 @@ struct HomeView: View {
         if origin != nil { return "" }
         return appModel.isLocating ? "Finding where you are…" : "Pick a starting city to begin."
     }
+
+    /// Today's date written like a journal entry, e.g. "Monday, July 6".
+    private var dateLine: String {
+        let f = DateFormatter()
+        f.dateFormat = "EEEE, MMMM d"
+        return f.string(from: Date())
+    }
 }
 
 // MARK: - Resume unfinished journey
@@ -324,8 +337,8 @@ private struct ResumeJourneySheet: View {
                             glow: (snapshot?.route.colorTheme.soft ?? AppColors.gold.opacity(0.7)),
                             assetName: snapshot?.skinAssetName)
                 VStack(spacing: 6) {
-                    Text("Continue your journey?")
-                        .font(AppTypography.title2)
+                    Text("Resume your expedition?")
+                        .font(AppTypography.serifTitle2)
                         .foregroundStyle(AppColors.textPrimary)
                     if let s = snapshot {
                         Text("\(s.origin.city) → \(s.route.destinationName)")
@@ -339,9 +352,9 @@ private struct ResumeJourneySheet: View {
                 .multilineTextAlignment(.center)
                 Spacer()
                 VStack(spacing: AppSpacing.sm) {
-                    AppPrimaryButton(title: "Continue journey", systemImage: "paperplane.fill") { onContinue() }
+                    ExpeditionButton(title: "Continue expedition", systemImage: "location.north.line.fill") { onContinue() }
                     Button(action: onStartNew) {
-                        Text("Start a new journey")
+                        Text("Start a new expedition")
                             .font(AppTypography.headline)
                             .foregroundStyle(AppColors.textPrimary)
                             .frame(maxWidth: .infinity).frame(height: 52)

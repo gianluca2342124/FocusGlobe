@@ -15,7 +15,7 @@ enum RouteCategory: String, Codable, CaseIterable, Identifiable, Hashable {
         case .short: return "Short"
         case .deep:  return "Deep"
         case .long:  return "Long"
-        case .ultra: return "Ultra"
+        case .ultra: return "Grand"   // user-facing "Grand Expedition"; internal case name stays `.ultra`
         }
     }
 
