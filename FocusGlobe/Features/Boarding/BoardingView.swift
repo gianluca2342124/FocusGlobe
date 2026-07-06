@@ -1,15 +1,16 @@
 import SwiftUI
+import UIKit
 
 /// The **Expedition Page** — a cream journal page the traveller signs before
-/// setting off. It replaces the old boarding-pass ticket entirely: the
-/// destination in serif, a hand-drawn dotted route between the two city *names*
-/// (no airport codes, no barcode), the date and focus written as ink stamps, and
-/// the trip as field-journal entries.
+/// setting off: destination in serif, a hand-drawn dotted route between the two
+/// city *names* (no airport codes, no barcode), date + focus as ink stamps.
 ///
-/// Setting off presses a red **wax seal** onto the lower-right of the page (a
-/// scale-down impact + page shake + heavy haptic + soft thud), then begins the
-/// expedition through the *exact same* session-start path as before
-/// (`router.startJourney`). No timer/session logic changed — only the surface.
+/// The signature moment is the **wax seal**. A stamp handle rests at the page's
+/// lower-right corner; the user **presses and holds** it — building haptic ticks
+/// while it rises and tilts — and on release it SLAMS down: impact, page shake,
+/// wax splat, heavy haptic and a soft thud. Then the expedition begins through the
+/// *exact same* session-start path as before (`router.startJourney`). Reduce Motion
+/// / VoiceOver fall back to a single tap. No timer/session logic changed.
 struct BoardingView: View {
     let route: Route
 
@@ -17,16 +18,20 @@ struct BoardingView: View {
     @EnvironmentObject private var router: AppRouter
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
 
     @State private var selectedPreset: FocusPreset?
     @State private var appeared = false
+
+    // Seal interaction state.
     @State private var sealed = false
-    @State private var sealScale: CGFloat = 2.4
+    @State private var holdProgress: CGFloat = 0   // 0…1 while pressing
+    @State private var splat: CGFloat = 0          // wax spread on impact
     @State private var pageShake: CGFloat = 0
+    @State private var showHint = true
+    @State private var holdTicks: [DispatchWorkItem] = []
     @State private var pageImage: Image?
 
-    /// `route` is required; `preselectedFocus` carries the focus chosen on the
-    /// pre-boarding ritual so the page arrives pre-filled.
     init(route: Route, preselectedFocus: FocusPreset? = nil) {
         self.route = route
         _selectedPreset = State(initialValue: preselectedFocus)
@@ -34,8 +39,6 @@ struct BoardingView: View {
 
     private var origin: JourneyOrigin { appModel.originForJourney }
     private var distanceKm: Double { GeoMath.distanceKm(from: origin.coordinate, to: route.destination) }
-
-    /// A cosmetic "expedition number" for the page — completed expeditions + 1.
     private var expeditionNumber: Int { appModel.history.filter(\.completed).count + 1 }
 
     var body: some View {
@@ -50,9 +53,9 @@ struct BoardingView: View {
                 topBar
                 Spacer(minLength: AppSpacing.xs)
                 ExpeditionPage(number: expeditionNumber, origin: origin, route: route,
-                               distanceKm: distanceKm, focus: selectedPreset,
-                               sealed: sealed, sealScale: sealScale)
+                               distanceKm: distanceKm, focus: selectedPreset, showSeal: false)
                     .frame(maxWidth: Layout.pad(420, 560))
+                    .overlay(alignment: .bottomTrailing) { sealArea }
                     .offset(x: pageShake)
                     .opacity(appeared ? 1 : 0)
                     .offset(y: appeared ? 0 : 26)
@@ -83,8 +86,6 @@ struct BoardingView: View {
         .allowsHitTesting(false)
     }
 
-    // Linear flow: focus is chosen in the pre-boarding ritual, so there is no
-    // back button here — only the centred title.
     private var topBar: some View {
         HStack {
             Color.clear.frame(width: 44, height: 44)
@@ -97,43 +98,96 @@ struct BoardingView: View {
         }
     }
 
-    // MARK: Controls — seal the page (launch) + save (share)
+    // MARK: The interactive wax seal
 
-    private var controls: some View {
-        VStack(spacing: AppSpacing.sm) {
-            ExpeditionButton(title: sealed ? "Setting off…" : "Seal the page",
-                             systemImage: "seal.fill", isEnabled: !sealed) {
-                setOff()
-            }
-            if let pageImage {
-                ShareLink(item: pageImage,
-                          preview: SharePreview("My Expedition Page", image: pageImage)) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "square.and.arrow.up").font(.system(size: 14, weight: .semibold))
-                        Text("Save page").font(.system(size: 13, weight: .medium, design: .serif))
-                    }
+    private var sealArea: some View {
+        ZStack {
+            // Wax splat under the seal — spreads on impact.
+            Circle()
+                .fill(RadialGradient(colors: [AppColors.waxSeal.opacity(0.85), AppColors.waxSeal.opacity(0.32)],
+                                     center: .center, startRadius: 1, endRadius: 44))
+                .frame(width: 86, height: 86)
+                .scaleEffect(splat)
+                .opacity(Double(splat))
+                .blur(radius: 2)
+
+            // The seal: hovers + rises/tilts while held, then slams down on release.
+            WaxSeal(symbol: "location.north.line.fill", diameter: 66)
+                .scaleEffect(sealed ? 1 : 1 + holdProgress * 0.06)
+                .rotationEffect(.degrees(sealed ? -8 : holdProgress * -12))
+                .offset(y: sealed ? 0 : -(26 + holdProgress * 30))
+                .shadow(color: .black.opacity(0.35),
+                        radius: sealed ? 4 : 10 + holdProgress * 8,
+                        y: sealed ? 3 : 12 + holdProgress * 8)
+                .contentShape(Circle())
+                .onLongPressGesture(minimumDuration: 0.7, maximumDistance: 90,
+                                    pressing: { handlePressing($0) },
+                                    perform: { completeSeal() })
+                .onTapGesture { if reduceMotion || voiceOver { completeSeal() } }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Wax seal — set off")
+                .accessibilityHint("Double-tap to seal the page and begin the expedition")
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction { completeSeal() }
+
+            if showHint && !sealed {
+                Text("hold to seal")
+                    .font(.system(size: 11, weight: .regular, design: .serif)).italic()
                     .foregroundStyle(.white.opacity(0.85))
-                    .padding(.vertical, 4)
-                }
-                .buttonStyle(SoftPressStyle())
+                    .shadow(color: .black.opacity(0.5), radius: 3, y: 1)
+                    .offset(y: 42)
+                    .allowsHitTesting(false)
             }
         }
-        .clusterMaxWidth()
+        .frame(width: 120, height: 120)
+        .padding(4)
     }
 
-    // MARK: Set off — the wax-seal ritual, then the real session start
-
-    private func setOff() {
+    private func handlePressing(_ isPressing: Bool) {
         guard !sealed else { return }
-        appModel.haptics.takeoff()                 // heavy, weighty impact
-        appModel.uiSound.play(.ticketTear)         // soft thud
-        withAnimation((AppMotion.sealImpact).respecting(reduceMotion)) {
+        if isPressing {
+            showHint = false
+            withAnimation(.easeOut(duration: 0.7)) { holdProgress = 1 }
+            scheduleTicks()
+        } else {
+            cancelTicks()
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { holdProgress = 0 }
+        }
+    }
+
+    /// Building haptic ticks over the hold — soft, then firmer.
+    private func scheduleTicks() {
+        cancelTicks()
+        guard !reduceMotion else { return }
+        let gen = UIImpactFeedbackGenerator(style: .rigid)
+        gen.prepare()
+        for i in 1...6 {
+            let item = DispatchWorkItem { gen.impactOccurred(intensity: CGFloat(min(1.0, 0.35 + Double(i) * 0.11))) }
+            holdTicks.append(item)
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.11, execute: item)
+        }
+    }
+
+    private func cancelTicks() {
+        holdTicks.forEach { $0.cancel() }
+        holdTicks = []
+    }
+
+    /// The slam: impact, splat, page shake, heavy haptic, thud → then set off.
+    private func completeSeal() {
+        guard !sealed else { return }
+        cancelTicks()
+        showHint = false
+        appModel.haptics.takeoff()             // heavy, weighty impact
+        appModel.uiSound.play(.ticketTear)     // soft thud
+        withAnimation(AppMotion.sealImpact.respecting(reduceMotion)) {
             sealed = true
-            sealScale = 1
+            splat = 1
+            holdProgress = 0
         }
         if !reduceMotion { shakePage() }
         // Then begin the expedition through the exact same code path as before.
-        DispatchQueue.main.asyncAfter(deadline: .now() + (reduceMotion ? 0.2 : 0.9)) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + (reduceMotion ? 0.2 : 0.85)) {
             router.startJourney(origin: origin, route: route, intention: selectedPreset?.title)
         }
     }
@@ -141,17 +195,36 @@ struct BoardingView: View {
     private func shakePage() {
         let seq: [CGFloat] = [-6, 5, -3, 2, 0]
         for (i, dx) in seq.enumerated() {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.26 + Double(i) * 0.05) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.06 + Double(i) * 0.05) {
                 withAnimation(.easeInOut(duration: 0.05)) { pageShake = dx }
             }
         }
     }
 
-    /// Render the sealed page to an image once, so "Save page" can share it.
+    // MARK: Controls — share the page
+
+    private var controls: some View {
+        VStack(spacing: AppSpacing.sm) {
+            if let pageImage {
+                ShareLink(item: pageImage,
+                          preview: SharePreview("My Expedition Page", image: pageImage)) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "square.and.arrow.up").font(.system(size: 14, weight: .semibold))
+                        Text("Share").font(.system(size: 14, weight: .medium, design: .serif))
+                    }
+                    .foregroundStyle(.white.opacity(0.88))
+                    .padding(.vertical, 6)
+                }
+                .buttonStyle(SoftPressStyle())
+            }
+        }
+        .clusterMaxWidth()
+    }
+
+    /// Render the sealed page to an image once, so "Share" can export it.
     @MainActor private func renderSharePage() {
         let snapshot = ExpeditionPage(number: expeditionNumber, origin: origin, route: route,
-                                      distanceKm: distanceKm, focus: selectedPreset,
-                                      sealed: true, sealScale: 1)
+                                      distanceKm: distanceKm, focus: selectedPreset, showSeal: true)
             .frame(width: 360)
             .padding(24)
             .background(Color(hex: 0xEADFC4))
@@ -169,8 +242,9 @@ private struct ExpeditionPage: View {
     let route: Route
     let distanceKm: Double
     let focus: FocusPreset?
-    let sealed: Bool
-    let sealScale: CGFloat
+    /// Draw a static wax seal on the page (used only for the shareable snapshot;
+    /// the live page shows the *interactive* seal overlaid by `BoardingView`).
+    var showSeal: Bool = false
 
     private let paper = Color(hex: 0xF5EFE2)
     private let ink   = Color(hex: 0x2B2620)
@@ -194,12 +268,11 @@ private struct ExpeditionPage: View {
                 .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(ink.opacity(0.18), lineWidth: 1))
         }
         .overlay(alignment: .bottomTrailing) {
-            // The wax seal presses onto the lower-right corner of the page.
-            WaxSeal(symbol: "location.north.line.fill", diameter: 74)
-                .scaleEffect(sealed ? 1 : sealScale)
-                .opacity(sealed ? 1 : 0)
-                .rotationEffect(.degrees(sealed ? -8 : 0))
-                .padding(22)
+            if showSeal {
+                WaxSeal(symbol: "location.north.line.fill", diameter: 74)
+                    .rotationEffect(.degrees(-8))
+                    .padding(22)
+            }
         }
         .shadow(color: .black.opacity(0.4), radius: 18, y: 10)
     }
@@ -231,7 +304,6 @@ private struct ExpeditionPage: View {
         }
     }
 
-    // Origin → destination, by name, joined by a hand-drawn dotted arc.
     private var routeSketch: some View {
         HStack(spacing: 8) {
             Circle().fill(terra).frame(width: 9, height: 9)
