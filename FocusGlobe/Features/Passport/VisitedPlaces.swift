@@ -129,7 +129,7 @@ struct VisitedPlacesSection: View {
                 Image(systemName: "map")
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(AppColors.brand)
-                Text("Your passport is waiting for its first stamps. Land a journey to start your map.")
+                Text("Your journal is waiting for its first stamps. Complete an expedition to start your map.")
                     .font(AppTypography.callout)
                     .foregroundStyle(AppColors.textSecondary)
                 Spacer(minLength: 0)

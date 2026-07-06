@@ -18,8 +18,8 @@ struct PassportView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
                     HStack(alignment: .top) {
-                        ScreenHeader(title: "Passport",
-                                     subtitle: "Your landings, miles and collection")
+                        ScreenHeader(title: "Field Journal",
+                                     subtitle: "Your discoveries, miles charted and collection")
                         Spacer()
                         // The crown only opens the paywall — hide it once Pro.
                         if !appModel.isPro {
@@ -53,9 +53,9 @@ struct PassportView: View {
         LazyVGrid(columns: cardColumns, spacing: AppSpacing.sm) {
             StatTile(systemImage: "point.topleft.down.to.point.bottomright.curvepath",
                      value: Formatters.miles(progress.totalFocusMiles),
-                     label: "Focus miles", accent: AppColors.brand)
+                     label: "Miles charted", accent: AppColors.brand)
             StatTile(systemImage: "mappin.and.ellipse",
-                     value: "\(progress.landings)", label: "Landings", accent: AppColors.gold)
+                     value: "\(progress.landings)", label: "Discoveries", accent: AppColors.gold)
             StatTile(systemImage: "hourglass",
                      value: progress.bestFocusSeconds > 0 ? Formatters.durationLabel(minutes: max(1, progress.bestFocusMinutes)) : "—",
                      label: "Best focus", accent: AppColors.success)
@@ -205,7 +205,7 @@ struct PassportView: View {
     /// The master Sound toggle (Settings) stays the on/off switch.
     private var journeySoundSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            SectionLabel(text: "Journey sound")
+            SectionLabel(text: "Expedition sound")
             LazyVGrid(columns: cardColumns, spacing: AppSpacing.sm) {
                 ForEach(JourneyAudioOption.all) { option in
                     JourneySoundCard(option: option,

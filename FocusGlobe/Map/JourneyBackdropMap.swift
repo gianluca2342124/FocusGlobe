@@ -140,9 +140,9 @@ struct JourneyBackdropMap: View {
                 ZStack {
                     FallbackJourneyMapView(data: fallbackData)
                         .frame(width: size.width, height: size.height)
-                    MapCodeTag(code: origin.code, highlighted: false)
+                    MapCodeTag(code: origin.city, highlighted: false)
                         .position(x: o.x, y: o.y - 22)
-                    MapCodeTag(code: destination?.destinationCode ?? "FLY", highlighted: true)
+                    MapCodeTag(code: destination?.destinationName ?? "", highlighted: true)
                         .position(x: d.x, y: d.y - 22)
                 }
             }
@@ -289,7 +289,7 @@ struct GoogleBackdropMapView: UIViewRepresentable {
                     markers.append(balloon)
                 }
                 if view.showsCodeTags && view.showsOrigin {
-                    addTag(code: view.origin.code, highlighted: false, at: originCoord, accent: accent, on: map)
+                    addTag(code: view.origin.city, highlighted: false, at: originCoord, accent: accent, on: map)
                 }
                 // Zoomed out so you see the city/region from above, not the street.
                 let zoom: Float = view.showsOrigin ? view.originZoom : 4.0
@@ -357,7 +357,7 @@ struct GoogleBackdropMapView: UIViewRepresentable {
                     let c = CLLocationCoordinate2D(latitude: pin.coordinate.latitude,
                                                    longitude: pin.coordinate.longitude)
                     let tag = GMSMarker(position: c)
-                    tag.icon = VehicleMarkerRenderer.tagImage(code: pin.code, highlighted: false,
+                    tag.icon = VehicleMarkerRenderer.tagImage(code: "", highlighted: false,
                                                               accent: UIColor(AppColors.textPrimary))
                     tag.groundAnchor = CGPoint(x: 0.5, y: 1.0)
                     tag.isTappable = false
@@ -369,9 +369,9 @@ struct GoogleBackdropMapView: UIViewRepresentable {
 
             if view.showsCodeTags {
                 if view.showsOrigin {
-                    addTag(code: view.origin.code, highlighted: false, at: originCoord, accent: accent, on: map)
+                    addTag(code: view.origin.city, highlighted: false, at: originCoord, accent: accent, on: map)
                 }
-                addTag(code: dest.destinationCode, highlighted: true, at: destCoord, accent: UIColor(AppColors.gold), on: map)
+                addTag(code: dest.destinationName, highlighted: true, at: destCoord, accent: UIColor(AppColors.gold), on: map)
             }
 
             // Frame the whole route (camera by centre + zoom — frame-independent).

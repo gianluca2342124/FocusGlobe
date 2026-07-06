@@ -151,7 +151,7 @@ struct AppleBackdropMapView: UIViewRepresentable {
                                                                          theme: view.theme, height: Layout.pad(58, 72)))
                 }
                 if view.showsCodeTags && view.showsOrigin {
-                    map.addAnnotation(AppleMapAnnotationRenderer.tag(at: originCoord, code: view.origin.code,
+                    map.addAnnotation(AppleMapAnnotationRenderer.tag(at: originCoord, code: view.origin.city,
                                                                      highlighted: false, accent: accent))
                 }
                 return
@@ -179,17 +179,19 @@ struct AppleBackdropMapView: UIViewRepresentable {
                                                                 tag: AppleMapRouteRenderer.Tag.ring), level: .aboveRoads)
                 }
                 for pin in view.nearby.prefix(10) where pin.code != dest.destinationCode {
-                    map.addAnnotation(AppleMapAnnotationRenderer.tag(at: pin.coordinate.cl, code: pin.code,
+                    // Nearby discovery pins carry no text label (no airport codes) —
+                    // just a small marker; the destination is named on its own tag.
+                    map.addAnnotation(AppleMapAnnotationRenderer.tag(at: pin.coordinate.cl, code: "",
                                                                      highlighted: false, accent: UIColor(AppColors.textPrimary)))
                 }
             }
 
             if view.showsCodeTags {
                 if view.showsOrigin {
-                    map.addAnnotation(AppleMapAnnotationRenderer.tag(at: originCoord, code: view.origin.code,
+                    map.addAnnotation(AppleMapAnnotationRenderer.tag(at: originCoord, code: view.origin.city,
                                                                      highlighted: false, accent: accent))
                 }
-                map.addAnnotation(AppleMapAnnotationRenderer.tag(at: dest.destination.cl, code: dest.destinationCode,
+                map.addAnnotation(AppleMapAnnotationRenderer.tag(at: dest.destination.cl, code: dest.destinationName,
                                                                  highlighted: true, accent: UIColor(AppColors.gold)))
             }
         }

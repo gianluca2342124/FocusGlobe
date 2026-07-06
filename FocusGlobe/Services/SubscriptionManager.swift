@@ -109,9 +109,12 @@ final class SubscriptionManager: ObservableObject {
     @Published private(set) var plans: [PlanOption] = SubscriptionManager.fallbackPlans
 
     static let fallbackPlans: [PlanOption] = [
-        PlanOption(kind: .annual,   localizedPrice: "18,99 €", monthlyEquivalent: "1,58 €/month", available: false),
-        PlanOption(kind: .lifetime, localizedPrice: "35,99 €", monthlyEquivalent: nil,            available: false),
-        PlanOption(kind: .monthly,  localizedPrice: "3,99 €",  monthlyEquivalent: nil,            available: false),
+        // Pre-load placeholders only (available:false); real localized prices come
+        // from StoreKit via RevenueCat. Kept in step with the current App Store
+        // pricing so no stale price ever flashes before products load.
+        PlanOption(kind: .annual,   localizedPrice: "19,99 €", monthlyEquivalent: "1,67 €/month", available: false),
+        PlanOption(kind: .lifetime, localizedPrice: "39,99 €", monthlyEquivalent: nil,            available: false),
+        PlanOption(kind: .monthly,  localizedPrice: "4,99 €",  monthlyEquivalent: nil,            available: false),
     ]
 
     func plan(_ kind: PlanKind) -> PlanOption? { plans.first { $0.kind == kind } }

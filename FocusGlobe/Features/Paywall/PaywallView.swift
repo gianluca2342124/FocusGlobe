@@ -24,10 +24,10 @@ struct PaywallView: View {
     // (replace the placeholder URLs there before release — see APP_STORE_READINESS.md).
 
     private let benefits: [(String, String)] = [
-        ("nosign", "No ads"),
-        ("paperplane.fill", "Long & Ultra journeys"),
-        ("balloon.fill", "Exclusive skins"),
-        ("gift.fill", "2x rewards"),
+        ("nosign", "No interruptions"),
+        ("mountain.2.fill", "Grand expeditions"),
+        ("balloon.fill", "Exclusive balloons & postcards"),
+        ("gift.fill", "2x discoveries"),
         ("music.note", "Focus sounds & music"),
         ("square.grid.2x2.fill", "All widgets unlocked"),
     ]
@@ -360,7 +360,7 @@ struct PaywallView: View {
     }
 
     private func buttonTitle(for kind: PlanKind?) -> String {
-        kind == .annual ? "Start 7 days free trial" : "Continue"
+        kind == .annual ? "Begin free trial" : "Continue"
     }
 
     private var goldGradient: LinearGradient {
