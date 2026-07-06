@@ -157,7 +157,7 @@ private struct DailyGoalsView: View {
             Spacer(minLength: 0)
             Text("Fresh goals at midnight")
                 .font(.system(size: 16, weight: .heavy, design: .rounded)).foregroundStyle(WTheme.ink)
-            Text("Take a flight today to start completing them.")
+            Text("Set off today to start completing them.")
                 .font(.system(size: 11, weight: .medium, design: .rounded)).foregroundStyle(WTheme.inkSoft)
             Spacer(minLength: 0)
         }

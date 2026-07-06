@@ -11,8 +11,8 @@ struct StartJourneyWidget: Widget {
                 .fgWidgetBackground(glow: WTheme.gold)
                 .widgetURL(FGLink.url("choose"))
         }
-        .configurationDisplayName("Start a Journey")
-        .description("Depart from your city and begin a focus flight.")
+        .configurationDisplayName("Begin an Expedition")
+        .description("Set off from your city and begin a focused expedition.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
@@ -22,7 +22,6 @@ private struct StartJourneyView: View {
     let entry: FGEntry
 
     private var city: String { entry.snapshot.originCity ?? "Anywhere" }
-    private var code: String { entry.snapshot.originCode ?? "FLY" }
 
     var body: some View {
         switch family {
@@ -36,10 +35,10 @@ private struct StartJourneyView: View {
         VStack(spacing: 7) {
             Spacer(minLength: 0)
             WBalloon(size: 40, tint: WTheme.gold)
-            Text(code).font(.system(size: 24, weight: .heavy, design: .rounded))
-                .foregroundStyle(WTheme.ink).lineLimit(1).minimumScaleFactor(0.7)
+            Text(city).font(.system(size: 20, weight: .heavy, design: .rounded))
+                .foregroundStyle(WTheme.ink).lineLimit(1).minimumScaleFactor(0.6)
             Spacer(minLength: 0)
-            WPill(icon: "paperplane.fill", title: "Take off", fill: WTheme.gold, fg: .black)
+            WPill(icon: "paperplane.fill", title: "Set off", fill: WTheme.gold, fg: .black)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(14)
@@ -50,12 +49,12 @@ private struct StartJourneyView: View {
             WBalloon(size: 70, tint: WTheme.gold)
                 .frame(width: 96)
             VStack(alignment: .leading, spacing: 6) {
-                WHeader(icon: "location.fill", title: "Depart from", tint: WTheme.gold)
+                WHeader(icon: "location.fill", title: "Set off from", tint: WTheme.gold)
                 Text(city).font(.system(size: 22, weight: .heavy, design: .rounded))
                     .foregroundStyle(WTheme.ink).lineLimit(1).minimumScaleFactor(0.7)
-                Text(code).font(.system(size: 13, weight: .heavy, design: .rounded)).foregroundStyle(WTheme.gold)
+                Text("Ready when you are").font(.system(size: 12, weight: .medium, design: .rounded)).foregroundStyle(WTheme.inkSoft)
                 Spacer(minLength: 0)
-                WPill(icon: "paperplane.fill", title: "Take off", fill: WTheme.gold, fg: .black)
+                WPill(icon: "paperplane.fill", title: "Set off", fill: WTheme.gold, fg: .black)
             }
             Spacer(minLength: 0)
         }
@@ -65,18 +64,19 @@ private struct StartJourneyView: View {
 
     private var large: some View {
         VStack(spacing: 14) {
-            WHeader(icon: "location.fill", title: "Depart from \(city)", tint: WTheme.gold)
+            WHeader(icon: "location.fill", title: "Set off", tint: WTheme.gold)
                 .frame(maxWidth: .infinity, alignment: .leading)
             Spacer(minLength: 0)
             WBalloon(size: 104, tint: WTheme.gold)
             VStack(spacing: 2) {
-                Text(code).font(.system(size: 40, weight: .heavy, design: .rounded)).foregroundStyle(WTheme.ink)
-                Text("Choose your focus, then fly")
+                Text(city).font(.system(size: 32, weight: .heavy, design: .rounded)).foregroundStyle(WTheme.ink)
+                    .lineLimit(1).minimumScaleFactor(0.6)
+                Text("Choose your focus, then set off")
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .foregroundStyle(WTheme.inkSoft)
             }
             Spacer(minLength: 0)
-            WPill(icon: "paperplane.fill", title: "Take off", fill: WTheme.gold, fg: .black)
+            WPill(icon: "paperplane.fill", title: "Set off", fill: WTheme.gold, fg: .black)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(18)

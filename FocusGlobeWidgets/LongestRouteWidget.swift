@@ -10,7 +10,7 @@ struct LongestRouteWidget: Widget {
                 .widgetURL(FGLink.url(entry.snapshot.gatedLink("passport")))
         }
         .configurationDisplayName("Longest Route")
-        .description("Your longest completed journey.")
+        .description("Your longest completed expedition.")
         .supportedFamilies([.systemMedium, .systemLarge])
     }
 }
@@ -48,9 +48,9 @@ private struct LongestRouteView: View {
             }
             Spacer(minLength: 0)
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(origin.fgCityCode).font(.system(size: big, weight: .heavy, design: .rounded)).foregroundStyle(.white)
+                Text(origin).font(.system(size: big * 0.62, weight: .heavy, design: .rounded)).foregroundStyle(.white)
                 Image(systemName: "ellipsis").font(.system(size: big * 0.4, weight: .black)).foregroundStyle(WTheme.gold)
-                Text(dest.fgCityCode).font(.system(size: big, weight: .heavy, design: .rounded)).foregroundStyle(.white)
+                Text(dest).font(.system(size: big * 0.62, weight: .heavy, design: .rounded)).foregroundStyle(.white)
             }
             .lineLimit(1).minimumScaleFactor(0.6)
             Text("\(origin)  →  \(dest)")
@@ -66,7 +66,7 @@ private struct LongestRouteView: View {
                     if let m = s.longestRouteDurationMinutes {
                         WStat(value: "\(m)", caption: "minutes", tint: .white)
                     }
-                    WStat(value: "\(s.landings)", caption: "total landings", tint: .white)
+                    WStat(value: "\(s.landings)", caption: "discoveries", tint: .white)
                 }
             } else if let km = s.longestRouteKm {
                 Text(metrics(km: km))
@@ -80,7 +80,7 @@ private struct LongestRouteView: View {
     private var landedChip: some View {
         HStack(spacing: 4) {
             Image(systemName: "checkmark.circle.fill").font(.system(size: 9, weight: .bold))
-            Text("LANDED").font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(0.6)
+            Text("ARRIVED").font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(0.6)
         }
         .foregroundStyle(.white)
         .padding(.horizontal, 8).padding(.vertical, 4)
@@ -98,8 +98,8 @@ private struct LongestRouteView: View {
         VStack(alignment: .leading, spacing: 6) {
             WHeader(icon: "trophy.fill", title: "Longest route", tint: WTheme.gold)
             Spacer(minLength: 0)
-            Text("No journeys yet").font(.system(size: 16, weight: .heavy, design: .rounded)).foregroundStyle(WTheme.ink)
-            Text("Complete a flight to see your longest route here.")
+            Text("No expeditions yet").font(.system(size: 16, weight: .heavy, design: .rounded)).foregroundStyle(WTheme.ink)
+            Text("Complete an expedition to see your longest route here.")
                 .font(.system(size: 11, weight: .medium, design: .rounded)).foregroundStyle(WTheme.inkSoft)
             Spacer(minLength: 0)
         }

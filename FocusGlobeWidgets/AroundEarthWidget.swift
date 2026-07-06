@@ -67,7 +67,7 @@ private struct AroundEarthView: View {
                     .minimumScaleFactor(0.7).lineLimit(1)
                 Text("\(s.totalFocusMiles.fgGrouped) km flown")
                     .font(.system(size: 13, weight: .semibold, design: .rounded)).foregroundStyle(WTheme.inkSoft)
-                Text("\(s.landings) landings · \(s.currentStreak)-day streak")
+                Text("\(s.landings) discoveries · \(s.currentStreak)-day streak")
                     .font(.system(size: 11, weight: .medium, design: .rounded)).foregroundStyle(WTheme.inkSoft)
             }
             Spacer(minLength: 0)
@@ -88,7 +88,7 @@ private struct AroundEarthView: View {
             Spacer(minLength: 0)
             HStack(spacing: 0) {
                 WStat(value: "\(s.totalFocusMiles.fgGrouped)", caption: "km flown", tint: WTheme.gold)
-                WStat(value: "\(s.landings)", caption: "landings")
+                WStat(value: "\(s.landings)", caption: "discoveries")
                 WStat(value: "\(s.currentStreak)", caption: "day streak", tint: WTheme.coral)
             }
         }

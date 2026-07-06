@@ -11,8 +11,8 @@ struct CurrentJourneyWidget: Widget {
             CurrentJourneyView(entry: entry)
                 .widgetURL(FGLink.url(entry.snapshot.journeyLink()))
         }
-        .configurationDisplayName("Current Journey")
-        .description("Resume an unfinished journey on the map.")
+        .configurationDisplayName("Current Expedition")
+        .description("Resume an unfinished expedition on the map.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
@@ -24,8 +24,10 @@ private struct CurrentJourneyView: View {
 
     private var progress: Double { min(1, max(0, s.resumeProgress ?? 0)) }
     private var pct: Int { Int((progress * 100).rounded()) }
-    private var origin: String { s.resumeOriginCode ?? (s.resumeOriginCity?.fgCityCode ?? "YOU") }
-    private var dest: String { s.resumeDestinationCode ?? (s.resumeDestinationCity?.fgCityCode ?? "FLY") }
+    // Show place NAMES (no airport codes) — fall back to a code only if a name is
+    // somehow absent.
+    private var origin: String { s.resumeOriginCity ?? s.resumeOriginCode ?? "You" }
+    private var dest: String { s.resumeDestinationCity ?? s.resumeDestinationCode ?? "Destination" }
     private var timeLeft: String { fgDuration(s.resumeRemainingSeconds ?? 0) }
     private var kmToGo: Int? {
         guard let km = s.resumeRouteKm else { return nil }
@@ -34,7 +36,7 @@ private struct CurrentJourneyView: View {
 
     var body: some View {
         if !s.isPro {
-            LockedTeaser(icon: "map.fill", title: "Current Journey", accent: WTheme.sky)
+            LockedTeaser(icon: "map.fill", title: "Current Expedition", accent: WTheme.sky)
                 .fgWidgetBackground(glow: WTheme.sky)
         } else if s.hasResumable {
             active
@@ -85,7 +87,7 @@ private struct CurrentJourneyView: View {
     private var activeMedium: some View {
         VStack(alignment: .leading, spacing: 9) {
             HStack {
-                WHeader(icon: "paperplane.fill", title: "In flight", tint: WTheme.sky)
+                WHeader(icon: "paperplane.fill", title: "Aloft", tint: WTheme.sky)
                 Spacer()
                 resumePill
             }
@@ -109,7 +111,7 @@ private struct CurrentJourneyView: View {
     private var activeLarge: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                WHeader(icon: "paperplane.fill", title: "Current journey", tint: WTheme.sky)
+                WHeader(icon: "paperplane.fill", title: "Current expedition", tint: WTheme.sky)
                 Spacer()
                 resumePill
             }
@@ -145,7 +147,7 @@ private struct CurrentJourneyView: View {
     private var inFlightChip: some View {
         HStack(spacing: 4) {
             Image(systemName: "paperplane.fill").font(.system(size: 9, weight: .bold))
-            Text("IN FLIGHT").font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(0.6)
+            Text("ALOFT").font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(0.6)
         }
         .foregroundStyle(.white)
         .padding(.horizontal, 8).padding(.vertical, 4)
@@ -167,17 +169,17 @@ private struct CurrentJourneyView: View {
             Spacer(minLength: 0)
             WBalloon(size: family == .systemSmall ? 44 : 64, tint: WTheme.sky)
             VStack(spacing: 3) {
-                Text("Ready for takeoff")
+                Text("Ready to set off")
                     .font(.system(size: family == .systemSmall ? 15 : 18, weight: .heavy, design: .rounded))
                     .foregroundStyle(WTheme.ink)
                 if family != .systemSmall {
-                    Text("Pick a destination and fly")
+                    Text("Pick a destination and set off")
                         .font(.system(size: 12, weight: .medium, design: .rounded))
                         .foregroundStyle(WTheme.inkSoft)
                 }
             }
             Spacer(minLength: 0)
-            WPill(icon: "paperplane.fill", title: "Start journey", fill: WTheme.ink, fg: .black)
+            WPill(icon: "paperplane.fill", title: "Begin expedition", fill: WTheme.ink, fg: .black)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(14)
