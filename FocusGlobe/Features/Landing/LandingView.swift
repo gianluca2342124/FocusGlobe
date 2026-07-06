@@ -16,6 +16,9 @@ struct LandingView: View {
     @State private var celebrateStreak = false
     @State private var shareImage: UIImage?
     @State private var showShare = false
+    /// True once the user watched the rewarded "double miles" ad — used to skip
+    /// the completion interstitial so two ads never stack in one landing.
+    @State private var didWatchRewarded = false
 
     private enum AdState { case available, loading, doubled }
 
@@ -66,8 +69,8 @@ struct LandingView: View {
 
     private var title: some View {
         VStack(spacing: 4) {
-            Text("You landed.")
-                .font(AppTypography.hero)
+            Text("You've arrived.")
+                .font(AppTypography.serifHero)
                 .foregroundStyle(AppColors.textPrimary)
             Text("\(summary.originName)  →  \(summary.route.destinationName)")
                 .font(AppTypography.subhead)
@@ -97,8 +100,8 @@ struct LandingView: View {
     }
 
     private var landedStamp: some View {
-        Text("LANDED")
-            .font(.system(size: 13, weight: .heavy, design: .rounded))
+        Text("ARRIVED")
+            .font(.system(size: 13, weight: .heavy, design: .serif))
             .tracking(1.5)
             .foregroundStyle(.white)
             .padding(.horizontal, 10).padding(.vertical, 5)
@@ -142,11 +145,11 @@ struct LandingView: View {
 
     private var actions: some View {
         VStack(spacing: AppSpacing.sm) {
-            AppPrimaryButton(title: "Claim Miles", systemImage: "checkmark") {
+            ExpeditionButton(title: "Claim Miles", systemImage: "checkmark") {
                 appModel.haptics.rewardClaim()
                 appModel.uiSound.play(.claim)
                 appModel.analytics.log(.rewardClaimed, ["route": summary.route.id, "miles": earnedMiles])
-                router.finishToHome()
+                finish(toPassport: false)
             }
             // Double-your-miles sits directly under Claim Miles.
             if !appModel.isPro { doubleReward }
@@ -154,9 +157,9 @@ struct LandingView: View {
                 AppSecondaryButton(title: "Share Postcard", systemImage: "square.and.arrow.up") {
                     sharePostcard()
                 }
-                AppSecondaryButton(title: "Passport", systemImage: "globe.europe.africa") {
+                AppSecondaryButton(title: "Field Journal", systemImage: "book.closed") {
                     appModel.tapFeedback()
-                    router.finishToPassport()
+                    finish(toPassport: true)
                 }
             }
         }
@@ -243,10 +246,24 @@ struct LandingView: View {
         }
     }
 
+    /// Leave the Landing screen. Free users see a single completion interstitial
+    /// here — unless they already watched the rewarded "double miles" ad, in which
+    /// case it is skipped so two ads never stack in one landing. (Pro users are
+    /// skipped inside `presentJourneyCompleteInterstitial`.)
+    private func finish(toPassport: Bool) {
+        let go = { toPassport ? router.finishToPassport() : router.finishToHome() }
+        if didWatchRewarded {
+            go()
+        } else {
+            appModel.ads.presentJourneyCompleteInterstitial(isPro: appModel.isPro) { go() }
+        }
+    }
+
     private func watchAdToDouble() async {
         adState = .loading
         let success = await appModel.watchRewardedAd()
         if success {
+            didWatchRewarded = true
             appModel.grantBonusMiles(for: summary)
             appModel.haptics.rewardClaim()
             appModel.uiSound.play(.claim)

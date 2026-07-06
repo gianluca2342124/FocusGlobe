@@ -58,7 +58,7 @@ struct FocusSessionView: View {
             topControls
             bottomReadouts
         }
-        .confirmationDialog("Leave this journey?",
+        .confirmationDialog("Leave this expedition?",
                             isPresented: $vm.showCancelConfirm,
                             titleVisibility: .visible) {
             Button("Leave", role: .destructive) {
@@ -109,7 +109,7 @@ struct FocusSessionView: View {
         VStack {
             HStack(alignment: .top) {
                 AppIconButton(systemImage: "xmark", size: Layout.pad(46, 56), tint: AppColors.textPrimary,
-                              accessibilityLabel: "End journey") { vm.requestCancel() }
+                              accessibilityLabel: "End expedition") { vm.requestCancel() }
                 Spacer()
                 statusPill
                 Spacer()
@@ -129,7 +129,7 @@ struct FocusSessionView: View {
                     }
                     AppIconButton(systemImage: vm.muteIconName, size: Layout.pad(46, 56),
                                   tint: AppColors.textPrimary,
-                                  accessibilityLabel: vm.isAudioMuted ? "Unmute journey audio" : "Mute journey audio") {
+                                  accessibilityLabel: vm.isAudioMuted ? "Unmute expedition audio" : "Mute expedition audio") {
                         vm.toggleMute()
                     }
                     // iPad/Mac: the pause control joins the side controls (the bottom-
@@ -189,7 +189,7 @@ struct FocusSessionView: View {
             // portrait the cap exceeds the width, so the immersive layout is unchanged.
             VStack(spacing: 0) {
                 HStack(alignment: .bottom) {
-                    readout(label: "Time Remaining", value: vm.remainingMinutesText, alignment: .leading)
+                    readout(label: "Until landing", value: vm.remainingMinutesText, alignment: .leading)
                     Spacer(minLength: AppSpacing.sm)
                     // iPhone keeps the white pause in the centre; on iPad/Mac the
                     // pause moved to the side controls, so the readouts spread to
@@ -198,17 +198,12 @@ struct FocusSessionView: View {
                         centerCluster
                         Spacer(minLength: AppSpacing.sm)
                     }
-                    readout(label: "Distance Remaining", value: vm.remainingDistanceText, alignment: .trailing)
+                    readout(label: "To discovery", value: vm.remainingDistanceText, alignment: .trailing)
                 }
                 .padding(.horizontal, Layout.pad(AppSpacing.lg, 44))
 
-                // Free users only (Pro is excluded inside `JourneyBannerAd`): a small
-                // adaptive banner *below* the time/distance readouts. It reserves
-                // height only once an ad actually loads — so it never covers the
-                // balloon, the corner controls or the pause button — and appears
-                // reactively once UMP consent allows ads. It manages its own top
-                // spacing, so the readouts lift only when a banner is present.
-                JourneyBannerAd(ads: appModel.ads, isPro: appModel.isPro)
+                // No banner ads during an expedition — the map breathes. Ads for
+                // free users are limited to a single interstitial at journey end.
             }
             // iPad/Mac: span the full width (with a safe-area margin via the inner
             // padding) so Time anchors to the left edge and Distance to the right.
@@ -223,10 +218,11 @@ struct FocusSessionView: View {
     private func readout(label: String, value: String, alignment: HorizontalAlignment) -> some View {
         VStack(alignment: alignment, spacing: 1) {
             Text(label)
-                .font(AppTypography.caption)
-                .foregroundStyle(.white.opacity(0.7))
+                .font(.system(size: Layout.pad(12, 15), weight: .regular, design: .serif))
+                .italic()
+                .foregroundStyle(.white.opacity(0.75))
             Text(value)
-                .font(.system(size: Layout.pad(36, 54), weight: .bold, design: .rounded))
+                .font(.system(size: Layout.pad(36, 54), weight: .semibold, design: .serif))
                 .monospacedDigit()
                 .foregroundStyle(.white)
                 .minimumScaleFactor(0.7)

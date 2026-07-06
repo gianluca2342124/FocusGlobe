@@ -158,10 +158,10 @@ final class FocusSessionViewModel: ObservableObject {
     /// A calm, FocusGlobe-flavoured status for the top pill.
     var statusLabel: String {
         switch phase {
-        case .boarding, .takingOff: return "Taking off"
+        case .boarding, .takingOff: return "Ascending"
         case .cruising:             return "Drifting"
-        case .approaching:          return "Landing soon"
-        case .landing:              return "Landing"
+        case .approaching:          return "Descending"
+        case .landing:              return "Arriving"
         }
     }
 
@@ -308,12 +308,11 @@ final class FocusSessionViewModel: ObservableObject {
             focusedSeconds: Int(timer.total.rounded()),
             intention: intention
         )
-        // Free users: a single skippable interstitial at the natural completion
-        // transition, before Landing. Pro / not-loaded / no-presenter → straight
-        // to Landing — the completion always runs, so Landing never blocks.
-        appModel.ads.presentJourneyCompleteInterstitial(isPro: appModel.isPro) { [weak self] in
-            self?.revealLanding()
-        }
+        // Reveal the Landing screen (with its postcard) immediately. The single
+        // interstitial for free users is deferred to the moment they LEAVE the
+        // Landing screen, and is skipped if they chose to watch the rewarded
+        // "double miles" ad — so two ads never stack in one landing.
+        revealLanding()
     }
 
     /// Reveal the Landing screen (after the optional completion interstitial).
