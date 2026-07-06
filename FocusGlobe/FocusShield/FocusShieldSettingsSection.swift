@@ -17,7 +17,7 @@ struct FocusShieldSettingsSection: View {
             VStack(spacing: 0) {
                 row(icon: "shield.lefthalf.filled",
                     tint: AppColors.success,
-                    title: "Block distracting apps during journeys",
+                    title: "Block distracting apps during expeditions",
                     subtitle: statusText,
                     showChevron: false)
                 divider

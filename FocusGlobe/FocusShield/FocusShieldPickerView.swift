@@ -10,7 +10,7 @@ import UIKit
 #endif
 
 /// Where a Focus Shield configurator sheet is being shown from — tunes which
-/// extra controls appear (e.g. "Disable for this journey" only mid-flight).
+/// extra controls appear (e.g. "Disable for this expedition" only mid-flight).
 enum FocusShieldContext {
     case settings
     case activeJourney
@@ -74,7 +74,7 @@ struct FocusShieldPickerView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Focus Shield")
                     .font(AppTypography.title).foregroundStyle(AppColors.textPrimary)
-                Text(context == .activeJourney ? "Block apps until landing" : "Block distractions during journeys")
+                Text(context == .activeJourney ? "Block apps until landing" : "Block distractions during expeditions")
                     .font(AppTypography.caption).foregroundStyle(AppColors.textTertiary)
             }
             Spacer()
@@ -108,7 +108,7 @@ struct FocusShieldPickerView: View {
                                  set: { service.setEnabled($0); appModel.tapFeedback() })) {
                 rowLabel(icon: "shield.lefthalf.filled",
                          tint: AppColors.success,
-                         title: "Block apps during journeys",
+                         title: "Block apps during expeditions",
                          subtitle: "Blocked apps stay locked until you land.")
             }
             .tint(AppColors.success)
@@ -137,12 +137,12 @@ struct FocusShieldPickerView: View {
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
                 rowLabel(icon: service.isShieldActive ? "shield.fill" : "shield.slash",
                          tint: service.isShieldActive ? AppColors.success : AppColors.textTertiary,
-                         title: service.isShieldActive ? "Shield is active" : "Shield is off for this journey",
+                         title: service.isShieldActive ? "Shield is active" : "Shield is off for this expedition",
                          subtitle: service.isShieldActive
                             ? "Changes apply immediately."
                             : "Apps aren't blocked right now.")
                 if service.isShieldActive {
-                    AppSecondaryButton(title: "Disable for this journey", systemImage: "shield.slash") {
+                    AppSecondaryButton(title: "Disable for this expedition", systemImage: "shield.slash") {
                         appModel.tapFeedback()
                         service.disableForActiveJourney()
                     }
@@ -157,9 +157,9 @@ struct FocusShieldPickerView: View {
         card {
             VStack(alignment: .leading, spacing: AppSpacing.md) {
                 shieldGlyph
-                Text("Block distractions during journeys")
+                Text("Block distractions during expeditions")
                     .font(AppTypography.headline).foregroundStyle(AppColors.textPrimary)
-                Text("Focus Shield needs Screen Time permission to block distracting apps during your FocusGlobe journeys.")
+                Text("Focus Shield needs Screen Time permission to block distracting apps during your FocusGlobe expeditions.")
                     .font(AppTypography.callout).foregroundStyle(AppColors.textSecondary)
                 AppPrimaryButton(title: "Enable Focus Shield", systemImage: "shield.fill", isLoading: requesting) {
                     requesting = true
@@ -183,7 +183,7 @@ struct FocusShieldPickerView: View {
                 shieldGlyph
                 Text("Screen Time access is off")
                     .font(AppTypography.headline).foregroundStyle(AppColors.textPrimary)
-                Text("To block apps during journeys, enable Screen Time access for FocusGlobe in Settings.")
+                Text("To block apps during expeditions, enable Screen Time access for FocusGlobe in Settings.")
                     .font(AppTypography.callout).foregroundStyle(AppColors.textSecondary)
                 #if canImport(UIKit)
                 AppPrimaryButton(title: "Open Settings", systemImage: "gear") {

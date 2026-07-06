@@ -67,6 +67,37 @@ maintainer's — which fits the per-phase confirmation gate.
 
 ## Status log
 
-- **Phase 1:** implemented + static-validated; awaiting on-device confirmation
-  before Phase 2. Files: `AppColors`, `AppTypography`, `AppMotion` (new),
-  `PaperTexture` (new), `AppGradients` (`AppBackground`).
+- **Phase 1 (design system):** done — expedition palette/type/motion/paper
+  primitives. `AppColors`, `AppTypography`, `AppMotion`, `PaperTexture`,
+  `ExpeditionButton`, `AppGradients`.
+- **Phase 2 (metaphor rename):** done — all user-facing airline vocabulary swept
+  to expedition vocabulary across Home, Route Selection, Focus, Check-in,
+  In-flight, Landing, Field Journal, History, Onboarding, Settings, notifications,
+  widgets. Definition-of-done grep is clean for user-facing banned terms.
+  (EN only; ES localization layer not yet built — deferred.)
+- **Phase 3 (Expedition Page):** done — journal page + wax-seal "Set Off"
+  replaces the boarding pass; barcode deleted; "Save page" share added.
+- **Banned elements:** removed — barcode, airport codes (cards, ticket, map,
+  city picker, visited places), in-flight banner (+ dead file deleted), old prices.
+- **Monetization:** banner removed; interstitial gated to post-landing exit and
+  skipped when the rewarded "double miles" ad was watched.
+- **Prices:** paywall benefits + placeholders updated (Annual 19,99 / Monthly
+  4,99 / Lifetime 39,99); real prices come from StoreKit.
+- **Build:** 12 (11 was burned by the rejection); marketing 1.0.
+
+### Deferred / staged (need a device-build pass or are blocked)
+- **Phase 4 (basket-load + rope-cut):** not done — the focus screen keeps its
+  existing button; the drag/rope gesture is a net-new interaction to build with a
+  compiler in the loop (it terminates in the same session-start path).
+- **Phase 5 (fog of exploration):** not done — postcards already exist and are
+  wired; the persistent fog layer is unbuilt.
+- **Phase 6 (living sky / WeatherKit):** not in this respec's screen list; not done.
+- **Phase 7 (app blocking / FamilyControls):** BLOCKED — the extension targets +
+  entitlement were removed earlier (`FOCUS_SHIELD_PARKED.md`); re-enabling needs
+  Xcode target/capability surgery in project.pbxproj that can't be compile-verified
+  on this Linux runner.
+- **Phase 8 (full journal-page paywall):** partial — new prices + benefits + trial
+  copy done; the full journal-page relayout + wax seal on the featured plan is not
+  done (kept the working dark/gold layout to protect the purchase flow).
+- **Map parchment tint** (old-chart look) and the **field-note input** on landing:
+  not done.

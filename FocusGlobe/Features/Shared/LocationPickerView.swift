@@ -87,9 +87,9 @@ struct LocationPickerView: View {
             dismiss()
         } label: {
             HStack(spacing: AppSpacing.sm) {
-                Text(code)
-                    .font(.system(size: 12, weight: .heavy, design: .rounded))
-                    .foregroundStyle(AppColors.textPrimary)
+                Image(systemName: "mappin.circle.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(AppColors.brand)
                     .frame(width: 42, height: 30)
                     .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(AppColors.brand.opacity(0.12)))
                 VStack(alignment: .leading, spacing: 1) {

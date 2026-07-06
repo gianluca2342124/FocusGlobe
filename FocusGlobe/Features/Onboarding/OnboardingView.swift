@@ -74,7 +74,7 @@ struct OnboardingView: View {
             Text("Finding your starting point…")
                 .font(AppTypography.headline)
                 .foregroundStyle(.white)
-            Text("Your journeys begin from where you are.")
+            Text("Your expeditions begin from where you are.")
                 .font(AppTypography.caption)
                 .foregroundStyle(.white.opacity(0.72))
                 .multilineTextAlignment(.center)

@@ -85,7 +85,7 @@ struct PassportView: View {
                 Image(systemName: "sparkles")
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(AppColors.brand)
-                Text("Complete a journey to unlock your first postcard.")
+                Text("Complete an expedition to unlock your first postcard.")
                     .font(AppTypography.callout)
                     .foregroundStyle(AppColors.textSecondary)
                 Spacer()

@@ -404,7 +404,7 @@ final class AppModel: ObservableObject {
         let earlierRouteIDs = Set(history.filter { $0.completed && !cal.isDateInToday($0.date) }.map { $0.routeID })
         let newDestinations = Double(Set(todays.map { $0.routeID }).subtracting(earlierRouteIDs).count)
         return [
-            DailyMission(id: "journey", title: "Complete a journey", systemImage: "paperplane.fill",
+            DailyMission(id: "journey", title: "Complete an expedition", systemImage: "paperplane.fill",
                          accent: .indigo, target: 1, current: journeys),
             DailyMission(id: "focus", title: "Focus 30 minutes", systemImage: "timer",
                          accent: .teal, target: 30, current: minutes),

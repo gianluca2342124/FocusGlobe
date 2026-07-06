@@ -132,7 +132,7 @@ struct SettingsView: View {
         SettingsCard(title: "Experience") {
             VStack(spacing: 0) {
                 ToggleRow(systemImage: "speaker.wave.2.fill", title: "Sound",
-                          subtitle: "Ambient audio during journeys",
+                          subtitle: "Ambient audio during expeditions",
                           isOn: boolBinding(\.soundEnabled))
                 RowDivider()
                 ToggleRow(systemImage: "iphone.radiowaves.left.and.right", title: "Haptics",
