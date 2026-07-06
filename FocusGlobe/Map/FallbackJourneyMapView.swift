@@ -104,7 +104,7 @@ private struct AuroraBackdrop: View {
             let w = geo.size.width, h = geo.size.height
             ZStack {
                 // Deep-space base.
-                LinearGradient(colors: [Color(hex: 0x070A14), Color(hex: 0x0B1228), Color(hex: 0x090E1E)],
+                LinearGradient(colors: [Color(hex: 0x241A10), Color(hex: 0x1C140C), Color(hex: 0x150F09)],
                                startPoint: .top, endPoint: .bottom)
 
                 // Soft nebula glows (themed + aurora hues), gently drifting.
@@ -112,7 +112,7 @@ private struct AuroraBackdrop: View {
                        dx: 18 * drift, dy: 8 * drift)
                 nebula(color: Color(hex: 0x3FD9A8), w: w, h: h, x: 0.78, y: 0.26, size: 0.9, op: 0.12,
                        dx: -16 * drift, dy: 10 * drift)
-                nebula(color: Color(hex: 0x8A6BE0), w: w, h: h, x: 0.5, y: 0.7, size: 1.2, op: 0.12,
+                nebula(color: Color(hex: 0xE0A050), w: w, h: h, x: 0.5, y: 0.7, size: 1.2, op: 0.12,
                        dx: 12 * drift, dy: -10 * drift)
 
                 StarField()
