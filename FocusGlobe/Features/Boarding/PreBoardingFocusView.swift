@@ -141,8 +141,8 @@ struct PreBoardingFocusView: View {
     private func envelope(width w: CGFloat, height h: CGFloat) -> some View {
         ZStack {
             BalloonEnvelopeShape()
-                .fill(LinearGradient(colors: [Color(hex: 0x2B3340).opacity(0.9),
-                                              Color(hex: 0x161B24).opacity(0.9)],
+                .fill(LinearGradient(colors: [Color(hex: 0xB6543A).opacity(0.92),
+                                              Color(hex: 0x7E3A28).opacity(0.92)],
                                      startPoint: .top, endPoint: .bottom))
             BalloonEnvelopeShape()
                 .fill(RadialGradient(colors: [.white.opacity(0.16), .clear],
@@ -172,8 +172,8 @@ struct PreBoardingFocusView: View {
     private func basket(width: CGFloat, height: CGFloat, dropSize: CGFloat) -> some View {
         ZStack {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(LinearGradient(colors: [Color(hex: 0x2A313B).opacity(0.92),
-                                              Color(hex: 0x14181F).opacity(0.92)],
+                .fill(LinearGradient(colors: [Color(hex: 0x6B4A2C).opacity(0.94),
+                                              Color(hex: 0x452F1D).opacity(0.94)],
                                      startPoint: .top, endPoint: .bottom))
                 .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .strokeBorder(.white.opacity(0.10), lineWidth: 1))

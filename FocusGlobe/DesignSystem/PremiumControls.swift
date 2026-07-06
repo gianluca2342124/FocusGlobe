@@ -38,7 +38,7 @@ struct PremiumBadge: View {
                     .font(.system(size: 10, weight: .heavy, design: .rounded))
             }
         }
-        .foregroundStyle(Color(hex: 0x14181F))
+        .foregroundStyle(Color(hex: 0x2B2620))
         .padding(.horizontal, compact ? 5 : 7)
         .padding(.vertical, 4)
         .background(Capsule().fill(AppColors.gold))

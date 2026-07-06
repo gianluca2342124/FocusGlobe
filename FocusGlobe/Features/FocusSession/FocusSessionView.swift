@@ -249,7 +249,7 @@ struct WhitePauseButton: View {
         Button(action: action) {
             Image(systemName: isPaused ? "play.fill" : "pause.fill")
                 .font(.system(size: size * 0.38, weight: .bold))
-                .foregroundStyle(Color(hex: 0x14181F))
+                .foregroundStyle(Color(hex: 0x2B2620))
                 .frame(width: size, height: size)
                 .background(Circle().fill(.white))
                 .shadow(color: .black.opacity(0.3), radius: 12, y: 5)

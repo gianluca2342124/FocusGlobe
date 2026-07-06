@@ -165,7 +165,7 @@ struct MapCodeTag: View {
             Text(code)
                 .font(.system(size: 12, weight: .heavy, design: .rounded))
         }
-        .foregroundStyle(highlighted ? Color(hex: 0x14181F) : .white)
+        .foregroundStyle(highlighted ? Color(hex: 0x2B2620) : .white)
         .padding(.horizontal, 9)
         .padding(.vertical, 5)
         .background(

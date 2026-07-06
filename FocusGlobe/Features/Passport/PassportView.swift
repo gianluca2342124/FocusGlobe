@@ -120,7 +120,7 @@ struct PassportView: View {
                                 Text("Claim +\(appModel.dailyMissionRewardMiles) miles")
                                     .font(AppTypography.callout)
                             }
-                            .foregroundStyle(Color(hex: 0x14181F))
+                            .foregroundStyle(Color(hex: 0x2B2620))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 11)
                             .background(Capsule().fill(AppColors.gold))
@@ -409,7 +409,7 @@ private struct JourneySoundCard: View {
         } else if locked {
             Image(systemName: "crown.fill")
                 .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(Color(hex: 0x14181F))
+                .foregroundStyle(Color(hex: 0x2B2620))
                 .padding(6)
                 .background(Circle().fill(AppColors.gold))
         }

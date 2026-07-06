@@ -186,7 +186,7 @@ struct PaywallView: View {
             Button { appModel.tapFeedback(); dismiss() } label: {
                 Text("Close")
                     .font(AppTypography.headline)
-                    .foregroundStyle(Color(hex: 0x14181F))
+                    .foregroundStyle(Color(hex: 0x2B2620))
                     .frame(maxWidth: .infinity).frame(height: 54)
                     .background(Capsule().fill(goldGradient))
             }
@@ -288,7 +288,7 @@ struct PaywallView: View {
     private var discountBadge: some View {
         Text("-60%")
             .font(.system(size: 10, weight: .heavy, design: .rounded))
-            .foregroundStyle(Color(hex: 0x14181F))
+            .foregroundStyle(Color(hex: 0x2B2620))
             .padding(.horizontal, 6).padding(.vertical, 2)
             .background(Capsule().fill(AppColors.gold))
     }
@@ -305,11 +305,11 @@ struct PaywallView: View {
         return Button { purchase() } label: {
             ZStack {
                 if working {
-                    ProgressView().tint(Color(hex: 0x14181F))
+                    ProgressView().tint(Color(hex: 0x2B2620))
                 } else {
                     Text(available ? buttonTitle(for: kind) : "Products unavailable")
                         .font(AppTypography.headline)
-                        .foregroundStyle(Color(hex: 0x14181F))
+                        .foregroundStyle(Color(hex: 0x2B2620))
                 }
             }
             .frame(maxWidth: .infinity).frame(height: 56)
