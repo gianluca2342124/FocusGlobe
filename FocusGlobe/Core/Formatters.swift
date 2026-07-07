@@ -54,6 +54,16 @@ enum Formatters {
         return (grouping.string(from: n) ?? "\(Int(km))") + " km"
     }
 
+    /// Live in-flight distance. One decimal under 100 km so the value visibly
+    /// moves with every timer tick ("73.8 km"); grouped whole km beyond.
+    static func flightKm(_ km: Double) -> String {
+        if km < 100 {
+            return String(format: "%.1f km", max(0, km))
+        }
+        let n = NSNumber(value: km.rounded())
+        return (grouping.string(from: n) ?? "\(Int(km))") + " km"
+    }
+
     /// Focus miles, grouped, e.g. "12,480".
     static func miles(_ value: Int) -> String {
         grouping.string(from: NSNumber(value: value)) ?? "\(value)"

@@ -86,18 +86,20 @@ enum DurationScale {
     }
 }
 
-// MARK: - The setup flow (Choose time → Pack focus → Ticket → Rope → fly)
+// MARK: - The setup ritual (Choose time → Pack your focus → Check in → fly)
 
-/// The pre-flight ritual, presented full-screen from Home. Four tactile beats —
-/// *choose your time, pack your focus, cut the ticket, cut the rope* — that end
+/// The pre-flight ritual, presented full-screen from Home. Three tactile beats
+/// over one continuous still world — *choose your time, pack your focus, check
+/// in* — and the validated boarding pass launches the flight directly. It ends
 /// by calling the *exact same* `router.startJourney(origin:route:intention:)`
-/// as before, so nothing downstream changes.
+/// as always, so nothing downstream changes.
 struct FlightSetupView: View {
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private enum Step { case duration, pack, ticket, rope }
+    private enum Step { case duration, pack, ticket }
     @State private var step: Step = .duration
     @State private var minutes = 25
     @State private var infinite = false
@@ -107,38 +109,51 @@ struct FlightSetupView: View {
 
     var body: some View {
         ZStack {
-            // The living world sits behind every step, so the whole ritual is
-            // one continuous place — not a stack of unrelated cards.
-            SkySceneView(scene: sky, progress: 0.05)
-            LinearGradient(colors: [.black.opacity(0.34), .clear, .black.opacity(0.62)],
+            // The world sits still behind every step — one continuous place.
+            // It only begins to move when the flight itself begins.
+            SkySceneView(scene: sky, altitude: 0.03,
+                         motion: reduceMotion ? .still : .ambient)
+            LinearGradient(colors: [.black.opacity(0.34), .clear, .black.opacity(0.60)],
                            startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea().allowsHitTesting(false)
 
             VStack(spacing: 0) {
                 header
-                switch step {
-                case .duration:
-                    DurationDialView(minutes: $minutes, infinite: $infinite) {
-                        appModel.tapFeedback()
-                        withAnimation(AppMotion.soft) { step = .pack }
+                ZStack {
+                    switch step {
+                    case .duration:
+                        DurationDialView(minutes: $minutes, infinite: $infinite) {
+                            appModel.tapFeedback()
+                            appModel.uiSound.play(.transition)
+                            withAnimation(AppMotion.soft) { step = .pack }
+                        }
+                        .transition(stepTransition)
+                    case .pack:
+                        PackFocusView(selected: $focus) {
+                            appModel.haptics.tap()
+                            appModel.uiSound.play(.transition)
+                            withAnimation(AppMotion.soft) { step = .ticket }
+                        }
+                        .transition(stepTransition)
+                    case .ticket:
+                        CheckInTicketView(minutes: minutes, infinite: infinite,
+                                          focus: focus, sky: sky) {
+                            takeOff()
+                        }
+                        .transition(stepTransition)
                     }
-                case .pack:
-                    PackFocusView(minutes: minutes, infinite: infinite, selected: $focus) {
-                        appModel.haptics.tap()
-                        appModel.uiSound.play(.transition)
-                        withAnimation(AppMotion.soft) { step = .ticket }
-                    }
-                case .ticket:
-                    BoardingTicketView(minutes: minutes, infinite: infinite, focus: focus, sky: sky) {
-                        withAnimation(AppMotion.soft) { step = .rope }
-                    }
-                case .rope:
-                    RopeCutView(sky: sky) { takeOff() }
                 }
             }
         }
         .preferredColorScheme(.dark)   // the ritual is always a night-cinema moment
-        .interactiveDismissDisabled(step == .rope)
+    }
+
+    /// A soft, deep step change: the outgoing step sinks away as the incoming
+    /// one rises into place — no hard swaps.
+    private var stepTransition: AnyTransition {
+        .asymmetric(
+            insertion: .opacity.combined(with: .offset(y: 26)).combined(with: .scale(scale: 0.99)),
+            removal: .opacity.combined(with: .offset(y: -18)))
     }
 
     private var header: some View {
@@ -150,13 +165,14 @@ struct FlightSetupView: View {
                 case .duration: dismiss()
                 case .pack:     withAnimation(AppMotion.soft) { step = .duration }
                 case .ticket:   withAnimation(AppMotion.soft) { step = .pack }
-                case .rope:     withAnimation(AppMotion.soft) { step = .ticket }
                 }
             }
             Spacer()
             Text(stepTitle)
                 .font(.system(size: 17, weight: .semibold, design: .serif))
                 .foregroundStyle(.white)
+                .id(stepTitle)
+                .transition(.opacity)
             Spacer()
             Color.clear.frame(width: 40, height: 40)
         }
@@ -168,8 +184,7 @@ struct FlightSetupView: View {
         switch step {
         case .duration: return "Choose your time"
         case .pack:     return "Pack your focus"
-        case .ticket:   return "Your boarding ticket"
-        case .rope:     return "Cut the rope"
+        case .ticket:   return "Check in"
         }
     }
 
@@ -178,8 +193,9 @@ struct FlightSetupView: View {
                                              origin: appModel.originForJourney, sky: sky)
         let intention = focus?.title
         dismiss()
-        // Let the cover dismiss, then present the full-screen flight (same
-        // pattern as the resume flow).
+        // Let the cover dismiss over the same still sky, then present the
+        // full-screen flight (same pattern as the resume flow). The flight
+        // opens on the same world, so the hand-off reads as one scene.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
             router.startJourney(origin: appModel.originForJourney, route: route, intention: intention)
         }
@@ -188,10 +204,10 @@ struct FlightSetupView: View {
 
 // MARK: - Step 1 · Altitude Dial
 
-/// A premium rotary **Altitude Dial**: drag around the gauge to raise or lower
-/// your flight time, from 1 minute up through 12 hours and then ∞. A huge centre
-/// value, ticking haptics at every stop, quick presets and a live distance
-/// preview. No slider anywhere in sight.
+/// A refined rotary **Altitude Dial**: drag around the gauge to raise or lower
+/// your flight time, from 1 minute up through 12 hours and then ∞. A huge
+/// centre value, ticking haptics at every stop, quick presets and a quiet
+/// symbolic distance preview.
 struct DurationDialView: View {
     @Binding var minutes: Int
     @Binding var infinite: Bool
@@ -212,12 +228,11 @@ struct DurationDialView: View {
     var body: some View {
         VStack(spacing: AppSpacing.md) {
             Spacer(minLength: 0)
-            dial.frame(height: 300)
+            dial.frame(height: 310)
             distancePreview
             Spacer(minLength: 0)
             presetRow
             AppPrimaryButton(title: "Continue", systemImage: "arrow.right") {
-                appModel.tapFeedback()
                 onContinue()
             }
             .padding(.horizontal, AppSpacing.screen)
@@ -236,28 +251,36 @@ struct DurationDialView: View {
         GeometryReader { geo in
             let side = min(geo.size.width, geo.size.height)
             let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
-            let ringSide = side - 28
+            let ringSide = side - 30
             let radius = ringSide / 2
 
             ZStack {
+                // A soft pool of depth behind the gauge so it floats over the
+                // world without a heavy panel.
+                RadialGradient(colors: [.black.opacity(0.30), .clear],
+                               center: .center, startRadius: 10, endRadius: side * 0.62)
+                    .allowsHitTesting(false)
+
                 // Track
                 Circle().trim(from: 0, to: 0.75)
-                    .stroke(Color.white.opacity(0.10),
-                            style: StrokeStyle(lineWidth: 14, lineCap: .round))
+                    .stroke(Color.white.opacity(0.08),
+                            style: StrokeStyle(lineWidth: 11, lineCap: .round))
                     .rotationEffect(.degrees(135))
                     .frame(width: ringSide, height: ringSide)
-                // Filled progress
+                // Filled arc — cream into gold, quietly luminous.
                 Circle().trim(from: 0, to: 0.75 * fraction)
-                    .stroke(AngularGradient(colors: [AppColors.gold, AppColors.brand, AppColors.gold],
-                                            center: .center),
-                            style: StrokeStyle(lineWidth: 14, lineCap: .round))
+                    .stroke(AngularGradient(
+                                gradient: Gradient(colors: [Color(hex: 0xF4EFE4),
+                                                            AppColors.gold,
+                                                            Color(hex: 0xE8C288)]),
+                                center: .center,
+                                startAngle: .degrees(135), endAngle: .degrees(405)),
+                            style: StrokeStyle(lineWidth: 11, lineCap: .round))
                     .rotationEffect(.degrees(135))
                     .frame(width: ringSide, height: ringSide)
-                // Tick marks
-                ticks(radius: radius, center: center)
-                // The altitude "bug" (knob)
+                    .shadow(color: AppColors.gold.opacity(0.35), radius: 10)
+                ticks(radius: radius)
                 knob(center: center, radius: radius)
-                // Huge centre value
                 centerValue
             }
             .frame(width: geo.size.width, height: geo.size.height)
@@ -265,23 +288,31 @@ struct DurationDialView: View {
             .gesture(DragGesture(minimumDistance: 0)
                 .onChanged { v in updateIndex(location: v.location, center: center) })
         }
+        .accessibilityElement()
+        .accessibilityLabel("Flight time")
+        .accessibilityValue(isInfinityIndex ? "Endless" : Formatters.durationLabel(minutes: minutes))
+        .accessibilityAdjustableAction { direction in
+            let next = direction == .increment ? index + 1 : index - 1
+            setIndex(max(0, min(DurationScale.count - 1, next)))
+        }
     }
 
-    private func ticks(radius: CGFloat, center: CGPoint) -> some View {
+    private func ticks(radius: CGFloat) -> some View {
         Canvas { ctx, size in
             let c = CGPoint(x: size.width / 2, y: size.height / 2)
             let count = DurationScale.count
             for i in 0..<count {
                 let f = Double(i) / Double(count - 1)
                 let a = (135.0 + f * 270.0) * .pi / 180.0
-                let outer = radius + 3
-                let inner = radius - 8
+                let outer = radius - 12
+                let inner = outer - 6
                 let p1 = CGPoint(x: c.x + CGFloat(cos(a)) * outer, y: c.y + CGFloat(sin(a)) * outer)
                 let p2 = CGPoint(x: c.x + CGFloat(cos(a)) * inner, y: c.y + CGFloat(sin(a)) * inner)
                 var path = Path()
                 path.move(to: p1)
                 path.addLine(to: p2)
-                ctx.stroke(path, with: .color(.white.opacity(i <= index ? 0.55 : 0.16)), lineWidth: 2)
+                ctx.stroke(path, with: .color(.white.opacity(i <= index ? 0.45 : 0.12)),
+                           lineWidth: 1.6)
             }
         }
     }
@@ -290,27 +321,31 @@ struct DurationDialView: View {
         let a = (135.0 + fraction * 270.0) * .pi / 180.0
         return Circle()
             .fill(Color(hex: 0xF4EFE4))
-            .frame(width: 22, height: 22)
-            .overlay(Circle().strokeBorder(AppColors.gold.opacity(0.7), lineWidth: 2))
-            .shadow(color: .black.opacity(0.4), radius: 5, y: 2)
+            .frame(width: 24, height: 24)
+            .overlay(Circle().strokeBorder(AppColors.gold.opacity(0.8), lineWidth: 2))
+            .shadow(color: AppColors.gold.opacity(0.55), radius: 9)
+            .shadow(color: .black.opacity(0.4), radius: 4, y: 2)
             .position(x: center.x + CGFloat(cos(a)) * radius,
                       y: center.y + CGFloat(sin(a)) * radius)
     }
 
     private var centerValue: some View {
-        VStack(spacing: 2) {
+        VStack(spacing: 3) {
             Text(centerBig)
-                .font(.system(size: 76, weight: .bold, design: .rounded))
+                .font(.system(size: 78, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
                 .monospacedDigit()
-                .minimumScaleFactor(0.5)
+                .contentTransition(.numericText())
+                .animation(.snappy(duration: 0.2), value: centerBig)
+                .minimumScaleFactor(0.45)
                 .lineLimit(1)
+                .shadow(color: AppColors.gold.opacity(0.25), radius: 18)
             Text(centerSub)
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
-                .tracking(3)
-                .foregroundStyle(.white.opacity(0.6))
+                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                .tracking(3.4)
+                .foregroundStyle(.white.opacity(0.55))
         }
-        .frame(width: 190)
+        .frame(width: 195)
     }
 
     private var centerBig: String {
@@ -327,11 +362,12 @@ struct DurationDialView: View {
 
     private var distancePreview: some View {
         Text(infinite
-             ? "Endless flight · time & distance count up"
+             ? "Endless flight"
              : "Estimated flight · \(Formatters.distance(km: FlightRouteFactory.symbolicKm(minutes: minutes)))")
             .font(.system(size: 14, weight: .medium, design: .rounded))
-            .foregroundStyle(.white.opacity(0.75))
+            .foregroundStyle(.white.opacity(0.72))
             .contentTransition(.opacity)
+            .animation(.easeInOut(duration: 0.2), value: infinite)
     }
 
     private var presetRow: some View {
@@ -348,7 +384,7 @@ struct DurationDialView: View {
                         .font(.system(size: 15, weight: .bold, design: .rounded))
                         .foregroundStyle(selected ? Color(hex: 0x14120E) : .white)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 44)
+                        .frame(height: 42)
                         .background(RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .fill(selected ? Color(hex: 0xF4EFE4) : Color.white.opacity(0.08)))
                         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -375,7 +411,10 @@ struct DurationDialView: View {
         if rel <= 270 { f = rel / 270 }
         else if rel <= 315 { f = 1 }         // just past the top → clamp to ∞
         else { f = 0 }                        // in the bottom gap near the start
-        let newIndex = Int((f * Double(DurationScale.count - 1)).rounded())
+        setIndex(Int((f * Double(DurationScale.count - 1)).rounded()))
+    }
+
+    private func setIndex(_ newIndex: Int) {
         guard newIndex != index else { return }
         index = newIndex
         let v = DurationScale.value(at: newIndex)
@@ -385,211 +424,549 @@ struct DurationDialView: View {
     }
 }
 
-// MARK: - Step 2 · Pack your focus
+// MARK: - Step 2 · Pack your focus (the drag ritual)
 
-/// Choose an intention **before** boarding and watch it pack into the balloon's
-/// basket. A calm, tap-to-load ritual — the packed focus rides with you.
+/// The focus ritual: a dark hot-air-balloon silhouette waits centre-screen and
+/// the user **drags** a glowing focus token up into its basket socket. The
+/// socket warms as the token nears; on the drop the burner lights, the envelope
+/// ignites from within and the balloon is packed. Tap-to-pack works too, and
+/// an eighth **Custom** token names any focus.
 struct PackFocusView: View {
-    let minutes: Int
-    let infinite: Bool
     @Binding var selected: FocusPreset?
     let onContinue: () -> Void
     @EnvironmentObject private var appModel: AppModel
 
+    @State private var dragging: FocusPreset?
+    @State private var dragPoint: CGPoint = .zero
+    @State private var dropFrame: CGRect = .zero
+    @State private var didInteract = false
+    @State private var loadedPop = false
+    @State private var showCustomAlert = false
+    @State private var customText = ""
+
+    /// The custom token that replaces the old "Fly" preset in this ritual.
+    private static let customTile = FocusPreset(
+        title: "Custom", systemImage: "square.and.pencil", accent: Color(hex: 0xC9A86A))
+
+    private var tokens: [FocusPreset] {
+        FocusPreset.all.filter { $0.title != "Fly" } + [Self.customTile]
+    }
+
+    /// Forgiving, magnetic hit test around the basket socket — a drop never
+    /// needs to be pixel-perfect.
+    private func isNearTarget(_ p: CGPoint) -> Bool {
+        guard dropFrame != .zero else { return false }
+        let c = CGPoint(x: dropFrame.midX, y: dropFrame.midY)
+        let reach = max(dropFrame.width, dropFrame.height) * 0.5 + 150
+        return hypot(p.x - c.x, p.y - c.y) <= reach
+    }
+    private var targetHot: Bool { dragging != nil && isNearTarget(dragPoint) }
+
     var body: some View {
-        VStack(spacing: AppSpacing.md) {
-            Spacer(minLength: 0)
-
-            // The balloon; the chosen focus nestles into the basket.
+        GeometryReader { geo in
+            let contentW = min(geo.size.width, Layout.pad(460, 680))
+            let w = min(contentW * 0.56, geo.size.height * 0.27, Layout.pad(250, 350))
             ZStack {
-                MiniBalloonView(size: 168, showGlow: true)
-                if let f = selected {
-                    HStack(spacing: 5) {
-                        Image(systemName: f.systemImage)
-                            .font(.system(size: 13, weight: .bold))
-                        Text(f.title)
-                            .font(.system(size: 12, weight: .semibold, design: .rounded))
-                            .lineLimit(1)
-                    }
-                    .foregroundStyle(Color(hex: 0x2A2119))
-                    .padding(.horizontal, 11)
-                    .padding(.vertical, 6)
-                    .background(Capsule().fill(Color(hex: 0xF4EFE4)))
-                    .shadow(color: .black.opacity(0.3), radius: 6, y: 3)
-                    .offset(y: 80)
-                    .transition(.scale(scale: 0.4).combined(with: .opacity))
+                VStack(spacing: AppSpacing.sm) {
+                    Spacer(minLength: 0)
+                    balloon(width: w)
+                    Text(caption)
+                        .font(.system(size: 15, weight: .medium, design: .serif)).italic()
+                        .foregroundStyle(.white.opacity(0.8))
+                        .padding(.top, AppSpacing.xs)
+                        .animation(.easeInOut(duration: 0.25), value: selected != nil)
+                    Spacer(minLength: 0)
+                    tokenTray
+                    AppPrimaryButton(title: selected == nil ? "Pack a focus" : "Continue",
+                                     systemImage: selected == nil ? "bag" : "arrow.right",
+                                     isEnabled: selected != nil) { onContinue() }
+                        .padding(.top, 2)
                 }
-            }
-            .frame(height: 210)
-
-            Text(selected == nil ? "Tap a focus to pack it into your basket" : "Packed and ready to board")
-                .font(.system(size: 15, weight: .medium, design: .rounded))
-                .foregroundStyle(.white.opacity(0.75))
-
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: AppSpacing.xs)],
-                      spacing: AppSpacing.xs) {
-                ForEach(FocusPreset.all) { preset in
-                    focusChip(preset)
-                }
-            }
-            .padding(.horizontal, AppSpacing.screen)
-
-            Spacer(minLength: 0)
-
-            AppPrimaryButton(title: selected == nil ? "Pick a focus" : "Continue",
-                             systemImage: selected == nil ? "bag" : "arrow.right",
-                             isEnabled: selected != nil) { onContinue() }
                 .padding(.horizontal, AppSpacing.screen)
                 .padding(.bottom, AppSpacing.lg)
-                .clusterMaxWidth()
+                .frame(maxWidth: contentW)
+                .frame(maxWidth: .infinity)
+
+                // The token that rides the finger while dragging.
+                if let d = dragging {
+                    tokenCard(d, compact: true, active: true)
+                        .frame(width: 86)
+                        .scaleEffect(1.12)
+                        .shadow(color: d.accent.opacity(0.5), radius: 14, y: 6)
+                        .position(dragPoint)
+                        .allowsHitTesting(false)
+                        .transition(.scale.combined(with: .opacity))
+                }
+            }
+            .coordinateSpace(name: "pack")
+            .onPreferenceChange(PackDropFrameKey.self) { dropFrame = $0 }
+        }
+        .onAppear { dragging = nil }
+        .alert("Name your focus", isPresented: $showCustomAlert) {
+            TextField("What are you working on?", text: $customText)
+            Button("Pack") {
+                let trimmed = customText.trimmingCharacters(in: .whitespacesAndNewlines)
+                assign(FocusPreset(title: trimmed.isEmpty ? "Focus" : String(trimmed.prefix(24)),
+                                   systemImage: "sparkles",
+                                   accent: Color(hex: 0xC9A86A)))
+            }
+            Button("Cancel", role: .cancel) {}
         }
     }
 
-    private func focusChip(_ preset: FocusPreset) -> some View {
-        let isSelected = selected?.id == preset.id
-        return Button {
-            appModel.haptics.tap()
-            appModel.uiSound.play(.transition)
-            withAnimation(AppMotion.settling) { selected = preset }
-        } label: {
-            VStack(spacing: 6) {
-                Image(systemName: preset.systemImage)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(isSelected ? Color(hex: 0x14120E) : preset.accent)
-                Text(preset.title)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .foregroundStyle(isSelected ? Color(hex: 0x14120E) : .white)
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 74)
-            .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(isSelected ? Color(hex: 0xF4EFE4) : Color.white.opacity(0.08)))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(.white.opacity(isSelected ? 0 : 0.12), lineWidth: 1))
+    private var caption: String {
+        if let s = selected { return "\(s.title) is packed — ready to check in" }
+        return "Drag a focus into the balloon"
+    }
+
+    // MARK: The dark silhouette that ignites
+
+    private func balloon(width w: CGFloat) -> some View {
+        let envH = w * 1.12
+        let basketW = w * 0.54
+        let basketH = w * 0.42
+        let dropSize = basketW * 0.60
+        return VStack(spacing: 0) {
+            envelope(width: w, height: envH)
+                .offset(y: selected != nil ? -5 : 0)
+            ropes(width: basketW, height: w * 0.12)
+            basket(width: basketW, height: basketH, dropSize: dropSize)
+                .overlay(alignment: .top) { burnerGlow.offset(y: -w * 0.13) }
         }
-        .buttonStyle(SoftPressStyle(scale: 0.96))
-        .accessibilityLabel("Focus on \(preset.title)")
+    }
+
+    private func envelope(width w: CGFloat, height h: CGFloat) -> some View {
+        let lit = selected != nil
+        return ZStack {
+            RitualEnvelopeShape()
+                .fill(LinearGradient(colors: [Color(hex: 0x2B2440), Color(hex: 0x151021)],
+                                     startPoint: .top, endPoint: .bottom))
+            // The inner light: cold and faint while empty, warm once packed.
+            RitualEnvelopeShape()
+                .fill(RadialGradient(
+                    colors: [lit ? AppColors.gold.opacity(0.34) : Color.white.opacity(0.05),
+                             .clear],
+                    center: UnitPoint(x: 0.5, y: lit ? 0.78 : 0.30),
+                    startRadius: 4, endRadius: w * 0.75))
+            RitualRibsShape().stroke(.white.opacity(lit ? 0.12 : 0.06), lineWidth: 1)
+            RitualEnvelopeShape().stroke(.white.opacity(lit ? 0.20 : 0.10), lineWidth: 1)
+        }
+        .frame(width: w, height: h)
+        .shadow(color: lit ? AppColors.gold.opacity(0.25) : .black.opacity(0.45),
+                radius: lit ? 30 : 24, y: lit ? 6 : 14)
+        .animation(.easeInOut(duration: 0.5), value: lit)
+    }
+
+    private func ropes(width w: CGFloat, height h: CGFloat) -> some View {
+        Path { p in
+            let cx = w / 2
+            let top = w * 0.16
+            let bot = w * 0.42
+            for s in [-1.0, -0.4, 0.4, 1.0] {
+                p.move(to: CGPoint(x: cx + CGFloat(s) * top, y: 1))
+                p.addLine(to: CGPoint(x: cx + CGFloat(s) * bot, y: h - 1))
+            }
+        }
+        .stroke(.white.opacity(0.16), lineWidth: 1.2)
+        .frame(width: w, height: h)
+    }
+
+    private func basket(width: CGFloat, height: CGFloat, dropSize: CGFloat) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 13, style: .continuous)
+                .fill(LinearGradient(colors: [Color(hex: 0x33281C), Color(hex: 0x1C140D)],
+                                     startPoint: .top, endPoint: .bottom))
+                .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    .strokeBorder(.white.opacity(0.10), lineWidth: 1))
+            HStack(spacing: width / 7) {
+                ForEach(0..<6, id: \.self) { _ in
+                    Rectangle().fill(.white.opacity(0.05)).frame(width: 1)
+                }
+            }
+            .padding(.vertical, 8)
+            dropTarget(size: dropSize)
+        }
+        .frame(width: width, height: height)
+        .shadow(color: .black.opacity(0.5), radius: 16, y: 9)
+    }
+
+    private func dropTarget(size: CGFloat) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 15, style: .continuous).fill(dropFill)
+            if let s = selected {
+                Image(systemName: s.systemImage)
+                    .font(.system(size: size * 0.36, weight: .bold))
+                    .foregroundStyle(.white)
+            } else {
+                Image(systemName: "plus")
+                    .font(.system(size: size * 0.3, weight: .semibold))
+                    .foregroundStyle(.white.opacity(targetHot ? 0.95 : 0.4))
+            }
+        }
+        .frame(width: size, height: size)
+        .overlay(dropBorder)
+        .scaleEffect(loadedPop ? 1.10 : (targetHot ? 1.05 : 1))
+        .shadow(color: dropGlow, radius: (targetHot || selected != nil) ? 20 : 0)
+        .animation(.easeOut(duration: 0.16), value: targetHot)
+        .background(GeometryReader { g in
+            Color.clear.preference(key: PackDropFrameKey.self, value: g.frame(in: .named("pack")))
+        })
+    }
+
+    private var dropFill: AnyShapeStyle {
+        if let s = selected {
+            return AnyShapeStyle(LinearGradient(colors: [s.accent, s.accent.opacity(0.8)],
+                                                startPoint: .topLeading, endPoint: .bottomTrailing))
+        }
+        return AnyShapeStyle(Color.white.opacity(targetHot ? 0.14 : 0.05))
+    }
+
+    @ViewBuilder private var dropBorder: some View {
+        if selected == nil {
+            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                .strokeBorder(targetHot ? AppColors.gold.opacity(0.9) : .white.opacity(0.3),
+                              style: StrokeStyle(lineWidth: targetHot ? 2 : 1.5, dash: [6, 5]))
+        } else {
+            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                .strokeBorder(.white.opacity(0.5), lineWidth: 1.5)
+        }
+    }
+
+    private var dropGlow: Color {
+        if let s = selected { return s.accent.opacity(0.7) }
+        return targetHot ? AppColors.gold.opacity(0.6) : .clear
+    }
+
+    private var burnerGlow: some View {
+        Circle()
+            .fill(RadialGradient(colors: [AppColors.gold.opacity(0.85),
+                                          Color(hex: 0xFF8A2A).opacity(0.4), .clear],
+                                 center: .center, startRadius: 1, endRadius: 34))
+            .frame(width: 72, height: 72)
+            .blur(radius: 6)
+            .opacity(selected != nil ? 1 : (targetHot ? 0.7 : 0))
+            .scaleEffect(loadedPop ? 1.18 : 1)
+            .animation(.easeOut(duration: 0.2), value: targetHot)
+            .allowsHitTesting(false)
+    }
+
+    // MARK: Token tray
+
+    private var tokenTray: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4), spacing: 10) {
+            ForEach(tokens) { preset in trayChip(preset) }
+        }
+        .padding(AppSpacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
+                    .fill(Color.black.opacity(0.32)))
+                .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
+                    .strokeBorder(.white.opacity(0.10), lineWidth: 1))
+        )
+        .overlay(alignment: .top) {
+            if !didInteract && selected == nil { PackDragHint().offset(y: -34) }
+        }
+    }
+
+    private func trayChip(_ preset: FocusPreset) -> some View {
+        let isDragging = dragging?.id == preset.id
+        let isLoaded = selected?.id == preset.id
+            || (preset.id == Self.customTile.id && selected.map { p in tokens.allSatisfy { $0.id != p.id } } == true)
+        return tokenCard(preset, compact: false)
+            .opacity(isDragging ? 0.35 : (isLoaded ? 0.45 : 1))
+            .onTapGesture { handleDrop(preset) }
+            .gesture(
+                DragGesture(coordinateSpace: .named("pack"))
+                    .onChanged { v in
+                        didInteract = true
+                        if dragging?.id != preset.id {
+                            dragging = preset
+                            appModel.haptics.bubble()   // soft pop on grab
+                        }
+                        dragPoint = v.location
+                    }
+                    .onEnded { v in
+                        // Accept near the socket OR on a meaningful upward
+                        // throw — generous, so a drop succeeds every time.
+                        let accepted = isNearTarget(v.location) || v.translation.height < -90
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.72)) { dragging = nil }
+                        if accepted { handleDrop(preset) }
+                    }
+            )
+            .accessibilityLabel("Focus on \(preset.title)")
+            .accessibilityAddTraits(.isButton)
+    }
+
+    private func handleDrop(_ preset: FocusPreset) {
+        didInteract = true
+        if preset.id == Self.customTile.id {
+            customText = ""
+            showCustomAlert = true
+        } else {
+            assign(preset)
+        }
+    }
+
+    /// A premium, colour-filled focus token (`active` = the dragged copy).
+    private func tokenCard(_ preset: FocusPreset, compact: Bool, active: Bool = false) -> some View {
+        VStack(spacing: 5) {
+            Image(systemName: preset.systemImage)
+                .font(.system(size: Layout.pad(19, 24), weight: .bold))
+                .foregroundStyle(.white)
+            Text(preset.title)
+                .font(.system(size: Layout.pad(12, 15), weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .lineLimit(1).minimumScaleFactor(0.7)
+        }
+        .shadow(color: .black.opacity(0.35), radius: 3, y: 1)
+        .frame(maxWidth: compact ? nil : .infinity)
+        .frame(height: Layout.pad(60, 76))
+        .padding(.horizontal, compact ? 18 : 4)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 17, style: .continuous)
+                    .fill(LinearGradient(colors: [preset.accent, preset.accent.opacity(0.78)],
+                                         startPoint: .topLeading, endPoint: .bottomTrailing))
+                RoundedRectangle(cornerRadius: 17, style: .continuous)
+                    .fill(LinearGradient(colors: [.white.opacity(0.22), .clear],
+                                         startPoint: .top, endPoint: .center))
+                    .blendMode(.plusLighter)
+            }
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 17, style: .continuous)
+                .strokeBorder(.white.opacity(active ? 0.85 : 0.22), lineWidth: active ? 2 : 1)
+        )
+        .shadow(color: preset.accent.opacity(active ? 0.65 : 0.35), radius: active ? 16 : 7, y: active ? 9 : 4)
+        .contentShape(RoundedRectangle(cornerRadius: 17, style: .continuous))
+    }
+
+    private func assign(_ preset: FocusPreset) {
+        appModel.haptics.takeoff()
+        appModel.uiSound.play(.focusDrop)
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+            selected = preset
+            dragging = nil
+        }
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) { loadedPop = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.32) {
+            withAnimation(.easeOut(duration: 0.2)) { loadedPop = false }
+        }
     }
 }
 
-// MARK: - Step 3 · Boarding ticket
+private struct PackDropFrameKey: PreferenceKey {
+    static var defaultValue: CGRect = .zero
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) { value = nextValue() }
+}
 
-/// A large, real-looking boarding ticket printed on warm paper, floating over
-/// the night sky. Drag the stub to **tear** it and board — a firm haptic + a
-/// dry snap. Reduce Motion / VoiceOver get a "Board this flight" button.
-struct BoardingTicketView: View {
+/// A rounded hot-air-balloon envelope (teardrop tapering to a small mouth).
+private struct RitualEnvelopeShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let w = rect.width, h = rect.height
+        let cx = rect.midX
+        let mouth = w * 0.15
+        p.move(to: CGPoint(x: cx - mouth, y: rect.maxY))
+        p.addCurve(to: CGPoint(x: rect.minX, y: rect.minY + h * 0.42),
+                   control1: CGPoint(x: cx - mouth - w * 0.05, y: rect.maxY - h * 0.04),
+                   control2: CGPoint(x: rect.minX, y: rect.minY + h * 0.78))
+        p.addCurve(to: CGPoint(x: cx, y: rect.minY),
+                   control1: CGPoint(x: rect.minX, y: rect.minY + h * 0.12),
+                   control2: CGPoint(x: cx - w * 0.34, y: rect.minY))
+        p.addCurve(to: CGPoint(x: rect.maxX, y: rect.minY + h * 0.42),
+                   control1: CGPoint(x: cx + w * 0.34, y: rect.minY),
+                   control2: CGPoint(x: rect.maxX, y: rect.minY + h * 0.12))
+        p.addCurve(to: CGPoint(x: cx + mouth, y: rect.maxY),
+                   control1: CGPoint(x: rect.maxX, y: rect.minY + h * 0.78),
+                   control2: CGPoint(x: cx + mouth + w * 0.05, y: rect.maxY - h * 0.04))
+        p.closeSubpath()
+        return p
+    }
+}
+
+/// A few curved vertical ribs (gores) so the envelope reads as a balloon.
+private struct RitualRibsShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let w = rect.width, h = rect.height, cx = rect.midX
+        let top = rect.minY + h * 0.05, bottom = rect.maxY - h * 0.04
+        for frac in [-0.6, -0.3, 0.0, 0.3, 0.6] {
+            let topX = cx + CGFloat(frac) * w * 0.14
+            let midX = cx + CGFloat(frac) * w * 0.5
+            p.move(to: CGPoint(x: topX, y: top))
+            p.addQuadCurve(to: CGPoint(x: cx + CGFloat(frac) * w * 0.15, y: bottom),
+                           control: CGPoint(x: midX, y: rect.minY + h * 0.5))
+        }
+        return p
+    }
+}
+
+/// A soft looping finger that drags upward from the tray toward the basket —
+/// shown only before the first interaction.
+private struct PackDragHint: View {
+    @State private var up = false
+    var body: some View {
+        Image(systemName: "hand.point.up.left.fill")
+            .font(.system(size: 26, weight: .semibold))
+            .foregroundStyle(.white.opacity(0.7))
+            .shadow(color: .black.opacity(0.4), radius: 5, y: 1)
+            .offset(y: up ? -64 : 4)
+            .opacity(up ? 0.15 : 0.85)
+            .onAppear {
+                withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: false)) { up = true }
+            }
+            .allowsHitTesting(false)
+    }
+}
+
+// MARK: - Step 3 · Check in (the boarding pass)
+
+/// A large boarding pass on warm paper, floating over the night world. The
+/// user slides a finger across the **barcode** to check in: a gold scan line
+/// follows the finger, the bars light behind it, and at the end the pass is
+/// stamped CHECKED IN — a firm haptic, a dry click, then the ticket lifts away
+/// and the flight begins. No tear-strips, no gimmicks.
+struct CheckInTicketView: View {
     let minutes: Int
     let infinite: Bool
     let focus: FocusPreset?
     let sky: SkyScene
-    let onTear: () -> Void
+    let onValidated: () -> Void
     @EnvironmentObject private var appModel: AppModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
 
-    @State private var tearX: CGFloat = 0
-    @State private var torn = false
+    @State private var scan: CGFloat = 0          // 0…1 across the barcode
+    @State private var checked = false
+    @State private var stampIn = false
+    @State private var flyAway = false
+    @State private var started = false
+    @State private var lastTick: CGFloat = 0
 
-    private let paper = Color(hex: 0xF3E9D6)
+    private let paper = Color(hex: 0xF5EBD8)
     private let ink = Color(hex: 0x2A2119)
-    private let inkSoft = Color(hex: 0x746657)
+    private let inkSoft = Color(hex: 0x77685A)
 
     var body: some View {
-        VStack(spacing: AppSpacing.lg) {
+        VStack(spacing: AppSpacing.md) {
             Spacer(minLength: 0)
-            ticket
-            VStack(spacing: AppSpacing.sm) {
-                Text(torn ? "Boarding…" : "Tear the stub to board")
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.75))
-                if reduceMotion || voiceOver {
-                    AppPrimaryButton(title: "Board this flight", systemImage: "ticket") { tearOff() }
-                        .padding(.horizontal, AppSpacing.screen)
-                        .clusterMaxWidth()
+            ZStack {
+                ticket
+                    .opacity(flyAway ? 0 : 1)
+                    .offset(y: flyAway ? -70 : 0)
+                    .scaleEffect(flyAway ? 1.04 : 1)
+                if started {
+                    Text("Focus started")
+                        .font(.system(size: 22, weight: .semibold, design: .serif))
+                        .foregroundStyle(.white)
+                        .shadow(color: .black.opacity(0.5), radius: 10, y: 2)
+                        .transition(.opacity.combined(with: .scale(scale: 0.96)))
                 }
             }
+            hint
             Spacer(minLength: 0)
         }
         .padding(.bottom, AppSpacing.lg)
     }
 
-    private var ticket: some View {
-        GeometryReader { geo in
-            let fullW = min(geo.size.width, 440)
-            let stubW: CGFloat = 96
-            ZStack(alignment: .leading) {
-                // Body stays put.
-                ticketCard(fullW: fullW, stubW: stubW)
-                    .mask(alignment: .leading) { Rectangle().frame(width: fullW - stubW) }
-                // Stub tears away to the right.
-                ticketCard(fullW: fullW, stubW: stubW)
-                    .mask(alignment: .trailing) { Rectangle().frame(width: stubW) }
-                    .offset(x: tearX)
-                    .rotationEffect(.degrees(Double(tearX) * 0.02), anchor: .bottomLeading)
-                    .opacity(torn ? 0 : 1)
-                // Perforation seam.
-                perforation(height: geo.size.height)
-                    .offset(x: fullW - stubW - 1)
+    @ViewBuilder private var hint: some View {
+        if !checked {
+            VStack(spacing: AppSpacing.sm) {
+                Label("Slide across the barcode to check in", systemImage: "hand.draw")
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.72))
+                if reduceMotion || voiceOver {
+                    AppPrimaryButton(title: "Check in", systemImage: "checkmark.seal") { validate() }
+                        .padding(.horizontal, AppSpacing.screen)
+                        .clusterMaxWidth()
+                }
             }
-            .frame(width: fullW, height: geo.size.height)
-            .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
-            .gesture(tearGesture)
+            .transition(.opacity)
+        } else {
+            Text("Ready to fly")
+                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .foregroundStyle(AppColors.gold)
+                .transition(.opacity)
         }
-        .frame(height: 300)
+    }
+
+    // MARK: The pass
+
+    private var ticket: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ticketHeader
+                .padding(.horizontal, AppSpacing.lg)
+                .padding(.top, AppSpacing.lg)
+            ticketBody
+                .padding(.horizontal, AppSpacing.lg)
+            Spacer(minLength: AppSpacing.sm)
+            perforation
+            barcodeZone
+                .padding(.horizontal, AppSpacing.lg)
+                .padding(.top, AppSpacing.sm)
+                .padding(.bottom, AppSpacing.md)
+        }
+        .frame(maxWidth: 480)
+        .frame(height: 430)
+        .background(
+            TicketShape(cornerRadius: 24, notchRadius: 10, notchFromBottom: 118)
+                .fill(paper, style: FillStyle(eoFill: true))
+                .overlay(
+                    PaperGrain(intensity: 0.8)
+                        .environment(\.colorScheme, .light)   // dark grain on cream
+                        .clipShape(TicketShape(cornerRadius: 24, notchRadius: 10, notchFromBottom: 118))
+                )
+                .shadow(color: .black.opacity(0.45), radius: 26, y: 16)
+        )
+        .overlay(stamp)
         .padding(.horizontal, AppSpacing.screen)
-        .clusterMaxWidth()
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Boarding ticket. Focus flight to \(sky.name), \(bigDuration).")
-        .accessibilityAction(named: "Board this flight") { tearOff() }
+        .accessibilityLabel("Boarding pass. Focus flight to \(sky.name), \(durationBig). \(checked ? "Checked in." : "Not checked in.")")
     }
 
-    private func ticketCard(fullW: CGFloat, stubW: CGFloat) -> some View {
-        HStack(spacing: 0) {
-            mainContent.frame(width: fullW - stubW)
-            stubContent.frame(width: stubW)
-        }
-        .frame(width: fullW, height: 300)
-        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(paper))
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
-            .strokeBorder(ink.opacity(0.08), lineWidth: 1))
-        .shadow(color: .black.opacity(0.4), radius: 18, y: 12)
-    }
-
-    private var mainContent: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
+    private var ticketHeader: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(alignment: .center) {
                 Text("FOCUSGLOBE")
-                    .font(.system(size: 20, weight: .bold, design: .serif))
+                    .font(.system(size: 22, weight: .bold, design: .serif))
                     .foregroundStyle(ink)
                 Spacer()
-                MiniBalloonView(size: 30, envelope: AppColors.terracotta, showGlow: false)
+                MiniBalloonView(size: 34, envelope: AppColors.terracotta, showGlow: false)
             }
-            Text("FOCUS FLIGHT")
+            Text("BOARDING PASS")
                 .font(.system(size: 11, weight: .heavy, design: .monospaced))
-                .tracking(3)
+                .tracking(3.4)
                 .foregroundStyle(inkSoft)
             Rectangle().fill(ink.opacity(0.14)).frame(height: 1)
+                .padding(.top, 3)
+        }
+    }
 
+    private var ticketBody: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("DURATION").font(microLabel).tracking(1.4).foregroundStyle(inkSoft)
-                    Text(bigDuration)
-                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                    fieldLabel("DURATION")
+                    Text(durationBig)
+                        .font(.system(size: 40, weight: .bold, design: .rounded))
                         .foregroundStyle(ink)
-                        .minimumScaleFactor(0.6)
+                        .minimumScaleFactor(0.55)
                         .lineLimit(1)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text("SKY").font(microLabel).tracking(1.4).foregroundStyle(inkSoft)
+                    fieldLabel("SKY")
                     Text(sky.name)
-                        .font(.system(size: 18, weight: .semibold, design: .serif))
+                        .font(.system(size: 20, weight: .semibold, design: .serif))
                         .foregroundStyle(ink)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                 }
             }
+            .padding(.top, AppSpacing.sm)
 
             HStack(alignment: .top, spacing: AppSpacing.md) {
                 field("DATE", dateText)
@@ -597,84 +974,123 @@ struct BoardingTicketView: View {
                 field("FLIGHT ID", flightID)
             }
 
-            Spacer(minLength: 0)
-
-            TicketBars(seed: barcodeSeed, color: ink)
-                .frame(height: 36)
-        }
-        .padding(AppSpacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var stubContent: some View {
-        VStack(spacing: 8) {
-            Text("BOARD")
-                .font(.system(size: 10, weight: .heavy, design: .monospaced))
-                .tracking(2)
-                .foregroundStyle(inkSoft)
-            Spacer(minLength: 0)
-            // A little wax stamp — the sky's initials, echoing the expedition seal.
-            ZStack {
-                Circle().fill(AppColors.terracotta)
-                Circle().strokeBorder(.white.opacity(0.35), lineWidth: 1).padding(3)
-                Text(skyInitials)
-                    .font(.system(size: 14, weight: .heavy, design: .serif))
-                    .foregroundStyle(.white)
-            }
-            .frame(width: 44, height: 44)
-            .shadow(color: .black.opacity(0.25), radius: 3, y: 1)
-            Text("SKY PASS")
-                .font(.system(size: 8, weight: .semibold, design: .monospaced))
-                .tracking(1.5)
-                .foregroundStyle(inkSoft)
-            Spacer(minLength: 0)
-            TicketBars(seed: "stub-\(flightID)", color: ink)
-                .frame(height: 22)
-                .padding(.horizontal, 4)
-        }
-        .padding(.vertical, AppSpacing.md)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(ink.opacity(0.03))
-    }
-
-    private func perforation(height: CGFloat) -> some View {
-        VStack(spacing: 5) {
-            ForEach(0..<max(1, Int(height / 9)), id: \.self) { _ in
-                Circle().fill(ink.opacity(0.30)).frame(width: 2.5, height: 2.5)
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(checked ? Color(hex: 0x3F9C7C) : inkSoft.opacity(0.5))
+                    .frame(width: 7, height: 7)
+                Text(checked ? "READY TO FLY" : "AWAITING CHECK-IN")
+                    .font(.system(size: 10, weight: .heavy, design: .monospaced))
+                    .tracking(1.6)
+                    .foregroundStyle(checked ? Color(hex: 0x3F9C7C) : inkSoft)
             }
         }
-        .frame(height: height)
     }
 
-    private func field(_ label: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label).font(microLabel).tracking(1).foregroundStyle(inkSoft)
-            Text(value)
-                .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                .foregroundStyle(ink)
-                .lineLimit(1)
-                .minimumScaleFactor(0.65)
+    private var perforation: some View {
+        HStack(spacing: 6) {
+            ForEach(0..<26, id: \.self) { _ in
+                Rectangle().fill(ink.opacity(0.22)).frame(height: 1.4)
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: 1.4)
+        .padding(.horizontal, AppSpacing.lg)
     }
 
-    private var microLabel: Font { .system(size: 9, weight: .semibold, design: .monospaced) }
+    // MARK: Barcode + scan interaction
 
-    // MARK: Ticket content
+    private var barcodeZone: some View {
+        GeometryReader { geo in
+            let w = geo.size.width
+            ZStack(alignment: .leading) {
+                TicketBars(seed: barcodeSeed, color: ink, highlight: scan,
+                           accent: AppColors.terracotta)
+                    .frame(height: 62)
+                // The scan line riding the finger.
+                if scan > 0.005 && !checked {
+                    RoundedRectangle(cornerRadius: 1.5)
+                        .fill(AppColors.gold)
+                        .frame(width: 3, height: 74)
+                        .shadow(color: AppColors.gold.opacity(0.8), radius: 7)
+                        .position(x: scan * w, y: 31)
+                }
+            }
+            .frame(width: w, height: 62)
+            .contentShape(Rectangle().inset(by: -14))
+            .gesture(
+                DragGesture(minimumDistance: 2)
+                    .onChanged { v in
+                        guard !checked else { return }
+                        let f = min(1, max(0, v.location.x / max(1, w)))
+                        scan = max(scan, f)   // the scan only advances
+                        tickIfNeeded(f)
+                        if scan >= 0.985 { validate() }
+                    }
+                    .onEnded { _ in
+                        guard !checked else { return }
+                        if scan >= 0.88 {
+                            validate()
+                        } else {
+                            withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) { scan = 0 }
+                            lastTick = 0
+                        }
+                    }
+            )
+        }
+        .frame(height: 62)
+        .accessibilityElement()
+        .accessibilityLabel("Barcode. Slide across to check in.")
+        .accessibilityAction { validate() }
+    }
 
-    private var bigDuration: String {
+    /// Light haptic clicks as the scan line sweeps the bars.
+    private func tickIfNeeded(_ f: CGFloat) {
+        for threshold in stride(from: CGFloat(0.2), through: 0.8, by: 0.2)
+        where lastTick < threshold && f >= threshold {
+            appModel.haptics.tap()
+            lastTick = threshold
+        }
+    }
+
+    @ViewBuilder private var stamp: some View {
+        if stampIn {
+            InkStamp(text: "Checked in", color: AppColors.terracotta, rotation: -8)
+                .scaleEffect(1.35)
+                .offset(x: 70, y: 26)
+                .transition(.scale(scale: 1.9).combined(with: .opacity))
+        }
+    }
+
+    // MARK: Validation → flight
+
+    private func validate() {
+        guard !checked else { return }
+        checked = true
+        scan = 1
+        appModel.haptics.takeoff()
+        appModel.uiSound.play(.ticketTear)          // the dry scan click
+        withAnimation(AppMotion.sealImpact.respecting(reduceMotion)) { stampIn = true }
+        let beat = reduceMotion ? 0.25 : 0.75
+        DispatchQueue.main.asyncAfter(deadline: .now() + beat) {
+            appModel.uiSound.play(.confirm)
+            withAnimation(.easeIn(duration: reduceMotion ? 0.1 : 0.45)) {
+                flyAway = true
+                started = true
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + beat + (reduceMotion ? 0.25 : 0.75)) {
+            onValidated()
+        }
+    }
+
+    // MARK: Pass content
+
+    private var durationBig: String {
         if infinite { return "∞" }
         if minutes < 60 { return "\(minutes) MIN" }
         return Formatters.durationLabel(minutes: minutes).uppercased()
     }
 
     private var dateText: String { Date().formatted(date: .abbreviated, time: .omitted) }
-
-    private var skyInitials: String {
-        let letters = sky.name.split(separator: " ").compactMap { $0.first }
-        let s = String(letters).uppercased()
-        return s.isEmpty ? "SK" : String(s.prefix(2))
-    }
 
     private var flightID: String {
         var h = 7
@@ -688,234 +1104,73 @@ struct BoardingTicketView: View {
 
     private var barcodeSeed: String { "\(minutes)-\(focus?.title ?? "focus")-\(sky.id)" }
 
-    // MARK: Tear interaction
-
-    private var tearGesture: some Gesture {
-        DragGesture(minimumDistance: 6)
-            .onChanged { v in
-                guard !torn else { return }
-                tearX = max(0, v.translation.width)
-            }
-            .onEnded { v in
-                guard !torn else { return }
-                if v.translation.width > 96 {
-                    tearOff()
-                } else {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { tearX = 0 }
-                }
-            }
+    private func fieldLabel(_ label: String) -> some View {
+        Text(label)
+            .font(.system(size: 9, weight: .semibold, design: .monospaced))
+            .tracking(1.4)
+            .foregroundStyle(inkSoft)
     }
 
-    private func tearOff() {
-        guard !torn else { return }
-        appModel.haptics.takeoff()
-        appModel.uiSound.play(.ticketTear)
-        withAnimation(.easeIn(duration: 0.42)) {
-            tearX = 480
-            torn = true
+    private func field(_ label: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            fieldLabel(label)
+            Text(value)
+                .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                .foregroundStyle(ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + (reduceMotion ? 0.12 : 0.46)) { onTear() }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
-/// Deterministic barcode-style bars (pure decoration, accessibility-hidden).
+/// The boarding-pass silhouette: a rounded card with two side notches punched
+/// at the perforation line, like a real pass. Fill with `FillStyle(eoFill:)`.
+struct TicketShape: Shape {
+    var cornerRadius: CGFloat = 24
+    var notchRadius: CGFloat = 10
+    /// Distance of the notch centres from the bottom edge.
+    var notchFromBottom: CGFloat = 118
+
+    func path(in rect: CGRect) -> Path {
+        var p = Path(roundedRect: rect, cornerRadius: cornerRadius, style: .continuous)
+        let y = rect.maxY - notchFromBottom
+        p.addEllipse(in: CGRect(x: rect.minX - notchRadius, y: y - notchRadius,
+                                width: notchRadius * 2, height: notchRadius * 2))
+        p.addEllipse(in: CGRect(x: rect.maxX - notchRadius, y: y - notchRadius,
+                                width: notchRadius * 2, height: notchRadius * 2))
+        return p
+    }
+}
+
+/// Deterministic barcode bars (decoration, accessibility-hidden). Bars behind
+/// the scan `highlight` fraction render in the warm accent — the pass visibly
+/// reacts as the finger sweeps it.
 struct TicketBars: View {
     let seed: String
     var color: Color = .white
+    var highlight: CGFloat = 0
+    var accent: Color = AppColors.terracotta
+
     var body: some View {
         Canvas { ctx, size in
             let scalars = Array(seed.unicodeScalars.map { Int($0.value) })
             guard !scalars.isEmpty else { return }
+            let cut = highlight * size.width
             var x: CGFloat = 0
             var i = 0
             while x < size.width {
                 let v = abs(scalars[i % scalars.count] &+ i &* 7)
                 let barW = CGFloat(1 + (v % 3))
                 if v % 4 != 0 {
+                    let scanned = x <= cut
                     ctx.fill(Path(CGRect(x: x, y: 0, width: barW, height: size.height)),
-                             with: .color(color.opacity(0.8)))
+                             with: .color(scanned ? accent.opacity(0.95) : color.opacity(0.82)))
                 }
                 x += barW + CGFloat(1 + ((v / 3) % 3))
                 i += 1
             }
         }
         .accessibilityHidden(true)
-    }
-}
-
-// MARK: - Step 4 · Rope Cut (grounded)
-
-/// The balloon is tethered by a slack rope to a stake planted in the ground of
-/// this very world. Swipe across the rope to cut it: a firm haptic, a dry snap,
-/// the rope falls and the balloon climbs away as the flight begins. Reduce
-/// Motion / VoiceOver get a "Take Off" tap fallback.
-struct RopeCutView: View {
-    let sky: SkyScene
-    let onCut: () -> Void
-    @EnvironmentObject private var appModel: AppModel
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
-
-    @State private var cut = false
-    @State private var balloonLift: CGFloat = 0
-    @State private var slack: CGFloat = 30
-    @State private var sway: CGFloat = 0
-    @State private var ropeGone = false
-    @State private var fingerStartX: CGFloat?
-
-    var body: some View {
-        GeometryReader { geo in
-            let w = geo.size.width
-            let h = geo.size.height
-            let balloonSize = min(150, h * 0.22)
-            let balloonY = h * 0.32 - balloonLift
-            let basket = CGPoint(x: w / 2, y: balloonY + balloonSize * 0.46)
-            let groundY = h * 0.80
-            let stake = CGPoint(x: w / 2, y: groundY)
-
-            ZStack {
-                ground(width: w, height: h, groundY: groundY)
-
-                if !ropeGone {
-                    GroundedRopeShape(top: basket, bottom: stake, sag: slack, sway: sway)
-                        .stroke(Color(hex: 0xC9A87A),
-                                style: StrokeStyle(lineWidth: 3.5, lineCap: .round))
-                        .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
-                        .opacity(cut ? 0 : 1)
-                }
-
-                stakeView.position(x: stake.x, y: stake.y)
-
-                MiniBalloonView(size: balloonSize, showGlow: true)
-                    .rotationEffect(.degrees(Double(sway) * 3))
-                    .position(x: w / 2, y: balloonY)
-
-                caption(height: h)
-            }
-            .contentShape(Rectangle())
-            .gesture(cutGesture(width: w, basket: basket, stake: stake))
-            .onAppear { startIdle() }
-            .accessibilityElement(children: .contain)
-            .accessibilityLabel("Cut the rope to take off")
-            .accessibilityAction { performCut() }
-        }
-    }
-
-    private func ground(width w: CGFloat, height h: CGFloat, groundY: CGFloat) -> some View {
-        Path { p in
-            p.move(to: CGPoint(x: 0, y: groundY))
-            p.addQuadCurve(to: CGPoint(x: w, y: groundY),
-                           control: CGPoint(x: w / 2, y: groundY - 16))
-            p.addLine(to: CGPoint(x: w, y: h))
-            p.addLine(to: CGPoint(x: 0, y: h))
-            p.closeSubpath()
-        }
-        .fill(LinearGradient(colors: [Color(hex: 0x2A211A), Color(hex: 0x120D09)],
-                             startPoint: .top, endPoint: .bottom))
-        .ignoresSafeArea()
-    }
-
-    private var stakeView: some View {
-        ZStack {
-            Capsule().fill(Color(hex: 0x6B4A2C)).frame(width: 7, height: 34)
-            Circle().strokeBorder(Color(hex: 0xC9A87A), lineWidth: 2)
-                .frame(width: 12, height: 12).offset(y: -9)
-        }
-    }
-
-    private func caption(height h: CGFloat) -> some View {
-        VStack {
-            Spacer()
-            if !cut {
-                Text("Cut the rope to take off")
-                    .font(.system(size: 17, weight: .medium, design: .serif)).italic()
-                    .foregroundStyle(.white.opacity(0.85))
-                Text("Swipe across the rope")
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.55))
-                    .padding(.top, 2)
-                if reduceMotion || voiceOver {
-                    AppPrimaryButton(title: "Take Off", systemImage: "scissors") { performCut() }
-                        .padding(.horizontal, AppSpacing.screen)
-                        .padding(.top, AppSpacing.sm)
-                        .clusterMaxWidth()
-                }
-            } else {
-                Text("Focus started")
-                    .font(.system(size: 20, weight: .semibold, design: .serif))
-                    .foregroundStyle(.white)
-                    .transition(.opacity)
-            }
-            Spacer().frame(height: AppSpacing.xxl)
-        }
-    }
-
-    /// A swipe crossing the rope's vertical band cuts it; nearing the rope tenses it.
-    private func cutGesture(width w: CGFloat, basket: CGPoint, stake: CGPoint) -> some Gesture {
-        DragGesture(minimumDistance: 8)
-            .onChanged { v in
-                guard !cut else { return }
-                let band = min(basket.y, stake.y)...max(basket.y, stake.y)
-                guard band.contains(v.location.y) else { return }
-                let dx = v.location.x - w / 2
-                withAnimation(.easeOut(duration: 0.1)) {
-                    sway = max(-1, min(1, dx / 80))
-                    slack = 10   // grabbing the rope pulls it taut
-                }
-                if fingerStartX == nil { fingerStartX = v.startLocation.x }
-                if let sx = fingerStartX,
-                   (sx - w / 2) * (v.location.x - w / 2) < 0,
-                   abs(v.translation.width) > 40 {
-                    performCut()
-                }
-            }
-            .onEnded { _ in
-                fingerStartX = nil
-                guard !cut else { return }
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.5)) {
-                    sway = 0
-                    slack = 30
-                }
-            }
-    }
-
-    private func performCut() {
-        guard !cut else { return }
-        appModel.haptics.takeoff()
-        appModel.uiSound.play(.ticketTear)   // dry rope snap
-        withAnimation(AppMotion.ropeSnap.respecting(reduceMotion)) {
-            cut = true
-            sway = 0
-        }
-        withAnimation(.easeIn(duration: 0.5)) { slack = 120 }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) { ropeGone = true }
-        withAnimation(.easeIn(duration: 0.9).delay(0.1)) { balloonLift = 560 }
-        DispatchQueue.main.asyncAfter(deadline: .now() + (reduceMotion ? 0.2 : 0.85)) { onCut() }
-    }
-
-    private func startIdle() {
-        guard !reduceMotion else { return }
-        withAnimation(.easeInOut(duration: 2.6).repeatForever(autoreverses: true)) { sway = 0.22 }
-    }
-}
-
-/// The tether — a slack curve from the basket to a ground stake, leaning with
-/// `sway` and sagging by `sag` (both animatable, so it tenses and snaps).
-struct GroundedRopeShape: Shape {
-    var top: CGPoint
-    var bottom: CGPoint
-    var sag: CGFloat
-    var sway: CGFloat
-    var animatableData: AnimatablePair<CGFloat, CGFloat> {
-        get { AnimatablePair(sag, sway) }
-        set { sag = newValue.first; sway = newValue.second }
-    }
-    func path(in rect: CGRect) -> Path {
-        var p = Path()
-        let mid = CGPoint(x: (top.x + bottom.x) / 2 + sway * 40,
-                          y: (top.y + bottom.y) / 2 + sag)
-        p.move(to: top)
-        p.addQuadCurve(to: bottom, control: mid)
-        return p
     }
 }

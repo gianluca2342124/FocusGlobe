@@ -44,22 +44,43 @@ struct FocusSessionView: View {
 
     @State private var balloonSway: CGFloat = 0
     @State private var balloonBob: CGFloat = 0
+    @State private var uiIn = false
 
     private var isInfinity: Bool { FlightRouteFactory.isInfinity(vm.route) }
     private var sky: SkyScene {
         SkyScene.all.first { vm.route.destinationName == $0.name } ?? SkyScene.today()
     }
     /// Sky altitude: real progress for timed flights; a slow, endless drift for ∞.
-    private var skyProgress: Double {
+    private var skyAltitude: Double {
         isInfinity ? SkyScene.loopedProgress(vm.progress * 12) : vm.progress
     }
     private var elapsedSeconds: Int {
         max(0, vm.route.durationMinutes * 60 - vm.remainingSeconds)
     }
 
+    // MARK: Local flight display model — the *visible* numbers.
+    //
+    // The symbolic route distance is the single source for the readouts (never
+    // the old geographic origin→destination span), and it re-derives on every
+    // one-second timer tick, so both values move from the very first second.
+
+    private var remainingDistanceText: String {
+        Formatters.flightKm(max(0, vm.route.approximateDistanceKm * (1 - min(1, vm.progress))))
+    }
+    private var traveledDistanceText: String {
+        Formatters.flightKm(FlightRouteFactory.traveledKm(elapsedSeconds: elapsedSeconds))
+    }
+    /// Infinity clock: live seconds under an hour ("12:34"), then "1h 12m".
+    private var focusedTimeText: String {
+        elapsedSeconds < 3600
+            ? Formatters.countdown(elapsedSeconds)
+            : Formatters.durationLabel(minutes: elapsedSeconds / 60)
+    }
+
     var body: some View {
         ZStack {
-            SkySceneView(scene: sky, progress: skyProgress, animated: !reduceMotion)
+            SkySceneView(scene: sky, altitude: skyAltitude,
+                         motion: reduceMotion ? .still : .flight)
 
             balloon
 
@@ -72,8 +93,8 @@ struct FocusSessionView: View {
             .ignoresSafeArea()
             .allowsHitTesting(false)
 
-            topControls
-            bottomReadouts
+            topControls.opacity(uiIn ? 1 : 0)
+            bottomReadouts.opacity(uiIn ? 1 : 0)
         }
         .confirmationDialog("Leave this flight?",
                             isPresented: $vm.showCancelConfirm,
@@ -94,6 +115,9 @@ struct FocusSessionView: View {
             }
         }
         .onAppear {
+            // The controls surface a beat after the world, so entering the
+            // flight reads as arriving in a place, not loading a screen.
+            withAnimation(.easeOut(duration: 0.8).delay(reduceMotion ? 0 : 0.25)) { uiIn = true }
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 4.2).repeatForever(autoreverses: true)) { balloonSway = 5 }
             withAnimation(.easeInOut(duration: 3.1).repeatForever(autoreverses: true)) { balloonBob = -7 }
@@ -160,17 +184,13 @@ struct FocusSessionView: View {
                 HStack(alignment: .bottom) {
                     if isInfinity {
                         // Endless flight — both counters climb from second one.
-                        readout(label: "Time Focused",
-                                value: Formatters.countdown(elapsedSeconds),
-                                alignment: .leading)
+                        readout(label: "Time Focused", value: focusedTimeText, alignment: .leading)
                         Spacer(minLength: AppSpacing.sm)
-                        readout(label: "Distance Traveled",
-                                value: Formatters.distance(km: FlightRouteFactory.traveledKm(elapsedSeconds: elapsedSeconds)),
-                                alignment: .trailing)
+                        readout(label: "Distance Traveled", value: traveledDistanceText, alignment: .trailing)
                     } else {
                         readout(label: "Time Remaining", value: vm.remainingMinutesText, alignment: .leading)
                         Spacer(minLength: AppSpacing.sm)
-                        readout(label: "Distance Remaining", value: vm.remainingDistanceText, alignment: .trailing)
+                        readout(label: "Distance Remaining", value: remainingDistanceText, alignment: .trailing)
                     }
                 }
                 .padding(.horizontal, Layout.pad(AppSpacing.lg, 44))

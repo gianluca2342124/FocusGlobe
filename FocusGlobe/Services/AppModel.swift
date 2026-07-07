@@ -210,9 +210,12 @@ final class AppModel: ObservableObject {
         progress.landings > 0 || settings.virtualOrigin != nil
     }
 
-    /// First-launch gate: show the resolving / choose-a-city onboarding only while
-    /// we have no origin at all (no GPS fix yet, none chosen, never travelled).
-    var needsOnboarding: Bool { currentOrigin == nil }
+    /// First-launch gate. FocusGlobe no longer departs from a place — flights
+    /// begin in the sky itself — so the old resolving / choose-a-city onboarding
+    /// is permanently skipped and the app opens straight onto Home. The screen
+    /// stays compiled but unreachable; the journey origin quietly falls back to
+    /// `JourneyOrigin.default`, which is cosmetic only.
+    var needsOnboarding: Bool { false }
 
     /// Whether the manual starting-city picker should be offered. It appears only
     /// when there is no valid origin yet — i.e. real location isn't resolved *and*

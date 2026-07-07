@@ -8,6 +8,7 @@ struct HomeView: View {
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
     @StateObject private var viewModel = HomeViewModel()
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showResume = false
     @State private var showStreak = false
     @State private var showSetup = false
@@ -17,7 +18,10 @@ struct HomeView: View {
 
     var body: some View {
         ZStack {
-            SkySceneView(scene: sky, progress: 0.03)
+            // The world at rest: alive (twinkle, breathing light) but grounded.
+            // It only starts streaming downward once a flight actually begins.
+            SkySceneView(scene: sky, altitude: 0.03,
+                         motion: reduceMotion ? .still : .ambient)
 
             // Gentle top/bottom scrims so text and the panel stay readable.
             VStack(spacing: 0) {
@@ -52,9 +56,9 @@ struct HomeView: View {
         }
         .focusScreenChrome()
         .onAppear {
-            appModel.requestLocation()
             maybeShowResume()
             maybeShowPremiumIntro()
+            guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 3.4).repeatForever(autoreverses: true)) { balloonFloat = -10 }
         }
         .fullScreenCover(isPresented: $showSetup) {
