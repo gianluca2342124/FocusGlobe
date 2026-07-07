@@ -158,9 +158,9 @@ final class FocusSessionViewModel: ObservableObject {
     /// A calm, FocusGlobe-flavoured status for the top pill.
     var statusLabel: String {
         switch phase {
-        case .boarding, .takingOff: return "Ascending"
-        case .cruising:             return "Drifting"
-        case .approaching:          return "Descending"
+        case .boarding, .takingOff: return "Focusing"
+        case .cruising:             return "Deep Focus"
+        case .approaching:          return "Deep Focus"
         case .landing:              return "Arriving"
         }
     }
@@ -281,6 +281,14 @@ final class FocusSessionViewModel: ObservableObject {
     /// Persist a lightweight snapshot so an unfinished journey can be resumed
     /// (called when leaving the journey or when the app is backgrounded).
     func persistForResume() { saveResumeSnapshot() }
+
+    /// End an open-ended (Infinity) flight now, banking it as a **completed**
+    /// session — streak, history, missions and rewards all count, exactly like a
+    /// timer running out. Safe no-op if the flight already landed.
+    func landNow() {
+        guard !didLand, !landing else { return }
+        land()
+    }
 
     private func saveResumeSnapshot() {
         guard let appModel, !didLand else { return }

@@ -24,10 +24,10 @@ struct PaywallView: View {
     // (replace the placeholder URLs there before release — see APP_STORE_READINESS.md).
 
     private let benefits: [(String, String)] = [
-        ("nosign", "No interruptions"),
-        ("mountain.2.fill", "Grand expeditions"),
+        ("nosign", "No ads"),
+        ("sparkles", "Ultra skies & flights"),
         ("balloon.fill", "Exclusive balloons & postcards"),
-        ("gift.fill", "2x discoveries"),
+        ("gift.fill", "2x rewards"),
         ("music.note", "Focus sounds & music"),
         ("square.grid.2x2.fill", "All widgets unlocked"),
     ]
@@ -50,7 +50,7 @@ struct PaywallView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: AppSpacing.sm) {
                         balloonHero
-                        Text("Unlock All Features")
+                        Text("Unlock FocusGlobe Ultra")
                             .font(.system(size: Layout.pad(26, 34), weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
                             .multilineTextAlignment(.center)
@@ -360,7 +360,7 @@ struct PaywallView: View {
     }
 
     private func buttonTitle(for kind: PlanKind?) -> String {
-        kind == .annual ? "Begin free trial" : "Continue"
+        kind == .annual ? "Start 7 days free trial" : "Continue"
     }
 
     private var goldGradient: LinearGradient {

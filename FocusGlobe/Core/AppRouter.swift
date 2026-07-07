@@ -73,7 +73,8 @@ final class AppRouter: ObservableObject {
         activeJourney = nil
         switch target {
         case "choose", "journey", "start":
-            path = [.routeSelection]
+            // The flight setup flow lives on Home now (no map route selection).
+            path.removeAll()
         case "passport", "stats", "goals", "missions", "collection":
             path = [.passport]
         case "streak", "resume", "current", "home", "":

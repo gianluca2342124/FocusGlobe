@@ -1,13 +1,7 @@
 import SwiftUI
 
-/// Hosts the live focus session and, on completion, the Landing screen — both
-/// inside the same full-screen cover so the journey stays seamless to landing.
-///
-/// There is no separate "Taking off" waiting screen: the cover opens straight
-/// into the live journey. The take-off haptic + earcon fire inside the session's
-/// `start()`, and the map plays its route-overview → zoom-in → follow intro, so
-/// the take-off feeling happens *inside* the Active Journey without delaying the
-/// user.
+/// Hosts the live focus session and, on completion, the completion screen —
+/// both inside the same full-screen cover so the flight stays seamless.
 struct FocusSessionContainerView: View {
     let journey: Journey
     @EnvironmentObject private var appModel: AppModel
@@ -30,35 +24,57 @@ struct FocusSessionContainerView: View {
         }
         .onAppear {
             vm.attach(appModel: appModel)
-            vm.startIfNeeded()   // straight into the live journey — no takeoff screen
+            vm.startIfNeeded()
         }
         .onDisappear { vm.tearDown() }
     }
 }
 
-/// The flagship screen. The real map dominates; the balloon is the moving
-/// vehicle; the UI is sparse, floating and high-end (FocusFlight-style):
-/// minimal corner controls, and large floating readouts at the bottom with no
-/// card — just the map, the journey, and restraint.
+/// The **Active Flight** — the main focus screen. No maps: a huge procedural
+/// sky is the protagonist, and a small white balloon slowly rises through it as
+/// the session progresses. UI is sparse: a status pill, time + distance
+/// readouts, a pause button, and a quiet exit. The timer/persistence engine
+/// (`FocusSessionViewModel`) is unchanged.
 struct FocusSessionView: View {
     @ObservedObject var vm: FocusSessionViewModel
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var appModel: AppModel
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    @State private var balloonSway: CGFloat = 0
+
+    private var isInfinity: Bool { FlightRouteFactory.isInfinity(vm.route) }
+    private var sky: SkyScene {
+        SkyScene.all.first { vm.route.destinationName == $0.name } ?? SkyScene.today()
+    }
+    /// Sky altitude: real progress for timed flights; a slow, endless drift for ∞.
+    private var skyProgress: Double {
+        isInfinity ? SkyScene.loopedProgress(vm.progress * 12) : vm.progress
+    }
+    private var elapsedSeconds: Int {
+        max(0, vm.route.durationMinutes * 60 - vm.remainingSeconds)
+    }
 
     var body: some View {
         ZStack {
-            JourneyMapView(data: vm.mapData, onUserPan: { vm.userInteractedWithMap() })
-                .ignoresSafeArea()
+            SkySceneView(scene: sky, progress: skyProgress, animated: !reduceMotion)
 
-            // Edge vignette + strong bottom scrim so white readouts stay legible
-            // over any map (dark or light).
-            vignette
+            balloon
+
+            // Soft bottom scrim so the readouts stay legible over bright bands.
+            VStack {
+                Spacer()
+                LinearGradient(colors: [.clear, .black.opacity(0.5)], startPoint: .top, endPoint: .bottom)
+                    .frame(height: 240)
+            }
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
 
             topControls
             bottomReadouts
         }
-        .confirmationDialog("Leave this expedition?",
+        .confirmationDialog("Leave this flight?",
                             isPresented: $vm.showCancelConfirm,
                             titleVisibility: .visible) {
             Button("Leave", role: .destructive) {
@@ -71,83 +87,45 @@ struct FocusSessionView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
-            case .active:              vm.refresh()
+            case .active:                vm.refresh()
             case .inactive, .background: vm.persistForResume()
-            @unknown default:          break
+            @unknown default:            break
             }
+        }
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 3.8).repeatForever(autoreverses: true)) { balloonSway = 5 }
         }
     }
 
-    // MARK: - Backdrop
-
-    private var vignette: some View {
-        ZStack {
-            // Keep bright map types (Terrain/Standard/Satellite) feeling dark and
-            // premium without changing the map type itself. Dark styles stay clean.
-            if !vm.mapStyle.isDark {
-                Color.black.opacity(0.22).ignoresSafeArea()
-            }
-            // Subtle warm expedition grade so the live flyover reads golden-hour,
-            // not cold — kept light so the 3D map and white readouts stay crisp.
-            Color(hex: 0x2A1E0F).opacity(0.16).blendMode(.multiply).ignoresSafeArea()
-            RadialGradient(colors: [Color(hex: 0xE8A94B).opacity(0.07), .clear],
-                           center: .center, startRadius: 40, endRadius: 520)
-                .blendMode(.plusLighter).ignoresSafeArea()
-            RadialGradient(colors: [.clear, .black.opacity(0.28)],
-                           center: .center, startRadius: 220, endRadius: 580)
-            VStack(spacing: 0) {
-                LinearGradient(colors: [.black.opacity(0.30), .clear],
-                               startPoint: .top, endPoint: .bottom)
-                    .frame(height: 170)
-                Spacer()
-                LinearGradient(colors: [.clear, .black.opacity(0.62)],
-                               startPoint: .top, endPoint: .bottom)
-                    .frame(height: 300)
-            }
+    // The small white balloon — rises gently up the screen with progress,
+    // swinging subtly. The landscape stays the protagonist.
+    private var balloon: some View {
+        GeometryReader { geo in
+            let h = geo.size.height
+            let y = h * (0.62 - CGFloat(min(1, skyProgress)) * 0.3)
+            BalloonView(height: 92, showBurner: true, showGlow: false,
+                        assetName: appModel.selectedSkin.assetName)
+                .rotationEffect(.degrees(Double(balloonSway) * 0.4))
+                .offset(x: balloonSway)
+                .position(x: geo.size.width / 2, y: y)
         }
-        .ignoresSafeArea()
         .allowsHitTesting(false)
     }
 
-    // MARK: - Top controls
+    // MARK: Top — exit, state, mute
 
     private var topControls: some View {
         VStack {
             HStack(alignment: .top) {
-                AppIconButton(systemImage: "xmark", size: Layout.pad(46, 56), tint: AppColors.textPrimary,
-                              accessibilityLabel: "End expedition") { vm.requestCancel() }
+                AppIconButton(systemImage: "xmark", size: Layout.pad(44, 54), tint: .white,
+                              accessibilityLabel: "End flight") { vm.requestCancel() }
                 Spacer()
                 statusPill
                 Spacer()
-                VStack(spacing: AppSpacing.xs) {
-                    mapStyleMenu
-                    AppIconButton(systemImage: vm.showsRecenter ? "location.fill" : "arrow.up.left.and.arrow.down.right",
-                                  size: Layout.pad(46, 56), tint: AppColors.textPrimary,
-                                  accessibilityLabel: vm.showsRecenter ? "Recenter on balloon" : "View full route") {
-                        vm.showsRecenter ? vm.recenter() : vm.showFullRoute()
-                    }
-                    // Shows the action it will switch TO: "2D" while 3D is active,
-                    // "3D" while 2D is active. Active state is a glass highlight,
-                    // never a coloured/yellow tint.
-                    GlassTextButton(text: vm.tilted ? "2D" : "3D", size: Layout.pad(46, 56), active: vm.tilted,
-                                    accessibilityLabel: vm.tilted ? "Switch to 2D" : "Switch to 3D") {
-                        vm.toggleTilt()
-                    }
-                    AppIconButton(systemImage: vm.muteIconName, size: Layout.pad(46, 56),
-                                  tint: AppColors.textPrimary,
-                                  accessibilityLabel: vm.isAudioMuted ? "Unmute expedition audio" : "Mute expedition audio") {
-                        vm.toggleMute()
-                    }
-                    // iPad/Mac: the pause control joins the side controls (the bottom-
-                    // centre pause is omitted there) so the control set reads as one
-                    // unified group. Same gray glass circle as the other buttons.
-                    if Layout.isPadIdiom {
-                        AppIconButton(systemImage: vm.isPaused ? "play.fill" : "pause.fill",
-                                      size: Layout.pad(46, 56), tint: AppColors.textPrimary,
-                                      accessibilityLabel: vm.isPaused ? "Resume" : "Pause") {
-                            vm.togglePause()
-                        }
-                    }
+                AppIconButton(systemImage: vm.muteIconName, size: Layout.pad(44, 54), tint: .white,
+                              accessibilityLabel: vm.isAudioMuted ? "Unmute" : "Mute") {
+                    vm.toggleMute()
                 }
             }
             Spacer()
@@ -157,108 +135,96 @@ struct FocusSessionView: View {
         .transition(.opacity)
     }
 
-    private var mapStyleMenu: some View {
-        Menu {
-            ForEach(MapDisplayStyle.selectable) { style in
-                Button { vm.setMapStyle(style) } label: {
-                    Label(style.displayName, systemImage: vm.mapStyle == style ? "checkmark" : style.systemImage)
-                }
-            }
-            Divider()
-            Button { vm.toggleLabels() } label: {
-                Label(vm.labelsOn ? "Hide labels" : "Show labels", systemImage: "textformat")
-            }
-        } label: {
-            GlassCircle(systemImage: vm.mapStyle.systemImage, size: Layout.pad(46, 56))
-        }
-        .accessibilityLabel("Map style")
-    }
-
     private var statusPill: some View {
         HStack(spacing: 6) {
-            Image(systemName: vm.phase.systemImage).font(.system(size: 12, weight: .semibold))
+            Circle().fill(AppColors.success).frame(width: 7, height: 7)
             Text(vm.statusLabel).font(AppTypography.caption)
         }
-        .foregroundStyle(AppColors.textPrimary)
+        .foregroundStyle(.white)
         .padding(.horizontal, AppSpacing.sm)
         .padding(.vertical, 8)
-        .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.22, shadowRadius: 8, shadowY: 4)
+        .background(Capsule().fill(.white.opacity(0.1)))
+        .overlay(Capsule().strokeBorder(.white.opacity(0.12), lineWidth: 1))
     }
 
-    // MARK: - Bottom readouts (no card — floating typography on the map)
+    // MARK: Bottom — readouts + pause
 
     private var bottomReadouts: some View {
         VStack(spacing: 0) {
             Spacer()
-            // Readouts + banner live in a centred band so on iPad/Mac/landscape the
-            // time and distance don't spread to opposite screen edges. On iPhone
-            // portrait the cap exceeds the width, so the immersive layout is unchanged.
-            VStack(spacing: 0) {
+            VStack(spacing: AppSpacing.md) {
                 HStack(alignment: .bottom) {
-                    readout(label: "Until landing", value: vm.remainingMinutesText, alignment: .leading)
-                    Spacer(minLength: AppSpacing.sm)
-                    // iPhone keeps the white pause in the centre; on iPad/Mac the
-                    // pause moved to the side controls, so the readouts spread to
-                    // the wide band's left/right edges.
-                    if !Layout.isPadIdiom {
-                        centerCluster
+                    if isInfinity {
+                        readout(label: "Time Focused",
+                                value: Formatters.durationLabel(minutes: max(0, elapsedSeconds / 60)),
+                                alignment: .leading)
                         Spacer(minLength: AppSpacing.sm)
+                        readout(label: "Distance Traveled",
+                                value: Formatters.distance(km: FlightRouteFactory.traveledKm(elapsedSeconds: elapsedSeconds)),
+                                alignment: .trailing)
+                    } else {
+                        readout(label: "Time Remaining", value: vm.remainingMinutesText, alignment: .leading)
+                        Spacer(minLength: AppSpacing.sm)
+                        readout(label: "Distance Remaining", value: vm.remainingDistanceText, alignment: .trailing)
                     }
-                    readout(label: "To discovery", value: vm.remainingDistanceText, alignment: .trailing)
                 }
                 .padding(.horizontal, Layout.pad(AppSpacing.lg, 44))
 
-                // No banner ads during an expedition — the map breathes. Ads for
-                // free users are limited to a single interstitial at journey end.
+                WhitePauseButton(isPaused: vm.isPaused, size: Layout.pad(58, 70)) { vm.togglePause() }
+
+                if isInfinity {
+                    Button {
+                        appModel.tapFeedback()
+                        vm.landNow()
+                    } label: {
+                        Text("Land now")
+                            .font(AppTypography.callout)
+                            .foregroundStyle(.white.opacity(0.85))
+                            .padding(.horizontal, AppSpacing.md).padding(.vertical, 8)
+                            .background(Capsule().fill(.white.opacity(0.1)))
+                    }
+                    .buttonStyle(SoftPressStyle())
+                }
             }
-            // iPad/Mac: span the full width (with a safe-area margin via the inner
-            // padding) so Time anchors to the left edge and Distance to the right.
-            // iPhone keeps the centred band.
             .frame(maxWidth: Layout.pad(Layout.journeyReadouts, .infinity))
             .frame(maxWidth: .infinity)
         }
-        .padding(.bottom, AppSpacing.md)
+        .padding(.bottom, AppSpacing.lg)
         .transition(.opacity)
     }
 
-    private func readout(label: String, value: String, alignment: HorizontalAlignment) -> some View {
+    fileprivate func readout(label: String, value: String, alignment: HorizontalAlignment) -> some View {
         VStack(alignment: alignment, spacing: 1) {
             Text(label)
-                .font(.system(size: Layout.pad(12, 15), weight: .regular, design: .serif))
-                .italic()
-                .foregroundStyle(.white.opacity(0.75))
+                .font(AppTypography.caption)
+                .foregroundStyle(.white.opacity(0.65))
             Text(value)
-                .font(.system(size: Layout.pad(36, 54), weight: .semibold, design: .serif))
+                .font(.system(size: Layout.pad(34, 52), weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(.white)
                 .minimumScaleFactor(0.7)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: alignment == .leading ? .leading : .trailing)
-        .shadow(color: .black.opacity(0.35), radius: 8, y: 2)
-    }
-
-    private var centerCluster: some View {
-        // No seconds countdown — calm and timeless. Just the pause control.
-        WhitePauseButton(isPaused: vm.isPaused, size: Layout.pad(60, 72)) { vm.togglePause() }
+        .shadow(color: .black.opacity(0.4), radius: 8, y: 2)
     }
 }
 
-/// A white circular pause/resume button — always white (it sits on the dark
-/// scrim), matching the FocusFlight session control.
-struct WhitePauseButton: View {
+/// The round pause/resume control — a warm white disc with a dark glyph, calm
+/// and thumb-sized, sitting centre-bottom of the flight.
+private struct WhitePauseButton: View {
     let isPaused: Bool
-    var size: CGFloat = 56
+    var size: CGFloat = 58
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Image(systemName: isPaused ? "play.fill" : "pause.fill")
-                .font(.system(size: size * 0.38, weight: .bold))
-                .foregroundStyle(Color(hex: 0x2B2620))
+                .font(.system(size: size * 0.34, weight: .bold))
+                .foregroundStyle(Color(hex: 0x14120E))
                 .frame(width: size, height: size)
-                .background(Circle().fill(.white))
-                .shadow(color: .black.opacity(0.3), radius: 12, y: 5)
+                .background(Circle().fill(Color(hex: 0xF4EFE4)))
+                .shadow(color: .black.opacity(0.3), radius: 12, y: 6)
         }
         .buttonStyle(SoftPressStyle())
         .accessibilityLabel(isPaused ? "Resume" : "Pause")

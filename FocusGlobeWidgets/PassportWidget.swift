@@ -10,7 +10,7 @@ struct PassportWidget: Widget {
                 .fgWidgetBackground(glow: WTheme.indigo)
                 .widgetURL(FGLink.url(entry.snapshot.gatedLink("passport")))
         }
-        .configurationDisplayName("Field Journal")
+        .configurationDisplayName("Passport")
         .description("Your collection and focus stats at a glance.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
@@ -24,7 +24,7 @@ private struct PassportSnapshotView: View {
 
     var body: some View {
         if !s.isPro {
-            LockedTeaser(icon: "books.vertical.fill", title: "Field Journal", accent: WTheme.indigo)
+            LockedTeaser(icon: "books.vertical.fill", title: "Passport", accent: WTheme.indigo)
         } else {
             switch family {
             case .systemLarge:  large
@@ -37,7 +37,7 @@ private struct PassportSnapshotView: View {
     private var small: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                WHeader(icon: "books.vertical.fill", title: "Field Journal", tint: WTheme.indigo)
+                WHeader(icon: "books.vertical.fill", title: "Passport", tint: WTheme.indigo)
                 Spacer()
                 WBalloon(size: 24, tint: WTheme.gold)
             }
@@ -62,7 +62,7 @@ private struct PassportSnapshotView: View {
             }
             .frame(width: 92)
             VStack(alignment: .leading, spacing: 10) {
-                WHeader(icon: "books.vertical.fill", title: "Field Journal", tint: WTheme.indigo)
+                WHeader(icon: "books.vertical.fill", title: "Passport", tint: WTheme.indigo)
                 WStat(value: s.totalFocusMiles.fgGrouped, caption: "miles charted", tint: WTheme.gold)
                 HStack(spacing: 12) {
                     WStat(value: "\(s.landings)", caption: "discoveries")
@@ -79,7 +79,7 @@ private struct PassportSnapshotView: View {
     private var large: some View {
         VStack(spacing: 0) {
             HStack {
-                WHeader(icon: "books.vertical.fill", title: "Field Journal", tint: WTheme.indigo)
+                WHeader(icon: "books.vertical.fill", title: "Passport", tint: WTheme.indigo)
                 Spacer()
                 Text("\(s.postcardCount) STAMPS")
                     .font(.system(size: 10, weight: .heavy, design: .rounded)).tracking(0.6)

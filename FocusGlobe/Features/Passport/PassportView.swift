@@ -18,8 +18,8 @@ struct PassportView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
                     HStack(alignment: .top) {
-                        ScreenHeader(title: "Field Journal",
-                                     subtitle: "Your discoveries, miles charted and collection")
+                        ScreenHeader(title: "Passport",
+                                     subtitle: "Your flights, discoveries and collection")
                         Spacer()
                         // The crown only opens the paywall — hide it once Pro.
                         if !appModel.isPro {

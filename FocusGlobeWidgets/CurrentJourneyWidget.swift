@@ -11,8 +11,8 @@ struct CurrentJourneyWidget: Widget {
             CurrentJourneyView(entry: entry)
                 .widgetURL(FGLink.url(entry.snapshot.journeyLink()))
         }
-        .configurationDisplayName("Current Expedition")
-        .description("Resume an unfinished expedition on the map.")
+        .configurationDisplayName("Current Flight")
+        .description("Resume an unfinished focus flight.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }

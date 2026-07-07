@@ -69,10 +69,10 @@ struct LandingView: View {
 
     private var title: some View {
         VStack(spacing: 4) {
-            Text("You've arrived.")
+            Text("Focus complete")
                 .font(AppTypography.serifHero)
                 .foregroundStyle(AppColors.textPrimary)
-            Text("\(summary.originName)  →  \(summary.route.destinationName)")
+            Text("You flew for \(summary.focusedMinutes) min · \(Formatters.distance(km: summary.distanceKm))")
                 .font(AppTypography.subhead)
                 .foregroundStyle(AppColors.textSecondary)
                 .lineLimit(1).minimumScaleFactor(0.7)
@@ -157,7 +157,7 @@ struct LandingView: View {
                 AppSecondaryButton(title: "Share Postcard", systemImage: "square.and.arrow.up") {
                     sharePostcard()
                 }
-                AppSecondaryButton(title: "Field Journal", systemImage: "book.closed") {
+                AppSecondaryButton(title: "Passport", systemImage: "book.closed") {
                     appModel.tapFeedback()
                     finish(toPassport: true)
                 }

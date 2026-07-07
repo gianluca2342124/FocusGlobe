@@ -11,8 +11,8 @@ struct StartJourneyWidget: Widget {
                 .fgWidgetBackground(glow: WTheme.gold)
                 .widgetURL(FGLink.url("choose"))
         }
-        .configurationDisplayName("Begin an Expedition")
-        .description("Set off from your city and begin a focused expedition.")
+        .configurationDisplayName("Start Focus")
+        .description("Start a focus flight in one tap.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
