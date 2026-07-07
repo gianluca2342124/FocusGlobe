@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		7A67A3282FEB2A3900C4725D /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = 7A67A3272FEB2A3900C4725D /* GoogleMobileAds */; };
+		7AA02B0E2FFC8A2D00B919DC /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7AA02B0D2FFC8A2D00B919DC /* StoreKit.framework */; };
 		7AAFA3F02FE59EC3002F4953 /* GoogleMaps in Frameworks */ = {isa = PBXBuildFile; productRef = 7AAFA3EF2FE59EC3002F4953 /* GoogleMaps */; };
 		7AE3B1DC2FEBE265008A59DA /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7AE3B1DB2FEBE265008A59DA /* WidgetKit.framework */; };
 		7AE3B1DE2FEBE265008A59DA /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7AE3B1DD2FEBE265008A59DA /* SwiftUI.framework */; };
@@ -41,6 +42,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		7AA02B0D2FFC8A2D00B919DC /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		7AE3B1D92FEBE265008A59DA /* FocusGlobeWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FocusGlobeWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		7AE3B1DB2FEBE265008A59DA /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		7AE3B1DD2FEBE265008A59DA /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
@@ -86,6 +88,7 @@
 			files = (
 				7A67A3282FEB2A3900C4725D /* GoogleMobileAds in Frameworks */,
 				7AE8FE6E2FE865DB00CD10A8 /* RevenueCat in Frameworks */,
+				7AA02B0E2FFC8A2D00B919DC /* StoreKit.framework in Frameworks */,
 				7AAFA3F02FE59EC3002F4953 /* GoogleMaps in Frameworks */,
 				7AE8FE702FE865DB00CD10A8 /* RevenueCatUI in Frameworks */,
 			);
@@ -97,6 +100,7 @@
 		7AE3B1DA2FEBE265008A59DA /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				7AA02B0D2FFC8A2D00B919DC /* StoreKit.framework */,
 				7AE3B1DB2FEBE265008A59DA /* WidgetKit.framework */,
 				7AE3B1DD2FEBE265008A59DA /* SwiftUI.framework */,
 			);
