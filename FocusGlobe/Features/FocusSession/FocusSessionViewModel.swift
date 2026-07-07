@@ -168,6 +168,29 @@ final class FocusSessionViewModel: ObservableObject {
     var remainingSeconds: Int { max(0, Int(timer.remaining.rounded(.up))) }
     var remainingTimeText: String { Formatters.countdown(remainingSeconds) }
 
+    // MARK: - Live display model (read inside the flight's TimelineView)
+    //
+    // These read the wall clock on every access, so they are always current
+    // regardless of the @Published tick cadence — the fix for "frozen" readouts.
+    // The visible active-flight UI uses ONLY these, never the map-era readouts.
+
+    /// Total symbolic flight distance (km) for the chosen duration — the single
+    /// source for the visible distance (never the geographic origin→dest span).
+    var totalFlightKm: Double { route.approximateDistanceKm }
+    var liveProgress: Double { timer.liveProgress }
+    var liveRemainingSeconds: Int { max(0, Int(timer.liveRemaining.rounded(.up))) }
+    var liveElapsedSeconds: Int { Int(timer.liveElapsed.rounded(.down)) }
+    var liveRemainingKm: Double { max(0, totalFlightKm * (1 - liveProgress)) }
+    var liveTraveledKm: Double { FlightRouteFactory.traveledKm(elapsedSeconds: liveElapsedSeconds) }
+
+    /// Completion backstop: if the live clock has reached the full duration but
+    /// the repeating timer's callback was starved (heavy render frame), land now.
+    /// Idempotent — `land()` guards against a second completion.
+    func finishIfDue() {
+        guard !didLand, !landing, timer.liveProgress >= 1 else { return }
+        land()
+    }
+
     /// Coarse remaining-time label for the big "Time Remaining" readout.
     /// Under an hour it reads as whole minutes ("33 min"); from an hour up it
     /// reads as hours + zero-padded minutes ("1h 05m", "2h 14m", "8h 42m") so a

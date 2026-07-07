@@ -532,15 +532,17 @@ struct PackFocusView: View {
     private func envelope(width w: CGFloat, height h: CGFloat) -> some View {
         let lit = selected != nil
         return ZStack {
+            // One coherent dark silhouette before activation — deep navy into
+            // near-black, no purple, no warmth. It only glows once packed.
             RitualEnvelopeShape()
-                .fill(LinearGradient(colors: [Color(hex: 0x2B2440), Color(hex: 0x151021)],
+                .fill(LinearGradient(colors: [Color(hex: 0x161B2B), Color(hex: 0x090C15)],
                                      startPoint: .top, endPoint: .bottom))
-            // The inner light: cold and faint while empty, warm once packed.
+            // The inner light stays off until a focus is packed; then it warms.
             RitualEnvelopeShape()
                 .fill(RadialGradient(
-                    colors: [lit ? AppColors.gold.opacity(0.34) : Color.white.opacity(0.05),
+                    colors: [lit ? AppColors.gold.opacity(0.36) : Color.clear,
                              .clear],
-                    center: UnitPoint(x: 0.5, y: lit ? 0.78 : 0.30),
+                    center: UnitPoint(x: 0.5, y: 0.78),
                     startRadius: 4, endRadius: w * 0.75))
             RitualRibsShape().stroke(.white.opacity(lit ? 0.12 : 0.06), lineWidth: 1)
             RitualEnvelopeShape().stroke(.white.opacity(lit ? 0.20 : 0.10), lineWidth: 1)
@@ -568,7 +570,7 @@ struct PackFocusView: View {
     private func basket(width: CGFloat, height: CGFloat, dropSize: CGFloat) -> some View {
         ZStack {
             RoundedRectangle(cornerRadius: 13, style: .continuous)
-                .fill(LinearGradient(colors: [Color(hex: 0x33281C), Color(hex: 0x1C140D)],
+                .fill(LinearGradient(colors: [Color(hex: 0x161B2B), Color(hex: 0x090C15)],
                                      startPoint: .top, endPoint: .bottom))
                 .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous)
                     .strokeBorder(.white.opacity(0.10), lineWidth: 1))
@@ -617,8 +619,9 @@ struct PackFocusView: View {
 
     @ViewBuilder private var dropBorder: some View {
         if selected == nil {
+            // A quiet dashed cream outline is the only marking before activation.
             RoundedRectangle(cornerRadius: 15, style: .continuous)
-                .strokeBorder(targetHot ? AppColors.gold.opacity(0.9) : .white.opacity(0.3),
+                .strokeBorder(targetHot ? AppColors.gold.opacity(0.9) : Color(hex: 0xE8DEC9).opacity(0.42),
                               style: StrokeStyle(lineWidth: targetHot ? 2 : 1.5, dash: [6, 5]))
         } else {
             RoundedRectangle(cornerRadius: 15, style: .continuous)
@@ -821,6 +824,24 @@ private struct PackSparkBurst: View {
     }
 }
 
+/// A soft looping finger that sweeps to the right across the barcode strip —
+/// shown only before the first tear, so the gesture is discoverable.
+private struct TearFingerHint: View {
+    @State private var go = false
+    var body: some View {
+        Image(systemName: "hand.point.up.left.fill")
+            .font(.system(size: 24, weight: .semibold))
+            .foregroundStyle(Color(hex: 0x2A2119).opacity(0.5))
+            .scaleEffect(x: -1, y: 1)   // face right
+            .offset(x: go ? 60 : -30)
+            .opacity(go ? 0.1 : 0.7)
+            .onAppear {
+                withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: false)) { go = true }
+            }
+            .allowsHitTesting(false)
+    }
+}
+
 /// A soft looping finger that drags upward from the tray toward the basket —
 /// shown only before the first interaction.
 private struct PackDragHint: View {
@@ -842,10 +863,10 @@ private struct PackDragHint: View {
 // MARK: - Step 3 · Check in (the boarding pass)
 
 /// A large boarding pass on warm paper, floating over the night world. The
-/// user slides a finger across the **barcode** to check in: a gold scan line
-/// follows the finger, the bars light behind it, and at the end the pass is
-/// stamped CHECKED IN — a firm haptic, a dry click, then the ticket lifts away
-/// and the flight begins. No tear-strips, no gimmicks.
+/// bottom **barcode strip physically tears off**: swipe across it and it peels
+/// from the perforation in 3D, following your finger, and past a threshold it
+/// detaches with a paper snap + a "Ready" stamp — then the pass lifts away and
+/// the flight begins. Restored from the build-11 boarding tear.
 struct CheckInTicketView: View {
     let minutes: Int
     let infinite: Bool
@@ -856,19 +877,27 @@ struct CheckInTicketView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
 
-    @State private var scan: CGFloat = 0          // 0…1 across the barcode
-    @State private var checked = false
+    /// Horizontal tear travel of the barcode strip (finger translation).
+    @State private var tearX: CGFloat = 0
+    @State private var checked = false            // strip torn off / validated
     @State private var stampIn = false
     @State private var flyAway = false
     @State private var started = false
-    @State private var lastTick: CGFloat = 0
     /// The scheduled check-in beats, cancellable so backing out of this step
     /// mid-validation can never launch a flight behind the user's back.
     @State private var pendingBeats: [DispatchWorkItem] = []
 
+    private let threshold: CGFloat = 120
     private let paper = Color(hex: 0xF5EBD8)
     private let ink = Color(hex: 0x2A2119)
     private let inkSoft = Color(hex: 0x77685A)
+
+    /// Effective tear distance: follows the finger, then snaps far once torn so
+    /// the strip peels fully away.
+    private var effTear: CGFloat { checked ? 640 : tearX }
+    /// 0…1 peel progress — grows the lift shadow so the strip reads as attached
+    /// at rest and lifting as it tears.
+    private var tearLift: CGFloat { min(1, effTear / threshold) }
 
     var body: some View {
         VStack(spacing: AppSpacing.md) {
@@ -899,11 +928,11 @@ struct CheckInTicketView: View {
     @ViewBuilder private var hint: some View {
         if !checked {
             VStack(spacing: AppSpacing.sm) {
-                Label("Slide across the barcode to check in", systemImage: "hand.draw")
+                Label("Tear the barcode across to board", systemImage: "hand.draw")
                     .font(.system(size: 14, weight: .medium, design: .rounded))
                     .foregroundStyle(.white.opacity(0.72))
                 if reduceMotion || voiceOver {
-                    AppPrimaryButton(title: "Check in", systemImage: "checkmark.seal") { validate() }
+                    AppPrimaryButton(title: "Check in", systemImage: "checkmark.seal") { commitTear() }
                         .padding(.horizontal, AppSpacing.screen)
                         .clusterMaxWidth()
                 }
@@ -917,38 +946,93 @@ struct CheckInTicketView: View {
         }
     }
 
-    // MARK: The pass
+    // MARK: The pass — a body card + a detachable barcode strip
 
     private var ticket: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ticketHeader
-                .padding(.horizontal, AppSpacing.lg)
-                .padding(.top, AppSpacing.lg)
-            ticketBody
-                .padding(.horizontal, AppSpacing.lg)
-            Spacer(minLength: AppSpacing.sm)
-            perforation
-            barcodeZone
-                .padding(.horizontal, AppSpacing.lg)
-                .padding(.top, AppSpacing.sm)
-                .padding(.bottom, AppSpacing.md)
+        VStack(spacing: 0) {   // spacing 0 → the strip touches the body's bottom edge
+            bodyCard
+                .overlay(alignment: .bottom) {
+                    perforation.opacity(checked ? 0 : 1).offset(y: 6)
+                }
+            // The barcode strip tears off as paper: it peels from the top-left of
+            // the perforation, bending out in 3D and following the finger sideways
+            // — never a fade, never a rigid block flying off flat.
+            barcodeStrip
+                .rotation3DEffect(.degrees(Double(min(30, effTear * 0.12))),
+                                  axis: (x: 0.18, y: 1, z: 0), anchor: .topLeading, perspective: 0.8)
+                .rotationEffect(.degrees(Double(min(10, effTear * 0.05))), anchor: .topLeading)
+                .offset(x: effTear * 0.8, y: effTear * 0.12)
+                .opacity(checked ? 0 : 1)
+                .overlay { if !checked && tearX == 0 { TearFingerHint() } }
+                .gesture(tearGesture)
         }
-        .frame(maxWidth: 480)
-        .frame(height: 452)
-        .background(
-            TicketShape(cornerRadius: 24, notchRadius: 10, notchFromBottom: 132)
-                .fill(paper, style: FillStyle(eoFill: true))
-                .overlay(
-                    PaperGrain(intensity: 0.8)
-                        .environment(\.colorScheme, .light)   // dark grain on cream
-                        .clipShape(TicketShape(cornerRadius: 24, notchRadius: 10, notchFromBottom: 132))
-                )
-                .shadow(color: .black.opacity(0.45), radius: 26, y: 16)
-        )
+        .frame(maxWidth: 460)
         .overlay(stamp)
         .padding(.horizontal, AppSpacing.screen)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Boarding pass. Focus flight to \(sky.name), \(durationBig). \(checked ? "Checked in." : "Not checked in.")")
+        .accessibilityAction(named: "Check in") { commitTear() }
+    }
+
+    private var bodyCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ticketHeader
+                .padding(.horizontal, AppSpacing.lg).padding(.top, AppSpacing.lg)
+            ticketBody
+                .padding(.horizontal, AppSpacing.lg).padding(.top, AppSpacing.md)
+            Spacer(minLength: AppSpacing.md)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 336)
+        .background(paperFill(topRounded: true))
+        .overlay(alignment: .bottomLeading) { notch.offset(x: -9, y: 9) }
+        .overlay(alignment: .bottomTrailing) { notch.offset(x: 9, y: 9) }
+        .compositingGroup()
+        .shadow(color: .black.opacity(0.45), radius: 20, y: 12)
+    }
+
+    private var barcodeStrip: some View {
+        VStack(spacing: 7) {
+            TicketBars(seed: barcodeSeed, color: ink)
+                .frame(height: 76)
+                .padding(.horizontal, AppSpacing.lg)
+            Text("FOCUSGLOBE · FOCUS FLIGHT · \(flightID)")
+                .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                .tracking(1)
+                .foregroundStyle(inkSoft)
+                .lineLimit(1).minimumScaleFactor(0.7)
+        }
+        .padding(.vertical, AppSpacing.md)
+        .frame(maxWidth: .infinity)
+        .background(paperFill(topRounded: false))
+        .overlay(alignment: .topLeading) { notch.offset(x: -9, y: -9) }
+        .overlay(alignment: .topTrailing) { notch.offset(x: 9, y: -9) }
+        .compositingGroup()
+        // No resting shadow → the stub reads as attached. The lift shadow grows
+        // only as the strip peels away.
+        .shadow(color: .black.opacity(0.5 * Double(tearLift)),
+                radius: 8 + 10 * tearLift, y: 4 + 8 * tearLift)
+    }
+
+    /// Cream paper with a soft grain, clipped so the body rounds at the top and
+    /// the strip rounds at the bottom — together they read as one ticket.
+    private func paperFill(topRounded: Bool) -> some View {
+        let shape = UnevenRoundedRectangle(
+            topLeadingRadius: topRounded ? 22 : 0,
+            bottomLeadingRadius: topRounded ? 0 : 22,
+            bottomTrailingRadius: topRounded ? 0 : 22,
+            topTrailingRadius: topRounded ? 22 : 0, style: .continuous)
+        return shape.fill(paper)
+            .overlay(
+                PaperGrain(intensity: 0.8)
+                    .environment(\.colorScheme, .light)
+                    .clipShape(shape))
+    }
+
+    /// A punched notch at the perforation corners — a hole showing the night sky
+    /// behind the pass, like a real ticket.
+    private var notch: some View {
+        Circle().fill(Color.black).frame(width: 18, height: 18).blendMode(.destinationOut)
     }
 
     private var ticketHeader: some View {
@@ -1026,98 +1110,45 @@ struct CheckInTicketView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// The dashed cut line drawn on the seam between the body and the strip.
     private var perforation: some View {
-        HStack(spacing: 6) {
-            ForEach(0..<26, id: \.self) { _ in
-                Rectangle().fill(ink.opacity(0.22)).frame(height: 1.4)
+        HStack(spacing: 5) {
+            ForEach(0..<28, id: \.self) { _ in
+                Capsule().fill(ink.opacity(0.30)).frame(width: 5, height: 1.6)
             }
         }
-        .frame(height: 1.4)
-        .padding(.horizontal, AppSpacing.lg)
+        .frame(height: 1.6)
+        .padding(.horizontal, AppSpacing.md)
     }
 
-    // MARK: Barcode + scan interaction
+    // MARK: Tear interaction → flight
 
-    private var barcodeZone: some View {
-        GeometryReader { geo in
-            let w = geo.size.width
-            ZStack(alignment: .leading) {
-                TicketBars(seed: barcodeSeed, color: ink, highlight: scan)
-                    .frame(height: 92)
-                // The cream cutting line riding the finger — paper being cut,
-                // not an orange scanner. A soft feathered edge trails it.
-                if scan > 0.005 && !checked {
-                    Rectangle()
-                        .fill(LinearGradient(colors: [Color(hex: 0xFBF6EA).opacity(0),
-                                                      Color(hex: 0xFBF6EA)],
-                                             startPoint: .leading, endPoint: .trailing))
-                        .frame(width: max(0, scan * w), height: 100)
-                        .position(x: scan * w / 2, y: 46)
-                        .blendMode(.screen)
-                        .opacity(0.5)
-                    RoundedRectangle(cornerRadius: 1.5)
-                        .fill(Color(hex: 0xFBF6EA))
-                        .frame(width: 3, height: 108)
-                        .shadow(color: .white.opacity(0.9), radius: 8)
-                        .position(x: scan * w, y: 46)
+    private var tearGesture: some Gesture {
+        DragGesture(minimumDistance: 8)
+            .onChanged { v in
+                guard !checked else { return }
+                let x = max(0, v.translation.width)
+                if x > tearX + 20 { appModel.haptics.tap() }   // a light paper ratchet
+                tearX = x
+            }
+            .onEnded { _ in
+                guard !checked else { return }
+                if tearX >= threshold {
+                    commitTear()
+                } else {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.72)) { tearX = 0 }
                 }
             }
-            .frame(width: w, height: 92)
-            .contentShape(Rectangle().inset(by: -16))
-            .gesture(
-                DragGesture(minimumDistance: 2)
-                    .onChanged { v in
-                        guard !checked else { return }
-                        let f = min(1, max(0, v.location.x / max(1, w)))
-                        scan = max(scan, f)   // the scan only advances
-                        tickIfNeeded(f)
-                        if scan >= 0.985 { validate() }
-                    }
-                    .onEnded { _ in
-                        guard !checked else { return }
-                        if scan >= 0.88 {
-                            validate()
-                        } else {
-                            withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) { scan = 0 }
-                            lastTick = 0
-                        }
-                    }
-            )
-        }
-        .frame(height: 92)
-        .accessibilityElement()
-        .accessibilityLabel("Barcode. Slide across to check in.")
-        .accessibilityAction { validate() }
     }
 
-    /// Light haptic clicks as the scan line sweeps the bars.
-    private func tickIfNeeded(_ f: CGFloat) {
-        for threshold in stride(from: CGFloat(0.2), through: 0.8, by: 0.2)
-        where lastTick < threshold && f >= threshold {
-            appModel.haptics.tap()
-            lastTick = threshold
-        }
-    }
-
-    @ViewBuilder private var stamp: some View {
-        if stampIn {
-            InkStamp(text: "Ready", color: AppColors.terracotta, rotation: -8)
-                .scaleEffect(1.55)
-                .offset(x: 66, y: 20)
-                .transition(.scale(scale: 1.9).combined(with: .opacity))
-        }
-    }
-
-    // MARK: Validation → flight
-
-    private func validate() {
+    private func commitTear() {
         guard !checked else { return }
-        checked = true
-        scan = 1
         appModel.haptics.takeoff()
-        appModel.uiSound.play(.ticketTear)          // the dry scan click
+        appModel.uiSound.play(.ticketTear)          // the paper snap
+        // `checked` drives effTear → 640, so the strip peels fully away.
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.7)) { checked = true }
         withAnimation(AppMotion.sealImpact.respecting(reduceMotion)) { stampIn = true }
-        let beat = reduceMotion ? 0.25 : 0.75
+        let beat = reduceMotion ? 0.25 : 0.8
         let lift = DispatchWorkItem {
             appModel.uiSound.play(.confirm)
             withAnimation(.easeIn(duration: reduceMotion ? 0.1 : 0.45)) {
@@ -1128,8 +1159,17 @@ struct CheckInTicketView: View {
         let launch = DispatchWorkItem { onValidated() }
         pendingBeats = [lift, launch]
         DispatchQueue.main.asyncAfter(deadline: .now() + beat, execute: lift)
-        DispatchQueue.main.asyncAfter(deadline: .now() + beat + (reduceMotion ? 0.25 : 0.75),
+        DispatchQueue.main.asyncAfter(deadline: .now() + beat + (reduceMotion ? 0.25 : 0.7),
                                       execute: launch)
+    }
+
+    @ViewBuilder private var stamp: some View {
+        if stampIn {
+            InkStamp(text: "Ready", color: AppColors.terracotta, rotation: -8)
+                .scaleEffect(1.55)
+                .offset(x: 60, y: -30)
+                .transition(.scale(scale: 1.9).combined(with: .opacity))
+        }
     }
 
     // MARK: Pass content
@@ -1174,47 +1214,24 @@ struct CheckInTicketView: View {
     }
 }
 
-/// The boarding-pass silhouette: a rounded card with two side notches punched
-/// at the perforation line, like a real pass. Fill with `FillStyle(eoFill:)`.
-struct TicketShape: Shape {
-    var cornerRadius: CGFloat = 24
-    var notchRadius: CGFloat = 10
-    /// Distance of the notch centres from the bottom edge.
-    var notchFromBottom: CGFloat = 118
-
-    func path(in rect: CGRect) -> Path {
-        var p = Path(roundedRect: rect, cornerRadius: cornerRadius, style: .continuous)
-        let y = rect.maxY - notchFromBottom
-        p.addEllipse(in: CGRect(x: rect.minX - notchRadius, y: y - notchRadius,
-                                width: notchRadius * 2, height: notchRadius * 2))
-        p.addEllipse(in: CGRect(x: rect.maxX - notchRadius, y: y - notchRadius,
-                                width: notchRadius * 2, height: notchRadius * 2))
-        return p
-    }
-}
-
-/// Deterministic barcode bars (decoration, accessibility-hidden). Bars behind
-/// the scan `highlight` fraction fade toward the paper — reading as the ticket
-/// being *cut away* along the swipe, not lit up by a scanner.
+/// Deterministic barcode bars (decoration, accessibility-hidden) for the
+/// detachable boarding-pass strip.
 struct TicketBars: View {
     let seed: String
     var color: Color = .white
-    var highlight: CGFloat = 0
 
     var body: some View {
         Canvas { ctx, size in
             let scalars = Array(seed.unicodeScalars.map { Int($0.value) })
             guard !scalars.isEmpty else { return }
-            let cut = highlight * size.width
             var x: CGFloat = 0
             var i = 0
             while x < size.width {
                 let v = abs(scalars[i % scalars.count] &+ i &* 7)
                 let barW = CGFloat(1 + (v % 3))
                 if v % 4 != 0 {
-                    let scanned = x <= cut
                     ctx.fill(Path(CGRect(x: x, y: 0, width: barW, height: size.height)),
-                             with: .color(color.opacity(scanned ? 0.12 : 0.82)))
+                             with: .color(color.opacity(0.82)))
                 }
                 x += barW + CGFloat(1 + ((v / 3) % 3))
                 i += 1

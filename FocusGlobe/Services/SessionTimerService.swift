@@ -43,6 +43,14 @@ final class SessionTimerService: ObservableObject {
     var progress: Double { min(1, elapsed / total) }
     var remaining: TimeInterval { max(0, total - elapsed) }
 
+    /// Elapsed computed **live from the wall clock on every read** (not the
+    /// last-published `elapsed`). Reading this inside a `TimelineView` gives a
+    /// countdown that is always correct and never stalls on the publish cadence.
+    /// Pause-aware: returns the frozen accumulated value while paused.
+    var liveElapsed: TimeInterval { min(total, currentElapsed()) }
+    var liveProgress: Double { min(1, liveElapsed / total) }
+    var liveRemaining: TimeInterval { max(0, total - liveElapsed) }
+
     // MARK: - Control
 
     func start() {
