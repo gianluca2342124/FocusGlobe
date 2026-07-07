@@ -43,6 +43,7 @@ struct FocusSessionView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var balloonSway: CGFloat = 0
+    @State private var balloonBob: CGFloat = 0
 
     private var isInfinity: Bool { FlightRouteFactory.isInfinity(vm.route) }
     private var sky: SkyScene {
@@ -94,21 +95,24 @@ struct FocusSessionView: View {
         }
         .onAppear {
             guard !reduceMotion else { return }
-            withAnimation(.easeInOut(duration: 3.8).repeatForever(autoreverses: true)) { balloonSway = 5 }
+            withAnimation(.easeInOut(duration: 4.2).repeatForever(autoreverses: true)) { balloonSway = 5 }
+            withAnimation(.easeInOut(duration: 3.1).repeatForever(autoreverses: true)) { balloonBob = -7 }
         }
     }
 
-    // The small white balloon — rises gently up the screen with progress,
-    // swinging subtly. The landscape stays the protagonist.
+    // The balloon is **tiny** (~7% of screen height) and stays roughly still,
+    // just breathing with a gentle sway + bob. The world scrolls *downward*
+    // behind it (see `SkySceneView`), so the balloon reads as rising while the
+    // landscape — not the balloon — is the protagonist.
     private var balloon: some View {
         GeometryReader { geo in
             let h = geo.size.height
-            let y = h * (0.62 - CGFloat(min(1, skyProgress)) * 0.3)
-            BalloonView(height: 92, showBurner: true, showGlow: false,
-                        assetName: appModel.selectedSkin.assetName)
-                .rotationEffect(.degrees(Double(balloonSway) * 0.4))
-                .offset(x: balloonSway)
-                .position(x: geo.size.width / 2, y: y)
+            let balloonSize = max(34, min(64, h * 0.075))   // 5–8% of screen height
+            MiniBalloonView(size: balloonSize, showGlow: true)
+                .rotationEffect(.degrees(Double(balloonSway) * 0.6))
+                .offset(x: balloonSway, y: balloonBob)
+                .position(x: geo.size.width / 2, y: h * 0.5)
+                .shadow(color: .black.opacity(0.28), radius: 10, y: 6)
         }
         .allowsHitTesting(false)
     }
@@ -155,8 +159,9 @@ struct FocusSessionView: View {
             VStack(spacing: AppSpacing.md) {
                 HStack(alignment: .bottom) {
                     if isInfinity {
+                        // Endless flight — both counters climb from second one.
                         readout(label: "Time Focused",
-                                value: Formatters.durationLabel(minutes: max(0, elapsedSeconds / 60)),
+                                value: Formatters.countdown(elapsedSeconds),
                                 alignment: .leading)
                         Spacer(minLength: AppSpacing.sm)
                         readout(label: "Distance Traveled",
@@ -170,20 +175,15 @@ struct FocusSessionView: View {
                 }
                 .padding(.horizontal, Layout.pad(AppSpacing.lg, 44))
 
-                WhitePauseButton(isPaused: vm.isPaused, size: Layout.pad(58, 70)) { vm.togglePause() }
-
+                // Timed flights pause & resume from the centre; an endless flight
+                // can't pause — its one central control lands the flight now.
                 if isInfinity {
-                    Button {
+                    LandNowButton(size: Layout.pad(58, 70)) {
                         appModel.tapFeedback()
                         vm.landNow()
-                    } label: {
-                        Text("Land now")
-                            .font(AppTypography.callout)
-                            .foregroundStyle(.white.opacity(0.85))
-                            .padding(.horizontal, AppSpacing.md).padding(.vertical, 8)
-                            .background(Capsule().fill(.white.opacity(0.1)))
                     }
-                    .buttonStyle(SoftPressStyle())
+                } else {
+                    WhitePauseButton(isPaused: vm.isPaused, size: Layout.pad(58, 70)) { vm.togglePause() }
                 }
             }
             .frame(maxWidth: Layout.pad(Layout.journeyReadouts, .infinity))
@@ -228,5 +228,33 @@ private struct WhitePauseButton: View {
         }
         .buttonStyle(SoftPressStyle())
         .accessibilityLabel(isPaused ? "Resume" : "Pause")
+    }
+}
+
+/// The endless-flight central control. An open-ended (∞) flight never pauses —
+/// instead its one button lands the flight now, banking it as complete. Same
+/// warm disc as the pause button, with a descend glyph + a small caption.
+private struct LandNowButton: View {
+    var size: CGFloat = 58
+    let action: () -> Void
+
+    var body: some View {
+        VStack(spacing: 7) {
+            Button(action: action) {
+                Image(systemName: "arrow.down.to.line")
+                    .font(.system(size: size * 0.34, weight: .bold))
+                    .foregroundStyle(Color(hex: 0x14120E))
+                    .frame(width: size, height: size)
+                    .background(Circle().fill(Color(hex: 0xF4EFE4)))
+                    .shadow(color: .black.opacity(0.3), radius: 12, y: 6)
+            }
+            .buttonStyle(SoftPressStyle())
+            Text("Land now")
+                .font(AppTypography.caption)
+                .foregroundStyle(.white.opacity(0.8))
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Land now")
+        .accessibilityHint("Ends this endless flight and saves it as complete.")
     }
 }
