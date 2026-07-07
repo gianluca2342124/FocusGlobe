@@ -57,25 +57,7 @@ struct FocusSessionView: View {
     private var elapsedSeconds: Int {
         max(0, vm.route.durationMinutes * 60 - vm.remainingSeconds)
     }
-
-    // MARK: Local flight display model — the *visible* numbers.
-    //
-    // The symbolic route distance is the single source for the readouts (never
-    // the old geographic origin→destination span), and it re-derives on every
-    // one-second timer tick, so both values move from the very first second.
-
-    private var remainingDistanceText: String {
-        Formatters.flightKm(max(0, vm.route.approximateDistanceKm * (1 - min(1, vm.progress))))
-    }
-    private var traveledDistanceText: String {
-        Formatters.flightKm(FlightRouteFactory.traveledKm(elapsedSeconds: elapsedSeconds))
-    }
-    /// Infinity clock: live seconds under an hour ("12:34"), then "1h 12m".
-    private var focusedTimeText: String {
-        elapsedSeconds < 3600
-            ? Formatters.countdown(elapsedSeconds)
-            : Formatters.durationLabel(minutes: elapsedSeconds / 60)
-    }
+    private var totalDistanceKm: Double { vm.route.approximateDistanceKm }
 
     var body: some View {
         ZStack {
@@ -131,8 +113,8 @@ struct FocusSessionView: View {
     private var balloon: some View {
         GeometryReader { geo in
             let h = geo.size.height
-            let balloonSize = max(34, min(64, h * 0.075))   // 5–8% of screen height
-            MiniBalloonView(size: balloonSize, showGlow: true)
+            let balloonSize = max(38, min(52, h * 0.07))   // 5–8% of screen height
+            FlightBalloonView(size: balloonSize, showGlow: true)
                 .rotationEffect(.degrees(Double(balloonSway) * 0.6))
                 .offset(x: balloonSway, y: balloonBob)
                 .position(x: geo.size.width / 2, y: h * 0.5)
@@ -181,17 +163,11 @@ struct FocusSessionView: View {
         VStack(spacing: 0) {
             Spacer()
             VStack(spacing: AppSpacing.md) {
-                HStack(alignment: .bottom) {
-                    if isInfinity {
-                        // Endless flight — both counters climb from second one.
-                        readout(label: "Time Focused", value: focusedTimeText, alignment: .leading)
-                        Spacer(minLength: AppSpacing.sm)
-                        readout(label: "Distance Traveled", value: traveledDistanceText, alignment: .trailing)
-                    } else {
-                        readout(label: "Time Remaining", value: vm.remainingMinutesText, alignment: .leading)
-                        Spacer(minLength: AppSpacing.sm)
-                        readout(label: "Distance Remaining", value: remainingDistanceText, alignment: .trailing)
-                    }
+                // A dedicated one-second clock drives the visible numbers, so
+                // they always tick even independently of the session engine's
+                // publishing — no more values frozen on a whole minute.
+                TimelineView(.periodic(from: .now, by: 1)) { _ in
+                    metricsRow
                 }
                 .padding(.horizontal, Layout.pad(AppSpacing.lg, 44))
 
@@ -211,6 +187,29 @@ struct FocusSessionView: View {
         }
         .padding(.bottom, AppSpacing.lg)
         .transition(.opacity)
+    }
+
+    /// The two readouts, recomputed on the one-second tick from the *live*
+    /// display model (elapsed drives everything; symbolic route km is the only
+    /// distance source — never the old geographic span).
+    @ViewBuilder private var metricsRow: some View {
+        HStack(alignment: .bottom) {
+            if isInfinity {
+                readout(label: "Time Focused",
+                        value: Formatters.flightClock(elapsedSeconds), alignment: .leading)
+                Spacer(minLength: AppSpacing.sm)
+                readout(label: "Distance Traveled",
+                        value: Formatters.flightKm(FlightRouteFactory.traveledKm(elapsedSeconds: elapsedSeconds)),
+                        alignment: .trailing)
+            } else {
+                readout(label: "Time Remaining",
+                        value: Formatters.flightClock(vm.remainingSeconds), alignment: .leading)
+                Spacer(minLength: AppSpacing.sm)
+                readout(label: "Distance Remaining",
+                        value: Formatters.flightKm(max(0, totalDistanceKm * (1 - min(1, vm.progress)))),
+                        alignment: .trailing)
+            }
+        }
     }
 
     fileprivate func readout(label: String, value: String, alignment: HorizontalAlignment) -> some View {

@@ -1,5 +1,8 @@
 import Foundation
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 // MARK: - Sky scene (world identity)
 
@@ -163,21 +166,23 @@ struct SkySceneView: View {
         // The downward stream. Progress carries the big journey displacement;
         // a gentle constant drift keeps the ascent readable even when progress
         // barely moves (long / infinity flights). Grounded modes never scroll.
-        let climb: Double = motion == .flight ? alt * Double(h) * 2.4 + time * 22 : 0
+        let climb: Double = motion == .flight ? alt * Double(h) * 2.8 + time * 26 : 0
 
-        // Stage weights — every layer fades in/out on a smooth curve, so no
-        // element ever pops or hard-cuts.
-        let hillsW   = 1 - smoothstep(0.045, 0.16, alt)
-        let fogW     = 1 - smoothstep(0.03, 0.13, alt)
-        let glowW    = (1 - smoothstep(0.28, 0.58, alt)) * scene.glowStrength
-        let seaW     = bell(center: 0.24, width: 0.15, alt)
-        let cloudW   = (0.55 + seaW * 0.45) * (1 - smoothstep(0.55, 0.86, alt))
-        let moonW    = smoothstep(0.42, 0.60, alt)
-        let starW    = max(scene.starFloor * (0.4 + 0.6 * alt + 0.6), smoothstep(0.38, 0.72, alt))
-        let auroraW  = bell(center: 0.72, width: 0.14, alt)
-        let snowW    = bell(center: 0.70, width: 0.16, alt)
-        let spaceW   = smoothstep(0.78, 0.95, alt)
-        let dustW    = (1 - smoothstep(0.30, 0.52, alt)) * 0.7
+        // Stage weights, tuned to the six chapters — Night 0–.15 · Cloud .15–.32
+        // · Moon .32–.48 · Aurora .48–.68 · Starfield .68–.85 · Deep Space .85–1.
+        // Every layer fades on a smooth curve with wide crossfades, so nothing
+        // pops or hard-cuts.
+        let hillsW   = 1 - smoothstep(0.06, 0.20, alt)
+        let fogW     = 1 - smoothstep(0.05, 0.17, alt)
+        let glowW    = (1 - smoothstep(0.26, 0.52, alt)) * scene.glowStrength
+        let seaW     = bell(center: 0.24, width: 0.14, alt)
+        let cloudW   = (0.5 + seaW * 0.5) * (1 - smoothstep(0.52, 0.80, alt))
+        let moonW    = smoothstep(0.30, 0.44, alt) * (1 - smoothstep(0.86, 0.99, alt))
+        let starW    = max(scene.starFloor, smoothstep(0.30, 0.72, alt))
+        let auroraW  = bell(center: 0.58, width: 0.13, alt)
+        let snowW    = bell(center: 0.58, width: 0.15, alt)
+        let spaceW   = smoothstep(0.80, 0.96, alt)
+        let dustW    = (1 - smoothstep(0.24, 0.44, alt)) * 0.7
 
         return ZStack {
             sunGlow(size: size, weight: glowW)
@@ -186,7 +191,8 @@ struct SkySceneView: View {
                 nebula(size: size, weight: spaceW)
                 planet(size: size, weight: spaceW, time: time)
             }
-            starLayer(size: size, time: time, weight: min(1, starW), spaceW: spaceW)
+            starLayer(size: size, time: time, climb: climb,
+                      weight: min(1, starW), spaceW: spaceW)
             if auroraW > 0.01 {
                 auroraLayer(size: size, time: time, weight: auroraW)
             }
@@ -284,16 +290,19 @@ struct SkySceneView: View {
 
     // MARK: Stars, meteors, comet
 
-    private func starLayer(size: CGSize, time: TimeInterval,
+    private func starLayer(size: CGSize, time: TimeInterval, climb: Double,
                            weight: Double, spaceW: Double) -> some View {
         Canvas { ctx, s in
             guard weight > 0.01 else { return }
             var rng = SeededRNG(seed: 0x57A2_F1E1)
             let count = 150
+            // The far star layer drifts downward slowly with the flight, so even
+            // the deep sky reads as descending (the slowest parallax plane).
+            let drift = CGFloat(climb * 0.10)
             for i in 0..<count {
                 let u1 = rng.unit(), u2 = rng.unit(), u3 = rng.unit(), u4 = rng.unit()
                 let x = u1 * s.width
-                let y = u2 * s.height
+                let y = (u2 * s.height + drift).truncatingRemainder(dividingBy: s.height)
                 let r = 0.5 + u3 * (1.0 + spaceW * 0.9)
                 // Deep-space stars only join at high altitude.
                 let member = Double(i) / Double(count)
@@ -571,6 +580,48 @@ struct RollingHillsShape: Shape {
         p.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
         p.closeSubpath()
         return p
+    }
+}
+
+// MARK: - Flight balloon (art asset with a safe vector fallback)
+
+/// The balloon shown across the flight experience. Prefers the bundled
+/// `BalloonSkin_Default` art; if that asset isn't present it falls back to the
+/// crisp vector `MiniBalloonView`, so the build never depends on the image.
+/// `size` is the balloon's height; the art keeps its aspect ratio.
+struct FlightBalloonView: View {
+    var size: CGFloat = 60
+    var showGlow: Bool = true
+
+    /// Resolved once — a missing asset simply means "use the vector".
+    private static let hasAsset: Bool = {
+        #if canImport(UIKit)
+        return UIImage(named: "BalloonSkin_Default") != nil
+        #else
+        return false
+        #endif
+    }()
+
+    var body: some View {
+        if Self.hasAsset {
+            ZStack {
+                if showGlow {
+                    Circle().fill(AppColors.gold.opacity(0.32))
+                        .frame(width: size * 0.5, height: size * 0.5)
+                        .blur(radius: size * 0.16)
+                        .offset(y: size * 0.34)
+                }
+                Image("BalloonSkin_Default")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: size)
+                    .shadow(color: .black.opacity(0.28), radius: size * 0.08, y: size * 0.05)
+            }
+            .frame(height: size)
+            .accessibilityHidden(true)
+        } else {
+            MiniBalloonView(size: size, showGlow: showGlow)
+        }
     }
 }
 

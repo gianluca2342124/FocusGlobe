@@ -427,10 +427,10 @@ struct DurationDialView: View {
 // MARK: - Step 2 · Pack your focus (the drag ritual)
 
 /// The focus ritual: a dark hot-air-balloon silhouette waits centre-screen and
-/// the user **drags** a glowing focus token up into its basket socket. The
-/// socket warms as the token nears; on the drop the burner lights, the envelope
-/// ignites from within and the balloon is packed. Tap-to-pack works too, and
-/// an eighth **Custom** token names any focus.
+/// the user **drags** (or taps) a glowing focus token up into its basket socket.
+/// The socket warms as the token nears; on the drop the burner lights, the
+/// envelope ignites from within, gold sparks lift — and the step advances to
+/// the boarding pass on its own. No confirm button: pack and go.
 struct PackFocusView: View {
     @Binding var selected: FocusPreset?
     let onContinue: () -> Void
@@ -442,16 +442,12 @@ struct PackFocusView: View {
     @State private var dropFrame: CGRect = .zero
     @State private var didInteract = false
     @State private var loadedPop = false
-    @State private var showCustomAlert = false
-    @State private var customText = ""
+    @State private var packing = false
+    /// The auto-advance beat, cancellable so backing out can't launch onward.
+    @State private var advance: DispatchWorkItem?
 
-    /// The custom token that replaces the old "Fly" preset in this ritual.
-    private static let customTile = FocusPreset(
-        title: "Custom", systemImage: "square.and.pencil", accent: Color(hex: 0xC9A86A))
-
-    private var tokens: [FocusPreset] {
-        FocusPreset.all.filter { $0.title != "Fly" } + [Self.customTile]
-    }
+    /// The eight focus intentions (Fly included; no Custom in this pass).
+    private var tokens: [FocusPreset] { FocusPreset.all }
 
     /// Forgiving, magnetic hit test around the basket socket — a drop never
     /// needs to be pixel-perfect.
@@ -478,10 +474,8 @@ struct PackFocusView: View {
                         .animation(.easeInOut(duration: 0.25), value: selected != nil)
                     Spacer(minLength: 0)
                     tokenTray
-                    AppPrimaryButton(title: selected == nil ? "Pack a focus" : "Continue",
-                                     systemImage: selected == nil ? "bag" : "arrow.right",
-                                     isEnabled: selected != nil) { onContinue() }
-                        .padding(.top, 2)
+                        .opacity(packing ? 0.4 : 1)
+                        .allowsHitTesting(!packing)
                 }
                 .padding(.horizontal, AppSpacing.screen)
                 .padding(.bottom, AppSpacing.lg)
@@ -503,6 +497,7 @@ struct PackFocusView: View {
             .onPreferenceChange(PackDropFrameKey.self) { dropFrame = $0 }
         }
         .onAppear { dragging = nil }
+        .onDisappear { advance?.cancel() }
         // A system-cancelled drag (backgrounding, interruption) never calls
         // onEnded — don't leave a token frozen mid-air.
         .onChange(of: scenePhase) { _, phase in
@@ -510,20 +505,10 @@ struct PackFocusView: View {
                 withAnimation(.easeOut(duration: 0.2)) { dragging = nil }
             }
         }
-        .alert("Name your focus", isPresented: $showCustomAlert) {
-            TextField("What are you working on?", text: $customText)
-            Button("Pack") {
-                let trimmed = customText.trimmingCharacters(in: .whitespacesAndNewlines)
-                assign(FocusPreset(title: trimmed.isEmpty ? "Focus" : String(trimmed.prefix(24)),
-                                   systemImage: "sparkles",
-                                   accent: Color(hex: 0xC9A86A)))
-            }
-            Button("Cancel", role: .cancel) {}
-        }
     }
 
     private var caption: String {
-        if let s = selected { return "\(s.title) is packed — ready to check in" }
+        if let s = selected { return "\(s.title) packed — taking off" }
         return "Drag a focus into the balloon"
     }
 
@@ -540,6 +525,7 @@ struct PackFocusView: View {
             ropes(width: basketW, height: w * 0.12)
             basket(width: basketW, height: basketH, dropSize: dropSize)
                 .overlay(alignment: .top) { burnerGlow.offset(y: -w * 0.13) }
+                .overlay { PackSparkBurst(active: loadedPop) }
         }
     }
 
@@ -681,7 +667,6 @@ struct PackFocusView: View {
     private func trayChip(_ preset: FocusPreset) -> some View {
         let isDragging = dragging?.id == preset.id
         let isLoaded = selected?.id == preset.id
-            || (preset.id == Self.customTile.id && selected.map { p in tokens.allSatisfy { $0.id != p.id } } == true)
         return tokenCard(preset, compact: false)
             .opacity(isDragging ? 0.35 : (isLoaded ? 0.45 : 1))
             .onTapGesture { handleDrop(preset) }
@@ -709,12 +694,7 @@ struct PackFocusView: View {
 
     private func handleDrop(_ preset: FocusPreset) {
         didInteract = true
-        if preset.id == Self.customTile.id {
-            customText = ""
-            showCustomAlert = true
-        } else {
-            assign(preset)
-        }
+        assign(preset)
     }
 
     /// A premium, colour-filled focus token (`active` = the dragged copy).
@@ -752,16 +732,23 @@ struct PackFocusView: View {
     }
 
     private func assign(_ preset: FocusPreset) {
+        guard !packing else { return }
         appModel.haptics.takeoff()
         appModel.uiSound.play(.focusDrop)
         withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
             selected = preset
             dragging = nil
+            packing = true
         }
         withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) { loadedPop = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.32) {
             withAnimation(.easeOut(duration: 0.2)) { loadedPop = false }
         }
+        // The balloon ignites, then the ritual carries itself into the ticket —
+        // no Continue tap. Cancellable so a Back before the beat aborts cleanly.
+        let work = DispatchWorkItem { onContinue() }
+        advance = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.9, execute: work)
     }
 }
 
@@ -809,6 +796,28 @@ private struct RitualRibsShape: Shape {
                            control: CGPoint(x: midX, y: rect.minY + h * 0.5))
         }
         return p
+    }
+}
+
+/// A short burst of small gold sparks lifting from the basket the moment a
+/// focus is packed — the ignition. Deterministic, cheap, and self-resetting.
+private struct PackSparkBurst: View {
+    let active: Bool
+    var body: some View {
+        ZStack {
+            ForEach(0..<10, id: \.self) { i in
+                let ang = Double(i) / 10 * 2 * .pi
+                Circle()
+                    .fill(AppColors.gold)
+                    .frame(width: 4, height: 4)
+                    .offset(x: active ? CGFloat(cos(ang)) * 34 : 0,
+                            y: active ? CGFloat(sin(ang)) * 34 - 10 : 0)
+                    .opacity(active ? 0 : 0.9)
+                    .scaleEffect(active ? 0.3 : 1)
+                    .animation(.easeOut(duration: 0.55).delay(Double(i) * 0.012), value: active)
+            }
+        }
+        .allowsHitTesting(false)
     }
 }
 
@@ -925,14 +934,14 @@ struct CheckInTicketView: View {
                 .padding(.bottom, AppSpacing.md)
         }
         .frame(maxWidth: 480)
-        .frame(height: 430)
+        .frame(height: 452)
         .background(
-            TicketShape(cornerRadius: 24, notchRadius: 10, notchFromBottom: 118)
+            TicketShape(cornerRadius: 24, notchRadius: 10, notchFromBottom: 132)
                 .fill(paper, style: FillStyle(eoFill: true))
                 .overlay(
                     PaperGrain(intensity: 0.8)
                         .environment(\.colorScheme, .light)   // dark grain on cream
-                        .clipShape(TicketShape(cornerRadius: 24, notchRadius: 10, notchFromBottom: 118))
+                        .clipShape(TicketShape(cornerRadius: 24, notchRadius: 10, notchFromBottom: 132))
                 )
                 .shadow(color: .black.opacity(0.45), radius: 26, y: 16)
         )
@@ -962,43 +971,59 @@ struct CheckInTicketView: View {
 
     private var ticketBody: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
+            // The headline trio — DURATION, FOCUS, SKY — reads at a glance.
             HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 1) {
                     fieldLabel("DURATION")
                     Text(durationBig)
-                        .font(.system(size: 40, weight: .bold, design: .rounded))
+                        .font(.system(size: 50, weight: .heavy, design: .rounded))
                         .foregroundStyle(ink)
-                        .minimumScaleFactor(0.55)
+                        .minimumScaleFactor(0.5)
                         .lineLimit(1)
                 }
                 Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
+                VStack(alignment: .trailing, spacing: 1) {
                     fieldLabel("SKY")
                     Text(sky.name)
-                        .font(.system(size: 20, weight: .semibold, design: .serif))
+                        .font(.system(size: 25, weight: .semibold, design: .serif))
                         .foregroundStyle(ink)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.7)
+                        .minimumScaleFactor(0.6)
                 }
             }
-            .padding(.top, AppSpacing.sm)
+            .padding(.top, AppSpacing.xs)
 
-            HStack(alignment: .top, spacing: AppSpacing.md) {
-                field("DATE", dateText)
-                field("FOCUS", focus?.title ?? "Focus")
-                field("FLIGHT ID", flightID)
+            VStack(alignment: .leading, spacing: 1) {
+                fieldLabel("FOCUS")
+                Text((focus?.title ?? "Focus").uppercased())
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppColors.terracotta)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
             }
 
-            HStack(spacing: 6) {
+            HStack(alignment: .top, spacing: AppSpacing.lg) {
+                field("DATE", dateText)
+                field("FLIGHT ID", flightID)
+                statusChip
+            }
+        }
+    }
+
+    private var statusChip: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            fieldLabel("STATUS")
+            HStack(spacing: 5) {
                 Circle()
                     .fill(checked ? Color(hex: 0x3F9C7C) : inkSoft.opacity(0.5))
                     .frame(width: 7, height: 7)
-                Text(checked ? "READY TO FLY" : "AWAITING CHECK-IN")
-                    .font(.system(size: 10, weight: .heavy, design: .monospaced))
-                    .tracking(1.6)
+                Text(checked ? "READY" : "CHECK IN")
+                    .font(.system(size: 12, weight: .heavy, design: .monospaced))
+                    .tracking(1.2)
                     .foregroundStyle(checked ? Color(hex: 0x3F9C7C) : inkSoft)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var perforation: some View {
@@ -1017,20 +1042,28 @@ struct CheckInTicketView: View {
         GeometryReader { geo in
             let w = geo.size.width
             ZStack(alignment: .leading) {
-                TicketBars(seed: barcodeSeed, color: ink, highlight: scan,
-                           accent: AppColors.terracotta)
-                    .frame(height: 62)
-                // The scan line riding the finger.
+                TicketBars(seed: barcodeSeed, color: ink, highlight: scan)
+                    .frame(height: 92)
+                // The cream cutting line riding the finger — paper being cut,
+                // not an orange scanner. A soft feathered edge trails it.
                 if scan > 0.005 && !checked {
+                    Rectangle()
+                        .fill(LinearGradient(colors: [Color(hex: 0xFBF6EA).opacity(0),
+                                                      Color(hex: 0xFBF6EA)],
+                                             startPoint: .leading, endPoint: .trailing))
+                        .frame(width: max(0, scan * w), height: 100)
+                        .position(x: scan * w / 2, y: 46)
+                        .blendMode(.screen)
+                        .opacity(0.5)
                     RoundedRectangle(cornerRadius: 1.5)
-                        .fill(AppColors.gold)
-                        .frame(width: 3, height: 74)
-                        .shadow(color: AppColors.gold.opacity(0.8), radius: 7)
-                        .position(x: scan * w, y: 31)
+                        .fill(Color(hex: 0xFBF6EA))
+                        .frame(width: 3, height: 108)
+                        .shadow(color: .white.opacity(0.9), radius: 8)
+                        .position(x: scan * w, y: 46)
                 }
             }
-            .frame(width: w, height: 62)
-            .contentShape(Rectangle().inset(by: -14))
+            .frame(width: w, height: 92)
+            .contentShape(Rectangle().inset(by: -16))
             .gesture(
                 DragGesture(minimumDistance: 2)
                     .onChanged { v in
@@ -1051,7 +1084,7 @@ struct CheckInTicketView: View {
                     }
             )
         }
-        .frame(height: 62)
+        .frame(height: 92)
         .accessibilityElement()
         .accessibilityLabel("Barcode. Slide across to check in.")
         .accessibilityAction { validate() }
@@ -1068,9 +1101,9 @@ struct CheckInTicketView: View {
 
     @ViewBuilder private var stamp: some View {
         if stampIn {
-            InkStamp(text: "Checked in", color: AppColors.terracotta, rotation: -8)
-                .scaleEffect(1.35)
-                .offset(x: 70, y: 26)
+            InkStamp(text: "Ready", color: AppColors.terracotta, rotation: -8)
+                .scaleEffect(1.55)
+                .offset(x: 66, y: 20)
                 .transition(.scale(scale: 1.9).combined(with: .opacity))
         }
     }
@@ -1161,13 +1194,12 @@ struct TicketShape: Shape {
 }
 
 /// Deterministic barcode bars (decoration, accessibility-hidden). Bars behind
-/// the scan `highlight` fraction render in the warm accent — the pass visibly
-/// reacts as the finger sweeps it.
+/// the scan `highlight` fraction fade toward the paper — reading as the ticket
+/// being *cut away* along the swipe, not lit up by a scanner.
 struct TicketBars: View {
     let seed: String
     var color: Color = .white
     var highlight: CGFloat = 0
-    var accent: Color = AppColors.terracotta
 
     var body: some View {
         Canvas { ctx, size in
@@ -1182,7 +1214,7 @@ struct TicketBars: View {
                 if v % 4 != 0 {
                     let scanned = x <= cut
                     ctx.fill(Path(CGRect(x: x, y: 0, width: barW, height: size.height)),
-                             with: .color(scanned ? accent.opacity(0.95) : color.opacity(0.82)))
+                             with: .color(color.opacity(scanned ? 0.12 : 0.82)))
                 }
                 x += barW + CGFloat(1 + ((v / 3) % 3))
                 i += 1

@@ -18,6 +18,15 @@ enum Formatters {
         return String(format: "%02d:%02d", minutes, secs)
     }
 
+    /// A **live** flight clock that visibly ticks every second: `MM:SS` under an
+    /// hour ("24:59"), then compact `1h 12m` for longer flights. Used for the
+    /// active-flight readouts so the value is never seen frozen on whole minutes.
+    static func flightClock(_ seconds: Int) -> String {
+        let s = max(0, seconds)
+        if s < 3600 { return String(format: "%d:%02d", s / 60, s % 60) }
+        return String(format: "%dh %02dm", s / 3600, (s % 3600) / 60)
+    }
+
     /// A friendly duration label, e.g. "5 min", "1h", "1h 30m", "12h".
     static func durationLabel(minutes: Int) -> String {
         guard minutes >= 60 else { return "\(minutes) min" }

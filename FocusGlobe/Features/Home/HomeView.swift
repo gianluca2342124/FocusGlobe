@@ -37,8 +37,8 @@ struct HomeView: View {
             // The small white balloon — gently floating, never the protagonist.
             // The living sky behind it is the scene; the balloon stays small.
             GeometryReader { geo in
-                let size = min(104, geo.size.height * 0.12)
-                MiniBalloonView(size: size, showGlow: true)
+                let size = max(70, min(90, geo.size.height * 0.11))
+                FlightBalloonView(size: size, showGlow: true)
                     .position(x: geo.size.width / 2, y: geo.size.height * 0.36 + balloonFloat)
                     .shadow(color: .black.opacity(0.28), radius: 12, y: 7)
             }
