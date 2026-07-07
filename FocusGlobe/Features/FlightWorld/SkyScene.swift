@@ -499,14 +499,17 @@ struct SkySceneView: View {
 
     private func particles(size: CGSize, time: TimeInterval, climb: Double,
                            dustW: Double, snowW: Double) -> some View {
-        Canvas { ctx, s in
+        // Vertical fall belongs to flight only — the grounded world must not
+        // stream in any direction. Horizontal drift stays as the ambient life.
+        let fall: Double = motion == .flight ? time : 0
+        return Canvas { ctx, s in
             if dustW > 0.01 {
                 var rng = SeededRNG(seed: 0x9A17_2C4B)
                 for i in 0..<14 {
                     let u1 = rng.unit(), u2 = rng.unit(), u3 = rng.unit()
                     let x = (u1 * s.width + CGFloat(time * (5 + u3 * 7)))
                         .truncatingRemainder(dividingBy: s.width)
-                    let y = (u2 * s.height + CGFloat(climb * 0.25 + time * 3 * Double(i % 3)))
+                    let y = (u2 * s.height + CGFloat(climb * 0.25 + fall * 3 * Double(i % 3)))
                         .truncatingRemainder(dividingBy: s.height)
                     let r = 0.7 + u3 * 1.0
                     ctx.fill(Path(ellipseIn: CGRect(x: x, y: y, width: r, height: r)),
@@ -519,7 +522,7 @@ struct SkySceneView: View {
                     let u1 = rng.unit(), u2 = rng.unit(), u3 = rng.unit()
                     let sway = motion == .still ? 0.0 : sin(time * 0.5 + Double(i)) * 16
                     let x = (u1 * s.width + CGFloat(sway)).truncatingRemainder(dividingBy: s.width)
-                    let y = (u2 * s.height + CGFloat(time * 13 + climb * 0.5))
+                    let y = (u2 * s.height + CGFloat(fall * 13 + climb * 0.5))
                         .truncatingRemainder(dividingBy: s.height)
                     let r = 0.9 + u3 * 1.2
                     ctx.fill(Path(ellipseIn: CGRect(x: x, y: y, width: r, height: r)),

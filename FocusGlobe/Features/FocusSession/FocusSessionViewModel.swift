@@ -313,7 +313,10 @@ final class FocusSessionViewModel: ObservableObject {
         landingSummary = appModel.completeJourney(
             origin: origin,
             route: route,
-            focusedSeconds: Int(timer.total.rounded()),
+            // Bank what was actually flown. The timer clamps elapsed == total on
+            // a natural finish, so this only differs for "Land now" on an
+            // endless flight — which must never bank the full 12-hour cap.
+            focusedSeconds: Int(timer.elapsed.rounded()),
             intention: intention
         )
         // Reveal the Landing screen (with its postcard) immediately. The single

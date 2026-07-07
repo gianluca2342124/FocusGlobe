@@ -435,6 +435,7 @@ struct PackFocusView: View {
     @Binding var selected: FocusPreset?
     let onContinue: () -> Void
     @EnvironmentObject private var appModel: AppModel
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var dragging: FocusPreset?
     @State private var dragPoint: CGPoint = .zero
@@ -502,6 +503,13 @@ struct PackFocusView: View {
             .onPreferenceChange(PackDropFrameKey.self) { dropFrame = $0 }
         }
         .onAppear { dragging = nil }
+        // A system-cancelled drag (backgrounding, interruption) never calls
+        // onEnded — don't leave a token frozen mid-air.
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active {
+                withAnimation(.easeOut(duration: 0.2)) { dragging = nil }
+            }
+        }
         .alert("Name your focus", isPresented: $showCustomAlert) {
             TextField("What are you working on?", text: $customText)
             Button("Pack") {
@@ -845,6 +853,9 @@ struct CheckInTicketView: View {
     @State private var flyAway = false
     @State private var started = false
     @State private var lastTick: CGFloat = 0
+    /// The scheduled check-in beats, cancellable so backing out of this step
+    /// mid-validation can never launch a flight behind the user's back.
+    @State private var pendingBeats: [DispatchWorkItem] = []
 
     private let paper = Color(hex: 0xF5EBD8)
     private let ink = Color(hex: 0x2A2119)
@@ -870,6 +881,10 @@ struct CheckInTicketView: View {
             Spacer(minLength: 0)
         }
         .padding(.bottom, AppSpacing.lg)
+        .onDisappear {
+            pendingBeats.forEach { $0.cancel() }
+            pendingBeats.removeAll()
+        }
     }
 
     @ViewBuilder private var hint: some View {
@@ -1070,16 +1085,18 @@ struct CheckInTicketView: View {
         appModel.uiSound.play(.ticketTear)          // the dry scan click
         withAnimation(AppMotion.sealImpact.respecting(reduceMotion)) { stampIn = true }
         let beat = reduceMotion ? 0.25 : 0.75
-        DispatchQueue.main.asyncAfter(deadline: .now() + beat) {
+        let lift = DispatchWorkItem {
             appModel.uiSound.play(.confirm)
             withAnimation(.easeIn(duration: reduceMotion ? 0.1 : 0.45)) {
                 flyAway = true
                 started = true
             }
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + beat + (reduceMotion ? 0.25 : 0.75)) {
-            onValidated()
-        }
+        let launch = DispatchWorkItem { onValidated() }
+        pendingBeats = [lift, launch]
+        DispatchQueue.main.asyncAfter(deadline: .now() + beat, execute: lift)
+        DispatchQueue.main.asyncAfter(deadline: .now() + beat + (reduceMotion ? 0.25 : 0.75),
+                                      execute: launch)
     }
 
     // MARK: Pass content
