@@ -346,22 +346,3 @@ struct MiniBalloonView: View {
         .accessibilityHidden(true)
     }
 }
-
-/// A classic hot-air-balloon envelope silhouette (teardrop with a rounded top).
-struct BalloonEnvelope: Shape {
-    func path(in rect: CGRect) -> Path {
-        var p = Path()
-        let w = rect.width, h = rect.height
-        p.move(to: CGPoint(x: w * 0.5, y: h))                       // basket mouth
-        p.addCurve(to: CGPoint(x: 0, y: h * 0.42),
-                   control1: CGPoint(x: w * 0.14, y: h * 0.9),
-                   control2: CGPoint(x: 0, y: h * 0.66))
-        p.addArc(center: CGPoint(x: w * 0.5, y: h * 0.42),
-                 radius: w * 0.5, startAngle: .degrees(180), endAngle: .degrees(0), clockwise: false)
-        p.addCurve(to: CGPoint(x: w * 0.5, y: h),
-                   control1: CGPoint(x: w, y: h * 0.66),
-                   control2: CGPoint(x: w * 0.86, y: h * 0.9))
-        p.closeSubpath()
-        return p
-    }
-}

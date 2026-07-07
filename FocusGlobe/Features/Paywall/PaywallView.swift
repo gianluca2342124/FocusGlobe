@@ -51,7 +51,7 @@ struct PaywallView: View {
                     VStack(spacing: AppSpacing.sm) {
                         balloonHero
                         Text("Unlock FocusGlobe Ultra")
-                            .font(.system(size: Layout.pad(26, 34), weight: .bold, design: .rounded))
+                            .font(.system(size: Layout.pad(26, 34), weight: .bold, design: .serif))
                             .foregroundStyle(.white)
                             .multilineTextAlignment(.center)
                         benefitsCard

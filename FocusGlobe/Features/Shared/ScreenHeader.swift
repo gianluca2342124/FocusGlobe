@@ -24,7 +24,7 @@ struct ScreenHeader: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(AppTypography.title)
+                    .font(AppTypography.serifTitle)
                     .foregroundStyle(AppColors.textPrimary)
                 if let subtitle {
                     Text(subtitle)

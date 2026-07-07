@@ -31,10 +31,12 @@ struct HomeView: View {
             .allowsHitTesting(false)
 
             // The small white balloon — gently floating, never the protagonist.
+            // The living sky behind it is the scene; the balloon stays small.
             GeometryReader { geo in
-                BalloonView(height: 130, showBurner: true, showGlow: true,
-                            assetName: appModel.selectedSkin.assetName)
-                    .position(x: geo.size.width / 2, y: geo.size.height * 0.38 + balloonFloat)
+                let size = min(104, geo.size.height * 0.12)
+                MiniBalloonView(size: size, showGlow: true)
+                    .position(x: geo.size.width / 2, y: geo.size.height * 0.36 + balloonFloat)
+                    .shadow(color: .black.opacity(0.28), radius: 12, y: 7)
             }
             .allowsHitTesting(false)
 
