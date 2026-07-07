@@ -203,6 +203,14 @@ struct DurationPickerView: View {
                         .padding(.horizontal, 4)
                 }
 
+                #if FOCUS_SHIELD_ENABLED
+                // "Leave them on the ground": pick apps to block for this flight.
+                // The shield applies on session start and lifts on landing/cancel
+                // (already wired in FocusSessionViewModel); fully optional.
+                FocusShieldBoardingRow(service: appModel.focusShield,
+                                       ink: .white, inkSoft: .white.opacity(0.6))
+                #endif
+
                 AppPrimaryButton(title: "Continue", systemImage: "arrow.right") { onContinue() }
                     .padding(.top, 2)
             }
