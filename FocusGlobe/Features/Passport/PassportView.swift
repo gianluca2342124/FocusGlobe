@@ -12,6 +12,15 @@ struct PassportView: View {
 
     private var progress: UserProgress { appModel.progress }
 
+    // MARK: Derived flight stats (from the on-device session history)
+
+    private var completedFlights: [FocusSessionRecord] { appModel.history.filter { $0.completed } }
+    private var totalFocusMinutes: Int { completedFlights.reduce(0) { $0 + $1.focusedSeconds } / 60 }
+    private var totalDistanceKm: Double { completedFlights.reduce(0) { $0 + $1.distanceKm } }
+    private var flightsCompleted: Int { max(progress.landings, completedFlights.count) }
+    private var skiesDiscovered: Int { Set(completedFlights.map { $0.destinationName }).count }
+    private var totalSkies: Int { max(SkyScene.all.count, skiesDiscovered) }
+
     var body: some View {
         ZStack {
             AppBackground()
@@ -19,7 +28,7 @@ struct PassportView: View {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
                     HStack(alignment: .top) {
                         ScreenHeader(title: "Passport",
-                                     subtitle: "Your flights, discoveries and collection")
+                                     subtitle: "Your flights, focus and discoveries")
                         Spacer()
                         // The crown only opens the paywall — hide it once Pro.
                         if !appModel.isPro {
@@ -27,12 +36,12 @@ struct PassportView: View {
                         }
                     }
                     statsGrid
-                    skinsSection
+                    achievementsSection
+                    focusCategoriesSection
+                    recentStampsSection
                     WidgetsGallerySection()
                     missionsSection
-                    postcardsSection
-                    VisitedPlacesSection()
-                    journeySoundSection
+                    flightSoundSection
                 }
                 .padding(AppSpacing.screen)
                 .padding(.top, AppSpacing.xs)
@@ -49,29 +58,122 @@ struct PassportView: View {
         }
     }
 
+    // MARK: Headline stats
+
     private var statsGrid: some View {
         LazyVGrid(columns: cardColumns, spacing: AppSpacing.sm) {
-            StatTile(systemImage: "point.topleft.down.to.point.bottomright.curvepath",
-                     value: Formatters.miles(progress.totalFocusMiles),
-                     label: "Miles charted", accent: AppColors.brand)
-            StatTile(systemImage: "mappin.and.ellipse",
-                     value: "\(progress.landings)", label: "Discoveries", accent: AppColors.gold)
             StatTile(systemImage: "hourglass",
-                     value: progress.bestFocusSeconds > 0 ? Formatters.durationLabel(minutes: max(1, progress.bestFocusMinutes)) : "—",
-                     label: "Best focus", accent: AppColors.success)
+                     value: totalFocusMinutes > 0 ? Formatters.durationLabel(minutes: totalFocusMinutes) : "—",
+                     label: "Total focus time", accent: AppColors.brand)
+            StatTile(systemImage: "paperplane.fill",
+                     value: "\(flightsCompleted)", label: "Flights completed", accent: AppColors.gold)
+            StatTile(systemImage: "point.topleft.down.to.point.bottomright.curvepath",
+                     value: totalDistanceKm > 0 ? Formatters.distance(km: totalDistanceKm) : "—",
+                     label: "Distance traveled", accent: AppColors.teal)
             StatTile(systemImage: "flame.fill",
                      value: "\(progress.currentStreak)", label: "Day streak", accent: AppColors.danger)
+            StatTile(systemImage: "trophy.fill",
+                     value: progress.bestFocusSeconds > 0 ? Formatters.durationLabel(minutes: max(1, progress.bestFocusMinutes)) : "—",
+                     label: "Best focus", accent: AppColors.gold)
+            StatTile(systemImage: "moon.stars.fill",
+                     value: "\(skiesDiscovered)/\(totalSkies)", label: "Skies discovered", accent: AppColors.brand)
         }
     }
 
-    @ViewBuilder private var postcardsSection: some View {
+    // MARK: Achievements
+
+    private var achievements: [Achievement] {
+        let flights = flightsCompleted
+        let mins = totalFocusMinutes
+        let best = progress.bestFocusMinutes
+        let streak = max(progress.currentStreak, progress.longestStreak)
+        let skies = skiesDiscovered
+        return [
+            Achievement("airplane.departure", "First flight", flights >= 1, AppColors.brand),
+            Achievement("5.circle.fill", "5 flights", flights >= 5, AppColors.brand),
+            Achievement("25.circle.fill", "25 flights", flights >= 25, AppColors.gold),
+            Achievement("flame.fill", "3-day streak", streak >= 3, AppColors.danger),
+            Achievement("bolt.heart.fill", "7-day streak", streak >= 7, AppColors.danger),
+            Achievement("hourglass.bottomhalf.filled", "Deep focus", best >= 60, AppColors.success),
+            Achievement("clock.badge.checkmark.fill", "10 hours", mins >= 600, AppColors.gold),
+            Achievement("moon.stars.fill", "Sky collector", skies >= SkyScene.all.count, AppColors.teal),
+        ]
+    }
+
+    private var achievementsSection: some View {
+        let earned = achievements.filter { $0.earned }.count
+        return VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            HStack {
+                SectionLabel(text: "Achievements")
+                Spacer()
+                Text("\(earned)/\(achievements.count)")
+                    .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    .foregroundStyle(AppColors.gold)
+                    .padding(.horizontal, 10).padding(.vertical, 5)
+                    .background(Capsule().fill(AppColors.gold.opacity(0.16)))
+                    .overlay(Capsule().strokeBorder(AppColors.gold.opacity(0.4), lineWidth: 1))
+            }
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: AppSpacing.sm)],
+                      spacing: AppSpacing.sm) {
+                ForEach(achievements) { badge in
+                    AchievementBadge(badge: badge)
+                }
+            }
+        }
+    }
+
+    // MARK: Focus categories (by the focus you packed)
+
+    private var focusCategories: [(title: String, count: Int, accent: Color)] {
+        var counts: [String: Int] = [:]
+        for r in completedFlights {
+            let key = (r.intention?.isEmpty == false) ? r.intention! : "Open focus"
+            counts[key, default: 0] += 1
+        }
+        return counts.sorted { $0.value > $1.value }.map { pair in
+            let accent = FocusPreset.all.first { $0.title == pair.key }?.accent ?? AppColors.brand
+            return (pair.key, pair.value, accent)
+        }
+    }
+
+    private var focusCategoriesSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            SectionLabel(text: "Your postcards")
+            SectionLabel(text: "Focus categories")
+            AppGlassCard {
+                let cats = focusCategories
+                if cats.isEmpty {
+                    HStack(spacing: AppSpacing.sm) {
+                        Image(systemName: "bag")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(AppColors.brand)
+                        Text("Pack a focus on your next flight to build your mix.")
+                            .font(AppTypography.callout)
+                            .foregroundStyle(AppColors.textSecondary)
+                        Spacer(minLength: 0)
+                    }
+                } else {
+                    let maxCount = max(1, cats.map { $0.count }.max() ?? 1)
+                    VStack(spacing: AppSpacing.sm) {
+                        ForEach(cats, id: \.title) { cat in
+                            CategoryBar(title: cat.title, count: cat.count,
+                                        fraction: Double(cat.count) / Double(maxCount), accent: cat.accent)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: Recent stamps (collectible postcards)
+
+    @ViewBuilder private var recentStampsSection: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            SectionLabel(text: "Recent stamps")
             if progress.postcards.isEmpty {
                 emptyCollection
             } else {
                 LazyVGrid(columns: cardColumns, spacing: AppSpacing.sm) {
-                    ForEach(progress.postcards) { postcard in
+                    ForEach(progress.postcards.prefix(6)) { postcard in
                         PostcardTile(postcard: postcard, compact: true)
                     }
                 }
@@ -85,7 +187,7 @@ struct PassportView: View {
                 Image(systemName: "sparkles")
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(AppColors.brand)
-                Text("Complete an expedition to unlock your first postcard.")
+                Text("Complete a flight to earn your first stamp.")
                     .font(AppTypography.callout)
                     .foregroundStyle(AppColors.textSecondary)
                 Spacer()
@@ -136,76 +238,14 @@ struct PassportView: View {
         }
     }
 
-    // MARK: Balloon skins
+    // MARK: Flight ambience
 
-    private var unlockedSkinCount: Int {
-        BalloonSkin.all.filter { appModel.isSkinUnlocked($0) }.count
-    }
-
-    /// A prominent, collectible-feeling gallery — one of the main reasons to keep
-    /// flying. Lives in its own gold-tinted panel above the postcards.
-    private var skinsSection: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Balloon skins")
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundStyle(AppColors.textPrimary)
-                    Text("Collect & equip your balloon")
-                        .font(AppTypography.caption)
-                        .foregroundStyle(AppColors.textSecondary)
-                }
-                Spacer()
-                Text("\(unlockedSkinCount)/\(BalloonSkin.all.count)")
-                    .font(.system(size: 13, weight: .heavy, design: .rounded))
-                    .foregroundStyle(AppColors.gold)
-                    .padding(.horizontal, 10).padding(.vertical, 6)
-                    .background(Capsule().fill(AppColors.gold.opacity(0.16)))
-                    .overlay(Capsule().strokeBorder(AppColors.gold.opacity(0.4), lineWidth: 1))
-            }
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: AppSpacing.sm) {
-                    ForEach(BalloonSkin.all) { skin in
-                        SkinTile(skin: skin,
-                                 unlocked: appModel.isSkinUnlocked(skin),
-                                 selected: appModel.selectedSkin.id == skin.id,
-                                 progress: appModel.unlockProgress(for: skin)) {
-                            handleSkinTap(skin)
-                        }
-                    }
-                }
-                .padding(.vertical, 4)
-            }
-        }
-        .padding(AppSpacing.md)
-        .background(
-            RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
-                .fill(LinearGradient(colors: [AppColors.gold.opacity(0.14), AppColors.brand.opacity(0.10)],
-                                     startPoint: .topLeading, endPoint: .bottomTrailing))
-                .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
-                    .strokeBorder(AppColors.gold.opacity(0.25), lineWidth: 1))
-        )
-    }
-
-    private func handleSkinTap(_ skin: BalloonSkin) {
-        if appModel.isSkinUnlocked(skin) {
-            appModel.selectSkin(skin)
-        } else if skin.isPremium {
-            appModel.tapFeedback()
-            router.presentPaywall()
-        } else {
-            appModel.haptics.tap()   // locked milestone — keep going to unlock
-        }
-    }
-
-    // MARK: Journey sound
-
-    /// The looping ambience that plays during a journey, as colourful sound cards.
+    /// The looping ambience that plays during a flight, as colourful sound cards.
     /// Wind is free; the rest require active Pro (locked cards open the paywall).
     /// The master Sound toggle (Settings) stays the on/off switch.
-    private var journeySoundSection: some View {
+    private var flightSoundSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            SectionLabel(text: "Expedition sound")
+            SectionLabel(text: "Flight ambience")
             LazyVGrid(columns: cardColumns, spacing: AppSpacing.sm) {
                 ForEach(JourneyAudioOption.all) { option in
                     JourneySoundCard(option: option,
@@ -235,6 +275,71 @@ struct PassportView: View {
         case "relaxing":    return .mint
         case "jazz":        return .coral
         default:            return .teal
+        }
+    }
+}
+
+// MARK: - Achievement badge
+
+private struct Achievement: Identifiable {
+    let id = UUID()
+    let icon: String
+    let title: String
+    let earned: Bool
+    let accent: Color
+    init(_ icon: String, _ title: String, _ earned: Bool, _ accent: Color) {
+        self.icon = icon; self.title = title; self.earned = earned; self.accent = accent
+    }
+}
+
+private struct AchievementBadge: View {
+    let badge: Achievement
+
+    var body: some View {
+        VStack(spacing: 6) {
+            ZStack {
+                Circle()
+                    .fill(badge.earned ? badge.accent.opacity(0.18) : AppColors.textTertiary.opacity(0.10))
+                    .frame(width: 46, height: 46)
+                Image(systemName: badge.earned ? badge.icon : "lock.fill")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(badge.earned ? badge.accent : AppColors.textTertiary)
+            }
+            Text(badge.title)
+                .font(AppTypography.micro)
+                .foregroundStyle(badge.earned ? AppColors.textPrimary : AppColors.textTertiary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, AppSpacing.sm)
+        .glassBackground(cornerRadius: AppSpacing.cardRadius, tintOpacity: 0.22, shadowRadius: 6, shadowY: 3)
+        .opacity(badge.earned ? 1 : 0.75)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(badge.title). \(badge.earned ? "Earned" : "Locked").")
+    }
+}
+
+// MARK: - Focus category bar
+
+private struct CategoryBar: View {
+    let title: String
+    let count: Int
+    let fraction: Double
+    let accent: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack {
+                Text(title)
+                    .font(AppTypography.callout)
+                    .foregroundStyle(AppColors.textPrimary)
+                Spacer()
+                Text("\(count)")
+                    .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    .foregroundStyle(AppColors.textSecondary)
+            }
+            MissionProgressBar(fraction: fraction, color: accent)
         }
     }
 }
@@ -284,67 +389,9 @@ private struct MissionProgressBar: View {
     }
 }
 
-// MARK: - Skin tile
+// MARK: - Flight ambience card
 
-private struct SkinTile: View {
-    let skin: BalloonSkin
-    let unlocked: Bool
-    let selected: Bool
-    let progress: Double?
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: AppSpacing.xs) {
-                // Fixed frame + no glow/burner so every skin renders at the same
-                // visual size (selection is shown by the ring + shadow + check).
-                // Larger, more prominent balloon preview (responsive: bigger on
-                // iPad). Selection/locked logic is unchanged — only the size grows.
-                BalloonView(height: Layout.pad(72, 88), showBurner: false, showGlow: false, skin: skin)
-                    .frame(width: Layout.pad(112, 138), height: Layout.pad(80, 96))
-                    .opacity(unlocked ? 1 : 0.42)
-                    .grayscale(unlocked ? 0 : 0.7)
-                    .overlay(alignment: .topTrailing) {
-                        if !unlocked && skin.isPremium {
-                            PremiumBadge(compact: true)
-                        } else if !unlocked {
-                            Image(systemName: "lock.fill")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundStyle(AppColors.textTertiary)
-                        } else if selected {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 17, weight: .bold))
-                                .foregroundStyle(AppColors.success)
-                        }
-                    }
-                Text(skin.name)
-                    .font(AppTypography.caption)
-                    .foregroundStyle(unlocked ? AppColors.textPrimary : AppColors.textTertiary)
-                    .lineLimit(1)
-                Text(unlocked ? (selected ? "Selected" : "Tap to use") : skin.requirementText)
-                    .font(AppTypography.micro)
-                    .foregroundStyle(selected ? AppColors.success
-                                     : (skin.isPremium && !unlocked ? AppColors.gold : AppColors.textTertiary))
-                if let progress, !unlocked {
-                    MissionProgressBar(fraction: progress, color: skin.theme.accent)
-                        .padding(.horizontal, 4)
-                }
-            }
-            .frame(width: Layout.pad(150, 184))
-            .padding(.vertical, AppSpacing.sm)
-            .padding(.horizontal, AppSpacing.xs)
-            .glassBackground(cornerRadius: AppSpacing.cardRadius, tintOpacity: 0.25, shadowRadius: 8, shadowY: 4)
-            .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
-                .strokeBorder(selected ? skin.theme.accent : Color.clear, lineWidth: 3))
-            .shadow(color: selected ? skin.theme.accent.opacity(0.5) : .clear, radius: 14, y: 3)
-        }
-        .buttonStyle(SoftPressStyle())
-    }
-}
-
-// MARK: - Journey sound card
-
-/// A large, colourful "sound disc" card for the journey-audio picker. Each sound
+/// A large, colourful "sound disc" card for the flight-audio picker. Each sound
 /// has its own gradient personality; the selected card shows a bright ring +
 /// check, and locked premium cards show a gold crown (and open the paywall).
 private struct JourneySoundCard: View {
@@ -416,8 +463,8 @@ private struct JourneySoundCard: View {
     }
 
     private var statusText: String {
-        if selected { return "Playing on journeys" }
-        if option.isPremium { return unlocked ? "Pro" : "Unlock with Pro" }
+        if selected { return "Playing on flights" }
+        if option.isPremium { return unlocked ? "Ultra" : "Unlock with Ultra" }
         return "Free"
     }
 }

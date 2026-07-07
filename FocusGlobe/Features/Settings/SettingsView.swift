@@ -7,7 +7,6 @@ struct SettingsView: View {
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
     @State private var restoreMessage: String?
-    @State private var showCityPicker = false
     #if canImport(RevenueCatUI)
     @State private var showCustomerCenter = false
     #endif
@@ -23,12 +22,10 @@ struct SettingsView: View {
                     ScreenHeader(title: "Settings")
 
                     appearanceSection
-                    locationSection
                     experienceSection
                     FocusShieldSettingsSection(service: appModel.focusShield)
-                    proSection
-                    privacySection
-                    legalSection
+                    ultraSection
+                    generalSection
                     versionFooter
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -46,7 +43,6 @@ struct SettingsView: View {
             // prompt) — never after a journey, never at first launch.
             appModel.requestNotificationPermissionForEngagement()
         }
-        .sheet(isPresented: $showCityPicker) { LocationPickerView().environmentObject(appModel) }
         #if canImport(RevenueCatUI)
         .sheet(isPresented: $showCustomerCenter) { CustomerCenterView() }
         #endif
@@ -85,54 +81,11 @@ struct SettingsView: View {
         .buttonStyle(SoftPressStyle())
     }
 
-    private var locationSection: some View {
-        SettingsCard(title: "Starting location") {
-            VStack(spacing: 0) {
-                SettingsRow(systemImage: "location.fill",
-                            title: appModel.currentOrigin?.city ?? "Not set",
-                            subtitle: locationSubtitle, tint: AppColors.brand,
-                            trailing: AnyView(EmptyView()))
-                if appModel.canReturnToRealLocation {
-                    RowDivider()
-                    Button { appModel.useCurrentLocation() } label: {
-                        SettingsRow(systemImage: "arrow.counterclockwise",
-                                    title: "Return to my real location",
-                                    subtitle: "Use GPS and clear travel progress", tint: AppColors.brand,
-                                    trailing: AnyView(EmptyView()))
-                    }
-                    .buttonStyle(SoftPressStyle())
-                }
-                if appModel.allowsManualOrigin {
-                    RowDivider()
-                    Button { appModel.tapFeedback(); showCityPicker = true } label: {
-                        SettingsRow(systemImage: "mappin.and.ellipse", title: "Choose starting city",
-                                    subtitle: "Browse and search world cities", tint: AppColors.gold,
-                                    trailing: AnyView(Image(systemName: "chevron.right")
-                                        .font(.system(size: 13, weight: .semibold))
-                                        .foregroundStyle(AppColors.textTertiary)))
-                    }
-                    .buttonStyle(SoftPressStyle())
-                }
-            }
-        }
-    }
-
-    private var locationSubtitle: String {
-        if appModel.settings.virtualOrigin != nil { return "Travelling — you landed here" }
-        if appModel.isUsingManualOrigin { return "Chosen manually" }
-        switch appModel.locationState {
-        case .resolved:           return "Detected automatically"
-        case .resolving:          return "Locating…"
-        case .denied:             return "Location off — pick a city"
-        case .unavailable, .idle: return "Detect or choose a city"
-        }
-    }
-
     private var experienceSection: some View {
         SettingsCard(title: "Experience") {
             VStack(spacing: 0) {
                 ToggleRow(systemImage: "speaker.wave.2.fill", title: "Sound",
-                          subtitle: "Ambient audio during expeditions",
+                          subtitle: "Ambient audio during your flights",
                           isOn: boolBinding(\.soundEnabled))
                 RowDivider()
                 ToggleRow(systemImage: "iphone.radiowaves.left.and.right", title: "Haptics",
@@ -147,11 +100,11 @@ struct SettingsView: View {
         }
     }
 
-    private var proSection: some View {
-        SettingsCard(title: "FocusGlobe Pro") {
+    private var ultraSection: some View {
+        SettingsCard(title: "FocusGlobe Ultra") {
             VStack(spacing: 0) {
                 if appModel.isPro {
-                    SettingsRow(systemImage: "checkmark.seal.fill", title: "Pro is active",
+                    SettingsRow(systemImage: "checkmark.seal.fill", title: "Ultra is active",
                                 subtitle: "Thank you for your support", tint: AppColors.success,
                                 trailing: AnyView(EmptyView()))
                     #if canImport(RevenueCatUI)
@@ -172,8 +125,8 @@ struct SettingsView: View {
                         appModel.tapFeedback()
                         router.presentPaywall()
                     } label: {
-                        SettingsRow(systemImage: "sparkles", title: "Remove ads & go Pro",
-                                    subtitle: "Premium routes, skins & more", tint: AppColors.gold,
+                        SettingsRow(systemImage: "sparkles", title: "Unlock FocusGlobe Ultra",
+                                    subtitle: "No ads · Ultra skies & flights · exclusive extras", tint: AppColors.gold,
                                     trailing: AnyView(Image(systemName: "chevron.right")
                                         .font(.system(size: 13, weight: .semibold))
                                         .foregroundStyle(AppColors.textTertiary)))
@@ -197,25 +150,21 @@ struct SettingsView: View {
         }
     }
 
-    private var privacySection: some View {
-        SettingsCard(title: "Privacy") {
-            HStack(spacing: AppSpacing.sm) {
-                Image(systemName: "lock.shield")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(AppColors.success)
-                Text("Your focus history stays on device. Location is used only to set your starting city and never leaves your device. No account, no tracking.")
-                    .font(AppTypography.callout)
-                    .foregroundStyle(AppColors.textSecondary)
-                Spacer(minLength: 0)
-            }
-        }
-    }
-
-    // Legal links at the bottom of Settings — open the real hosted pages in the
-    // browser (same `LegalLinks` used by the paywall footer).
-    private var legalSection: some View {
-        SettingsCard(title: "Legal") {
-            VStack(spacing: 0) {
+    // General — privacy statement + the legal links (real hosted pages, same
+    // `LegalLinks` used by the paywall footer).
+    private var generalSection: some View {
+        SettingsCard(title: "General") {
+            VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                HStack(spacing: AppSpacing.sm) {
+                    Image(systemName: "lock.shield")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(AppColors.success)
+                    Text("Your focus history stays on this device. No account, no tracking.")
+                        .font(AppTypography.callout)
+                        .foregroundStyle(AppColors.textSecondary)
+                    Spacer(minLength: 0)
+                }
+                RowDivider()
                 Link(destination: LegalLinks.privacy) {
                     SettingsRow(systemImage: "hand.raised.fill", title: "Privacy Policy",
                                 tint: AppColors.brand, trailing: AnyView(legalChevron))

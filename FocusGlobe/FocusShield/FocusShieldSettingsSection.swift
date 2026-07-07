@@ -17,7 +17,7 @@ struct FocusShieldSettingsSection: View {
             VStack(spacing: 0) {
                 row(icon: "shield.lefthalf.filled",
                     tint: AppColors.success,
-                    title: "Block distracting apps during expeditions",
+                    title: "Block distracting apps during flights",
                     subtitle: statusText,
                     showChevron: false)
                 divider
@@ -115,7 +115,7 @@ struct FocusShieldSettingsSection: View {
                             .font(AppTypography.callout).foregroundStyle(AppColors.textPrimary)
                         Text(showSoon
                              ? "Coming soon ✨"
-                             : "Soon… keep social, video and games out of your focus journeys")
+                             : "Soon… keep social, video and games out of your focus flights")
                             .font(AppTypography.caption).foregroundStyle(AppColors.textTertiary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
