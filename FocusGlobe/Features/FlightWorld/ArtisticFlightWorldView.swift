@@ -301,17 +301,30 @@ private struct AuroraRibbons: View {
         Canvas { ctx, s in
             let colors = [Color(hex: 0x5CE6A8), Color(hex: 0x4CC8D9), Color(hex: 0x8E7BE8)]
             for band in 0..<3 {
+                let bandValue: Double = Double(band)
                 let base = s.height * (0.30 + CGFloat(band) * 0.12)
-                let breathe = time == 0 ? 1.0 : 0.75 + 0.25 * sin(time * 0.25 + Double(band) * 1.9)
+                let breatheValue: Double
+                if time == 0 {
+                    breatheValue = 1.0
+                } else {
+                    let breathePhase: Double = time * 0.25 + bandValue * 1.9
+                    breatheValue = 0.75 + 0.25 * Foundation.sin(breathePhase)
+                }
+                let breathe: CGFloat = CGFloat(breatheValue)
                 let amp = s.height * 0.06 * breathe
                 let bandH = s.height * 0.16
                 var top = Path()
                 var x: CGFloat = -10
                 var first = true
                 while x <= s.width + 10 {
-                    let wv = sin(Double(x) / 90 + time * (0.22 + Double(band) * 0.07) + Double(band) * 2.1)
-                        + 0.4 * sin(Double(x) / 36 - time * 0.13 + Double(band))
-                    let y = base + CGFloat(wv) * amp
+                    let xValue: Double = Double(x)
+                    let primarySpeed: Double = 0.22 + bandValue * 0.07
+                    let primaryPhase: Double = xValue / 90.0 + time * primarySpeed + bandValue * 2.1
+                    let secondaryPhase: Double = xValue / 36.0 - time * 0.13 + bandValue
+                    let primaryWave: Double = Foundation.sin(primaryPhase)
+                    let secondaryWave: Double = 0.4 * Foundation.sin(secondaryPhase)
+                    let waveValue: Double = primaryWave + secondaryWave
+                    let y = base + CGFloat(waveValue) * amp
                     if first { top.move(to: CGPoint(x: x, y: y)); first = false }
                     else { top.addLine(to: CGPoint(x: x, y: y)) }
                     x += 16
