@@ -45,27 +45,44 @@ struct FocusSessionView: View {
     @State private var balloonSway: CGFloat = 0
     @State private var balloonBob: CGFloat = 0
     @State private var uiIn = false
-    /// A local 1-second clock. Updating this @State forces the whole body to
-    /// re-render every second, so the readouts below (which read the wall-clock
-    /// live values) can never sit frozen. It also drives the completion backstop.
-    @State private var liveNow = Date()
-
-    private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    /// The wall-clock anchor for everything the pilot sees. Captured **once** on
+    /// appear (resume-aware); shifted forward when a pause ends so paused time
+    /// never counts. Never touched inside `body`.
+    @State private var flightStartedAt: Date?
+    /// Set while paused so the display clock holds still.
+    @State private var pausedAt: Date?
 
     private var isInfinity: Bool { FlightRouteFactory.isInfinity(vm.route) }
-    /// World progress (0…1 across the six chapters). Read live, so finite flights
-    /// traverse every chapter over their duration (a 1-minute flight shows all
-    /// six) and an endless flight drifts up and back through them forever.
+    private var durationSeconds: Double { Double(vm.route.durationMinutes) * 60.0 }
+
+    // MARK: The display clock — pure wall-clock arithmetic, no publishers.
+
+    private func displayElapsed(at now: Date) -> Double {
+        guard let start = flightStartedAt else { return 0 }
+        let effective = pausedAt ?? now
+        return max(0, effective.timeIntervalSince(start))
+    }
+
+    private func displayProgress(at now: Date) -> Double {
+        guard durationSeconds > 0 else { return 0 }
+        return min(1, displayElapsed(at: now) / durationSeconds)
+    }
+
+    /// World progress (0…1 across the six chapters), read live by the tape each
+    /// frame. A finite flight traverses every chapter over its duration (a
+    /// 1-minute flight shows all six); an endless flight drifts up through them
+    /// in ~6 minutes, then folds back forever.
     private func worldProgress() -> Double {
+        let now = Date()
         if isInfinity {
-            return SkyScene.loopedProgress(Double(vm.liveElapsedSeconds) / 60.0 / 6.0)
+            return SkyScene.loopedProgress(displayElapsed(at: now) / 360.0)
         }
-        return vm.liveProgress
+        return displayProgress(at: now)
     }
 
     var body: some View {
         ZStack {
-            // The vertical world tape — a self-contained TimelineView reads
+            // The vertical world tape — its own TimelineView reads
             // `worldProgress()` live each frame and slides the six-chapter tape
             // downward, so the world genuinely moves and evolves during flight.
             ActiveFlightJourneyWorldView(progress: worldProgress, animated: !reduceMotion)
@@ -84,12 +101,26 @@ struct FocusSessionView: View {
             topControls.opacity(uiIn ? 1 : 0)
             bottomBar.opacity(uiIn ? 1 : 0)
         }
-        // The one-second heartbeat: re-render (so the readouts tick), refresh the
-        // engine, and land a finite flight the instant it is due.
-        .onReceive(ticker) { now in
-            liveNow = now
-            vm.refresh()
-            if !isInfinity { vm.finishIfDue() }
+        // The engine heartbeat (display never depends on it): refresh the session
+        // engine and land a finite flight the moment it is due. `.task` is
+        // lifecycle-bound — it cancels itself when the flight screen goes away.
+        .task {
+            vm.startIfNeeded()   // idempotent belt-and-braces after the container
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                vm.refresh()
+                if !isInfinity { vm.finishIfDue() }
+            }
+        }
+        // Pause holds the display clock; resuming shifts the anchor forward by
+        // exactly the paused span, so paused minutes never count as focus.
+        .onChange(of: vm.isPaused) { _, paused in
+            if paused {
+                pausedAt = Date()
+            } else if let resumedFrom = pausedAt {
+                flightStartedAt = flightStartedAt?.addingTimeInterval(Date().timeIntervalSince(resumedFrom))
+                pausedAt = nil
+            }
         }
         .confirmationDialog("Leave this flight?",
                             isPresented: $vm.showCancelConfirm,
@@ -110,6 +141,12 @@ struct FocusSessionView: View {
             }
         }
         .onAppear {
+            // Anchor the display clock exactly once. Seeding from the engine's
+            // live elapsed makes a resumed flight continue from the right point;
+            // a fresh flight anchors at now.
+            if flightStartedAt == nil {
+                flightStartedAt = Date().addingTimeInterval(-vm.timer.liveElapsed)
+            }
             // The controls surface a beat after the world, so entering the
             // flight reads as arriving in a place, not loading a screen.
             withAnimation(.easeOut(duration: 0.8).delay(reduceMotion ? 0 : 0.25)) { uiIn = true }
@@ -173,36 +210,13 @@ struct FocusSessionView: View {
     // MARK: Bottom bar — Time · centre control · Distance, on one row
 
     private var bottomBar: some View {
-        // Referencing `liveNow` ties this subtree to the 1-second heartbeat, so
-        // the wall-clock live values below re-render (tick) every second.
-        let _ = liveNow
-        return VStack(spacing: 0) {
+        VStack(spacing: 0) {
             Spacer()
-            HStack(alignment: .bottom) {
-                if isInfinity {
-                    readout(label: "Time Focused",
-                            value: Formatters.flightClock(vm.liveElapsedSeconds), alignment: .leading)
-                } else {
-                    readout(label: "Time Remaining",
-                            value: Formatters.flightClock(vm.liveRemainingSeconds), alignment: .leading)
-                }
-
-                if isInfinity {
-                    LandNowButton(size: Layout.pad(56, 68)) {
-                        appModel.tapFeedback()
-                        vm.landNow()
-                    }
-                } else {
-                    WhitePauseButton(isPaused: vm.isPaused, size: Layout.pad(56, 68)) { vm.togglePause() }
-                }
-
-                if isInfinity {
-                    readout(label: "Distance Traveled",
-                            value: Formatters.flightKm(vm.liveTraveledKm), alignment: .trailing)
-                } else {
-                    readout(label: "Distance Remaining",
-                            value: Formatters.flightKm(vm.liveRemainingKm), alignment: .trailing)
-                }
+            // A half-second TimelineView is the tick: it re-evaluates this row on
+            // schedule and every value is derived from `ctx.date` right here —
+            // no publishers, no engine state, nothing that can go stale.
+            TimelineView(.periodic(from: .now, by: 0.5)) { ctx in
+                metricsRow(now: ctx.date)
             }
             .frame(maxWidth: Layout.pad(Layout.journeyReadouts, 640))
             .frame(maxWidth: .infinity)
@@ -210,6 +224,40 @@ struct FocusSessionView: View {
         }
         .padding(.bottom, AppSpacing.md)
         .transition(.opacity)
+    }
+
+    private func metricsRow(now: Date) -> some View {
+        let elapsed = displayElapsed(at: now)
+        let elapsedSecs = Int(elapsed.rounded(.down))
+        let remainingSecs = max(0, Int((durationSeconds - elapsed).rounded(.up)))
+        let remainingKm = max(0, vm.route.approximateDistanceKm * (1 - displayProgress(at: now)))
+        return HStack(alignment: .bottom) {
+            if isInfinity {
+                readout(label: "Time Focused",
+                        value: Formatters.flightClock(elapsedSecs), alignment: .leading)
+            } else {
+                readout(label: "Time Remaining",
+                        value: Formatters.flightClock(remainingSecs), alignment: .leading)
+            }
+
+            if isInfinity {
+                LandNowButton(size: Layout.pad(56, 68)) {
+                    appModel.tapFeedback()
+                    vm.landNow()
+                }
+            } else {
+                WhitePauseButton(isPaused: vm.isPaused, size: Layout.pad(56, 68)) { vm.togglePause() }
+            }
+
+            if isInfinity {
+                readout(label: "Distance Traveled",
+                        value: Formatters.flightKm(FlightRouteFactory.traveledKm(elapsedSeconds: elapsedSecs)),
+                        alignment: .trailing)
+            } else {
+                readout(label: "Distance Remaining",
+                        value: Formatters.flightKm(remainingKm), alignment: .trailing)
+            }
+        }
     }
 
     fileprivate func readout(label: String, value: String, alignment: HorizontalAlignment) -> some View {
