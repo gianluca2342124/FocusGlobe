@@ -41,9 +41,15 @@ struct FocusSessionView: View {
     @EnvironmentObject private var appModel: AppModel
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.horizontalSizeClass) private var hSize
 
     @State private var balloonSway: CGFloat = 0
     @State private var balloonBob: CGFloat = 0
+    /// A slow lateral breeze the balloon rides, layered on the faster sway.
+    @State private var balloonDrift: CGFloat = 0
+    /// Take-off: 0 = resting low near the terrain, 1 = risen to the cruising
+    /// centre. Eased up once on appear, then the balloon steady-follows.
+    @State private var takeoffLift: CGFloat = 0
     @State private var uiIn = false
     /// The wall-clock anchor for everything the pilot sees. Captured **once** on
     /// appear (resume-aware); shifted forward when a pause ends so paused time
@@ -149,9 +155,13 @@ struct FocusSessionView: View {
             // The controls surface a beat after the world, so entering the
             // flight reads as arriving in a place, not loading a screen.
             withAnimation(.easeOut(duration: 0.8).delay(reduceMotion ? 0 : 0.25)) { uiIn = true }
-            guard !reduceMotion else { return }
+            guard !reduceMotion else { takeoffLift = 1; return }
+            // Lift off the ground once, then settle into an endless gentle breathe
+            // (sway + bob) and a slow lateral drift.
+            withAnimation(.easeOut(duration: 2.8)) { takeoffLift = 1 }
             withAnimation(.easeInOut(duration: 4.2).repeatForever(autoreverses: true)) { balloonSway = 5 }
             withAnimation(.easeInOut(duration: 3.1).repeatForever(autoreverses: true)) { balloonBob = -7 }
+            withAnimation(.easeInOut(duration: 7.5).repeatForever(autoreverses: true)) { balloonDrift = 6 }
         }
     }
 
@@ -163,11 +173,15 @@ struct FocusSessionView: View {
         GeometryReader { geo in
             let h = geo.size.height
             let balloonSize = max(38, min(52, h * 0.07))   // 5–8% of screen height
+            // Take-off: rise from just above the terrain (0.80) to the cruising
+            // centre (0.50) as `takeoffLift` eases 0→1, then hold and breathe.
+            let restY = h * (0.80 - 0.30 * takeoffLift)
             FlightBalloonView(size: balloonSize, showGlow: true)
                 .rotationEffect(.degrees(Double(balloonSway) * 0.6))
-                .offset(x: balloonSway, y: balloonBob)
-                .position(x: geo.size.width / 2, y: h * 0.5)
-                .shadow(color: .black.opacity(0.28), radius: 10, y: 6)
+                .offset(x: balloonSway + balloonDrift, y: balloonBob)
+                .position(x: geo.size.width / 2, y: restY)
+                .shadow(color: .black.opacity(0.28),
+                        radius: 10, y: 6 + 6 * (1 - takeoffLift))
         }
         .allowsHitTesting(false)
     }
@@ -217,11 +231,14 @@ struct FocusSessionView: View {
             TimelineView(.periodic(from: .now, by: 0.5)) { ctx in
                 metricsRow(now: ctx.date)
             }
-            .frame(maxWidth: Layout.pad(Layout.journeyReadouts, 640))
+            // iPhone (compact): a centred cluster, exactly as before. iPad/Mac
+            // (regular): span the full width so the readouts sit out near the
+            // left and right edges — spacious, not centre-clustered.
+            .frame(maxWidth: hSize == .regular ? .infinity : Layout.journeyReadouts)
             .frame(maxWidth: .infinity)
-            .padding(.horizontal, AppSpacing.screen)
+            .padding(.horizontal, hSize == .regular ? AppSpacing.xxl : AppSpacing.screen)
         }
-        .padding(.bottom, AppSpacing.md)
+        .padding(.bottom, hSize == .regular ? AppSpacing.lg : AppSpacing.md)
         .transition(.opacity)
     }
 
@@ -266,7 +283,7 @@ struct FocusSessionView: View {
                 .foregroundStyle(.white.opacity(0.6))
                 .lineLimit(1).minimumScaleFactor(0.8)
             Text(value)
-                .font(.system(size: Layout.pad(30, 44), weight: .bold, design: .rounded))
+                .font(.system(size: Layout.pad(30, 54), weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(.white)
                 .contentTransition(.numericText(countsDown: alignment == .leading && !isInfinity))

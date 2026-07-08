@@ -13,6 +13,13 @@ struct HomeView: View {
     @State private var showStreak = false
     @State private var showSetup = false
     @State private var balloonFloat: CGFloat = 0
+    /// While handing the ticket off to the flight, the Home chrome (greeting,
+    /// panel, resting balloon) is held hidden so only the continuous sky shows as
+    /// the setup cover dismisses and the flight cover rises — no Home flash.
+    @State private var handingOff = false
+    /// The validated flight, stashed by `beginTakeOff` and launched from the
+    /// setup cover's `onDismiss` so the two covers never contend to present.
+    @State private var pendingTakeoff: (route: Route, intention: String?)?
 
     private var sky: SkyScene { SkyScene.today() }
 
@@ -43,6 +50,7 @@ struct HomeView: View {
                     .shadow(color: .black.opacity(0.28), radius: 12, y: 7)
             }
             .allowsHitTesting(false)
+            .opacity(handingOff ? 0 : 1)
 
             VStack(spacing: 0) {
                 topBar
@@ -53,7 +61,9 @@ struct HomeView: View {
             }
             .padding(.horizontal, AppSpacing.screen)
             .padding(.bottom, AppSpacing.lg)
+            .opacity(handingOff ? 0 : 1)
         }
+        .animation(.easeOut(duration: 0.3), value: handingOff)
         .focusScreenChrome()
         .onAppear {
             maybeShowResume()
@@ -61,8 +71,9 @@ struct HomeView: View {
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 3.4).repeatForever(autoreverses: true)) { balloonFloat = -10 }
         }
-        .fullScreenCover(isPresented: $showSetup) {
-            FlightSetupView().environmentObject(appModel).environmentObject(router)
+        .fullScreenCover(isPresented: $showSetup, onDismiss: launchPendingFlight) {
+            FlightSetupView(onTakeOff: beginTakeOff)
+                .environmentObject(appModel).environmentObject(router)
         }
         // "Start another flight" from the Landing screen: wait a beat for the
         // journey cover to finish dismissing, then open the setup ritual.
@@ -70,6 +81,11 @@ struct HomeView: View {
             guard wants else { return }
             router.pendingNewFlight = false
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { showSetup = true }
+        }
+        // The flight cover is up (Home hidden) or has returned to Home: once it
+        // clears, restore the chrome that the take-off hand-off hid.
+        .onChange(of: router.activeJourney) { _, journey in
+            if journey == nil { handingOff = false }
         }
         .adaptiveModal(isPresented: $showStreak,
                        width: Layout.streakPanelWidth, height: Layout.streakPanelHeight) {
@@ -87,6 +103,27 @@ struct HomeView: View {
                 }
             )
         }
+    }
+
+    // MARK: Ticket → flight hand-off (no Home flash)
+
+    /// Called from inside the setup ritual the instant the ticket validates.
+    /// Hides the Home chrome first (so nothing can pop in behind the dismissing
+    /// cover), stashes the flight, then dismisses the setup cover.
+    private func beginTakeOff(route: Route, intention: String?) {
+        pendingTakeoff = (route, intention)
+        handingOff = true
+        showSetup = false
+    }
+
+    /// Runs in the setup cover's `onDismiss` — the cover is fully gone, so
+    /// presenting the flight here can never contend with it. Home is still
+    /// chrome-less (only the sky), so the flight rises over a continuous scene.
+    private func launchPendingFlight() {
+        guard let takeoff = pendingTakeoff else { return }
+        pendingTakeoff = nil
+        router.startJourney(origin: appModel.originForJourney,
+                            route: takeoff.route, intention: takeoff.intention)
     }
 
     // MARK: Resume / premium intro (unchanged logic)

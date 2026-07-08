@@ -94,6 +94,11 @@ enum DurationScale {
 /// by calling the *exact same* `router.startJourney(origin:route:intention:)`
 /// as always, so nothing downstream changes.
 struct FlightSetupView: View {
+    /// Hands the validated flight back to the presenter (Home) so it can swap the
+    /// setup cover directly into the flight cover — with the Home chrome held
+    /// hidden across the swap, the base screen never flashes between them.
+    var onTakeOff: (Route, String?) -> Void
+
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
     @Environment(\.dismiss) private var dismiss
@@ -191,14 +196,10 @@ struct FlightSetupView: View {
     private func takeOff() {
         let route = FlightRouteFactory.route(minutes: minutes, infinite: infinite,
                                              origin: appModel.originForJourney, sky: sky)
-        let intention = focus?.title
-        dismiss()
-        // Let the cover dismiss over the same still sky, then present the
-        // full-screen flight (same pattern as the resume flow). The flight
-        // opens on the same world, so the hand-off reads as one scene.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-            router.startJourney(origin: appModel.originForJourney, route: route, intention: intention)
-        }
+        // Hand off to Home, which hides its chrome, dismisses this cover, and — in
+        // the cover's own `onDismiss` — presents the flight. No timed gap, so the
+        // Home screen never flashes between the ticket and the flight.
+        onTakeOff(route, focus?.title)
     }
 }
 

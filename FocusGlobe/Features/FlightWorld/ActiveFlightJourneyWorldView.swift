@@ -252,14 +252,23 @@ private struct ChapterSectionView: View {
 
     private var moonSky: some View {
         let side: CGFloat = seededBool(salt: 4) ? 0.72 : 0.28
-        let d = min(ref * 0.20, 170)
+        // Sometimes a vast moon rides high and part off-screen for scale; usually
+        // a calm, mid-size one. Lit from whichever side it sits on.
+        let giant = seededBool(salt: 15)
+        let d = giant ? min(ref * 0.62, 460) : min(ref * 0.22, 190)
+        let my: CGFloat = giant ? 0.16 : 0.30
+        let litLeft = side < 0.5
         return ZStack {
             starsCanvas(count: 75 + seededInt(0, 25, salt: 5), brightness: 0.75, heightFraction: 1)
-            glow(Color(hex: 0xEDF2FB), alpha: 0.22, radius: d * 2.2, x: side, y: 0.32)
-            moonDisc(diameter: d)
-                .position(x: width * side, y: height * 0.32)
-            wisp(y: 0.56, w: 0.72, alpha: 0.12)
-            wisp(y: 0.70, w: 0.5, alpha: 0.10)
+            glow(Color(hex: 0xEDF2FB), alpha: 0.22, radius: d * 1.5, x: side, y: my)
+            moonDisc(diameter: d, litFromLeft: litLeft)
+                .position(x: width * side, y: height * my)
+            // A small companion moon further into the frame.
+            moonDisc(diameter: d * 0.24, litFromLeft: litLeft)
+                .position(x: width * (litLeft ? side + 0.34 : side - 0.34),
+                          y: height * (my + 0.26))
+            wisp(y: 0.58, w: 0.72, alpha: 0.12)
+            wisp(y: 0.72, w: 0.5, alpha: 0.10)
         }
     }
 
@@ -277,8 +286,8 @@ private struct ChapterSectionView: View {
             starsCanvas(count: 55 + seededInt(0, 20, salt: 8), brightness: 0.6, heightFraction: 1)
             // Quiet cloud silhouettes low in the frame.
             puffRowsCanvas(rows: [
-                PuffRow(y: 0.74, count: 5, radius: 0.24, tint: Color(hex: 0x1E1838), alpha: 0.5),
-                PuffRow(y: 0.88, count: 4, radius: 0.3, tint: Color(hex: 0x161230), alpha: 0.6),
+                PuffRow(y: 0.74, count: 5, radius: 0.24, tint: Color(hex: 0x1E1838), alpha: 0.5, highlight: false),
+                PuffRow(y: 0.88, count: 4, radius: 0.3, tint: Color(hex: 0x161230), alpha: 0.6, highlight: false),
             ])
         }
     }
@@ -299,8 +308,8 @@ private struct ChapterSectionView: View {
             glow(Color(hex: 0xF6E9C8), alpha: 0.16, radius: ref * 0.4, x: 0.5, y: 0.78)
             // Backlit cloud silhouettes across the light.
             puffRowsCanvas(rows: [
-                PuffRow(y: 0.66, count: 5, radius: 0.22, tint: Color(hex: 0x3A3450), alpha: 0.45),
-                PuffRow(y: 0.82, count: 6, radius: 0.26, tint: Color(hex: 0x2C2842), alpha: 0.55),
+                PuffRow(y: 0.66, count: 5, radius: 0.22, tint: Color(hex: 0x3A3450), alpha: 0.45, highlight: false),
+                PuffRow(y: 0.82, count: 6, radius: 0.26, tint: Color(hex: 0x2C2842), alpha: 0.55, highlight: false),
             ])
             starsCanvas(count: 24, brightness: 0.4, heightFraction: 0.35)
         }
@@ -328,16 +337,22 @@ private struct ChapterSectionView: View {
 
     private var deepSpace: some View {
         let side: CGFloat = seededBool(salt: 12) ? 0.30 : 0.70
-        let d = min(ref * 0.26, 210)
+        // A commanding world: sometimes vast and partly off-screen, sometimes
+        // ringed. Its companion moon rides just off the sunlit shoulder.
+        let giant = seededBool(salt: 16)
+        let d = giant ? min(ref * 0.7, 520) : min(ref * 0.30, 250)
+        let py: CGFloat = giant ? 0.30 : 0.42
+        let ringed = seededBool(salt: 17)
+        let litLeft = side < 0.5
         return ZStack {
             glow(Color(hex: 0x6E4AE8), alpha: 0.16, radius: ref * 0.55, x: 1 - side, y: 0.28)
             glow(Color(hex: 0x2AC8B0), alpha: 0.10, radius: ref * 0.5, x: side * 0.6, y: 0.72)
             starsCanvas(count: 120, brightness: 0.9, heightFraction: 1)
-            planetDisc(diameter: d)
-                .position(x: width * side, y: height * 0.42)
-            Circle().fill(Color(hex: 0xC9D2E4))
-                .frame(width: d * 0.10, height: d * 0.10)
-                .position(x: width * side + d * 0.85, y: height * 0.42 - d * 0.55)
+            planetDisc(diameter: d, ringed: ringed, litFromLeft: litLeft)
+                .position(x: width * side, y: height * py)
+            moonDisc(diameter: d * 0.14, litFromLeft: litLeft)
+                .position(x: width * side + d * (litLeft ? 0.8 : -0.8),
+                          y: height * py - d * 0.5)
         }
     }
 
@@ -367,16 +382,43 @@ private struct ChapterSectionView: View {
     private func starsCanvas(count: Int, brightness: Double, heightFraction: CGFloat) -> some View {
         Canvas { ctx, s in
             var rng = SeededRNG(seed: spec.seed &+ 0x57A2)
+            // Far layer — many tiny, dim stars sit deep behind the near field,
+            // so the sky has real depth rather than a single flat sprinkle.
+            let farCount = count + count / 2
+            for _ in 0..<farCount {
+                let u1 = rng.unit()
+                let u2 = rng.unit()
+                let u3 = rng.unit()
+                let x = CGFloat(u1) * s.width
+                let y = CGFloat(u2) * s.height * heightFraction
+                let r = CGFloat(0.4 + u3 * 0.7)
+                let a = (0.10 + u3 * 0.26) * brightness
+                ctx.fill(Path(ellipseIn: CGRect(x: x, y: y, width: r, height: r)),
+                         with: .color(.white.opacity(a)))
+            }
+            // Near layer — fewer, larger, brighter; the brightest carry a soft
+            // four-point glint so a few stars read as close and luminous.
             for _ in 0..<count {
                 let u1 = rng.unit()
                 let u2 = rng.unit()
                 let u3 = rng.unit()
                 let x = CGFloat(u1) * s.width
                 let y = CGFloat(u2) * s.height * heightFraction
-                let r = CGFloat(0.6 + u3 * 1.6)
-                let a = (0.25 + u3 * 0.65) * brightness
+                let r = CGFloat(0.9 + u3 * 1.7)
+                let a = (0.32 + u3 * 0.6) * brightness
                 ctx.fill(Path(ellipseIn: CGRect(x: x, y: y, width: r, height: r)),
                          with: .color(.white.opacity(a)))
+                if u3 > 0.9 {
+                    let gx = x + r * 0.5
+                    let gy = y + r * 0.5
+                    let len = r * 3.0
+                    var glint = Path()
+                    glint.move(to: CGPoint(x: gx - len, y: gy))
+                    glint.addLine(to: CGPoint(x: gx + len, y: gy))
+                    glint.move(to: CGPoint(x: gx, y: gy - len))
+                    glint.addLine(to: CGPoint(x: gx, y: gy + len))
+                    ctx.stroke(glint, with: .color(.white.opacity(a * 0.5)), lineWidth: 0.6)
+                }
             }
         }
     }
@@ -384,32 +426,73 @@ private struct ChapterSectionView: View {
     private struct PuffRow {
         let y: CGFloat
         let count: Int
-        let radius: CGFloat   // × ref
+        let radius: CGFloat   // cloud half-width × ref
         let tint: Color
         let alpha: Double
+        /// A soft top-lit crown on the upper lobes — on for lit clouds, off for
+        /// flat dark silhouettes (dusk / backlit).
+        var highlight: Bool = true
     }
 
+    /// Organic clouds: each cloud is a flat-based mass of several overlapping
+    /// lobes — larger in the middle, smaller at the ends — so it billows rather
+    /// than reading as a row of identical circles.
     private func puffRowsCanvas(rows: [PuffRow]) -> some View {
         Canvas { ctx, s in
             var rng = SeededRNG(seed: spec.seed &+ 0x5EAC)
+            let ref = min(s.width, s.height)
             for row in rows {
                 let n = row.count
                 for i in 0..<n {
-                    let u = rng.unit()
-                    let jitterX = CGFloat(u - 0.5) * 44
-                    let jitterY = CGFloat(rng.unit() - 0.5) * s.height * 0.03
-                    let cx = s.width * (CGFloat(i) / CGFloat(max(1, n - 1))) + jitterX
+                    let slot = n <= 1 ? 0.5 : CGFloat(i) / CGFloat(n - 1)
+                    let jitterX = CGFloat(rng.unit() - 0.5) * s.width * 0.12
+                    let jitterY = CGFloat(rng.unit() - 0.5) * s.height * 0.025
+                    let cx = s.width * slot + jitterX
                     let cy = s.height * row.y + jitterY
-                    let radius = min(s.width, s.height) * row.radius
-                    let g = Gradient(colors: [row.tint.opacity(row.alpha),
-                                              row.tint.opacity(row.alpha * 0.55),
-                                              row.tint.opacity(0)])
-                    let rect = CGRect(x: cx - radius, y: cy - radius * 0.5,
-                                      width: radius * 2, height: radius)
-                    ctx.fill(Path(ellipseIn: rect),
-                             with: .radialGradient(g, center: CGPoint(x: cx, y: cy),
-                                                   startRadius: 0, endRadius: radius))
+                    let halfW = ref * row.radius * CGFloat(0.85 + rng.unit() * 0.5)
+                    drawCloud(&ctx, cx: cx, cy: cy, halfWidth: halfW, tint: row.tint,
+                              alpha: row.alpha, highlight: row.highlight, rng: &rng)
                 }
+            }
+        }
+    }
+
+    /// Paint one billowing cloud. All maths in small typed steps so the
+    /// type-checker stays fast.
+    private func drawCloud(_ ctx: inout GraphicsContext, cx: CGFloat, cy: CGFloat,
+                           halfWidth: CGFloat, tint: Color, alpha: Double,
+                           highlight: Bool, rng: inout SeededRNG) {
+        let lobes = 4 + Int(rng.unit() * 3.0)      // 4…6 lobes
+        let baseY = cy + halfWidth * 0.16          // the soft flat underside
+        let crown = halfWidth * 0.62               // how tall the middle billows
+        // A wide, low base mattress unifies the lobes into one grounded mass.
+        let baseR = halfWidth
+        let baseGrad = Gradient(colors: [tint.opacity(alpha * 0.7), tint.opacity(0)])
+        let baseRect = CGRect(x: cx - baseR, y: baseY - baseR * 0.34,
+                              width: baseR * 2, height: baseR * 0.68)
+        ctx.fill(Path(ellipseIn: baseRect),
+                 with: .radialGradient(baseGrad, center: CGPoint(x: cx, y: baseY),
+                                       startRadius: 0, endRadius: baseR))
+        for l in 0..<lobes {
+            let t = lobes <= 1 ? 0.5 : Double(l) / Double(lobes - 1)   // 0…1 across
+            let bell = Foundation.sin(t * Double.pi)                   // 0 ends, 1 middle
+            let jitter = rng.unit()
+            let lx = cx + CGFloat(t - 0.5) * halfWidth * 1.5
+            let lr = halfWidth * CGFloat(0.34 + 0.34 * bell) * CGFloat(0.8 + jitter * 0.4)
+            let ly = baseY - CGFloat(bell) * crown - lr * 0.25
+            let g = Gradient(colors: [tint.opacity(alpha), tint.opacity(alpha * 0.5), tint.opacity(0)])
+            let rect = CGRect(x: lx - lr, y: ly - lr, width: lr * 2, height: lr * 2)
+            ctx.fill(Path(ellipseIn: rect),
+                     with: .radialGradient(g, center: CGPoint(x: lx, y: ly),
+                                           startRadius: 0, endRadius: lr))
+            if highlight && bell > 0.55 {
+                let hr = lr * 0.6
+                let hy = ly - lr * 0.4
+                let hg = Gradient(colors: [Color.white.opacity(alpha * 0.5), Color.white.opacity(0)])
+                let hrect = CGRect(x: lx - hr, y: hy - hr, width: hr * 2, height: hr * 2)
+                ctx.fill(Path(ellipseIn: hrect),
+                         with: .radialGradient(hg, center: CGPoint(x: lx, y: hy),
+                                               startRadius: 0, endRadius: hr))
             }
         }
     }
@@ -477,34 +560,65 @@ private struct ChapterSectionView: View {
         }
     }
 
-    private func moonDisc(diameter d: CGFloat) -> some View {
-        ZStack {
-            Circle()
-                .fill(LinearGradient(colors: [Color(hex: 0xF5F7FB), Color(hex: 0xC8D2E6)],
-                                     startPoint: .topLeading, endPoint: .bottomTrailing))
-            Circle().fill(Color(hex: 0x9AA6C0).opacity(0.35))
-                .frame(width: d * 0.18, height: d * 0.18)
-                .offset(x: -d * 0.15, y: -d * 0.05)
-            Circle().fill(Color(hex: 0x9AA6C0).opacity(0.30))
-                .frame(width: d * 0.11, height: d * 0.11)
-                .offset(x: d * 0.12, y: d * 0.16)
-            Circle().fill(Color(hex: 0x9AA6C0).opacity(0.25))
+    private func moonDisc(diameter d: CGFloat, litFromLeft: Bool = true) -> some View {
+        let lx: CGFloat = litFromLeft ? 0.34 : 0.66
+        return ZStack {
+            // A lit sphere: brightest toward the light, falling toward the limb.
+            Circle().fill(RadialGradient(
+                colors: [Color(hex: 0xFCFDFF), Color(hex: 0xDBE2F0), Color(hex: 0xAEB9D2)],
+                center: UnitPoint(x: lx, y: 0.36), startRadius: 0, endRadius: d * 0.62))
+            // Maria — soft grey seas of varying size.
+            Circle().fill(Color(hex: 0x93A0BC).opacity(0.32))
+                .frame(width: d * 0.20, height: d * 0.20)
+                .offset(x: -d * 0.15, y: -d * 0.06)
+            Circle().fill(Color(hex: 0x93A0BC).opacity(0.26))
+                .frame(width: d * 0.12, height: d * 0.12)
+                .offset(x: d * 0.13, y: d * 0.16)
+            Circle().fill(Color(hex: 0x93A0BC).opacity(0.22))
                 .frame(width: d * 0.08, height: d * 0.08)
                 .offset(x: -d * 0.02, y: d * 0.24)
-            Circle().strokeBorder(Color.white.opacity(0.22), lineWidth: 1)
+            Circle().fill(Color(hex: 0x93A0BC).opacity(0.16))
+                .frame(width: d * 0.05, height: d * 0.05)
+                .offset(x: d * 0.22, y: -d * 0.18)
+            // Terminator — the far limb falls into shadow for a gentle phase.
+            Circle().fill(RadialGradient(
+                colors: [Color.clear, Color(hex: 0x0A0F1E).opacity(0.5)],
+                center: UnitPoint(x: lx, y: 0.34), startRadius: d * 0.16, endRadius: d * 0.72))
+            // A crisp rim of light on the sunlit edge.
+            Circle().strokeBorder(Color.white.opacity(0.26), lineWidth: max(0.6, d * 0.006))
         }
         .frame(width: d, height: d)
     }
 
-    private func planetDisc(diameter d: CGFloat) -> some View {
-        ZStack {
-            Circle()
-                .fill(LinearGradient(colors: [Color(hex: 0x9DB2DE), Color(hex: 0x4A5A84)],
-                                     startPoint: .topLeading, endPoint: .bottomTrailing))
-            Circle()
-                .fill(RadialGradient(colors: [Color.clear, Color(hex: 0x0A0F1E).opacity(0.6)],
-                                     center: UnitPoint(x: 0.32, y: 0.36),
-                                     startRadius: d * 0.2, endRadius: d * 0.62))
+    private func planetDisc(diameter d: CGFloat, ringed: Bool = false,
+                            litFromLeft: Bool = true) -> some View {
+        let lx: CGFloat = litFromLeft ? 0.34 : 0.66
+        return ZStack {
+            // A tilted ring encircling the globe (drawn behind for a clean,
+            // stylised read — the globe's shading carries the volume).
+            if ringed {
+                Ellipse()
+                    .stroke(LinearGradient(
+                        colors: [Color(hex: 0xE6D7B4).opacity(0), Color(hex: 0xE9DBBA).opacity(0.5),
+                                 Color(hex: 0xC9B788).opacity(0.32), Color(hex: 0xE6D7B4).opacity(0)],
+                        startPoint: .leading, endPoint: .trailing),
+                        lineWidth: d * 0.05)
+                    .frame(width: d * 2.0, height: d * 0.62)
+                    .rotationEffect(.degrees(-20))
+            }
+            // The globe — soft latitudinal banding, light to deep.
+            Circle().fill(LinearGradient(
+                colors: [Color(hex: 0xAABDE6), Color(hex: 0x7E92C2),
+                         Color(hex: 0x53628E), Color(hex: 0x3A4A72)],
+                startPoint: .top, endPoint: .bottom))
+            // A gentle specular bloom toward the light.
+            Circle().fill(RadialGradient(colors: [Color.white.opacity(0.16), Color.clear],
+                                         center: UnitPoint(x: lx, y: 0.30),
+                                         startRadius: 0, endRadius: d * 0.5))
+            // Terminator shadow on the far limb.
+            Circle().fill(RadialGradient(colors: [Color.clear, Color(hex: 0x05070F).opacity(0.6)],
+                                         center: UnitPoint(x: lx, y: 0.34),
+                                         startRadius: d * 0.18, endRadius: d * 0.66))
             Circle().strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
         }
         .frame(width: d, height: d)
@@ -633,16 +747,16 @@ private struct AmbientLifeOverlay: View {
     /// cycle index + session seed, so events are deterministic per session.
     private func drawRareEvent(_ c: inout GraphicsContext, size s: CGSize,
                                time t: Double, seed: UInt64) {
-        let period = 70.0
+        let period = 56.0
         let cycle = (t / period).rounded(.down)
         let phase = t / period - cycle
-        guard phase < 0.09 else { return }   // ~6 s window per cycle
+        guard phase < 0.09 else { return }   // ~5 s window per cycle
         let local = phase / 0.09
         var rng = SeededRNG(seed: seed &+ UInt64(bitPattern: Int64(cycle)) &* 97)
         let kindRoll = rng.unit()
 
-        if kindRoll < 0.4 {
-            // Shooting star.
+        if kindRoll < 0.34 {
+            // Shooting star with a bright head and a fading tail.
             let x0 = s.width * CGFloat(0.25 + rng.unit() * 0.6)
             let y0 = s.height * CGFloat(0.08 + rng.unit() * 0.3)
             let travel = s.width * 0.45 * CGFloat(local)
@@ -654,7 +768,9 @@ private struct AmbientLifeOverlay: View {
             let a = Foundation.sin(.pi * local) * 0.85
             let g = Gradient(colors: [Color.white.opacity(0), Color.white.opacity(a)])
             c.stroke(p, with: .linearGradient(g, startPoint: tail, endPoint: head), lineWidth: 1.5)
-        } else if kindRoll < 0.7 {
+            c.fill(Path(ellipseIn: CGRect(x: head.x - 1.7, y: head.y - 1.7, width: 3.4, height: 3.4)),
+                   with: .color(.white.opacity(a)))
+        } else if kindRoll < 0.58 {
             // A small cluster of golden sparks blooming and fading.
             let cx = s.width * CGFloat(0.3 + rng.unit() * 0.4)
             let cy = s.height * CGFloat(0.2 + rng.unit() * 0.3)
@@ -668,7 +784,7 @@ private struct AmbientLifeOverlay: View {
                 c.fill(Path(ellipseIn: CGRect(x: px - 1.4, y: py - 1.4, width: 2.8, height: 2.8)),
                        with: .color(Color(hex: 0xE8CE9A).opacity(a)))
             }
-        } else {
+        } else if kindRoll < 0.78 {
             // A faint cosmic shimmer — one slow soft pulse of light.
             let cx = s.width * CGFloat(0.3 + rng.unit() * 0.4)
             let cy = s.height * CGFloat(0.25 + rng.unit() * 0.3)
@@ -679,6 +795,19 @@ private struct AmbientLifeOverlay: View {
             c.fill(Path(ellipseIn: rect),
                    with: .radialGradient(g, center: CGPoint(x: cx, y: cy),
                                          startRadius: 0, endRadius: radius))
+        } else {
+            // A slow horizon pulse — a wide, low band of light swelling and fading
+            // along the lower sky, warm or cool depending on the cycle.
+            let cy = s.height * CGFloat(0.82 + rng.unit() * 0.08)
+            let tint = rng.unit() < 0.5 ? Color(hex: 0xE8CE9A) : Color(hex: 0xBFD0EC)
+            let a = 0.16 * Foundation.sin(.pi * local)
+            let w = s.width * CGFloat(0.7 + 0.2 * local)
+            let h = s.height * 0.14
+            let g = Gradient(colors: [tint.opacity(a), tint.opacity(0)])
+            let rect = CGRect(x: s.width / 2 - w / 2, y: cy - h, width: w, height: h * 2)
+            c.fill(Path(ellipseIn: rect),
+                   with: .radialGradient(g, center: CGPoint(x: s.width / 2, y: cy),
+                                         startRadius: 0, endRadius: max(w, h)))
         }
     }
 }
