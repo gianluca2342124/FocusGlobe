@@ -139,8 +139,10 @@ final class FocusSessionViewModel: ObservableObject {
 
     func tearDown() {
         cancellable?.cancel()
+        // Always stop the engine timer (idempotent). Landing an endless flight
+        // early leaves the repeating tick scheduled otherwise — a quiet leak.
+        timer.stop()
         if !didLand {
-            timer.stop()
             // Backstop: the journey view went away without landing — make sure no
             // shields are left behind (idempotent; a no-op if already cleared).
             appModel?.focusShield.clear(reason: .cancel)
