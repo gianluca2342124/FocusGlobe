@@ -216,11 +216,19 @@ struct DurationDialView: View {
 
     @State private var index = 0
     @State private var didInit = false
+    @Environment(\.horizontalSizeClass) private var hSize
 
-    private let presets: [(label: String, minutes: Int, infinite: Bool)] = [
-        ("5", 5, false), ("15", 15, false), ("25", 25, false), ("45", 45, false),
-        ("60", 60, false), ("2h", 120, false), ("4h", 240, false), ("∞", 720, true)
-    ]
+    /// Presets. On a compact iPhone width we drop 5 & 15 to keep the row roomy;
+    /// iPad/Mac (regular) keep them. "60" reads as "1h".
+    private var presets: [(label: String, minutes: Int, infinite: Bool)] {
+        let full: [(String, Int, Bool)] = [
+            ("5", 5, false), ("15", 15, false), ("25", 25, false), ("45", 45, false),
+            ("1h", 60, false), ("2h", 120, false), ("4h", 240, false), ("∞", 720, true)
+        ]
+        let compact = full.filter { $0.1 != 5 && $0.1 != 15 }
+        return (hSize == .regular ? full : compact)
+            .map { (label: $0.0, minutes: $0.1, infinite: $0.2) }
+    }
 
     private var fraction: Double { Double(index) / Double(DurationScale.count - 1) }
     private var isInfinityIndex: Bool { index >= DurationScale.infinityIndex }
@@ -630,20 +638,21 @@ struct PackFocusView: View {
     }
 
     private var dropGlow: Color {
+        // No warm glow before a focus is packed — only a cool cream hint on hover.
         if let s = selected { return s.accent.opacity(0.7) }
-        return targetHot ? AppColors.gold.opacity(0.6) : .clear
+        return targetHot ? Color(hex: 0xE8DEC9).opacity(0.35) : .clear
     }
 
     private var burnerGlow: some View {
+        // The burner is fully dark until a focus is packed; then it ignites.
         Circle()
             .fill(RadialGradient(colors: [AppColors.gold.opacity(0.85),
                                           Color(hex: 0xFF8A2A).opacity(0.4), .clear],
                                  center: .center, startRadius: 1, endRadius: 34))
             .frame(width: 72, height: 72)
             .blur(radius: 6)
-            .opacity(selected != nil ? 1 : (targetHot ? 0.7 : 0))
+            .opacity(selected != nil ? 1 : 0)
             .scaleEffect(loadedPop ? 1.18 : 1)
-            .animation(.easeOut(duration: 0.2), value: targetHot)
             .allowsHitTesting(false)
     }
 
@@ -963,7 +972,11 @@ struct CheckInTicketView: View {
                 .rotationEffect(.degrees(Double(min(10, effTear * 0.05))), anchor: .topLeading)
                 .offset(x: effTear * 0.8, y: effTear * 0.12)
                 .opacity(checked ? 0 : 1)
-                .overlay { if !checked && tearX == 0 { TearFingerHint() } }
+                // The gesture hint rides the perforation (top of the strip), not
+                // the barcode itself — it shows where to tear.
+                .overlay(alignment: .top) {
+                    if !checked && tearX == 0 { TearFingerHint().offset(y: -13) }
+                }
                 .gesture(tearGesture)
         }
         .frame(maxWidth: 460)
@@ -992,18 +1005,11 @@ struct CheckInTicketView: View {
     }
 
     private var barcodeStrip: some View {
-        VStack(spacing: 7) {
-            TicketBars(seed: barcodeSeed, color: ink)
-                .frame(height: 76)
-                .padding(.horizontal, AppSpacing.lg)
-            Text("FOCUSGLOBE · FOCUS FLIGHT · \(flightID)")
-                .font(.system(size: 9, weight: .semibold, design: .monospaced))
-                .tracking(1)
-                .foregroundStyle(inkSoft)
-                .lineLimit(1).minimumScaleFactor(0.7)
-        }
-        .padding(.vertical, AppSpacing.md)
-        .frame(maxWidth: .infinity)
+        TicketBars(seed: barcodeSeed, color: ink)
+            .frame(height: 84)
+            .padding(.horizontal, AppSpacing.lg)
+            .padding(.vertical, AppSpacing.md)
+            .frame(maxWidth: .infinity)
         .background(paperFill(topRounded: false))
         .overlay(alignment: .topLeading) { notch.offset(x: -9, y: -9) }
         .overlay(alignment: .topTrailing) { notch.offset(x: 9, y: -9) }

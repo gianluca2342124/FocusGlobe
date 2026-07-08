@@ -45,58 +45,49 @@ struct FocusSessionView: View {
     @State private var balloonSway: CGFloat = 0
     @State private var balloonBob: CGFloat = 0
     @State private var uiIn = false
+    /// A local 1-second clock. Updating this @State forces the whole body to
+    /// re-render every second, so the readouts below (which read the wall-clock
+    /// live values) can never sit frozen. It also drives the completion backstop.
+    @State private var liveNow = Date()
+
+    private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private var isInfinity: Bool { FlightRouteFactory.isInfinity(vm.route) }
-    private var sky: SkyScene {
-        SkyScene.all.first { vm.route.destinationName == $0.name } ?? SkyScene.today()
-    }
-    /// The world altitude (0…1 across the six chapters). Finite flights map it
-    /// straight to live progress, so a short session traverses every chapter;
-    /// an endless flight drifts up through them over ~40 minutes, then cycles.
-    private var worldAltitude: Double {
+    /// World progress (0…1 across the six chapters). Read live, so finite flights
+    /// traverse every chapter over their duration (a 1-minute flight shows all
+    /// six) and an endless flight drifts up and back through them forever.
+    private func worldProgress() -> Double {
         if isInfinity {
-            return SkyScene.loopedProgress(Double(vm.liveElapsedSeconds) / 60.0 / 40.0)
+            return SkyScene.loopedProgress(Double(vm.liveElapsedSeconds) / 60.0 / 6.0)
         }
         return vm.liveProgress
     }
 
     var body: some View {
         ZStack {
-            // ONE animation timeline drives the whole world. `worldAltitude` and
-            // the ambient `time` are re-read every frame from the live wall clock,
-            // so the world genuinely climbs and the reads never depend on the
-            // @Published tick cadence. The world is cheap (offset compositing),
-            // so the main thread stays free for the timers and the UI.
-            TimelineView(.animation(minimumInterval: 1.0 / 20.0, paused: reduceMotion)) { ctx in
-                ArtisticFlightWorldView(
-                    scene: sky,
-                    altitude: worldAltitude,
-                    time: ctx.date.timeIntervalSinceReferenceDate,
-                    animated: !reduceMotion)
-            }
+            // The vertical world tape — a self-contained TimelineView reads
+            // `worldProgress()` live each frame and slides the six-chapter tape
+            // downward, so the world genuinely moves and evolves during flight.
+            ActiveFlightJourneyWorldView(progress: worldProgress, animated: !reduceMotion)
 
             balloon
 
             // Soft bottom scrim so the readouts stay legible over bright bands.
             VStack {
                 Spacer()
-                LinearGradient(colors: [.clear, .black.opacity(0.5)], startPoint: .top, endPoint: .bottom)
-                    .frame(height: 240)
+                LinearGradient(colors: [.clear, .black.opacity(0.55)], startPoint: .top, endPoint: .bottom)
+                    .frame(height: 200)
             }
             .ignoresSafeArea()
             .allowsHitTesting(false)
 
             topControls.opacity(uiIn ? 1 : 0)
-            bottomReadouts.opacity(uiIn ? 1 : 0)
-
-            #if DEBUG
-            debugOverlay
-            #endif
+            bottomBar.opacity(uiIn ? 1 : 0)
         }
-        // A lightweight 1-second heartbeat, independent of the world timeline and
-        // the session engine: it re-derives the live clock and lands the flight
-        // the instant it is due, even if the repeating timer callback was starved.
-        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
+        // The one-second heartbeat: re-render (so the readouts tick), refresh the
+        // engine, and land a finite flight the instant it is due.
+        .onReceive(ticker) { now in
+            liveNow = now
             vm.refresh()
             if !isInfinity { vm.finishIfDue() }
         }
@@ -130,7 +121,7 @@ struct FocusSessionView: View {
 
     // The balloon is **tiny** (~7% of screen height) and stays roughly still,
     // just breathing with a gentle sway + bob. The world tape scrolls *downward*
-    // behind it (see `ArtisticFlightWorldView`), so the balloon reads as rising
+    // behind it (see `ActiveFlightJourneyWorldView`), so the balloon reads as rising
     // while the landscape — not the balloon — is the protagonist.
     private var balloon: some View {
         GeometryReader { geo in
@@ -179,106 +170,59 @@ struct FocusSessionView: View {
         .overlay(Capsule().strokeBorder(.white.opacity(0.12), lineWidth: 1))
     }
 
-    // MARK: Bottom — readouts + pause
+    // MARK: Bottom bar — Time · centre control · Distance, on one row
 
-    private var bottomReadouts: some View {
-        VStack(spacing: 0) {
+    private var bottomBar: some View {
+        // Referencing `liveNow` ties this subtree to the 1-second heartbeat, so
+        // the wall-clock live values below re-render (tick) every second.
+        let _ = liveNow
+        return VStack(spacing: 0) {
             Spacer()
-            VStack(spacing: AppSpacing.md) {
-                // A dedicated one-second clock drives the visible numbers, so
-                // they always tick even independently of the session engine's
-                // publishing — no more values frozen on a whole minute.
-                TimelineView(.periodic(from: .now, by: 1)) { _ in
-                    metricsRow
-                }
-                .padding(.horizontal, Layout.pad(AppSpacing.lg, 44))
-
-                // Timed flights pause & resume from the centre; an endless flight
-                // can't pause — its one central control lands the flight now.
+            HStack(alignment: .bottom) {
                 if isInfinity {
-                    LandNowButton(size: Layout.pad(58, 70)) {
+                    readout(label: "Time Focused",
+                            value: Formatters.flightClock(vm.liveElapsedSeconds), alignment: .leading)
+                } else {
+                    readout(label: "Time Remaining",
+                            value: Formatters.flightClock(vm.liveRemainingSeconds), alignment: .leading)
+                }
+
+                if isInfinity {
+                    LandNowButton(size: Layout.pad(56, 68)) {
                         appModel.tapFeedback()
                         vm.landNow()
                     }
                 } else {
-                    WhitePauseButton(isPaused: vm.isPaused, size: Layout.pad(58, 70)) { vm.togglePause() }
+                    WhitePauseButton(isPaused: vm.isPaused, size: Layout.pad(56, 68)) { vm.togglePause() }
+                }
+
+                if isInfinity {
+                    readout(label: "Distance Traveled",
+                            value: Formatters.flightKm(vm.liveTraveledKm), alignment: .trailing)
+                } else {
+                    readout(label: "Distance Remaining",
+                            value: Formatters.flightKm(vm.liveRemainingKm), alignment: .trailing)
                 }
             }
-            .frame(maxWidth: Layout.pad(Layout.journeyReadouts, .infinity))
+            .frame(maxWidth: Layout.pad(Layout.journeyReadouts, 640))
             .frame(maxWidth: .infinity)
+            .padding(.horizontal, AppSpacing.screen)
         }
-        .padding(.bottom, AppSpacing.lg)
+        .padding(.bottom, AppSpacing.md)
         .transition(.opacity)
     }
-
-    /// The two readouts, recomputed on the one-second tick from the *live*
-    /// display model (elapsed drives everything; symbolic route km is the only
-    /// distance source — never the old geographic span).
-    @ViewBuilder private var metricsRow: some View {
-        HStack(alignment: .bottom) {
-            if isInfinity {
-                readout(label: "Time Focused",
-                        value: Formatters.flightClock(vm.liveElapsedSeconds), alignment: .leading)
-                Spacer(minLength: AppSpacing.sm)
-                readout(label: "Distance Traveled",
-                        value: Formatters.flightKm(vm.liveTraveledKm), alignment: .trailing)
-            } else {
-                readout(label: "Time Remaining",
-                        value: Formatters.flightClock(vm.liveRemainingSeconds), alignment: .leading)
-                Spacer(minLength: AppSpacing.sm)
-                readout(label: "Distance Remaining",
-                        value: Formatters.flightKm(vm.liveRemainingKm), alignment: .trailing)
-            }
-        }
-    }
-
-    // MARK: DEBUG proof overlay (compiled only in DEBUG; never ships)
-
-    #if DEBUG
-    @ViewBuilder private var debugOverlay: some View {
-        TimelineView(.periodic(from: .now, by: 1)) { _ in
-            let dur = vm.route.durationMinutes * 60
-            VStack(alignment: .leading, spacing: 2) {
-                Text("⚑ FLIGHT DEBUG").font(.system(size: 9, weight: .heavy, design: .monospaced))
-                Text("elapsed \(vm.liveElapsedSeconds)s / dur \(dur)s")
-                Text(String(format: "progress %.3f", vm.liveProgress))
-                Text("remaining \(vm.liveRemainingSeconds)s")
-                Text(String(format: "distRem %.1f km", vm.liveRemainingKm))
-                Text(String(format: "alt %.3f · stage %@", worldAltitude, debugStageName))
-                Text(isInfinity ? "mode ∞" : "mode finite")
-            }
-            .font(.system(size: 9, weight: .medium, design: .monospaced))
-            .foregroundStyle(.white)
-            .padding(6)
-            .background(RoundedRectangle(cornerRadius: 6).fill(.black.opacity(0.5)))
-            .padding(.top, 92).padding(.leading, 10)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .allowsHitTesting(false)
-        }
-    }
-
-    private var debugStageName: String {
-        switch worldAltitude {
-        case ..<0.15: return "NightValley"
-        case ..<0.32: return "CloudOcean"
-        case ..<0.48: return "MoonSky"
-        case ..<0.68: return "Aurora"
-        case ..<0.85: return "Starfield"
-        default:      return "DeepSpace"
-        }
-    }
-    #endif
 
     fileprivate func readout(label: String, value: String, alignment: HorizontalAlignment) -> some View {
         VStack(alignment: alignment, spacing: 1) {
             Text(label)
                 .font(AppTypography.caption)
                 .foregroundStyle(.white.opacity(0.65))
+                .lineLimit(1).minimumScaleFactor(0.8)
             Text(value)
-                .font(.system(size: Layout.pad(34, 52), weight: .semibold, design: .rounded))
+                .font(.system(size: Layout.pad(26, 40), weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(.white)
-                .minimumScaleFactor(0.7)
+                .minimumScaleFactor(0.6)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: alignment == .leading ? .leading : .trailing)
