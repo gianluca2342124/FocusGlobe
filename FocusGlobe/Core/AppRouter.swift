@@ -37,6 +37,9 @@ final class AppRouter: ObservableObject {
     @Published var path: [Destination] = []
     @Published var activeJourney: Journey?
     @Published var showPaywall = false
+    /// Set when the Landing screen asks for a fresh flight; Home observes it and
+    /// opens the flight setup as soon as the journey cover has dismissed.
+    @Published var pendingNewFlight = false
 
     // MARK: Pushes
 
@@ -106,6 +109,14 @@ final class AppRouter: ObservableObject {
     func startAnotherJourney() {
         activeJourney = nil
         path = [.routeSelection]
+    }
+
+    /// Dismiss the journey cover to Home and ask it to open the flight setup —
+    /// the Landing screen's "Start another flight".
+    func startAnotherFlight() {
+        activeJourney = nil
+        path.removeAll()
+        pendingNewFlight = true
     }
 
     /// Dismiss the journey cover and open the Passport.

@@ -27,6 +27,34 @@ enum Formatters {
         return String(format: "%dh %02dm", s / 3600, (s % 3600) / 60)
     }
 
+    /// Remaining time, human first: "1h 12m" → "33 min" → "59s". Rounds minutes
+    /// **up** so a fresh 25-minute flight reads "25 min", and the final minute
+    /// counts down live in seconds.
+    static func flightTimeRemaining(_ seconds: Int) -> String {
+        let s = max(0, seconds)
+        if s >= 3600 { return String(format: "%dh %02dm", s / 3600, (s % 3600) / 60) }
+        if s >= 60 { return "\((s + 59) / 60) min" }
+        return "\(s)s"
+    }
+
+    /// Elapsed time, human first: "45s" → "12 min" → "1h 12m". Rounds minutes
+    /// **down**, and the opening minute counts up live in seconds.
+    static func flightTimeElapsed(_ seconds: Int) -> String {
+        let s = max(0, seconds)
+        if s >= 3600 { return String(format: "%dh %02dm", s / 3600, (s % 3600) / 60) }
+        if s >= 60 { return "\(s / 60) min" }
+        return "\(s)s"
+    }
+
+    /// Flight distance, calm and whole: "41 km" (grouped beyond thousands);
+    /// one decimal only while under a single kilometre ("0.4 km").
+    static func flightDistanceKm(_ km: Double) -> String {
+        let v = max(0, km)
+        if v < 1 { return String(format: "%.1f km", v) }
+        let n = NSNumber(value: v.rounded())
+        return (grouping.string(from: n) ?? "\(Int(v))") + " km"
+    }
+
     /// A friendly duration label, e.g. "5 min", "1h", "1h 30m", "12h".
     static func durationLabel(minutes: Int) -> String {
         guard minutes >= 60 else { return "\(minutes) min" }

@@ -68,24 +68,19 @@ struct FocusSessionView: View {
         return min(1, displayElapsed(at: now) / durationSeconds)
     }
 
-    /// World progress (0…1 across the six chapters), read live by the tape each
-    /// frame. A finite flight traverses every chapter over its duration (a
-    /// 1-minute flight shows all six); an endless flight drifts up through them
-    /// in ~6 minutes, then folds back forever.
-    private func worldProgress() -> Double {
-        let now = Date()
-        if isInfinity {
-            return SkyScene.loopedProgress(displayElapsed(at: now) / 360.0)
-        }
-        return displayProgress(at: now)
-    }
+    /// The per-session world seed: fixed once the flight anchors, so the world
+    /// order and dressing are stable in-session but fresh every flight.
+    @State private var worldSeed: UInt64 = 1
 
     var body: some View {
         ZStack {
-            // The vertical world tape — its own TimelineView reads
-            // `worldProgress()` live each frame and slides the six-chapter tape
-            // downward, so the world genuinely moves and evolves during flight.
-            ActiveFlightJourneyWorldView(progress: worldProgress, animated: !reduceMotion)
+            // The vertical world journey — a constant cinematic pace driven by
+            // elapsed focus time (pause-aware), fully decoupled from the chosen
+            // duration. 1-minute flights drift calmly; 12-hour flights keep
+            // evolving; endless flights never run out of sky.
+            ActiveFlightJourneyWorldView(elapsed: { displayElapsed(at: Date()) },
+                                         seed: worldSeed,
+                                         animated: !reduceMotion)
 
             balloon
 
@@ -145,7 +140,11 @@ struct FocusSessionView: View {
             // live elapsed makes a resumed flight continue from the right point;
             // a fresh flight anchors at now.
             if flightStartedAt == nil {
-                flightStartedAt = Date().addingTimeInterval(-vm.timer.liveElapsed)
+                let anchor = Date().addingTimeInterval(-vm.timer.liveElapsed)
+                flightStartedAt = anchor
+                // Seed the world from the anchor: stable for this session,
+                // different for every flight.
+                worldSeed = UInt64(bitPattern: Int64(anchor.timeIntervalSince1970 * 1000))
             }
             // The controls surface a beat after the world, so entering the
             // flight reads as arriving in a place, not loading a screen.
@@ -234,10 +233,10 @@ struct FocusSessionView: View {
         return HStack(alignment: .bottom) {
             if isInfinity {
                 readout(label: "Time Focused",
-                        value: Formatters.flightClock(elapsedSecs), alignment: .leading)
+                        value: Formatters.flightTimeElapsed(elapsedSecs), alignment: .leading)
             } else {
                 readout(label: "Time Remaining",
-                        value: Formatters.flightClock(remainingSecs), alignment: .leading)
+                        value: Formatters.flightTimeRemaining(remainingSecs), alignment: .leading)
             }
 
             if isInfinity {
@@ -251,26 +250,28 @@ struct FocusSessionView: View {
 
             if isInfinity {
                 readout(label: "Distance Traveled",
-                        value: Formatters.flightKm(FlightRouteFactory.traveledKm(elapsedSeconds: elapsedSecs)),
+                        value: Formatters.flightDistanceKm(FlightRouteFactory.traveledKm(elapsedSeconds: elapsedSecs)),
                         alignment: .trailing)
             } else {
                 readout(label: "Distance Remaining",
-                        value: Formatters.flightKm(remainingKm), alignment: .trailing)
+                        value: Formatters.flightDistanceKm(remainingKm), alignment: .trailing)
             }
         }
     }
 
     fileprivate func readout(label: String, value: String, alignment: HorizontalAlignment) -> some View {
-        VStack(alignment: alignment, spacing: 1) {
+        VStack(alignment: alignment, spacing: 2) {
             Text(label)
                 .font(AppTypography.caption)
-                .foregroundStyle(.white.opacity(0.65))
+                .foregroundStyle(.white.opacity(0.6))
                 .lineLimit(1).minimumScaleFactor(0.8)
             Text(value)
-                .font(.system(size: Layout.pad(26, 40), weight: .semibold, design: .rounded))
+                .font(.system(size: Layout.pad(30, 44), weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(.white)
-                .minimumScaleFactor(0.6)
+                .contentTransition(.numericText(countsDown: alignment == .leading && !isInfinity))
+                .animation(.snappy(duration: 0.3), value: value)
+                .minimumScaleFactor(0.55)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: alignment == .leading ? .leading : .trailing)

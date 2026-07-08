@@ -48,6 +48,10 @@ struct LandingView: View {
                 .padding(.top, AppSpacing.xl)
                 .padding(.bottom, AppSpacing.xxl)
                 .contentMaxWidth(Layout.readable)   // wider centred column on iPad/Mac
+                // A peaceful arrival: the whole page settles in with a gentle
+                // scale + fade (the container above already crossfades).
+                .scaleEffect(appeared ? 1 : 0.97)
+                .opacity(appeared ? 1 : 0)
             }
 
             // A premium, one-shot confetti burst when the landing appears.
@@ -68,14 +72,18 @@ struct LandingView: View {
     }
 
     private var title: some View {
-        VStack(spacing: 4) {
-            Text("Focus complete")
+        VStack(spacing: 5) {
+            Text("You landed")
                 .font(AppTypography.serifHero)
                 .foregroundStyle(AppColors.textPrimary)
-            Text("You flew for \(summary.focusedMinutes) min · \(Formatters.distance(km: summary.distanceKm))")
+            Text("\(Formatters.durationLabel(minutes: max(1, summary.focusedMinutes))) focused · \(Formatters.flightDistanceKm(summary.distanceKm)) flown")
                 .font(AppTypography.subhead)
                 .foregroundStyle(AppColors.textSecondary)
                 .lineLimit(1).minimumScaleFactor(0.7)
+            Text(summary.route.destinationName)
+                .font(.system(size: 14, weight: .medium, design: .serif))
+                .italic()
+                .foregroundStyle(AppColors.gold)
         }
         .frame(maxWidth: .infinity)
     }
@@ -114,7 +122,7 @@ struct LandingView: View {
         HStack(spacing: 0) {
             stat(value: "\(summary.focusedMinutes)", unit: "min", label: "Focused")
             divider
-            stat(value: Formatters.distance(km: summary.distanceKm), unit: "", label: "Distance")
+            stat(value: Formatters.flightDistanceKm(summary.distanceKm), unit: "", label: "Distance")
             divider
             stat(value: Formatters.miles(earnedMiles), unit: "", label: adState == .doubled ? "Miles ×2" : "Miles")
             divider
@@ -145,14 +153,26 @@ struct LandingView: View {
 
     private var actions: some View {
         VStack(spacing: AppSpacing.sm) {
-            ExpeditionButton(title: "Claim Miles", systemImage: "checkmark") {
+            ExpeditionButton(title: "Continue", systemImage: "checkmark") {
                 appModel.haptics.rewardClaim()
                 appModel.uiSound.play(.claim)
                 appModel.analytics.log(.rewardClaimed, ["route": summary.route.id, "miles": earnedMiles])
                 finish(toPassport: false)
             }
-            // Double-your-miles sits directly under Claim Miles.
+            // Double-your-miles sits directly under Continue.
             if !appModel.isPro { doubleReward }
+            Button {
+                appModel.tapFeedback()
+                startAnotherFlight()
+            } label: {
+                Text("Start another flight")
+                    .font(AppTypography.headline)
+                    .foregroundStyle(AppColors.textPrimary)
+                    .frame(maxWidth: .infinity).frame(height: 52)
+                    .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.18,
+                                     shadowRadius: 8, shadowY: 4)
+            }
+            .buttonStyle(SoftPressStyle())
             HStack(spacing: AppSpacing.sm) {
                 AppSecondaryButton(title: "Share Postcard", systemImage: "square.and.arrow.up") {
                     sharePostcard()
@@ -162,6 +182,18 @@ struct LandingView: View {
                     finish(toPassport: true)
                 }
             }
+        }
+    }
+
+    /// Land, then glide straight into a fresh setup: Home opens the flight
+    /// ritual as soon as the journey cover has dismissed. Same single-ad rule
+    /// as every other exit from the Landing screen.
+    private func startAnotherFlight() {
+        let go = { router.startAnotherFlight() }
+        if didWatchRewarded {
+            go()
+        } else {
+            appModel.ads.presentJourneyCompleteInterstitial(isPro: appModel.isPro) { go() }
         }
     }
 

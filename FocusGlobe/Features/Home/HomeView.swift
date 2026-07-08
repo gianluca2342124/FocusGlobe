@@ -64,6 +64,13 @@ struct HomeView: View {
         .fullScreenCover(isPresented: $showSetup) {
             FlightSetupView().environmentObject(appModel).environmentObject(router)
         }
+        // "Start another flight" from the Landing screen: wait a beat for the
+        // journey cover to finish dismissing, then open the setup ritual.
+        .onChange(of: router.pendingNewFlight) { _, wants in
+            guard wants else { return }
+            router.pendingNewFlight = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { showSetup = true }
+        }
         .adaptiveModal(isPresented: $showStreak,
                        width: Layout.streakPanelWidth, height: Layout.streakPanelHeight) {
             StreakDetailsView().environmentObject(appModel)
