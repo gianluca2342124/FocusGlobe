@@ -93,9 +93,17 @@ struct FocusSessionView: View {
             .ignoresSafeArea()
             .allowsHitTesting(false)
 
+            // Paused: gently dim the living world and show a large, calm pause
+            // mark so the state is unmistakable. The timer + Resume control sit
+            // above it and stay bright.
+            if vm.isPaused {
+                pausedOverlay
+            }
+
             topControls.opacity(uiIn ? 1 : 0)
             bottomBar.opacity(uiIn ? 1 : 0)
         }
+        .animation(.easeInOut(duration: 0.35), value: vm.isPaused)
         // The engine heartbeat (display never depends on it): refresh the session
         // engine and land a finite flight the moment it is due. `.task` is
         // lifecycle-bound — it cancels itself when the flight screen goes away.
@@ -212,6 +220,32 @@ struct FocusSessionView: View {
         .padding(.vertical, 8)
         .background(Capsule().fill(.white.opacity(0.1)))
         .overlay(Capsule().strokeBorder(.white.opacity(0.12), lineWidth: 1))
+    }
+
+    // MARK: Paused state — a large, calm, unmistakable pause treatment
+
+    private var pausedOverlay: some View {
+        ZStack {
+            // A soft dim settles the moving world so the pause reads instantly.
+            Color.black.opacity(0.4).ignoresSafeArea()
+            VStack(spacing: Layout.pad(18, 26)) {
+                // A large elegant pause glyph — two softly-glowing rounded bars.
+                HStack(spacing: Layout.pad(15, 22)) {
+                    Capsule().fill(.white.opacity(0.92))
+                        .frame(width: Layout.pad(19, 28), height: Layout.pad(66, 96))
+                    Capsule().fill(.white.opacity(0.92))
+                        .frame(width: Layout.pad(19, 28), height: Layout.pad(66, 96))
+                }
+                .shadow(color: .black.opacity(0.45), radius: 20, y: 8)
+                Text("Paused")
+                    .font(.system(size: Layout.pad(19, 25), weight: .semibold, design: .rounded))
+                    .tracking(4)
+                    .foregroundStyle(.white.opacity(0.82))
+            }
+            .offset(y: -Layout.pad(44, 66))   // rest a little above the hero timer
+        }
+        .allowsHitTesting(false)              // never blocks the Resume control
+        .transition(.opacity)
     }
 
     // MARK: Bottom bar — a focus-first hero timer
