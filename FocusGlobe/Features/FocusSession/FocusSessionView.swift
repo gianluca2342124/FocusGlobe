@@ -158,9 +158,10 @@ struct FocusSessionView: View {
             // flight reads as arriving in a place, not loading a screen.
             withAnimation(.easeOut(duration: 0.8).delay(reduceMotion ? 0 : 0.25)) { uiIn = true }
             guard !reduceMotion else { takeoffLift = 1; return }
-            // Lift off the ground once, then settle into an endless gentle breathe
-            // (sway + bob) and a slow lateral drift.
-            withAnimation(.easeOut(duration: 2.8)) { takeoffLift = 1 }
+            // The cinematic take-off pull-back: ~5.5 s to ease the balloon from
+            // close-and-low up to its cruising size and centre. Then settle into
+            // an endless gentle breathe (sway + bob) and a slow lateral drift.
+            withAnimation(.easeInOut(duration: 5.5)) { takeoffLift = 1 }
             withAnimation(.easeInOut(duration: 4.2).repeatForever(autoreverses: true)) { balloonSway = 5 }
             withAnimation(.easeInOut(duration: 3.1).repeatForever(autoreverses: true)) { balloonBob = -7 }
             withAnimation(.easeInOut(duration: 7.5).repeatForever(autoreverses: true)) { balloonDrift = 6 }
@@ -175,15 +176,19 @@ struct FocusSessionView: View {
         GeometryReader { geo in
             let h = geo.size.height
             let balloonSize = max(38, min(52, h * 0.07))   // 5–8% of screen height
-            // Take-off: rise from just above the terrain (0.80) to the cruising
-            // centre (0.50) as `takeoffLift` eases 0→1, then hold and breathe.
-            let restY = h * (0.80 - 0.30 * takeoffLift)
+            // Take-off camera: the balloon begins close and large, low near the
+            // ground, then the "camera" pulls smoothly back — it shrinks to its
+            // cruising size and rises to centre as `takeoffLift` eases 0→1. After
+            // that it just breathes (sway + bob + drift).
+            let restY = h * (0.82 - 0.32 * takeoffLift)
+            let takeoffScale = 1 + (1 - takeoffLift) * 1.4
             FlightBalloonView(size: balloonSize, showGlow: true)
+                .scaleEffect(takeoffScale)
                 .rotationEffect(.degrees(Double(balloonSway) * 0.6))
                 .offset(x: balloonSway + balloonDrift, y: balloonBob)
                 .position(x: geo.size.width / 2, y: restY)
                 .shadow(color: .black.opacity(0.28),
-                        radius: 10, y: 6 + 6 * (1 - takeoffLift))
+                        radius: 10 + 8 * (1 - takeoffLift), y: 6 + 8 * (1 - takeoffLift))
         }
         .allowsHitTesting(false)
     }

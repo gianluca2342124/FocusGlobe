@@ -63,8 +63,10 @@ enum FlightRouteFactory {
 /// with an extra terminal stop meaning **∞ (endless)**. Presets and the dial
 /// both address these by index so the two controls always agree.
 enum DurationScale {
-    static let stops: [Int] = [1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 40, 45, 50, 60,
-                               75, 90, 120, 150, 180, 240, 300, 360, 480, 600, 720]
+    /// Clean 5-minute steps from 5 minutes up through 12 hours, then a trailing
+    /// ∞. Presets and the dial both address these by index so the two controls
+    /// always agree.
+    static let stops: [Int] = Array(stride(from: 5, through: 720, by: 5))
     /// Total selectable positions, including the trailing ∞.
     static var count: Int { stops.count + 1 }
     static var infinityIndex: Int { stops.count }
@@ -104,11 +106,15 @@ struct FlightSetupView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private enum Step { case duration, pack, ticket }
+    private enum Step { case duration, pack, protect, ticket }
     @State private var step: Step = .duration
     @State private var minutes = 25
     @State private var infinite = false
     @State private var focus: FocusPreset?
+    /// The pre-flight "Flight Mode" intent — whether the user wants distracting
+    /// apps grounded for this journey. (Real enforcement rides the parked Focus
+    /// Shield infrastructure; this is the premium pre-flight control for it.)
+    @State private var blockApps = true
 
     private var sky: SkyScene { SkyScene.today() }
 
@@ -136,6 +142,13 @@ struct FlightSetupView: View {
                     case .pack:
                         PackFocusView(selected: $focus) {
                             appModel.haptics.tap()
+                            appModel.uiSound.play(.transition)
+                            withAnimation(AppMotion.soft) { step = .protect }
+                        }
+                        .transition(stepTransition)
+                    case .protect:
+                        FlightModeView(blockApps: $blockApps) {
+                            appModel.tapFeedback()
                             appModel.uiSound.play(.transition)
                             withAnimation(AppMotion.soft) { step = .ticket }
                         }
@@ -169,7 +182,8 @@ struct FlightSetupView: View {
                 switch step {
                 case .duration: dismiss()
                 case .pack:     withAnimation(AppMotion.soft) { step = .duration }
-                case .ticket:   withAnimation(AppMotion.soft) { step = .pack }
+                case .protect:  withAnimation(AppMotion.soft) { step = .pack }
+                case .ticket:   withAnimation(AppMotion.soft) { step = .protect }
                 }
             }
             Spacer()
@@ -189,6 +203,7 @@ struct FlightSetupView: View {
         switch step {
         case .duration: return "Choose your time"
         case .pack:     return "Pack your focus"
+        case .protect:  return "Flight Mode"
         case .ticket:   return "Check in"
         }
     }
@@ -237,7 +252,7 @@ struct DurationDialView: View {
     var body: some View {
         VStack(spacing: AppSpacing.md) {
             Spacer(minLength: 0)
-            dial.frame(height: 310)
+            dial.frame(height: hSize == .regular ? 440 : 310)   // the dial is the hero, larger on iPad/Mac
             distancePreview
             Spacer(minLength: 0)
             presetRow
@@ -309,19 +324,22 @@ struct DurationDialView: View {
     private func ticks(radius: CGFloat) -> some View {
         Canvas { ctx, size in
             let c = CGPoint(x: size.width / 2, y: size.height / 2)
-            let count = DurationScale.count
+            // A fixed rhythm of ticks (decoupled from the 5-minute stop count, so
+            // the ring never looks like a solid band) with a longer major every 5.
+            let count = 31
             for i in 0..<count {
                 let f = Double(i) / Double(count - 1)
                 let a = (135.0 + f * 270.0) * .pi / 180.0
+                let major = i % 5 == 0
                 let outer = radius - 12
-                let inner = outer - 6
+                let inner = outer - (major ? 10 : 6)
                 let p1 = CGPoint(x: c.x + CGFloat(cos(a)) * outer, y: c.y + CGFloat(sin(a)) * outer)
                 let p2 = CGPoint(x: c.x + CGFloat(cos(a)) * inner, y: c.y + CGFloat(sin(a)) * inner)
                 var path = Path()
                 path.move(to: p1)
                 path.addLine(to: p2)
-                ctx.stroke(path, with: .color(.white.opacity(i <= index ? 0.45 : 0.12)),
-                           lineWidth: 1.6)
+                ctx.stroke(path, with: .color(.white.opacity(f <= fraction + 0.001 ? 0.45 : 0.12)),
+                           lineWidth: major ? 2.0 : 1.4)
             }
         }
     }
@@ -341,7 +359,7 @@ struct DurationDialView: View {
     private var centerValue: some View {
         VStack(spacing: 3) {
             Text(centerBig)
-                .font(.system(size: 78, weight: .bold, design: .rounded))
+                .font(.system(size: hSize == .regular ? 108 : 78, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
                 .monospacedDigit()
                 .contentTransition(.numericText())
@@ -350,11 +368,11 @@ struct DurationDialView: View {
                 .lineLimit(1)
                 .shadow(color: AppColors.gold.opacity(0.25), radius: 18)
             Text(centerSub)
-                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                .font(.system(size: hSize == .regular ? 13 : 12, weight: .semibold, design: .monospaced))
                 .tracking(3.4)
                 .foregroundStyle(.white.opacity(0.55))
         }
-        .frame(width: 195)
+        .frame(width: hSize == .regular ? 270 : 195)
     }
 
     private var centerBig: String {
@@ -476,11 +494,16 @@ struct PackFocusView: View {
                 VStack(spacing: AppSpacing.sm) {
                     Spacer(minLength: 0)
                     balloon(width: w)
-                    Text(caption)
-                        .font(.system(size: 15, weight: .medium, design: .serif)).italic()
-                        .foregroundStyle(.white.opacity(0.8))
-                        .padding(.top, AppSpacing.xs)
-                        .animation(.easeInOut(duration: 0.25), value: selected != nil)
+                    // The interaction is self-evident (the finger hint + the socket),
+                    // so no instruction line before packing. Only a soft confirmation
+                    // appears once a focus is loaded.
+                    if let s = selected {
+                        Text("\(s.title) packed — taking off")
+                            .font(.system(size: 15, weight: .medium, design: .serif)).italic()
+                            .foregroundStyle(.white.opacity(0.8))
+                            .padding(.top, AppSpacing.xs)
+                            .transition(.opacity)
+                    }
                     Spacer(minLength: 0)
                     tokenTray
                         .opacity(packing ? 0.4 : 1)
@@ -514,11 +537,6 @@ struct PackFocusView: View {
                 withAnimation(.easeOut(duration: 0.2)) { dragging = nil }
             }
         }
-    }
-
-    private var caption: String {
-        if let s = selected { return "\(s.title) packed — taking off" }
-        return "Drag a focus into the balloon"
     }
 
     // MARK: The dark silhouette that ignites
@@ -870,7 +888,106 @@ private struct PackDragHint: View {
     }
 }
 
-// MARK: - Step 3 · Check in (the boarding pass)
+// MARK: - Step 3 · Flight Mode (protected flight)
+
+/// A compact, premium pre-flight control: ground distracting apps for the
+/// journey. Framed as boarding preparation, not a settings screen — so
+/// distraction blocking feels like a core part of taking off. Enforcement rides
+/// the (currently parked) Focus Shield infrastructure; this surfaces the intent.
+struct FlightModeView: View {
+    @Binding var blockApps: Bool
+    let onContinue: () -> Void
+    @EnvironmentObject private var appModel: AppModel
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            card
+                .padding(.horizontal, AppSpacing.screen)
+                .clusterMaxWidth()
+            Spacer(minLength: 0)
+            AppPrimaryButton(title: "Ready for takeoff", systemImage: "airplane.departure") {
+                appModel.tapFeedback()
+                onContinue()
+            }
+            .padding(.horizontal, AppSpacing.screen)
+            .padding(.bottom, AppSpacing.lg)
+            .clusterMaxWidth()
+        }
+    }
+
+    private var card: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
+            HStack(spacing: AppSpacing.sm) {
+                ZStack {
+                    Circle().fill(AppColors.gold.opacity(0.16)).frame(width: 52, height: 52)
+                    Image(systemName: "airplane")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(AppColors.gold)
+                        .rotationEffect(.degrees(-45))
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Protected flight")
+                        .font(.system(size: 22, weight: .semibold, design: .serif))
+                        .foregroundStyle(.white)
+                    Text("Ground distracting apps so the journey stays yours.")
+                        .font(.system(size: 14, weight: .regular, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.68))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            Divider().overlay(Color.white.opacity(0.12))
+
+            Button {
+                withAnimation(.snappy(duration: 0.25)) { blockApps.toggle() }
+                appModel.haptics.tap()
+            } label: {
+                HStack(spacing: AppSpacing.sm) {
+                    Image(systemName: blockApps ? "moon.zzz.fill" : "bell.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(blockApps ? AppColors.gold : .white.opacity(0.6))
+                        .frame(width: 26)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Block distracting apps")
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white)
+                        Text(blockApps ? "Distractions grounded for the flight"
+                                       : "Notifications and apps stay on")
+                            .font(.system(size: 12.5, weight: .regular, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.6))
+                            .lineLimit(1).minimumScaleFactor(0.8)
+                    }
+                    Spacer()
+                    fauxSwitch
+                }
+            }
+            .buttonStyle(SoftPressStyle(scale: 0.99))
+        }
+        .padding(AppSpacing.lg)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Color.black.opacity(0.28)))
+                .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .strokeBorder(.white.opacity(0.12), lineWidth: 1))
+        )
+    }
+
+    /// A soft sliding switch (the knob eases across as the toggle flips).
+    private var fauxSwitch: some View {
+        Capsule()
+            .fill(blockApps ? AppColors.gold : Color.white.opacity(0.16))
+            .frame(width: 50, height: 30)
+            .overlay(alignment: .leading) {
+                Circle().fill(.white).frame(width: 24, height: 24)
+                    .shadow(color: .black.opacity(0.3), radius: 3, y: 1)
+                    .offset(x: blockApps ? 23 : 3)
+            }
+    }
+}
+
+// MARK: - Step 4 · Check in (the boarding pass)
 
 /// A large boarding pass on warm paper, floating over the night world. The
 /// bottom **barcode strip physically tears off**: swipe across it and it peels
@@ -1117,14 +1234,21 @@ struct CheckInTicketView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// The dashed cut line drawn on the seam between the body and the strip.
+    /// The dashed cut line on the seam between the body and the strip — clearly
+    /// visible so the "tear here" affordance reads instantly, with a small
+    /// scissors mark at the leading edge.
     private var perforation: some View {
         HStack(spacing: 5) {
-            ForEach(0..<28, id: \.self) { _ in
-                Capsule().fill(ink.opacity(0.30)).frame(width: 5, height: 1.6)
+            Image(systemName: "scissors")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(inkSoft.opacity(0.7))
+            HStack(spacing: 5) {
+                ForEach(0..<26, id: \.self) { _ in
+                    Capsule().fill(ink.opacity(0.45)).frame(width: 6, height: 2)
+                }
             }
         }
-        .frame(height: 1.6)
+        .frame(height: 2)
         .padding(.horizontal, AppSpacing.md)
     }
 

@@ -187,7 +187,7 @@ struct ActiveFlightJourneyWorldView: View {
         ZStack {
             ChapterSectionView(spec: spec, bottomEdge: bottomEdge, width: W, height: H)
                 .id(chapterID)
-            ChapterLifeCanvas(seed: spec.seed, t: t, width: W, height: H)
+            ChapterLifeCanvas(seed: spec.seed, kind: spec.kind, t: t, width: W, height: H)
         }
         .frame(width: W, height: H)
     }
@@ -728,18 +728,106 @@ private func auroraRibbonPath(width: CGFloat, baseY: CGFloat, amp: CGFloat,
 /// screen.
 private struct ChapterLifeCanvas: View {
     let seed: UInt64
+    let kind: WorldKind
     let t: Double
     let width: CGFloat
     let height: CGFloat
 
+    /// Cold worlds get a soft snow flurry; space worlds get a distant galaxy.
+    private var isCold: Bool {
+        switch kind { case .snowSky, .auroraField, .quietReturn: return true; default: return false }
+    }
+    private var isSpace: Bool {
+        switch kind { case .starfield, .deepSpace, .nebulaDream: return true; default: return false }
+    }
+
     var body: some View {
         Canvas { c, s in
+            if isSpace { drawGalaxy(&c, s: s) }        // far behind everything
             drawTwinkles(&c, s: s)
             drawShootingStar(&c, s: s)
+            drawMeteor(&c, s: s)
             drawSparkle(&c, s: s)
+            if isCold { drawSnow(&c, s: s) }           // near foreground flurry
         }
         .frame(width: width, height: height)
         .allowsHitTesting(false)
+    }
+
+    /// A soft radial dot — the shared building block for meteor trails and snow.
+    private func softDot(_ c: inout GraphicsContext, x: CGFloat, y: CGFloat, r: CGFloat, _ color: Color) {
+        let g = Gradient(colors: [color, color.opacity(0)])
+        c.fill(Path(ellipseIn: CGRect(x: x - r, y: y - r, width: r * 2, height: r * 2)),
+               with: .radialGradient(g, center: CGPoint(x: x, y: y), startRadius: 0, endRadius: r))
+    }
+
+    /// A faint, slowly-drifting distant galaxy — a tilted elliptical glow with a
+    /// soft bright core. Part of the scenery, so it scrolls with the chapter.
+    private func drawGalaxy(_ c: inout GraphicsContext, s: CGSize) {
+        var rng = SeededRNG(seed: seed &+ 0x6A1A)
+        let gx = Double(0.2 + rng.unit() * 0.6) * Double(s.width)
+        let gy = Double(0.14 + rng.unit() * 0.5) * Double(s.height)
+        let drift = Foundation.sin(t * 0.03) * Double(s.width) * 0.01
+        let r = Double(min(s.width, s.height)) * (0.22 + rng.unit() * 0.12)
+        let tilt = rng.unit() * 0.8 - 0.4
+        c.drawLayer { l in
+            l.translateBy(x: CGFloat(gx + drift), y: CGFloat(gy))
+            l.rotate(by: .radians(tilt))
+            let g = Gradient(colors: [Color(hex: 0xB49CE8).opacity(0.16),
+                                      Color(hex: 0x6E7EC8).opacity(0.06), .clear])
+            l.fill(Path(ellipseIn: CGRect(x: -r, y: -r * 0.45, width: r * 2, height: r * 0.9)),
+                   with: .radialGradient(g, center: .zero, startRadius: 0, endRadius: CGFloat(r)))
+            let cg = Gradient(colors: [Color.white.opacity(0.16), .clear])
+            l.fill(Path(ellipseIn: CGRect(x: -r * 0.16, y: -r * 0.08, width: r * 0.32, height: r * 0.16)),
+                   with: .radialGradient(cg, center: .zero, startRadius: 0, endRadius: CGFloat(r * 0.22)))
+        }
+    }
+
+    /// A rarer, brighter meteor (~every 19 s) with a warm glowing trail.
+    private func drawMeteor(_ c: inout GraphicsContext, s: CGSize) {
+        let period = 19.0
+        let cycle = (t / period).rounded(.down)
+        let phase = t / period - cycle
+        guard phase < 0.22 else { return }
+        let local = phase / 0.22
+        var rng = SeededRNG(seed: seed &+ UInt64(bitPattern: Int64(cycle)) &* 151 &+ 5)
+        let x0 = Double(s.width) * (0.1 + rng.unit() * 0.8)
+        let y0 = Double(s.height) * (0.02 + rng.unit() * 0.3)
+        let dir: Double = rng.unit() < 0.5 ? -1 : 1
+        let travel = Double(s.width) * 0.7 * local
+        let hx = x0 - dir * travel
+        let hy = y0 + travel * 0.7
+        let a = Foundation.sin(.pi * local)
+        var i = 0
+        while i < 8 {
+            let f = Double(i) / 7.0
+            let tx = hx + dir * travel * f * 0.5
+            let ty = hy - travel * f * 0.35
+            softDot(&c, x: CGFloat(tx), y: CGFloat(ty), r: CGFloat(6 * (1 - f) + 1.5),
+                    Color(hex: 0xFFE7C4).opacity(a * (1 - f) * 0.4))
+            i += 1
+        }
+        softDot(&c, x: CGFloat(hx), y: CGFloat(hy), r: 9, Color(hex: 0xFFF0D8).opacity(a * 0.6))
+        c.fill(Path(ellipseIn: CGRect(x: hx - 2.6, y: hy - 2.6, width: 5.2, height: 5.2)),
+               with: .color(.white.opacity(a)))
+    }
+
+    /// A soft snow flurry drifting down and swaying — for cold / aurora skies.
+    private func drawSnow(_ c: inout GraphicsContext, s: CGSize) {
+        var rng = SeededRNG(seed: seed &+ 0x5A0F)
+        let H = Double(s.height) + 40
+        for i in 0..<46 {
+            let di = Double(i)
+            let fx = rng.unit()
+            let fy = rng.unit()
+            let speed = 18.0 + rng.unit() * 26.0
+            let y = (fy * H + t * speed).truncatingRemainder(dividingBy: H) - 20
+            let sway = Foundation.sin(t * (0.5 + rng.unit()) + di) * (4 + rng.unit() * 8)
+            let x = fx * Double(s.width) + sway
+            let r = 0.8 + rng.unit() * 1.8
+            let a = 0.35 + rng.unit() * 0.4
+            softDot(&c, x: CGFloat(x), y: CGFloat(y), r: CGFloat(r), Color.white.opacity(a))
+        }
     }
 
     /// Soft twinkling accent stars, seeded to this chapter.

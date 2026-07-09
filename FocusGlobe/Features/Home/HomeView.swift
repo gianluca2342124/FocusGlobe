@@ -187,14 +187,16 @@ struct HomeView: View {
     // MARK: Greeting
 
     private var greetingBlock: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(viewModel.greeting)
-                .font(.system(size: Layout.pad(30, 40), weight: .semibold, design: .serif))
+                .font(.system(size: Layout.pad(37, 50), weight: .semibold, design: .serif))
                 .foregroundStyle(.white)
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
             Text(dateLine)
-                .font(.system(size: Layout.pad(14, 17), weight: .regular, design: .serif))
+                .font(.system(size: Layout.pad(15, 18), weight: .regular, design: .serif))
                 .italic()
-                .foregroundStyle(.white.opacity(0.65))
+                .foregroundStyle(.white.opacity(0.66))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, AppSpacing.sm)
