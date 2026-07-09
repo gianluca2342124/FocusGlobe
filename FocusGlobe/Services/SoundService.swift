@@ -28,7 +28,9 @@ final class SoundService {
     private var muted = false
     /// The option currently playing, so a live switch can no-op if unchanged.
     private var currentOptionID: String?
-    private let targetVolume: Float = 0.6
+    /// Clearly present during the flight (the ambience is a core part of the
+    /// experience), but still calm enough to focus over.
+    private let targetVolume: Float = 0.72
 
     /// Whether the current journey audio is muted (volume 0 but still "playing",
     /// so pause/resume are unaffected).

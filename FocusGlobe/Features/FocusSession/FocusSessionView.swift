@@ -41,7 +41,6 @@ struct FocusSessionView: View {
     @EnvironmentObject private var appModel: AppModel
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.horizontalSizeClass) private var hSize
 
     @State private var balloonSway: CGFloat = 0
     @State private var balloonBob: CGFloat = 0
@@ -67,11 +66,6 @@ struct FocusSessionView: View {
         guard let start = flightStartedAt else { return 0 }
         let effective = pausedAt ?? now
         return max(0, effective.timeIntervalSince(start))
-    }
-
-    private func displayProgress(at now: Date) -> Double {
-        guard durationSeconds > 0 else { return 0 }
-        return min(1, displayElapsed(at: now) / durationSeconds)
     }
 
     /// The per-session world seed: fixed once the flight anchors, so the world
@@ -220,127 +214,79 @@ struct FocusSessionView: View {
         .overlay(Capsule().strokeBorder(.white.opacity(0.12), lineWidth: 1))
     }
 
-    // MARK: Bottom bar — Time · centre control · Distance, on one row
+    // MARK: Bottom bar — a focus-first hero timer
 
+    // FocusGlobe is a focus timer first, so the remaining time is the single hero
+    // at the bottom: large and glanceable, with the controls demoted to a quiet
+    // secondary affordance beneath it. (Distance was removed — it isn't the point.)
     private var bottomBar: some View {
         VStack(spacing: 0) {
             Spacer()
-            // A half-second TimelineView is the tick: it re-evaluates this row on
-            // schedule and every value is derived from `ctx.date` right here —
-            // no publishers, no engine state, nothing that can go stale.
+            // A half-second TimelineView is the tick: every value is derived from
+            // `ctx.date` right here, so the clock can never go stale.
             TimelineView(.periodic(from: .now, by: 0.5)) { ctx in
-                metricsRow(now: ctx.date)
+                heroTimer(now: ctx.date)
             }
-            // iPhone (compact): a centred cluster, exactly as before. iPad/Mac
-            // (regular): span the full width so the readouts sit out near the
-            // left and right edges — spacious, not centre-clustered.
-            .frame(maxWidth: hSize == .regular ? .infinity : Layout.journeyReadouts)
             .frame(maxWidth: .infinity)
-            .padding(.horizontal, hSize == .regular ? AppSpacing.xxl : AppSpacing.screen)
+            .padding(.horizontal, AppSpacing.screen)
         }
-        .padding(.bottom, hSize == .regular ? AppSpacing.lg : AppSpacing.md)
+        .padding(.bottom, Layout.pad(30, 46))
         .transition(.opacity)
     }
 
-    private func metricsRow(now: Date) -> some View {
+    private func heroTimer(now: Date) -> some View {
         let elapsed = displayElapsed(at: now)
         let elapsedSecs = Int(elapsed.rounded(.down))
         let remainingSecs = max(0, Int((durationSeconds - elapsed).rounded(.up)))
-        let remainingKm = max(0, vm.route.approximateDistanceKm * (1 - displayProgress(at: now)))
-        return HStack(alignment: .bottom) {
-            if isInfinity {
-                readout(label: "Time Focused",
-                        value: Formatters.flightTimeElapsed(elapsedSecs), alignment: .leading)
-            } else {
-                readout(label: "Time Remaining",
-                        value: Formatters.flightTimeRemaining(remainingSecs), alignment: .leading)
+        let label = isInfinity ? "Focused" : "Time Remaining"
+        let value = isInfinity ? Formatters.flightClock(elapsedSecs)
+                               : Formatters.flightClock(remainingSecs)
+        return VStack(spacing: Layout.pad(16, 24)) {
+            VStack(spacing: 4) {
+                Text(label.uppercased())
+                    .font(.system(size: Layout.pad(12, 15), weight: .semibold, design: .rounded))
+                    .tracking(2.5)
+                    .foregroundStyle(.white.opacity(0.55))
+                Text(value)
+                    .font(.system(size: Layout.pad(66, 108), weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.white)
+                    .contentTransition(.numericText(countsDown: !isInfinity))
+                    .animation(.snappy(duration: 0.35), value: value)
+                    .minimumScaleFactor(0.5)
+                    .lineLimit(1)
+                    .shadow(color: .black.opacity(0.45), radius: 14, y: 3)
             }
-
             if isInfinity {
-                LandNowButton(size: Layout.pad(56, 68)) {
-                    appModel.tapFeedback()
-                    vm.landNow()
+                subtleControl(icon: "arrow.down.to.line", title: "Land now") {
+                    appModel.tapFeedback(); vm.landNow()
                 }
             } else {
-                WhitePauseButton(isPaused: vm.isPaused, size: Layout.pad(56, 68)) { vm.togglePause() }
-            }
-
-            if isInfinity {
-                readout(label: "Distance Traveled",
-                        value: Formatters.flightDistanceKm(FlightRouteFactory.traveledKm(elapsedSeconds: elapsedSecs)),
-                        alignment: .trailing)
-            } else {
-                readout(label: "Distance Remaining",
-                        value: Formatters.flightDistanceKm(remainingKm), alignment: .trailing)
+                subtleControl(icon: vm.isPaused ? "play.fill" : "pause.fill",
+                              title: vm.isPaused ? "Resume" : "Pause") {
+                    vm.togglePause()
+                }
             }
         }
+        .frame(maxWidth: .infinity)
     }
 
-    fileprivate func readout(label: String, value: String, alignment: HorizontalAlignment) -> some View {
-        VStack(alignment: alignment, spacing: 2) {
-            Text(label)
-                .font(AppTypography.caption)
-                .foregroundStyle(.white.opacity(0.6))
-                .lineLimit(1).minimumScaleFactor(0.8)
-            Text(value)
-                .font(.system(size: Layout.pad(30, 54), weight: .bold, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(.white)
-                .contentTransition(.numericText(countsDown: alignment == .leading && !isInfinity))
-                .animation(.snappy(duration: 0.3), value: value)
-                .minimumScaleFactor(0.55)
-                .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity, alignment: alignment == .leading ? .leading : .trailing)
-        .shadow(color: .black.opacity(0.4), radius: 8, y: 2)
-    }
-}
-
-/// The round pause/resume control — a warm white disc with a dark glyph, calm
-/// and thumb-sized, sitting centre-bottom of the flight.
-private struct WhitePauseButton: View {
-    let isPaused: Bool
-    var size: CGFloat = 58
-    let action: () -> Void
-
-    var body: some View {
+    /// A quiet, secondary control beneath the hero timer — deliberately
+    /// understated so the time stays the focus.
+    private func subtleControl(icon: String, title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: isPaused ? "play.fill" : "pause.fill")
-                .font(.system(size: size * 0.34, weight: .bold))
-                .foregroundStyle(Color(hex: 0x14120E))
-                .frame(width: size, height: size)
-                .background(Circle().fill(Color(hex: 0xF4EFE4)))
-                .shadow(color: .black.opacity(0.3), radius: 12, y: 6)
+            HStack(spacing: 8) {
+                Image(systemName: icon).font(.system(size: Layout.pad(14, 17), weight: .bold))
+                Text(title).font(.system(size: Layout.pad(15, 18), weight: .semibold, design: .rounded))
+            }
+            .foregroundStyle(.white.opacity(0.9))
+            .padding(.horizontal, Layout.pad(22, 28))
+            .padding(.vertical, Layout.pad(12, 15))
+            .background(Capsule().fill(.white.opacity(0.12)))
+            .overlay(Capsule().strokeBorder(.white.opacity(0.16), lineWidth: 1))
         }
         .buttonStyle(SoftPressStyle())
-        .accessibilityLabel(isPaused ? "Resume" : "Pause")
+        .accessibilityLabel(title)
     }
 }
 
-/// The endless-flight central control. An open-ended (∞) flight never pauses —
-/// instead its one button lands the flight now, banking it as complete. Same
-/// warm disc as the pause button, with a descend glyph + a small caption.
-private struct LandNowButton: View {
-    var size: CGFloat = 58
-    let action: () -> Void
-
-    var body: some View {
-        VStack(spacing: 7) {
-            Button(action: action) {
-                Image(systemName: "arrow.down.to.line")
-                    .font(.system(size: size * 0.34, weight: .bold))
-                    .foregroundStyle(Color(hex: 0x14120E))
-                    .frame(width: size, height: size)
-                    .background(Circle().fill(Color(hex: 0xF4EFE4)))
-                    .shadow(color: .black.opacity(0.3), radius: 12, y: 6)
-            }
-            .buttonStyle(SoftPressStyle())
-            Text("Land now")
-                .font(AppTypography.caption)
-                .foregroundStyle(.white.opacity(0.8))
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Land now")
-        .accessibilityHint("Ends this endless flight and saves it as complete.")
-    }
-}
