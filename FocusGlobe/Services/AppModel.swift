@@ -290,6 +290,38 @@ final class AppModel: ObservableObject {
     }
     #endif
 
+    // MARK: - Focus Coins + Store
+
+    /// The spendable **Focus Coins** balance: lifetime coins earned by landing
+    /// flights minus what's been spent in the Store. (The lifetime total keeps
+    /// driving achievements, so spending never un-earns a badge.)
+    var focusCoins: Int {
+        max(0, progress.totalFocusMiles - (profile.spentFocusCoins ?? 0))
+    }
+
+    func ownsStoreItem(_ item: StoreItem) -> Bool {
+        (profile.ownedStoreItemIDs ?? []).contains(item.id)
+    }
+
+    /// Buy a cosmetic with Focus Coins (or claim a premium item when Pro).
+    /// Returns `true` on success.
+    @discardableResult
+    func purchaseStoreItem(_ item: StoreItem) -> Bool {
+        guard !ownsStoreItem(item) else { return true }
+        if item.isPremium {
+            guard isPro else { return false }
+        } else {
+            guard focusCoins >= item.price else { return false }
+            profile.spentFocusCoins = (profile.spentFocusCoins ?? 0) + item.price
+        }
+        var owned = profile.ownedStoreItemIDs ?? []
+        owned.insert(item.id)
+        profile.ownedStoreItemIDs = owned
+        haptics.rewardClaim()
+        uiSound.play(.claim)
+        return true
+    }
+
     // MARK: - Onboarding completion
 
     /// Persist everything gathered by first-run onboarding and open the app.
@@ -497,13 +529,13 @@ final class AppModel: ObservableObject {
         let earlierRouteIDs = Set(history.filter { $0.completed && !cal.isDateInToday($0.date) }.map { $0.routeID })
         let newDestinations = Double(Set(todays.map { $0.routeID }).subtracting(earlierRouteIDs).count)
         return [
-            DailyMission(id: "journey", title: "Complete an expedition", systemImage: "paperplane.fill",
+            DailyMission(id: "journey", title: "Complete one flight", systemImage: "paperplane.fill",
                          accent: .indigo, target: 1, current: journeys),
             DailyMission(id: "focus", title: "Focus 30 minutes", systemImage: "timer",
                          accent: .teal, target: 30, current: minutes),
-            DailyMission(id: "new", title: "Visit a new destination", systemImage: "mappin.and.ellipse",
+            DailyMission(id: "new", title: "Land in a new Sky", systemImage: "moon.stars.fill",
                          accent: .gold, target: 1, current: newDestinations),
-            DailyMission(id: "miles", title: "Earn 60 miles", systemImage: "sparkles",
+            DailyMission(id: "miles", title: "Earn 60 Focus Coins", systemImage: "sparkles",
                          accent: .coral, target: 60, current: miles),
         ]
     }

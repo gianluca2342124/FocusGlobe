@@ -34,6 +34,11 @@ struct UserProfile: Codable, Equatable {
     var acceptedInviteCount: Int = 0
     /// When the profile was first created.
     var createdAt: Date? = nil
+    /// Focus Coins spent in the Store (balance = lifetime earned − spent).
+    /// Optional so profiles saved before the Store keep decoding.
+    var spentFocusCoins: Int? = nil
+    /// Store items this pilot owns. Optional for the same decoding reason.
+    var ownedStoreItemIDs: Set<String>? = nil
 
     static let empty = UserProfile()
 }

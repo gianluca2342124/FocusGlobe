@@ -306,6 +306,7 @@ struct HomeView: View {
             missionsCard
             HStack(spacing: AppSpacing.xs) {
                 compactNav(title: "Passport", systemImage: "book.closed") { appModel.tapFeedback(); router.openPassport() }
+                compactNav(title: "Store", systemImage: "bag") { appModel.tapFeedback(); router.openStore() }
                 compactNav(title: "Settings", systemImage: "gearshape") { appModel.tapFeedback(); router.openSettings() }
             }
         }

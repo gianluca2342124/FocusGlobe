@@ -124,7 +124,7 @@ struct LandingView: View {
             divider
             stat(value: Formatters.flightDistanceKm(summary.distanceKm), unit: "", label: "Distance")
             divider
-            stat(value: Formatters.miles(earnedMiles), unit: "", label: adState == .doubled ? "Miles ×2" : "Miles")
+            stat(value: Formatters.miles(earnedMiles), unit: "", label: adState == .doubled ? "Coins ×2" : "Focus Coins")
             divider
             stat(value: "\(summary.streak)", unit: summary.streak == 1 ? "day" : "days", label: "Streak")
         }
@@ -213,7 +213,7 @@ struct LandingView: View {
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
-                        Text(adState == .doubled ? "Miles doubled" : "Double your miles")
+                        Text(adState == .doubled ? "Coins doubled" : "Double your Focus Coins")
                             .font(AppTypography.callout)
                             .foregroundStyle(AppColors.textPrimary)
                         if adState == .available { adBadge }
@@ -245,9 +245,9 @@ struct LandingView: View {
 
     private var doubleRewardSubtitle: String {
         switch adState {
-        case .doubled: return "Now \(Formatters.miles(earnedMiles)) miles"
+        case .doubled: return "Now \(Formatters.miles(earnedMiles)) Focus Coins"
         case .loading: return "Playing…"
-        case .available: return "Double to \(Formatters.miles(summary.baseMiles * 2)) miles"
+        case .available: return "Double to \(Formatters.miles(summary.baseMiles * 2)) Focus Coins"
         }
     }
 

@@ -43,7 +43,38 @@ struct FocusSky: Identifiable, Hashable {
     let visualPresetID: String
     /// Which flight-world opening sequence best matches this Sky (0…3, see
     /// `FlightWorldSequence.openings`); `nil` keeps the seeded random opening.
+    /// Superseded by `flightPool` for Sky-identity flights; kept as a fallback.
     let flightOpening: Int?
+
+    /// The Sky-identity weather riding inside the flight's scrolling world.
+    enum FlightParticle { case none, snow, rain, lanterns }
+
+    /// **The Sky's own flight.** A session stays inside this small family of
+    /// world chapters (its recognizable identity — evolving, never cycling into
+    /// unrelated landscapes), decorated by `flightParticles`. Populated after
+    /// the catalog via `flightIdentity(for:)` so this file stays data-first.
+    var flightPool: [WorldKind] { FocusSky.flightIdentity(for: id).pool }
+    var flightParticles: FlightParticle { FocusSky.flightIdentity(for: id).particles }
+
+    /// Chapter family + weather per Sky. Every case maps onto existing, proven
+    /// chapter renderers — a new Sky is one line here.
+    static func flightIdentity(for id: String) -> (pool: [WorldKind], particles: FlightParticle) {
+        switch id {
+        case "golden-hour":      return ([.goldenHorizon, .cloudOcean, .roseDawn], .none)
+        case "paris-sunset":     return ([.roseDawn, .goldenHorizon, .violetTwilight], .none)
+        case "fiji-lagoon":      return ([.cloudOcean, .goldenHorizon], .none)
+        case "kyoto-lanterns":   return ([.violetTwilight, .nightValley], .lanterns)
+        case "aurora-snowfield": return ([.auroraField, .snowSky], .snow)
+        case "moon-garden":      return ([.moonSky, .quietReturn], .none)
+        case "galaxy-drift":     return ([.nebulaDream, .starfield], .none)
+        case "deep-space":       return ([.deepSpace, .starfield], .none)
+        case "rainy-tokyo":      return ([.nightValley, .violetTwilight], .rain)
+        case "swiss-alps":       return ([.snowSky, .cloudOcean], .snow)
+        case "sahara-night":     return ([.nightValley, .starfield], .none)
+        case "santorini-dawn":   return ([.roseDawn, .cloudOcean], .none)
+        default:                 return ([.goldenHorizon, .cloudOcean, .roseDawn], .none)
+        }
+    }
 
     var isDefaultFree: Bool { unlockRequirement == .free }
     var isPremium: Bool { unlockRequirement == .premiumOrInvites }

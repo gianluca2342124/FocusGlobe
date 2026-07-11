@@ -90,13 +90,20 @@ struct PassportView: View {
 
     // MARK: Hero logbook summary (the journal cover)
 
+    /// "Pilot {name}" when the profile has a name; the plain logbook otherwise.
+    private var pilotLine: String {
+        if let name = appModel.profile.name, !name.isEmpty { return "Pilot \(name)" }
+        return "Flight logbook"
+    }
+
     private var heroLogbookCard: some View {
         let focus = totalFocusMinutes
         return VStack(alignment: .leading, spacing: AppSpacing.md) {
             HStack {
-                Label("Flight logbook", systemImage: "book.closed.fill")
+                Label(pilotLine, systemImage: "book.closed.fill")
                     .font(.system(size: 12, weight: .bold, design: .rounded))
                     .foregroundStyle(AppColors.gold)
+                    .lineLimit(1)
                 Spacer()
                 if progress.currentStreak > 0 {
                     StreakPill(days: progress.currentStreak)
@@ -216,7 +223,7 @@ struct PassportView: View {
             } label: {
                 HStack(spacing: 7) {
                     Image(systemName: "gift.fill").font(.system(size: 14, weight: .bold))
-                    Text("Claim +\(appModel.dailyMissionRewardMiles) miles")
+                    Text("Claim +\(appModel.dailyMissionRewardMiles) Focus Coins")
                         .font(AppTypography.callout)
                 }
                 .foregroundStyle(Color(hex: 0x2B2620))

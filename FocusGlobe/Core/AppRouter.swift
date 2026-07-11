@@ -32,6 +32,7 @@ final class AppRouter: ObservableObject {
         case passport
         case history
         case settings
+        case store
     }
 
     @Published var path: [Destination] = []
@@ -61,6 +62,7 @@ final class AppRouter: ObservableObject {
         }
     }
     func openPassport() { path.append(.passport) }
+    func openStore() { path.append(.store) }
     func openHistory() { path.append(.history) }
     func openSettings() { path.append(.settings) }
     func presentPaywall() { showPaywall = true }

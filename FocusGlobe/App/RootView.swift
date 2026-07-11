@@ -23,6 +23,7 @@ struct RootView: View {
                             case .passport: PassportView()
                             case .history: HistoryView()
                             case .settings: SettingsView()
+                            case .store: StoreView()
                             }
                         }
                 }
