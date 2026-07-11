@@ -15,6 +15,7 @@ final class PersistenceService {
         case history = "fg.history"
         case isPro = "fg.isPro"
         case resumableJourney = "fg.resumableJourney"
+        case profile = "fg.profile"
     }
 
     private let defaults: UserDefaults
@@ -49,6 +50,6 @@ final class PersistenceService {
 
     /// Wipes all FocusGlobe data (used by the debug "Reset" action).
     func wipeAll() {
-        [Key.settings, .progress, .history, .isPro, .resumableJourney].forEach { remove($0) }
+        [Key.settings, .progress, .history, .isPro, .resumableJourney, .profile].forEach { remove($0) }
     }
 }

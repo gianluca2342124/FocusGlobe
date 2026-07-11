@@ -91,20 +91,24 @@ enum FlightWorldSequence {
         .nebulaDream, .quietReturn, .deepSpace, .cloudOcean, .roseDawn,
     ]
 
-    /// One-entry memo: the same session seed always yields the same sequence,
-    /// so rebuilding on every body evaluation would be pure waste.
-    @MainActor private static var cached: (seed: UInt64, specs: [ChapterSpec])?
+    /// One-entry memo: the same session seed (and opening bias) always yields
+    /// the same sequence, so rebuilding per body evaluation would be pure waste.
+    @MainActor private static var cached: (seed: UInt64, opening: Int?, specs: [ChapterSpec])?
 
-    @MainActor static func sequence(seed: UInt64) -> [ChapterSpec] {
-        if let cached, cached.seed == seed { return cached.specs }
-        let specs = build(seed: seed)
-        cached = (seed, specs)
+    /// `opening` biases the journey's first chapters toward the selected Sky's
+    /// mood (an index into `openings`); `nil` keeps the seeded random opening.
+    @MainActor static func sequence(seed: UInt64, opening: Int? = nil) -> [ChapterSpec] {
+        if let cached, cached.seed == seed, cached.opening == opening { return cached.specs }
+        let specs = build(seed: seed, opening: opening)
+        cached = (seed, opening, specs)
         return specs
     }
 
-    private static func build(seed: UInt64) -> [ChapterSpec] {
+    private static func build(seed: UInt64, opening forcedOpening: Int?) -> [ChapterSpec] {
         var rng = SeededRNG(seed: seed == 0 ? 0xF0C0_5155 : seed)
-        let opening = openings[Int(rng.unit() * Double(openings.count)) % openings.count]
+        let seededIndex = Int(rng.unit() * Double(openings.count)) % openings.count
+        let openingIndex = forcedOpening.map { max(0, min(openings.count - 1, $0)) } ?? seededIndex
+        let opening = openings[openingIndex]
         var specs: [ChapterSpec] = opening.enumerated().map { i, kind in
             ChapterSpec(kind: kind, seed: seed &+ UInt64(i) &* 0x9E37_79B9)
         }
@@ -138,12 +142,15 @@ struct ActiveFlightJourneyWorldView: View {
     /// Stable per-session seed: world order and dressing vary between flights.
     var seed: UInt64 = 1
     var animated: Bool = true
+    /// Biases the opening chapters toward the selected Sky (see
+    /// `FlightWorldSequence.openings`); `nil` keeps the seeded opening.
+    var openingBias: Int? = nil
 
     var body: some View {
         GeometryReader { geo in
             let W = geo.size.width
             let H = max(1, geo.size.height)
-            let seq = FlightWorldSequence.sequence(seed: seed)
+            let seq = FlightWorldSequence.sequence(seed: seed, opening: openingBias)
             ZStack {
                 Color(hex: 0x0D1322)
 

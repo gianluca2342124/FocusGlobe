@@ -22,6 +22,12 @@ final class AppModel: ObservableObject {
     @Published var settings: AppSettings {
         didSet { settingsChanged(from: oldValue) }
     }
+    /// The lightweight local account/profile (onboarding answers, selected Sky,
+    /// invite state). Persisted under its own key; auto-saves on every change.
+    /// (didSet doesn't fire during `init`, matching the other stores.)
+    @Published var profile: UserProfile {
+        didSet { persistence.save(profile, for: .profile) }
+    }
     @Published private(set) var progress: UserProgress
     @Published private(set) var history: [FocusSessionRecord]
     @Published private(set) var isPro: Bool {
@@ -76,10 +82,23 @@ final class AppModel: ObservableObject {
 
         let loadedSettings = persistence.load(AppSettings.self, for: .settings) ?? .default
         self.settings = loadedSettings
-        self.progress = persistence.load(UserProgress.self, for: .progress) ?? .empty
-        self.history = persistence.load([FocusSessionRecord].self, for: .history) ?? []
+        let loadedProgress = persistence.load(UserProgress.self, for: .progress) ?? .empty
+        let loadedHistory = persistence.load([FocusSessionRecord].self, for: .history) ?? []
+        self.progress = loadedProgress
+        self.history = loadedHistory
         self.isPro = persistence.bool(for: .isPro)
         self.resumableJourney = persistence.load(ResumableJourney.self, for: .resumableJourney)
+
+        // Profile: first-run onboarding shows only for genuinely new pilots.
+        // Anyone with existing progress/history predates onboarding — mark it
+        // completed once so they are never onboarded retroactively.
+        var loadedProfile = persistence.load(UserProfile.self, for: .profile) ?? .empty
+        if !loadedProfile.hasCompletedOnboarding
+            && (loadedProgress.hasAnyProgress || !loadedHistory.isEmpty) {
+            loadedProfile.hasCompletedOnboarding = true
+            persistence.save(loadedProfile, for: .profile)
+        }
+        self.profile = loadedProfile
         LaunchLog.mark("AppModel.init persistence loaded")
 
         haptics.isEnabled = loadedSettings.hapticsEnabled
@@ -210,12 +229,83 @@ final class AppModel: ObservableObject {
         progress.landings > 0 || settings.virtualOrigin != nil
     }
 
-    /// First-launch gate. FocusGlobe no longer departs from a place — flights
-    /// begin in the sky itself — so the old resolving / choose-a-city onboarding
-    /// is permanently skipped and the app opens straight onto Home. The screen
-    /// stays compiled but unreachable; the journey origin quietly falls back to
-    /// `JourneyOrigin.default`, which is cosmetic only.
-    var needsOnboarding: Bool { false }
+    /// First-launch gate: the premium first-run onboarding shows only until the
+    /// local profile is created (and never for pre-existing pilots — see `init`,
+    /// which auto-completes it when progress/history already exist).
+    var needsOnboarding: Bool { !profile.hasCompletedOnboarding }
+
+    // MARK: - Skies (destination system) + invites
+
+    /// The currently selected Sky. Falls back to the free Golden Hour whenever
+    /// nothing is chosen or the stored choice is no longer unlocked (e.g. Pro
+    /// lapsed before 3 invites) — premium Skies are never permanently kept.
+    var selectedSky: FocusSky {
+        let stored = FocusSky.byID(profile.selectedSkyID) ?? .goldenHour
+        return isSkyUnlocked(stored) ? stored : .goldenHour
+    }
+
+    /// Whether a Sky is flyable for this pilot (free / Pro / 3 accepted invites).
+    func isSkyUnlocked(_ sky: FocusSky) -> Bool {
+        SkyUnlock.isUnlocked(sky, isPro: isPro, acceptedInvites: profile.acceptedInviteCount)
+    }
+
+    /// Select a Sky for the next flights. Locked Skies can be previewed on Home
+    /// but never stored as the active choice.
+    func selectSky(_ sky: FocusSky) {
+        guard isSkyUnlocked(sky) else { return }
+        guard profile.selectedSkyID != sky.id else { return }
+        profile.selectedSkyID = sky.id
+    }
+
+    /// This pilot's stable invite code (created lazily on first use).
+    func referralCode() -> String {
+        if let code = profile.referralCode { return code }
+        let alphabet = Array("ABCDEFGHJKMNPQRSTUVWXYZ23456789")
+        var code = ""
+        for _ in 0..<6 { code.append(alphabet[Int.random(in: 0..<alphabet.count)]) }
+        profile.referralCode = code
+        return code
+    }
+
+    /// The share message for "Invite 3 friends". The link is a placeholder until
+    /// the referral backend + Associated Domains ship; the code makes it real
+    /// enough to test end-to-end copy.
+    func inviteShareMessage() -> String {
+        "Join me on FocusGlobe — focus feels like a calm balloon flight. " +
+        "Use my invite code \(referralCode()) → https://focusglobe.app/i/\(referralCode())"
+    }
+
+    /// Future backend entry point: apply the server-verified accepted-invite
+    /// count. Production code must ONLY ever set this from a trusted source.
+    func applyVerifiedInviteCount(_ count: Int) {
+        profile.acceptedInviteCount = max(profile.acceptedInviteCount, max(0, count))
+    }
+
+    #if DEBUG
+    /// DEBUG-only: simulate one accepted invite so the unlock flow can be tested
+    /// without a backend. Never compiled into release builds.
+    func debugSimulateAcceptedInvite() {
+        profile.acceptedInviteCount += 1
+        haptics.tap()
+    }
+    #endif
+
+    // MARK: - Onboarding completion
+
+    /// Persist everything gathered by first-run onboarding and open the app.
+    func completeOnboarding(name: String?, yearGoal: String?, ageRange: String?,
+                            struggle: String?, focusStyle: String?, shieldOptIn: Bool) {
+        var p = profile
+        p.name = name?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? name : nil
+        p.yearGoal = yearGoal?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? yearGoal : nil
+        p.ageRange = ageRange
+        p.focusStruggle = struggle
+        p.focusStyle = focusStyle
+        p.focusShieldOptIn = shieldOptIn
+        p.createdAt = p.createdAt ?? Date()
+        p.hasCompletedOnboarding = true
+        profile = p
+    }
 
     /// Whether the manual starting-city picker should be offered. It appears only
     /// when there is no valid origin yet — i.e. real location isn't resolved *and*

@@ -77,6 +77,12 @@ struct FocusSessionView: View {
     /// order and dressing are stable in-session but fresh every flight.
     @State private var worldSeed: UInt64 = 1
 
+    /// The selected Sky's flight-opening bias, recovered from the route id (the
+    /// Sky id is embedded there, so this survives resume). `nil` → seeded random.
+    private var skyOpeningBias: Int? {
+        FocusSky.matching(routeID: vm.route.id)?.flightOpening
+    }
+
     var body: some View {
         ZStack {
             // The vertical world journey — a constant cinematic pace driven by
@@ -87,14 +93,16 @@ struct FocusSessionView: View {
             case .exterior:
                 ActiveFlightJourneyWorldView(elapsed: { displayElapsed(at: Date()) },
                                              seed: worldSeed,
-                                             animated: !reduceMotion)
+                                             animated: !reduceMotion,
+                                             openingBias: skyOpeningBias)
                     .transition(.opacity)
                 balloon
                     .transition(.opacity)
             case .cabin:
                 CabinView(elapsed: { displayElapsed(at: Date()) },
                           seed: worldSeed,
-                          animated: !reduceMotion)
+                          animated: !reduceMotion,
+                          openingBias: skyOpeningBias)
                     .transition(.opacity)
             }
 
