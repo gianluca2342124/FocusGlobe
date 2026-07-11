@@ -57,16 +57,48 @@ enum FlightRouteFactory {
     }
 
     static func isInfinity(_ route: Route) -> Bool { route.id.hasPrefix(infinityIDPrefix) }
+
+    /// Build the synthetic route for a chosen **Sky** — the Sky's id rides in the
+    /// route id (resume-safe) and its name becomes the destination, so the
+    /// ticket, landing and Passport all record the Sky without model changes.
+    static func route(minutes rawMinutes: Int, infinite: Bool,
+                      origin: JourneyOrigin, focusSky: FocusSky) -> Route {
+        let minutes = infinite ? infinityMinutes : max(1, min(rawMinutes, infinityMinutes))
+        let km = infinite ? symbolicKm(minutes: 60) * 4 : symbolicKm(minutes: minutes)
+        let deg = min(60, km / 111.0)
+        let category: RouteCategory = minutes <= 30 ? .short : (minutes <= 90 ? .deep : (minutes <= 240 ? .long : .ultra))
+        let id = infinite ? "\(infinityIDPrefix)-\(focusSky.id)" : "flight-\(minutes)m-\(focusSky.id)"
+        let scene = focusSky.scene
+        return Route(
+            id: id,
+            name: focusSky.name,
+            shortName: focusSky.name,
+            originName: origin.city,
+            destinationName: focusSky.name,
+            originLatitude: origin.coordinate.latitude,
+            originLongitude: origin.coordinate.longitude,
+            destinationLatitude: min(84, origin.coordinate.latitude + deg * 0.55),
+            destinationLongitude: origin.coordinate.longitude + deg,
+            durationMinutes: minutes,
+            approximateDistanceKm: km,
+            category: category,
+            mood: scene.mood,
+            rewardName: focusSky.name,
+            isPremium: false,
+            colorTheme: scene.theme,
+            ambientSoundName: "")
+    }
 }
 
 /// The set of "nice" durations the Altitude Dial snaps through, low → high,
 /// with an extra terminal stop meaning **∞ (endless)**. Presets and the dial
 /// both address these by index so the two controls always agree.
 enum DurationScale {
-    /// Clean 5-minute steps from 5 minutes up through 12 hours, then a trailing
-    /// ∞. Presets and the dial both address these by index so the two controls
-    /// always agree.
-    static let stops: [Int] = Array(stride(from: 5, through: 720, by: 5))
+    /// Clean 5-minute steps up to 3 hours, then broader cinematic stops
+    /// (3h30 · 4h · 5h · 6h · 8h · 10h · 12h) and a trailing ∞. Presets and the
+    /// dial both address these by index so the two controls always agree.
+    static let stops: [Int] =
+        Array(stride(from: 5, through: 180, by: 5)) + [210, 240, 300, 360, 480, 600, 720]
     /// Total selectable positions, including the trailing ∞.
     static var count: Int { stops.count + 1 }
     static var infinityIndex: Int { stops.count }
@@ -96,6 +128,9 @@ enum DurationScale {
 /// by calling the *exact same* `router.startJourney(origin:route:intention:)`
 /// as always, so nothing downstream changes.
 struct FlightSetupView: View {
+    /// The Sky chosen on Home — carried through the whole ritual: the backdrop
+    /// matches its mood, the ticket names it, and the flight is biased to it.
+    var focusSky: FocusSky = .goldenHour
     /// Hands the validated flight back to the presenter (Home) so it can swap the
     /// setup cover directly into the flight cover — with the Home chrome held
     /// hidden across the swap, the base screen never flashes between them.
@@ -116,7 +151,8 @@ struct FlightSetupView: View {
     /// Shield infrastructure; this is the premium pre-flight control for it.)
     @State private var blockApps = true
 
-    private var sky: SkyScene { SkyScene.today() }
+    /// The ritual backdrop mapped from the chosen Sky (closest existing preset).
+    private var sky: SkyScene { focusSky.scene }
 
     var body: some View {
         ZStack {
@@ -155,7 +191,7 @@ struct FlightSetupView: View {
                         .transition(stepTransition)
                     case .ticket:
                         CheckInTicketView(minutes: minutes, infinite: infinite,
-                                          focus: focus, sky: sky) {
+                                          focus: focus, skyName: focusSky.name) {
                             takeOff()
                         }
                         .transition(stepTransition)
@@ -210,7 +246,8 @@ struct FlightSetupView: View {
 
     private func takeOff() {
         let route = FlightRouteFactory.route(minutes: minutes, infinite: infinite,
-                                             origin: appModel.originForJourney, sky: sky)
+                                             origin: appModel.originForJourney,
+                                             focusSky: focusSky)
         // Hand off to Home, which hides its chrome, dismisses this cover, and — in
         // the cover's own `onDismiss` — presents the flight. No timed gap, so the
         // Home screen never flashes between the ticket and the flight.
@@ -963,6 +1000,24 @@ struct FlightModeView: View {
                 }
             }
             .buttonStyle(SoftPressStyle(scale: 0.99))
+
+            // The flight's soundscape, so the whole pre-flight state reads in
+            // one glance. Changeable in Passport → Flight ambience.
+            HStack(spacing: AppSpacing.sm) {
+                Image(systemName: appModel.selectedJourneyAudio.systemImage)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(AppColors.gold)
+                    .frame(width: 26)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Soundscape")
+                        .font(.system(size: 12.5, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.6))
+                    Text(appModel.selectedJourneyAudio.displayName)
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white)
+                }
+                Spacer()
+            }
         }
         .padding(AppSpacing.lg)
         .background(
@@ -998,7 +1053,7 @@ struct CheckInTicketView: View {
     let minutes: Int
     let infinite: Bool
     let focus: FocusPreset?
-    let sky: SkyScene
+    let skyName: String
     let onValidated: () -> Void
     @EnvironmentObject private var appModel: AppModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -1101,7 +1156,7 @@ struct CheckInTicketView: View {
         .overlay(stamp)
         .padding(.horizontal, AppSpacing.screen)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Boarding pass. Focus flight to \(sky.name), \(durationBig). \(checked ? "Checked in." : "Not checked in.")")
+        .accessibilityLabel("Boarding pass. Focus flight to \(skyName), \(durationBig). \(checked ? "Checked in." : "Not checked in.")")
         .accessibilityAction(named: "Check in") { commitTear() }
     }
 
@@ -1192,7 +1247,7 @@ struct CheckInTicketView: View {
                 Spacer()
                 VStack(alignment: .trailing, spacing: 1) {
                     fieldLabel("SKY")
-                    Text(sky.name)
+                    Text(skyName)
                         .font(.system(size: 25, weight: .semibold, design: .serif))
                         .foregroundStyle(ink)
                         .lineLimit(1)
@@ -1315,7 +1370,7 @@ struct CheckInTicketView: View {
 
     private var flightID: String {
         var h = 7
-        for u in ("\(minutes)" + (focus?.title ?? "") + sky.id).unicodeScalars {
+        for u in ("\(minutes)" + (focus?.title ?? "") + skyName).unicodeScalars {
             h = (h &* 31 &+ Int(u.value)) & 0x7fffffff
         }
         let n = h % 900 + 100
@@ -1323,7 +1378,7 @@ struct CheckInTicketView: View {
         return "FG\(base)·\(n)"
     }
 
-    private var barcodeSeed: String { "\(minutes)-\(focus?.title ?? "focus")-\(sky.id)" }
+    private var barcodeSeed: String { "\(minutes)-\(focus?.title ?? "focus")-\(skyName)" }
 
     private func fieldLabel(_ label: String) -> some View {
         Text(label)

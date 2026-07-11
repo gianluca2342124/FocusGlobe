@@ -91,20 +91,46 @@ enum FlightWorldSequence {
         .nebulaDream, .quietReturn, .deepSpace, .cloudOcean, .roseDawn,
     ]
 
-    /// One-entry memo: the same session seed always yields the same sequence,
-    /// so rebuilding on every body evaluation would be pure waste.
-    @MainActor private static var cached: (seed: UInt64, specs: [ChapterSpec])?
+    /// One-entry memo: the same session seed (and Sky identity) always yields
+    /// the same sequence, so rebuilding per body evaluation would be pure waste.
+    @MainActor private static var cached: (seed: UInt64, opening: Int?, pool: [WorldKind]?, specs: [ChapterSpec])?
 
-    @MainActor static func sequence(seed: UInt64) -> [ChapterSpec] {
-        if let cached, cached.seed == seed { return cached.specs }
-        let specs = build(seed: seed)
-        cached = (seed, specs)
+    /// `pool` pins the whole session inside one Sky's chapter family (its
+    /// recognizable identity); otherwise `opening` biases just the first
+    /// chapters, and `nil`/`nil` keeps the fully seeded journey.
+    @MainActor static func sequence(seed: UInt64, opening: Int? = nil,
+                                    pool: [WorldKind]? = nil) -> [ChapterSpec] {
+        if let cached, cached.seed == seed, cached.opening == opening, cached.pool == pool {
+            return cached.specs
+        }
+        let specs = build(seed: seed, opening: opening, pool: pool)
+        cached = (seed, opening, pool, specs)
         return specs
     }
 
-    private static func build(seed: UInt64) -> [ChapterSpec] {
+    private static func build(seed: UInt64, opening forcedOpening: Int?,
+                              pool: [WorldKind]?) -> [ChapterSpec] {
+        // A Sky-identity flight: open through the Sky's own chapters in order,
+        // then keep drifting inside that family — evolving, never leaving.
+        if let pool, !pool.isEmpty {
+            var specs: [ChapterSpec] = pool.enumerated().map { i, kind in
+                ChapterSpec(kind: kind, seed: seed &+ UInt64(i) &* 0x9E37_79B9)
+            }
+            var k = 0
+            while specs.count < 940 {
+                let kind = pool[k % pool.count]
+                if kind != specs[specs.count - 1].kind || pool.count == 1 {
+                    specs.append(ChapterSpec(kind: kind,
+                                             seed: seed &+ UInt64(specs.count) &* 0x9E37_79B9))
+                }
+                k += 1
+            }
+            return specs
+        }
         var rng = SeededRNG(seed: seed == 0 ? 0xF0C0_5155 : seed)
-        let opening = openings[Int(rng.unit() * Double(openings.count)) % openings.count]
+        let seededIndex = Int(rng.unit() * Double(openings.count)) % openings.count
+        let openingIndex = forcedOpening.map { max(0, min(openings.count - 1, $0)) } ?? seededIndex
+        let opening = openings[openingIndex]
         var specs: [ChapterSpec] = opening.enumerated().map { i, kind in
             ChapterSpec(kind: kind, seed: seed &+ UInt64(i) &* 0x9E37_79B9)
         }
@@ -138,12 +164,20 @@ struct ActiveFlightJourneyWorldView: View {
     /// Stable per-session seed: world order and dressing vary between flights.
     var seed: UInt64 = 1
     var animated: Bool = true
+    /// Biases the opening chapters toward the selected Sky (see
+    /// `FlightWorldSequence.openings`); `nil` keeps the seeded opening.
+    var openingBias: Int? = nil
+    /// Pins the whole flight inside one Sky's chapter family (the Sky-identity
+    /// flight). Takes precedence over `openingBias`.
+    var skyPool: [WorldKind]? = nil
+    /// The Sky's own weather riding inside the scrolling world.
+    var skyParticles: FocusSky.FlightParticle = .none
 
     var body: some View {
         GeometryReader { geo in
             let W = geo.size.width
             let H = max(1, geo.size.height)
-            let seq = FlightWorldSequence.sequence(seed: seed)
+            let seq = FlightWorldSequence.sequence(seed: seed, opening: openingBias, pool: skyPool)
             ZStack {
                 Color(hex: 0x0D1322)
 
@@ -187,7 +221,8 @@ struct ActiveFlightJourneyWorldView: View {
         ZStack {
             ChapterSectionView(spec: spec, bottomEdge: bottomEdge, width: W, height: H)
                 .id(chapterID)
-            ChapterLifeCanvas(seed: spec.seed, kind: spec.kind, t: t, width: W, height: H)
+            ChapterLifeCanvas(seed: spec.seed, kind: spec.kind, particles: skyParticles,
+                              t: t, width: W, height: H)
         }
         .frame(width: W, height: H)
     }
@@ -729,6 +764,7 @@ private func auroraRibbonPath(width: CGFloat, baseY: CGFloat, amp: CGFloat,
 private struct ChapterLifeCanvas: View {
     let seed: UInt64
     let kind: WorldKind
+    var particles: FocusSky.FlightParticle = .none
     let t: Double
     let width: CGFloat
     let height: CGFloat
@@ -748,10 +784,77 @@ private struct ChapterLifeCanvas: View {
             drawShootingStar(&c, s: s)
             drawMeteor(&c, s: s)
             drawSparkle(&c, s: s)
-            if isCold { drawSnow(&c, s: s) }           // near foreground flurry
+            drawDistantBalloon(&c, s: s)
+            // The Sky's own weather (identity), plus snow for cold chapters.
+            switch particles {
+            case .snow:     drawSnow(&c, s: s)
+            case .rain:     drawRain(&c, s: s)
+            case .lanterns: drawLanterns(&c, s: s)
+            case .none:     if isCold { drawSnow(&c, s: s) }
+            }
         }
         .frame(width: width, height: height)
         .allowsHitTesting(false)
+    }
+
+    /// Soft rain streaks drifting down and slightly sideways — cozy, not stormy.
+    private func drawRain(_ c: inout GraphicsContext, s: CGSize) {
+        var rng = SeededRNG(seed: seed &+ 0x0A17)
+        let H = Double(s.height) + 40
+        for _ in 0..<38 {
+            let fx = rng.unit()
+            let fy = rng.unit()
+            let speed = 120.0 + rng.unit() * 90.0
+            let y = (fy * H + t * speed).truncatingRemainder(dividingBy: H) - 20
+            let x = fx * Double(s.width) - (y * 0.06)
+            let len = 8.0 + rng.unit() * 8.0
+            var p = Path()
+            p.move(to: CGPoint(x: x, y: y))
+            p.addLine(to: CGPoint(x: x - len * 0.14, y: y + len))
+            c.stroke(p, with: .color(Color(hex: 0xBFD0EC).opacity(0.10 + rng.unit() * 0.14)),
+                     lineWidth: 1)
+        }
+    }
+
+    /// Warm lantern lights drifting gently down with the world — Kyoto's glow.
+    private func drawLanterns(_ c: inout GraphicsContext, s: CGSize) {
+        var rng = SeededRNG(seed: seed &+ 0x1A27)
+        let H = Double(s.height) + 60
+        for i in 0..<9 {
+            let di = Double(i)
+            let fx = rng.unit()
+            let fy = rng.unit()
+            let speed = 9.0 + rng.unit() * 8.0
+            let y = (fy * H + t * speed).truncatingRemainder(dividingBy: H) - 30
+            let sway = Foundation.sin(t * (0.3 + rng.unit() * 0.3) + di) * (6 + rng.unit() * 8)
+            let x = fx * Double(s.width) + sway
+            let r = 2.2 + rng.unit() * 2.4
+            let warm = Color(hex: 0xFFC873)
+            let g = Gradient(colors: [warm.opacity(0.7), warm.opacity(0)])
+            c.fill(Path(ellipseIn: CGRect(x: x - r * 3.2, y: y - r * 3.2, width: r * 6.4, height: r * 6.4)),
+                   with: .radialGradient(g, center: CGPoint(x: x, y: y),
+                                         startRadius: 0, endRadius: CGFloat(r * 3.2)))
+            c.fill(Path(ellipseIn: CGRect(x: x - r / 2, y: y - r * 0.7, width: r, height: r * 1.4)),
+                   with: .color(warm.opacity(0.9)))
+        }
+    }
+
+    /// Once in a while, a tiny fellow traveller drifts far away inside the
+    /// world — ambient life, one balloon at most, never a crowd.
+    private func drawDistantBalloon(_ c: inout GraphicsContext, s: CGSize) {
+        var rng = SeededRNG(seed: seed &+ 0xBA11)
+        guard rng.unit() < 0.4 else { return }          // most chapters stay empty
+        let baseX = 0.14 + rng.unit() * 0.72
+        let baseY = 0.18 + rng.unit() * 0.5
+        let drift = Foundation.sin(t * 0.05 + rng.unit() * 6) * 0.02
+        let x = (baseX + drift) * Double(s.width)
+        let y = baseY * Double(s.height) + Foundation.sin(t * 0.4) * 3
+        let h = 9.0 + rng.unit() * 5.0                  // tiny — far away
+        let alpha = 0.30 + rng.unit() * 0.18
+        let envelope = CGRect(x: x - h * 0.36, y: y - h, width: h * 0.72, height: h * 0.8)
+        c.fill(Path(ellipseIn: envelope), with: .color(Color(hex: 0xF4EFE4).opacity(alpha)))
+        let basket = CGRect(x: x - h * 0.09, y: y - h * 0.08, width: h * 0.18, height: h * 0.14)
+        c.fill(Path(basket), with: .color(Color(hex: 0x6B4A2C).opacity(alpha)))
     }
 
     /// A soft radial dot — the shared building block for meteor trails and snow.

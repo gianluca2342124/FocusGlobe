@@ -21,6 +21,10 @@ struct CabinView: View {
     var seed: UInt64
     /// When false every layer is frozen (Reduce Motion / low-power calm).
     var animated: Bool
+    /// Same Sky identity as the exterior, so the window shows the SAME world.
+    var openingBias: Int? = nil
+    var skyPool: [WorldKind]? = nil
+    var skyParticles: FocusSky.FlightParticle = .none
 
     var body: some View {
         GeometryReader { geo in
@@ -79,7 +83,9 @@ struct CabinView: View {
                                   startPoint: .top, endPoint: .bottom)
         return ZStack {
             // The SAME live world as the exterior, seen through the glass.
-            ActiveFlightJourneyWorldView(elapsed: elapsed, seed: seed, animated: animated)
+            ActiveFlightJourneyWorldView(elapsed: elapsed, seed: seed,
+                                         animated: animated, openingBias: openingBias,
+                                         skyPool: skyPool, skyParticles: skyParticles)
                 .frame(width: winW, height: winH)
                 .clipShape(shape)
             // Inner radial shade so the edges read darker → depth.

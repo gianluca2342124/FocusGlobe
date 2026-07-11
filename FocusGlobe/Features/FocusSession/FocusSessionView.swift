@@ -77,6 +77,13 @@ struct FocusSessionView: View {
     /// order and dressing are stable in-session but fresh every flight.
     @State private var worldSeed: UInt64 = 1
 
+    /// The selected Sky, recovered from the route id (the Sky id is embedded
+    /// there, so this survives resume). Drives the whole flight's identity:
+    /// its chapter family, its weather, and the cabin window.
+    private var matchedSky: FocusSky? {
+        FocusSky.matching(routeID: vm.route.id)
+    }
+
     var body: some View {
         ZStack {
             // The vertical world journey — a constant cinematic pace driven by
@@ -87,14 +94,20 @@ struct FocusSessionView: View {
             case .exterior:
                 ActiveFlightJourneyWorldView(elapsed: { displayElapsed(at: Date()) },
                                              seed: worldSeed,
-                                             animated: !reduceMotion)
+                                             animated: !reduceMotion,
+                                             openingBias: matchedSky?.flightOpening,
+                                             skyPool: matchedSky?.flightPool,
+                                             skyParticles: matchedSky?.flightParticles ?? .none)
                     .transition(.opacity)
                 balloon
                     .transition(.opacity)
             case .cabin:
                 CabinView(elapsed: { displayElapsed(at: Date()) },
                           seed: worldSeed,
-                          animated: !reduceMotion)
+                          animated: !reduceMotion,
+                          openingBias: matchedSky?.flightOpening,
+                          skyPool: matchedSky?.flightPool,
+                          skyParticles: matchedSky?.flightParticles ?? .none)
                     .transition(.opacity)
             }
 
@@ -172,10 +185,10 @@ struct FocusSessionView: View {
             // flight reads as arriving in a place, not loading a screen.
             withAnimation(.easeOut(duration: 0.8).delay(reduceMotion ? 0 : 0.25)) { uiIn = true }
             guard !reduceMotion else { takeoffLift = 1; return }
-            // The cinematic take-off pull-back: ~5.5 s to ease the balloon from
-            // close-and-low up to its cruising size and centre. Then settle into
-            // an endless gentle breathe (sway + bob) and a slow lateral drift.
-            withAnimation(.easeInOut(duration: 5.5)) { takeoffLift = 1 }
+            // The cinematic take-off pull-back: ~3.2 s (present but never slow)
+            // to ease the balloon from close-and-low up to its cruising size and
+            // centre. Then an endless gentle breathe (sway + bob) and slow drift.
+            withAnimation(.easeInOut(duration: 3.2)) { takeoffLift = 1 }
             withAnimation(.easeInOut(duration: 4.2).repeatForever(autoreverses: true)) { balloonSway = 5 }
             withAnimation(.easeInOut(duration: 3.1).repeatForever(autoreverses: true)) { balloonBob = -7 }
             withAnimation(.easeInOut(duration: 7.5).repeatForever(autoreverses: true)) { balloonDrift = 6 }
@@ -301,9 +314,11 @@ struct FocusSessionView: View {
         let elapsed = displayElapsed(at: now)
         let elapsedSecs = Int(elapsed.rounded(.down))
         let remainingSecs = max(0, Int((durationSeconds - elapsed).rounded(.up)))
-        let label = isInfinity ? "Focused" : "Time Remaining"
-        let value = isInfinity ? Formatters.flightClock(elapsedSecs)
-                               : Formatters.flightClock(remainingSecs)
+        let label = isInfinity ? "Time Focused" : "Time Remaining"
+        // A true live timer: MM:SS under an hour, H:MM:SS beyond — the seconds
+        // always visibly tick (the calm "20 min" style stays on Home/ticket).
+        let secs = isInfinity ? elapsedSecs : remainingSecs
+        let value = secs >= 3600 ? Formatters.countdown(secs) : Formatters.flightClock(secs)
         return VStack(spacing: Layout.pad(16, 24)) {
             VStack(spacing: 4) {
                 Text(label.uppercased())
