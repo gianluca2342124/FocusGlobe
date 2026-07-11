@@ -57,6 +57,11 @@ struct FocusSessionView: View {
     /// Set while paused so the display clock holds still.
     @State private var pausedAt: Date?
 
+    /// Which face of the flight the pilot is looking at: the exterior sky world,
+    /// or the cozy cabin interior. Presentation only — never affects timing.
+    private enum FlightViewMode { case exterior, cabin }
+    @State private var viewMode: FlightViewMode = .exterior
+
     private var isInfinity: Bool { FlightRouteFactory.isInfinity(vm.route) }
     private var durationSeconds: Double { Double(vm.route.durationMinutes) * 60.0 }
 
@@ -78,11 +83,20 @@ struct FocusSessionView: View {
             // elapsed focus time (pause-aware), fully decoupled from the chosen
             // duration. 1-minute flights drift calmly; 12-hour flights keep
             // evolving; endless flights never run out of sky.
-            ActiveFlightJourneyWorldView(elapsed: { displayElapsed(at: Date()) },
-                                         seed: worldSeed,
-                                         animated: !reduceMotion)
-
-            balloon
+            switch viewMode {
+            case .exterior:
+                ActiveFlightJourneyWorldView(elapsed: { displayElapsed(at: Date()) },
+                                             seed: worldSeed,
+                                             animated: !reduceMotion)
+                    .transition(.opacity)
+                balloon
+                    .transition(.opacity)
+            case .cabin:
+                CabinView(elapsed: { displayElapsed(at: Date()) },
+                          seed: worldSeed,
+                          animated: !reduceMotion)
+                    .transition(.opacity)
+            }
 
             // Soft bottom scrim so the readouts stay legible over bright bands.
             VStack {
@@ -203,9 +217,19 @@ struct FocusSessionView: View {
                 Spacer()
                 statusPill
                 Spacer()
-                AppIconButton(systemImage: vm.muteIconName, size: Layout.pad(44, 54), tint: .white,
-                              accessibilityLabel: vm.isAudioMuted ? "Unmute" : "Mute") {
-                    vm.toggleMute()
+                HStack(spacing: Layout.pad(8, 12)) {
+                    AppIconButton(systemImage: viewMode == .cabin ? "mountain.2.fill" : "cup.and.saucer.fill",
+                                  size: Layout.pad(44, 54), tint: .white,
+                                  accessibilityLabel: viewMode == .cabin ? "Exterior view" : "Cabin view") {
+                        appModel.tapFeedback()
+                        withAnimation(.easeInOut(duration: 0.5)) {
+                            viewMode = (viewMode == .cabin ? .exterior : .cabin)
+                        }
+                    }
+                    AppIconButton(systemImage: vm.muteIconName, size: Layout.pad(44, 54), tint: .white,
+                                  accessibilityLabel: vm.isAudioMuted ? "Unmute" : "Mute") {
+                        vm.toggleMute()
+                    }
                 }
             }
             Spacer()

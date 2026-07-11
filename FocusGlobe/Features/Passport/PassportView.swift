@@ -1,5 +1,13 @@
 import SwiftUI
 
+/// The **Passport** — a premium *flight logbook* / travel journal. It reads
+/// top-to-bottom as a collectible record: a warm hero summary (the journal
+/// cover), refined flight stats, today's flight objectives, discovered skies
+/// (stamps), visited places, flight ambience, widgets and collectible badges.
+///
+/// Presentation only — every number is derived from the on-device session
+/// history / `UserProgress`; nothing here writes persistence, analytics or
+/// mission state (beyond the existing claim action).
 struct PassportView: View {
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
@@ -21,27 +29,36 @@ struct PassportView: View {
     private var skiesDiscovered: Int { Set(completedFlights.map { $0.destinationName }).count }
     private var totalSkies: Int { max(SkyScene.all.count, skiesDiscovered) }
 
+    /// Longest single flight — by focus time (falls back to a dash when empty).
+    private var longestFlightLabel: String {
+        progress.bestFocusSeconds > 0
+            ? Formatters.durationLabel(minutes: max(1, progress.bestFocusMinutes))
+            : "—"
+    }
+
+    /// Most-visited destination across completed flights (a "home sky").
+    private var favoriteSky: String? {
+        guard !completedFlights.isEmpty else { return nil }
+        var counts: [String: Int] = [:]
+        for r in completedFlights { counts[r.destinationName, default: 0] += 1 }
+        return counts.max { $0.value < $1.value }?.key
+    }
+
     var body: some View {
         ZStack {
             AppBackground()
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
-                    HStack(alignment: .top) {
-                        ScreenHeader(title: "Passport",
-                                     subtitle: "Your flights, focus and discoveries")
-                        Spacer()
-                        // The crown only opens the paywall — hide it once Pro.
-                        if !appModel.isPro {
-                            CrownButton { appModel.tapFeedback(); router.presentPaywall() }
-                        }
-                    }
+                    header
+                    heroLogbookCard
                     statsGrid
-                    achievementsSection
-                    focusCategoriesSection
-                    recentStampsSection
-                    WidgetsGallerySection()
                     missionsSection
+                    focusCategoriesSection
+                    discoveredSkiesSection
+                    VisitedPlacesSection()
                     flightSoundSection
+                    WidgetsGallerySection()
+                    achievementsSection
                 }
                 .padding(AppSpacing.screen)
                 .padding(.top, AppSpacing.xs)
@@ -58,6 +75,92 @@ struct PassportView: View {
         }
     }
 
+    // MARK: Header
+
+    private var header: some View {
+        HStack(alignment: .top) {
+            ScreenHeader(title: "Passport", subtitle: "Your flight logbook")
+            Spacer()
+            // The crown only opens the paywall — hide it once Pro.
+            if !appModel.isPro {
+                CrownButton { appModel.tapFeedback(); router.presentPaywall() }
+            }
+        }
+    }
+
+    // MARK: Hero logbook summary (the journal cover)
+
+    private var heroLogbookCard: some View {
+        let focus = totalFocusMinutes
+        return VStack(alignment: .leading, spacing: AppSpacing.md) {
+            HStack {
+                Label("Flight logbook", systemImage: "book.closed.fill")
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppColors.gold)
+                Spacer()
+                if progress.currentStreak > 0 {
+                    StreakPill(days: progress.currentStreak)
+                }
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Total focus in the air")
+                    .font(AppTypography.caption)
+                    .foregroundStyle(AppColors.textSecondary)
+                Text(focus > 0 ? Formatters.durationLabel(minutes: focus) : "Ready for takeoff")
+                    .font(.system(size: Layout.pad(40, 48), weight: .bold, design: .serif))
+                    .foregroundStyle(AppColors.textPrimary)
+                    .minimumScaleFactor(0.55)
+                    .lineLimit(1)
+            }
+            heroSecondaryRow
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(AppSpacing.lg)
+        .glassBackground(cornerRadius: AppSpacing.cardRadius,
+                         tint: AppColors.goldFoil, tintOpacity: 0.13,
+                         shadowRadius: 22, shadowY: 12)
+        .overlay(
+            RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
+                .strokeBorder(AppColors.gold.opacity(0.32), lineWidth: 1)
+        )
+    }
+
+    private var heroSecondaryRow: some View {
+        HStack(spacing: AppSpacing.sm) {
+            heroChip(icon: "paperplane.fill", value: "\(flightsCompleted)",
+                     label: "flights", tint: AppColors.gold)
+            heroChip(icon: "location.fill",
+                     value: totalDistanceKm > 0 ? Formatters.distance(km: totalDistanceKm) : "0 km",
+                     label: "traveled", tint: AppColors.teal)
+            heroChip(icon: "moon.stars.fill", value: "\(skiesDiscovered)",
+                     label: "skies", tint: AppColors.brand)
+        }
+    }
+
+    private func heroChip(icon: String, value: String, label: String, tint: Color) -> some View {
+        HStack(spacing: 7) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(tint)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(value)
+                    .font(.system(size: 15, weight: .heavy, design: .rounded))
+                    .foregroundStyle(AppColors.textPrimary)
+                    .lineLimit(1).minimumScaleFactor(0.7)
+                Text(label)
+                    .font(AppTypography.micro)
+                    .foregroundStyle(AppColors.textTertiary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, AppSpacing.sm)
+        .padding(.vertical, AppSpacing.xs + 2)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(AppColors.textPrimary.opacity(0.05))
+        )
+    }
+
     // MARK: Headline stats
 
     private var statsGrid: some View {
@@ -66,63 +169,76 @@ struct PassportView: View {
                      value: totalFocusMinutes > 0 ? Formatters.durationLabel(minutes: totalFocusMinutes) : "—",
                      label: "Total focus time", accent: AppColors.brand)
             StatTile(systemImage: "paperplane.fill",
-                     value: "\(flightsCompleted)", label: "Flights completed", accent: AppColors.gold)
+                     value: "\(flightsCompleted)", label: "Flights", accent: AppColors.gold)
             StatTile(systemImage: "point.topleft.down.to.point.bottomright.curvepath",
                      value: totalDistanceKm > 0 ? Formatters.distance(km: totalDistanceKm) : "—",
-                     label: "Distance traveled", accent: AppColors.teal)
+                     label: "Distance", accent: AppColors.teal)
             StatTile(systemImage: "flame.fill",
                      value: "\(progress.currentStreak)", label: "Day streak", accent: AppColors.danger)
             StatTile(systemImage: "trophy.fill",
                      value: progress.bestFocusSeconds > 0 ? Formatters.durationLabel(minutes: max(1, progress.bestFocusMinutes)) : "—",
                      label: "Best focus", accent: AppColors.gold)
+            StatTile(systemImage: "clock.arrow.circlepath",
+                     value: longestFlightLabel, label: "Longest flight", accent: AppColors.success)
+            StatTile(systemImage: "heart.fill",
+                     value: favoriteSky ?? "—", label: "Favorite sky", accent: AppColors.terracotta)
             StatTile(systemImage: "moon.stars.fill",
                      value: "\(skiesDiscovered)/\(totalSkies)", label: "Skies discovered", accent: AppColors.brand)
         }
     }
 
-    // MARK: Achievements
+    // MARK: Today's objectives (daily missions)
 
-    private var achievements: [Achievement] {
-        let flights = flightsCompleted
-        let mins = totalFocusMinutes
-        let best = progress.bestFocusMinutes
-        let streak = max(progress.currentStreak, progress.longestStreak)
-        let skies = skiesDiscovered
-        return [
-            Achievement("airplane.departure", "First flight", flights >= 1, AppColors.brand),
-            Achievement("5.circle.fill", "5 flights", flights >= 5, AppColors.brand),
-            Achievement("25.circle.fill", "25 flights", flights >= 25, AppColors.gold),
-            Achievement("flame.fill", "3-day streak", streak >= 3, AppColors.danger),
-            Achievement("bolt.heart.fill", "7-day streak", streak >= 7, AppColors.danger),
-            Achievement("hourglass.bottomhalf.filled", "Deep focus", best >= 60, AppColors.success),
-            Achievement("clock.badge.checkmark.fill", "10 hours", mins >= 600, AppColors.gold),
-            Achievement("moon.stars.fill", "Sky collector", skies >= SkyScene.all.count, AppColors.teal),
-        ]
-    }
-
-    private var achievementsSection: some View {
-        let earned = achievements.filter { $0.earned }.count
-        return VStack(alignment: .leading, spacing: AppSpacing.sm) {
+    private var missionsSection: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
             HStack {
-                SectionLabel(text: "Achievements")
+                SectionLabel(text: "Today's objectives")
                 Spacer()
-                Text("\(earned)/\(achievements.count)")
-                    .font(.system(size: 13, weight: .heavy, design: .rounded))
-                    .foregroundStyle(AppColors.gold)
-                    .padding(.horizontal, 10).padding(.vertical, 5)
-                    .background(Capsule().fill(AppColors.gold.opacity(0.16)))
-                    .overlay(Capsule().strokeBorder(AppColors.gold.opacity(0.4), lineWidth: 1))
-            }
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: AppSpacing.sm)],
-                      spacing: AppSpacing.sm) {
-                ForEach(achievements) { badge in
-                    AchievementBadge(badge: badge)
+                if appModel.dailyMissionsComplete {
+                    Label("All done", systemImage: "checkmark.seal.fill")
+                        .font(AppTypography.caption)
+                        .foregroundStyle(AppColors.success)
                 }
             }
+            VStack(spacing: AppSpacing.sm) {
+                ForEach(appModel.dailyMissions) { mission in
+                    MissionObjectiveCard(mission: mission)
+                }
+            }
+            missionRewardFooter
         }
     }
 
-    // MARK: Focus categories (by the focus you packed)
+    @ViewBuilder private var missionRewardFooter: some View {
+        if appModel.canClaimDailyMissionReward {
+            Button {
+                appModel.claimDailyMissionReward()
+            } label: {
+                HStack(spacing: 7) {
+                    Image(systemName: "gift.fill").font(.system(size: 14, weight: .bold))
+                    Text("Claim +\(appModel.dailyMissionRewardMiles) miles")
+                        .font(AppTypography.callout)
+                }
+                .foregroundStyle(Color(hex: 0x2B2620))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(Capsule().fill(AppColors.gold))
+                .shadow(color: AppColors.gold.opacity(0.4), radius: 10, y: 5)
+            }
+            .buttonStyle(SoftPressStyle())
+        } else if appModel.dailyMissionsComplete {
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.seal.fill").font(.system(size: 12, weight: .bold))
+                Text("Daily bonus claimed — see you tomorrow.")
+                    .font(AppTypography.caption)
+            }
+            .foregroundStyle(AppColors.textTertiary)
+            .frame(maxWidth: .infinity)
+            .padding(.top, 2)
+        }
+    }
+
+    // MARK: Focus mix (by the focus you packed)
 
     private var focusCategories: [(title: String, count: Int, accent: Color)] {
         var counts: [String: Int] = [:]
@@ -138,7 +254,7 @@ struct PassportView: View {
 
     private var focusCategoriesSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            SectionLabel(text: "Focus categories")
+            SectionLabel(text: "Focus mix")
             AppGlassCard {
                 let cats = focusCategories
                 if cats.isEmpty {
@@ -153,7 +269,7 @@ struct PassportView: View {
                     }
                 } else {
                     let maxCount = max(1, cats.map { $0.count }.max() ?? 1)
-                    VStack(spacing: AppSpacing.sm) {
+                    VStack(spacing: AppSpacing.md) {
                         ForEach(cats, id: \.title) { cat in
                             CategoryBar(title: cat.title, count: cat.count,
                                         fraction: Double(cat.count) / Double(maxCount), accent: cat.accent)
@@ -164,11 +280,21 @@ struct PassportView: View {
         }
     }
 
-    // MARK: Recent stamps (collectible postcards)
+    // MARK: Discovered skies (collectible stamps)
 
-    @ViewBuilder private var recentStampsSection: some View {
+    @ViewBuilder private var discoveredSkiesSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            SectionLabel(text: "Recent stamps")
+            HStack {
+                SectionLabel(text: "Discovered skies")
+                Spacer()
+                if !progress.postcards.isEmpty {
+                    Text("\(progress.postcards.count)")
+                        .font(.system(size: 13, weight: .heavy, design: .rounded))
+                        .foregroundStyle(AppColors.gold)
+                        .padding(.horizontal, 10).padding(.vertical, 5)
+                        .background(Capsule().fill(AppColors.gold.opacity(0.14)))
+                }
+            }
             if progress.postcards.isEmpty {
                 emptyCollection
             } else {
@@ -195,44 +321,43 @@ struct PassportView: View {
         }
     }
 
-    // MARK: Daily missions
+    // MARK: Achievements (collectible badges)
 
-    private var missionsSection: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+    private var achievements: [Achievement] {
+        let flights = flightsCompleted
+        let mins = totalFocusMinutes
+        let best = progress.bestFocusMinutes
+        let streak = max(progress.currentStreak, progress.longestStreak)
+        let skies = skiesDiscovered
+        return [
+            Achievement("airplane.departure", "First flight", flights >= 1, AppColors.brand),
+            Achievement("5.circle.fill", "5 flights", flights >= 5, AppColors.brand),
+            Achievement("25.circle.fill", "25 flights", flights >= 25, AppColors.gold),
+            Achievement("flame.fill", "3-day streak", streak >= 3, AppColors.danger),
+            Achievement("bolt.heart.fill", "7-day streak", streak >= 7, AppColors.danger),
+            Achievement("hourglass.bottomhalf.filled", "Deep focus", best >= 60, AppColors.success),
+            Achievement("clock.badge.checkmark.fill", "10 hours", mins >= 600, AppColors.gold),
+            Achievement("moon.stars.fill", "Sky collector", skies >= SkyScene.all.count, AppColors.teal),
+        ]
+    }
+
+    private var achievementsSection: some View {
+        let earned = achievements.filter { $0.earned }.count
+        return VStack(alignment: .leading, spacing: AppSpacing.sm) {
             HStack {
-                SectionLabel(text: "Today's missions")
+                SectionLabel(text: "Badges")
                 Spacer()
-                if appModel.dailyMissionsComplete {
-                    Label("All done", systemImage: "checkmark.seal.fill")
-                        .font(AppTypography.caption)
-                        .foregroundStyle(AppColors.success)
-                }
+                Text("\(earned)/\(achievements.count)")
+                    .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    .foregroundStyle(AppColors.gold)
+                    .padding(.horizontal, 10).padding(.vertical, 5)
+                    .background(Capsule().fill(AppColors.gold.opacity(0.16)))
+                    .overlay(Capsule().strokeBorder(AppColors.gold.opacity(0.4), lineWidth: 1))
             }
-            AppGlassCard {
-                VStack(spacing: AppSpacing.md) {
-                    ForEach(appModel.dailyMissions) { mission in
-                        MissionRow(mission: mission)
-                    }
-                    if appModel.canClaimDailyMissionReward {
-                        Button {
-                            appModel.claimDailyMissionReward()
-                        } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: "gift.fill").font(.system(size: 14, weight: .bold))
-                                Text("Claim +\(appModel.dailyMissionRewardMiles) miles")
-                                    .font(AppTypography.callout)
-                            }
-                            .foregroundStyle(Color(hex: 0x2B2620))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 11)
-                            .background(Capsule().fill(AppColors.gold))
-                        }
-                        .buttonStyle(SoftPressStyle())
-                    } else if appModel.dailyMissionsComplete {
-                        Text("Daily bonus claimed — see you tomorrow.")
-                            .font(AppTypography.caption)
-                            .foregroundStyle(AppColors.textTertiary)
-                    }
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 88), spacing: AppSpacing.sm)],
+                      spacing: AppSpacing.sm) {
+                ForEach(achievements) { badge in
+                    AchievementBadge(badge: badge)
                 }
             }
         }
@@ -292,17 +417,23 @@ private struct Achievement: Identifiable {
     }
 }
 
+/// A collectible stamp-style badge: a warm ringed disc, earned in full colour and
+/// locked as a muted seal.
 private struct AchievementBadge: View {
     let badge: Achievement
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 8) {
             ZStack {
                 Circle()
-                    .fill(badge.earned ? badge.accent.opacity(0.18) : AppColors.textTertiary.opacity(0.10))
-                    .frame(width: 46, height: 46)
+                    .fill(badge.earned ? badge.accent.opacity(0.18) : AppColors.textTertiary.opacity(0.08))
+                    .frame(width: 52, height: 52)
+                Circle()
+                    .strokeBorder(badge.earned ? badge.accent.opacity(0.55) : AppColors.hairline,
+                                  lineWidth: badge.earned ? 1.5 : 1)
+                    .frame(width: 52, height: 52)
                 Image(systemName: badge.earned ? badge.icon : "lock.fill")
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.system(size: 19, weight: .bold))
                     .foregroundStyle(badge.earned ? badge.accent : AppColors.textTertiary)
             }
             Text(badge.title)
@@ -313,8 +444,17 @@ private struct AchievementBadge: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, AppSpacing.sm)
-        .glassBackground(cornerRadius: AppSpacing.cardRadius, tintOpacity: 0.22, shadowRadius: 6, shadowY: 3)
-        .opacity(badge.earned ? 1 : 0.75)
+        .glassBackground(cornerRadius: AppSpacing.cardRadius,
+                         tint: badge.earned ? badge.accent : AppColors.glassTint,
+                         tintOpacity: badge.earned ? 0.14 : 0.20,
+                         shadowRadius: 6, shadowY: 3)
+        .overlay {
+            if badge.earned {
+                RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
+                    .strokeBorder(badge.accent.opacity(0.28), lineWidth: 1)
+            }
+        }
+        .opacity(badge.earned ? 1 : 0.7)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(badge.title). \(badge.earned ? "Earned" : "Locked").")
     }
@@ -329,7 +469,7 @@ private struct CategoryBar: View {
     let accent: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(title)
                     .font(AppTypography.callout)
@@ -337,42 +477,66 @@ private struct CategoryBar: View {
                 Spacer()
                 Text("\(count)")
                     .font(.system(size: 13, weight: .heavy, design: .rounded))
-                    .foregroundStyle(AppColors.textSecondary)
+                    .foregroundStyle(accent)
             }
             MissionProgressBar(fraction: fraction, color: accent)
         }
     }
 }
 
-// MARK: - Mission row
+// MARK: - Mission objective card
 
-private struct MissionRow: View {
+/// A premium "flight objective" card: a tinted rounded icon badge, the title, a
+/// slim progress bar, and a clear completed state (gold seal + warm ring).
+private struct MissionObjectiveCard: View {
     let mission: DailyMission
 
     var body: some View {
         HStack(spacing: AppSpacing.sm) {
             ZStack {
-                Circle().fill(mission.accent.accent.opacity(0.16)).frame(width: 34, height: 34)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(mission.accent.accent.opacity(mission.isComplete ? 0.22 : 0.16))
+                    .frame(width: 44, height: 44)
                 Image(systemName: mission.isComplete ? "checkmark" : mission.systemImage)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: 17, weight: .bold))
                     .foregroundStyle(mission.isComplete ? AppColors.success : mission.accent.accent)
             }
-            VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: 7) {
                 HStack {
                     Text(mission.title)
-                        .font(AppTypography.callout)
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
                         .foregroundStyle(AppColors.textPrimary)
+                        .lineLimit(1)
                     Spacer()
-                    Text(mission.progressText)
-                        .font(AppTypography.micro)
-                        .foregroundStyle(AppColors.textTertiary)
+                    if mission.isComplete {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(AppColors.gold)
+                    } else {
+                        Text(mission.progressText)
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundStyle(AppColors.textTertiary)
+                    }
                 }
-                MissionProgressBar(fraction: mission.fraction, color: mission.accent.accent)
+                MissionProgressBar(fraction: mission.fraction,
+                                   color: mission.isComplete ? AppColors.gold : mission.accent.accent)
+            }
+        }
+        .padding(AppSpacing.md)
+        .glassBackground(cornerRadius: 18,
+                         tint: mission.isComplete ? AppColors.goldFoil : AppColors.glassTint,
+                         tintOpacity: mission.isComplete ? 0.14 : 0.28,
+                         shadowRadius: 8, shadowY: 4)
+        .overlay {
+            if mission.isComplete {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(AppColors.gold.opacity(0.3), lineWidth: 1)
             }
         }
     }
 }
 
+/// A refined slim progress bar used by missions and the focus mix.
 private struct MissionProgressBar: View {
     let fraction: Double
     let color: Color
@@ -381,11 +545,15 @@ private struct MissionProgressBar: View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
                 Capsule().fill(AppColors.hairline)
-                Capsule().fill(color)
-                    .frame(width: max(5, geo.size.width * fraction))
+                Capsule()
+                    .fill(
+                        LinearGradient(colors: [color.opacity(0.75), color],
+                                       startPoint: .leading, endPoint: .trailing)
+                    )
+                    .frame(width: max(6, geo.size.width * CGFloat(min(1, max(0, fraction)))))
             }
         }
-        .frame(height: 6)
+        .frame(height: 7)
     }
 }
 

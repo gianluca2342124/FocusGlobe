@@ -1,11 +1,16 @@
 import SwiftUI
 
-/// A calm, premium "streak details" sheet opened from the Home streak badge.
-/// Duolingo-style motivation, adapted to FocusGlobe's glassy, restrained style:
-/// the current streak (even when 0), an encouraging line, a 7-day week row, and
-/// today's goals with progress. Read-only — it never changes streak logic.
+/// A warm, precious "streak details" sheet opened from the Home streak badge.
+/// FocusGlobe's cozy-premium take on a streak screen: a glowing, breathing ember,
+/// a big current-streak numeral, an encouraging line, a luminous 7-day continuity
+/// strip (with a flight trail linking consecutive days), and a single clean
+/// "today" status line. Read-only — it never changes streak logic.
 struct StreakDetailsView: View {
     @EnvironmentObject private var appModel: AppModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    @State private var breathe = false
+    @State private var appeared = false
 
     private var streak: Int { appModel.progress.currentStreak }
     private var best: Int { appModel.progress.longestStreak }
@@ -15,13 +20,16 @@ struct StreakDetailsView: View {
             GlassBlurBackground()
             ScrollView {
                 VStack(spacing: AppSpacing.lg) {
-                    header
+                    hero
                     weekRow
+                    todayStatus
                     goalsSection
                 }
                 .padding(Layout.pad(AppSpacing.screen, AppSpacing.xl))
                 .frame(maxWidth: Layout.pad(540, 760))   // fills the iPad modal panel
                 .frame(maxWidth: .infinity)
+                .opacity(appeared ? 1 : 0)
+                .onAppear(perform: animateIn)
             }
         }
         // iPhone keeps a draggable sheet; on iPad the adaptive modal panel sizes it.
@@ -30,37 +38,77 @@ struct StreakDetailsView: View {
         .presentationDragIndicator(.visible)
     }
 
-    // MARK: Header
-
-    private var header: some View {
-        VStack(spacing: AppSpacing.sm) {
-            ZStack {
-                Circle()
-                    .fill(RadialGradient(colors: [Color(hex: 0xFFB13C).opacity(0.5), .clear],
-                                         center: .center, startRadius: 2, endRadius: 70))
-                    .frame(width: Layout.pad(130, 152), height: Layout.pad(130, 152))
-                Image(systemName: "flame.fill")
-                    .font(.system(size: Layout.pad(64, 76), weight: .bold))
-                    .foregroundStyle(LinearGradient(colors: [Color(hex: 0xFFC24B), Color(hex: 0xF2643C)],
-                                                    startPoint: .top, endPoint: .bottom))
-                    .shadow(color: Color(hex: 0xF2643C).opacity(0.5), radius: 14, y: 4)
+    private func animateIn() {
+        if reduceMotion {
+            appeared = true
+        } else {
+            withAnimation(.easeOut(duration: 0.55)) { appeared = true }
+            withAnimation(.easeInOut(duration: 2.6).repeatForever(autoreverses: true)) {
+                breathe = true
             }
+        }
+    }
+
+    // MARK: Hero ember
+
+    private var hero: some View {
+        VStack(spacing: AppSpacing.sm) {
+            ember
             Text("\(streak)")
-                .font(.system(size: Layout.pad(54, 66), weight: .heavy, design: .rounded))
+                .font(.system(size: Layout.pad(CGFloat(66), CGFloat(88)),
+                              weight: .heavy, design: .rounded))
                 .foregroundStyle(AppColors.textPrimary)
             Text("day streak")
-                .font(AppTypography.headline).foregroundStyle(AppColors.textSecondary)
+                .font(AppTypography.headline)
+                .foregroundStyle(AppColors.textSecondary)
             Text(message)
                 .font(AppTypography.callout)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(AppColors.textSecondary)
                 .padding(.horizontal, AppSpacing.md)
-            if best > 0 {
-                Text("Best: \(best) days")
-                    .font(AppTypography.caption).foregroundStyle(AppColors.gold)
-            }
+            if best > 0 { bestPill }
         }
         .frame(maxWidth: .infinity)
+    }
+
+    private var ember: some View {
+        let size = Layout.pad(CGFloat(150), CGFloat(182))
+        let flameSize = Layout.pad(CGFloat(72), CGFloat(88))
+        return ZStack {
+            Circle()
+                .fill(RadialGradient(
+                    colors: [Color(hex: 0xFFC24B).opacity(0.55),
+                             Color(hex: 0xF2643C).opacity(0.22),
+                             .clear],
+                    center: .center, startRadius: 2, endRadius: size * 0.5))
+                .frame(width: size, height: size)
+                .blur(radius: 6)
+                .scaleEffect(reduceMotion ? 1 : (breathe ? 1.08 : 0.94))
+                .opacity(reduceMotion ? 0.9 : (breathe ? 1 : 0.7))
+            Image(systemName: "flame.fill")
+                .font(.system(size: flameSize, weight: .bold))
+                .foregroundStyle(LinearGradient(
+                    colors: [Color(hex: 0xFFC24B), Color(hex: 0xF2643C)],
+                    startPoint: .top, endPoint: .bottom))
+                .shadow(color: Color(hex: 0xF2643C).opacity(0.5), radius: 14, y: 4)
+                .scaleEffect(reduceMotion ? 1 : (breathe ? 1.04 : 0.99))
+        }
+        .frame(height: size)
+    }
+
+    private var bestPill: some View {
+        HStack(spacing: AppSpacing.xs) {
+            Image(systemName: "flame.fill")
+                .font(.system(size: 13, weight: .bold))
+            Text("Best \(best) days")
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+        }
+        .foregroundStyle(AppColors.gold)
+        .padding(.horizontal, AppSpacing.md)
+        .padding(.vertical, AppSpacing.xs)
+        .background(Capsule().fill(AppColors.gold.opacity(0.12)))
+        .overlay(Capsule().strokeBorder(AppColors.gold.opacity(0.5), lineWidth: 1))
+        .padding(.top, AppSpacing.xxs)
     }
 
     private var message: String {
@@ -81,35 +129,110 @@ struct StreakDetailsView: View {
                 Text("THIS WEEK")
                     .font(.system(size: 12, weight: .bold, design: .rounded)).tracking(0.6)
                     .foregroundStyle(AppColors.textTertiary)
-                HStack(spacing: 0) {
-                    ForEach(days, id: \.date) { day in
-                        VStack(spacing: 6) {
-                            Text(day.label)
-                                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                                .foregroundStyle(AppColors.textTertiary)
-                            ZStack {
-                                Circle()
-                                    .fill(day.active
-                                          ? AnyShapeStyle(LinearGradient(colors: [Color(hex: 0xFFB13C), Color(hex: 0xF2643C)],
-                                                                         startPoint: .top, endPoint: .bottom))
-                                          : AnyShapeStyle(AppColors.textPrimary.opacity(0.10)))
-                                    .frame(width: 30, height: 30)
-                                if day.active {
-                                    Image(systemName: "flame.fill").font(.system(size: 13, weight: .bold))
-                                        .foregroundStyle(.white)
-                                } else if day.isToday {
-                                    Circle().strokeBorder(AppColors.textPrimary.opacity(0.4), lineWidth: 1.5).frame(width: 30, height: 30)
-                                }
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                }
+                weekStrip(days)
             }
         }
     }
 
-    // MARK: Today's goals
+    private func weekStrip(_ days: [Day]) -> some View {
+        let disc = Layout.pad(CGFloat(36), CGFloat(44))
+        return VStack(spacing: AppSpacing.xs) {
+            HStack(spacing: 0) {
+                ForEach(days, id: \.date) { day in
+                    Text(day.label)
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundStyle(day.active ? AppColors.gold : AppColors.textTertiary)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            ZStack {
+                trail(days)
+                HStack(spacing: 0) {
+                    ForEach(days, id: \.date) { day in
+                        dayDisc(day, size: disc)
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+            }
+            .frame(height: disc)
+        }
+    }
+
+    /// A soft luminous "flight trail" drawn behind consecutive active days.
+    private func trail(_ days: [Day]) -> some View {
+        Canvas { ctx, size in
+            let n = days.count
+            guard n > 1 else { return }
+            let cy = size.height / 2
+            var path = Path()
+            for i in 0..<(n - 1) where days[i].active && days[i + 1].active {
+                let x1 = size.width * CGFloat(Double(i) + 0.5) / CGFloat(n)
+                let x2 = size.width * CGFloat(Double(i) + 1.5) / CGFloat(n)
+                path.move(to: CGPoint(x: x1, y: cy))
+                path.addLine(to: CGPoint(x: x2, y: cy))
+            }
+            ctx.stroke(path,
+                       with: .color(Color(hex: 0xFFB13C).opacity(0.22)),
+                       style: StrokeStyle(lineWidth: 10, lineCap: .round))
+            ctx.stroke(path,
+                       with: .linearGradient(
+                        Gradient(colors: [Color(hex: 0xFFC24B), Color(hex: 0xF2643C)]),
+                        startPoint: CGPoint(x: 0, y: cy),
+                        endPoint: CGPoint(x: size.width, y: cy)),
+                       style: StrokeStyle(lineWidth: 4, lineCap: .round))
+        }
+        .allowsHitTesting(false)
+    }
+
+    private func dayDisc(_ day: Day, size: CGFloat) -> some View {
+        ZStack {
+            if day.active {
+                Circle()
+                    .fill(LinearGradient(
+                        colors: [Color(hex: 0xFFC24B), Color(hex: 0xF2643C)],
+                        startPoint: .top, endPoint: .bottom))
+                    .overlay(Circle().strokeBorder(.white.opacity(0.35), lineWidth: 1))
+                    .shadow(color: Color(hex: 0xF2643C).opacity(0.45), radius: 6, y: 2)
+                Image(systemName: "flame.fill")
+                    .font(.system(size: size * 0.42, weight: .bold))
+                    .foregroundStyle(.white)
+            } else if day.isToday {
+                Circle().fill(AppColors.gold.opacity(0.10))
+                Circle().strokeBorder(AppColors.gold.opacity(0.7), lineWidth: 2)
+            } else {
+                Circle().fill(AppColors.textPrimary.opacity(0.08))
+            }
+        }
+        .frame(width: size, height: size)
+    }
+
+    // MARK: Today status
+
+    private var todayStatus: some View {
+        let landed = todayLanded
+        return GlassCard {
+            HStack(spacing: AppSpacing.sm) {
+                Image(systemName: landed ? "checkmark.seal.fill" : "flame")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(landed ? AppColors.success : AppColors.gold)
+                Text(landed
+                     ? "Landed today — your streak is safe"
+                     : "Land a flight today to keep the streak alive")
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundStyle(AppColors.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+            }
+        }
+    }
+
+    private var todayLanded: Bool {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        return appModel.history.contains { $0.completed && cal.isDate($0.date, inSameDayAs: today) }
+    }
+
+    // MARK: Today's goals (kept minimal & premium)
 
     private var goalsSection: some View {
         let missions = appModel.dailyMissions
@@ -125,30 +248,34 @@ struct StreakDetailsView: View {
                         .foregroundStyle(AppColors.gold)
                 }
                 ForEach(missions) { mission in
-                    HStack(spacing: AppSpacing.sm) {
-                        Image(systemName: mission.isComplete ? "checkmark.circle.fill" : mission.systemImage)
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundStyle(mission.isComplete ? AppColors.success : AppColors.textTertiary)
-                            .frame(width: 22)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(mission.title)
-                                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                .foregroundStyle(AppColors.textPrimary)
-                            GeometryReader { g in
-                                ZStack(alignment: .leading) {
-                                    Capsule().fill(AppColors.textPrimary.opacity(0.12))
-                                    Capsule().fill(mission.isComplete ? AppColors.success : AppColors.gold)
-                                        .frame(width: max(5, g.size.width * mission.fraction))
-                                }
-                            }
-                            .frame(height: 5)
-                        }
-                        Text(mission.progressText)
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            .foregroundStyle(AppColors.textTertiary)
-                    }
+                    missionRow(mission)
                 }
             }
+        }
+    }
+
+    private func missionRow(_ mission: DailyMission) -> some View {
+        HStack(spacing: AppSpacing.sm) {
+            Image(systemName: mission.isComplete ? "checkmark.circle.fill" : mission.systemImage)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(mission.isComplete ? AppColors.success : AppColors.textTertiary)
+                .frame(width: 22)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(mission.title)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(AppColors.textPrimary)
+                GeometryReader { g in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(AppColors.textPrimary.opacity(0.12))
+                        Capsule().fill(mission.isComplete ? AppColors.success : AppColors.gold)
+                            .frame(width: max(CGFloat(5), g.size.width * CGFloat(mission.fraction)))
+                    }
+                }
+                .frame(height: 5)
+            }
+            Text(mission.progressText)
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .foregroundStyle(AppColors.textTertiary)
         }
     }
 
