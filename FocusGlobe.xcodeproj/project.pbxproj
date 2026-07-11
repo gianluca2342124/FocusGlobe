@@ -467,6 +467,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = FocusGlobe/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = FocusGlobe;
+				INFOPLIST_KEY_NSContactsUsageDescription = "";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "FocusGlobe begins each journey from where you are, so your focus route can start from your real city.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -509,6 +510,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = FocusGlobe/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = FocusGlobe;
+				INFOPLIST_KEY_NSContactsUsageDescription = "";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "FocusGlobe begins each journey from where you are, so your focus route can start from your real city.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
