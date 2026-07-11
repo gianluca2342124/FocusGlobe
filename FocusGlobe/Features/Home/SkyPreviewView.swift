@@ -1,4 +1,6 @@
+import Foundation
 import SwiftUI
+import UIKit
 
 /// A full-screen, procedural preview of one **Sky** — the paging background of
 /// the Home Sky selector. Fully vector (palette gradient, glow, stars, an
