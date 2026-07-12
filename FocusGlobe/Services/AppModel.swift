@@ -244,9 +244,30 @@ final class AppModel: ObservableObject {
         return isSkyUnlocked(stored) ? stored : .goldenHour
     }
 
-    /// Whether a Sky is flyable for this pilot (free / Pro / 3 accepted invites).
+    /// Whether a Sky is flyable for this pilot: free Sky always; Premium unlocks
+    /// all while active; otherwise the Sky must have earned its own 3 accepted
+    /// invites (per-Sky unlocks — never global).
     func isSkyUnlocked(_ sky: FocusSky) -> Bool {
-        SkyUnlock.isUnlocked(sky, isPro: isPro, acceptedInvites: profile.acceptedInviteCount)
+        SkyUnlock.isUnlocked(sky, isPro: isPro, unlockedSkyIDs: profile.unlockedSkyIDs ?? [])
+    }
+
+    /// Accepted invites counted toward unlocking this specific Sky.
+    func inviteProgress(for sky: FocusSky) -> Int {
+        min(SkyUnlock.invitesNeeded, (profile.inviteProgressBySkyID ?? [:])[sky.id] ?? 0)
+    }
+
+    /// The backend/universal-link entry point: one verified accepted invite for
+    /// one specific Sky. At 3, that Sky (and only that Sky) unlocks. Production
+    /// must only ever call this from a trusted source — never fabricate it.
+    func registerAcceptedInvite(forSkyID skyID: String) {
+        var perSky = profile.inviteProgressBySkyID ?? [:]
+        perSky[skyID, default: 0] += 1
+        profile.inviteProgressBySkyID = perSky
+        if perSky[skyID, default: 0] >= SkyUnlock.invitesNeeded {
+            var unlocked = profile.unlockedSkyIDs ?? []
+            unlocked.insert(skyID)
+            profile.unlockedSkyIDs = unlocked
+        }
     }
 
     /// Select a Sky for the next flights. Locked Skies can be previewed on Home
@@ -267,25 +288,37 @@ final class AppModel: ObservableObject {
         return code
     }
 
-    /// The share message for "Invite 3 friends". The link is a placeholder until
-    /// the referral backend + Associated Domains ship; the code makes it real
-    /// enough to test end-to-end copy.
-    func inviteShareMessage() -> String {
-        "Join me on FocusGlobe — focus feels like a calm balloon flight. " +
-        "Use my invite code \(referralCode()) → https://focusglobe.app/i/\(referralCode())"
-    }
-
-    /// Future backend entry point: apply the server-verified accepted-invite
-    /// count. Production code must ONLY ever set this from a trusted source.
-    func applyVerifiedInviteCount(_ count: Int) {
-        profile.acceptedInviteCount = max(profile.acceptedInviteCount, max(0, count))
+    /// The per-Sky share message. The link carries the referral code AND the
+    /// Sky being unlocked, so an accepted invite credits exactly that Sky.
+    /// (Placeholder domain until the referral backend + Associated Domains ship.)
+    func inviteShareMessage(for sky: FocusSky) -> String {
+        "Fly with me in \(sky.name) on FocusGlobe — focus feels like a calm balloon flight. " +
+        "My invite code: \(referralCode()) → https://focusglobe.app/i/\(referralCode())?sky=\(sky.id)"
     }
 
     #if DEBUG
-    /// DEBUG-only: simulate one accepted invite so the unlock flow can be tested
-    /// without a backend. Never compiled into release builds.
-    func debugSimulateAcceptedInvite() {
-        profile.acceptedInviteCount += 1
+    /// DEBUG-only: simulate the backend confirming one accepted invite for one
+    /// Sky, so the per-Sky unlock flow is testable. Never compiled into release.
+    func debugSimulateAcceptedInvite(forSkyID skyID: String) {
+        registerAcceptedInvite(forSkyID: skyID)
+        haptics.tap()
+    }
+
+    /// DEBUG-only: wipe every piece of local data and return the app to a true
+    /// first-launch state — onboarding shows again on the spot, no reinstall
+    /// needed. Disk keys are removed first; the assignments reset the published
+    /// state (settings/profile/isPro re-persist via their own `didSet`, the
+    /// rest simply load as empty next launch). Never compiled into release.
+    func debugResetAllData() {
+        persistence.wipeAll()
+        UserDefaults.standard.removeObject(forKey: "fg.notifications.enabled")
+        settings = .default
+        progress = .empty
+        history = []
+        isPro = false
+        resumableJourney = nil
+        profile = .empty        // hasCompletedOnboarding = false → onboarding returns
+        syncWidgets()
         haptics.tap()
     }
     #endif
@@ -320,6 +353,35 @@ final class AppModel: ObservableObject {
         haptics.rewardClaim()
         uiSound.play(.claim)
         return true
+    }
+
+    // MARK: - Equipping cosmetics (owned items become visible effects)
+
+    /// The one equipped balloon trail, if any — drawn behind the balloon in flight.
+    var equippedTrail: StoreItem? {
+        guard let id = profile.equippedTrailID else { return nil }
+        guard let item = StoreItem.byID(id), item.kind == .trail else { return nil }
+        return ownsStoreItem(item) ? item : nil
+    }
+
+    /// Equip a trail (or pass the equipped one again to unequip). Owned only.
+    func equipTrail(_ item: StoreItem) {
+        guard item.kind == .trail, ownsStoreItem(item) else { return }
+        profile.equippedTrailID = profile.equippedTrailID == item.id ? nil : item.id
+        haptics.tap()
+    }
+
+    func isCabinItemEquipped(_ item: StoreItem) -> Bool {
+        (profile.equippedCabinItemIDs ?? []).contains(item.id)
+    }
+
+    /// Show/hide an owned decoration inside the Cabin View.
+    func toggleCabinItem(_ item: StoreItem) {
+        guard item.kind == .cabinDecoration, ownsStoreItem(item) else { return }
+        var ids = profile.equippedCabinItemIDs ?? []
+        if ids.contains(item.id) { ids.remove(item.id) } else { ids.insert(item.id) }
+        profile.equippedCabinItemIDs = ids
+        haptics.tap()
     }
 
     // MARK: - Onboarding completion
@@ -492,7 +554,9 @@ final class AppModel: ObservableObject {
 
     /// Wind is free for everyone; the rest require an **active** subscription.
     func isAudioUnlocked(_ option: JourneyAudioOption) -> Bool {
-        !option.isPremium || isPro
+        // Every soundscape is free for now — sound is core to the experience.
+        // (A future premium tier can reintroduce gating here in one place.)
+        true
     }
 
     func selectJourneyAudio(_ option: JourneyAudioOption) {

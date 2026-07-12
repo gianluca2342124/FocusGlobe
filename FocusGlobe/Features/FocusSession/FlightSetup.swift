@@ -1001,6 +1001,38 @@ struct FlightModeView: View {
             }
             .buttonStyle(SoftPressStyle(scale: 0.99))
 
+            // Fellow pilots: ambient balloons share the Sky unless the pilot
+            // prefers a solo flight. Presentation-only; honest by design.
+            Button {
+                withAnimation(.snappy(duration: 0.25)) {
+                    appModel.profile.soloFlights = !(appModel.profile.soloFlights ?? false)
+                }
+                appModel.haptics.tap()
+            } label: {
+                HStack(spacing: AppSpacing.sm) {
+                    Image(systemName: (appModel.profile.soloFlights ?? false) ? "person.fill" : "person.3.fill")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle((appModel.profile.soloFlights ?? false) ? .white.opacity(0.6) : AppColors.gold)
+                        .frame(width: 26)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text((appModel.profile.soloFlights ?? false) ? "Solo flight" : "Fly with others")
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white)
+                        Text((appModel.profile.soloFlights ?? false)
+                             ? "Only your balloon in the Sky"
+                             : "Other balloons share your Sky")
+                            .font(.system(size: 12.5, weight: .regular, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.6))
+                            .lineLimit(1).minimumScaleFactor(0.8)
+                    }
+                    Spacer()
+                    Image(systemName: (appModel.profile.soloFlights ?? false) ? "circle" : "checkmark.circle.fill")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle((appModel.profile.soloFlights ?? false) ? .white.opacity(0.4) : AppColors.gold)
+                }
+            }
+            .buttonStyle(SoftPressStyle(scale: 0.99))
+
             // The flight's soundscape, so the whole pre-flight state reads in
             // one glance. Changeable in Passport → Flight ambience.
             HStack(spacing: AppSpacing.sm) {

@@ -16,6 +16,7 @@ struct HomeView: View {
     @State private var showSetup = false
     @State private var showUnlock = false
     @State private var balloonFloat: CGFloat = 0
+    @State private var activityPulse = false
     /// The Sky the pager is resting on (an index into `FocusSky.all`).
     @State private var skyIndex = 0
     @State private var didInitSky = false
@@ -185,12 +186,32 @@ struct HomeView: View {
     private var topBar: some View {
         HStack(spacing: AppSpacing.xs) {
             Spacer()
+            coinsChip
             if !appModel.isPro {
                 CrownButton(size: Layout.pad(42, 50)) { appModel.tapFeedback(); router.presentPaywall() }
             }
             streakButton
         }
         .padding(.top, AppSpacing.xs)
+    }
+
+    private var coinsChip: some View {
+        Button { appModel.tapFeedback(); router.openStore() } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "circle.hexagongrid.circle.fill")
+                    .font(.system(size: Layout.pad(13, 15), weight: .bold))
+                    .foregroundStyle(AppColors.gold)
+                Text(Formatters.miles(appModel.focusCoins))
+                    .font(.system(size: Layout.pad(14, 17), weight: .heavy, design: .rounded))
+                    .foregroundStyle(.white)
+            }
+            .padding(.horizontal, Layout.pad(11, 14))
+            .padding(.vertical, Layout.pad(8, 10))
+            .background(Capsule().fill(.white.opacity(0.1)))
+            .overlay(Capsule().strokeBorder(.white.opacity(0.12), lineWidth: 1))
+        }
+        .buttonStyle(SoftPressStyle())
+        .accessibilityLabel("\(appModel.focusCoins) Focus Coins. Opens the Store.")
     }
 
     private var streakButton: some View {
@@ -217,21 +238,17 @@ struct HomeView: View {
 
     // MARK: Greeting + selected Sky
 
+    // The hero text: just the greeting, big and premium — no date line, no
+    // instructions, nothing competing with it.
     private var greetingBlock: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(personalGreeting)
-                .font(.system(size: Layout.pad(38, 52), weight: .semibold, design: .serif))
-                .foregroundStyle(.white)
-                .minimumScaleFactor(0.6)
-                .lineLimit(1)
-            Text(dateLine)
-                .font(.system(size: Layout.pad(15, 18), weight: .regular, design: .serif))
-                .italic()
-                .foregroundStyle(.white.opacity(0.66))
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.top, AppSpacing.sm)
-        .shadow(color: .black.opacity(0.4), radius: 8, y: 2)
+        Text(personalGreeting)
+            .font(.system(size: Layout.pad(44, 60), weight: .semibold, design: .serif))
+            .foregroundStyle(.white)
+            .minimumScaleFactor(0.55)
+            .lineLimit(1)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, AppSpacing.sm)
+            .shadow(color: .black.opacity(0.4), radius: 8, y: 2)
     }
 
     private var personalGreeting: String {
@@ -241,12 +258,13 @@ struct HomeView: View {
         return viewModel.greeting
     }
 
-    /// The selected Sky's identity: name, unlock state, and ambient activity.
+    /// The selected Sky's name (with a lock when preview-only) plus the arrows +
+    /// dots that make switching self-evident — no instructional text anywhere.
     private var skyLabel: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Text(currentSky.name)
-                    .font(.system(size: Layout.pad(21, 26), weight: .semibold, design: .serif))
+                    .font(.system(size: Layout.pad(22, 27), weight: .semibold, design: .serif))
                     .foregroundStyle(AppColors.gold)
                 if !currentSkyUnlocked {
                     Image(systemName: "lock.fill")
@@ -254,18 +272,7 @@ struct HomeView: View {
                         .foregroundStyle(.white.opacity(0.75))
                 }
             }
-            HStack(spacing: 7) {
-                Text(currentSkyUnlocked ? currentSky.subtitle : "Premium or 3 friends")
-                    .font(.system(size: Layout.pad(12.5, 14), weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.72))
-                Circle().fill(.white.opacity(0.4)).frame(width: 3, height: 3)
-                // Ambient Sky activity — simulated until a live backend exists
-                // (see `SkyActivity`); phrased as activity, never as real users.
-                Text("Sky activity · \(SkyActivity.count(for: currentSky))")
-                    .font(.system(size: Layout.pad(12.5, 14), weight: .medium, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.6))
-            }
-            swipeHint
+            skySwitcher
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, AppSpacing.xs)
@@ -273,27 +280,48 @@ struct HomeView: View {
         .animation(.easeInOut(duration: 0.25), value: skyIndex)
     }
 
-    private var swipeHint: some View {
-        HStack(spacing: 5) {
-            Image(systemName: "chevron.left")
-            Text("Swipe to change Sky")
-            Image(systemName: "chevron.right")
+    /// Left/right arrows + one dot per Sky: the selector is visually obvious.
+    private var skySwitcher: some View {
+        HStack(spacing: AppSpacing.sm) {
+            skyArrow(system: "chevron.left", enabled: skyIndex > 0) {
+                withAnimation(.easeInOut(duration: 0.35)) { skyIndex = max(0, skyIndex - 1) }
+            }
+            HStack(spacing: 5) {
+                ForEach(FocusSky.all.indices, id: \.self) { i in
+                    Capsule()
+                        .fill(i == skyIndex ? AppColors.gold : .white.opacity(0.30))
+                        .frame(width: i == skyIndex ? 16 : 5, height: 5)
+                }
+            }
+            skyArrow(system: "chevron.right", enabled: skyIndex < FocusSky.all.count - 1) {
+                withAnimation(.easeInOut(duration: 0.35)) {
+                    skyIndex = min(FocusSky.all.count - 1, skyIndex + 1)
+                }
+            }
         }
-        .font(.system(size: 11, weight: .semibold, design: .rounded))
-        .foregroundStyle(.white.opacity(0.42))
-        .padding(.top, 2)
     }
 
-    private var dateLine: String {
-        let f = DateFormatter()
-        f.dateFormat = "EEEE, MMMM d"
-        return f.string(from: Date())
+    private func skyArrow(system: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: system)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(.white.opacity(enabled ? 0.9 : 0.3))
+                .frame(width: 30, height: 30)
+                .background(Circle().fill(.white.opacity(0.10)))
+                .overlay(Circle().strokeBorder(.white.opacity(0.12), lineWidth: 1))
+        }
+        .buttonStyle(SoftPressStyle())
+        .disabled(!enabled)
     }
 
     // MARK: Bottom panel
 
     private var bottomPanel: some View {
         VStack(spacing: AppSpacing.sm) {
+            HStack {
+                Spacer()
+                activityIsland
+            }
             if currentSkyUnlocked {
                 AppPrimaryButton(title: "Start Focus", systemImage: "arrow.up") {
                     appModel.tapFeedback()
@@ -304,12 +332,78 @@ struct HomeView: View {
                 lockedCTA
             }
             missionsCard
-            HStack(spacing: AppSpacing.xs) {
-                compactNav(title: "Passport", systemImage: "book.closed") { appModel.tapFeedback(); router.openPassport() }
-                compactNav(title: "Store", systemImage: "bag") { appModel.tapFeedback(); router.openStore() }
-                compactNav(title: "Settings", systemImage: "gearshape") { appModel.tapFeedback(); router.openSettings() }
+            bottomNavBar
+        }
+    }
+
+    /// The floating activity island — a green pulse + "N focusing now". Counts
+    /// come from the clearly-simulated `SkyActivity` provider until a live
+    /// backend replaces it (see that type's honesty contract).
+    private var activityIsland: some View {
+        HStack(spacing: 7) {
+            Circle()
+                .fill(Color(hex: 0x4ADE80))
+                .frame(width: 8, height: 8)
+                .shadow(color: Color(hex: 0x4ADE80).opacity(0.8), radius: activityPulse ? 5 : 2)
+            Text("\(SkyActivity.count(for: currentSky)) focusing now")
+                .font(.system(size: Layout.pad(13, 15), weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+        }
+        .padding(.horizontal, Layout.pad(13, 16))
+        .padding(.vertical, Layout.pad(9, 11))
+        .background(Capsule().fill(.ultraThinMaterial))
+        .overlay(Capsule().fill(Color.black.opacity(0.2)))
+        .overlay(Capsule().strokeBorder(.white.opacity(0.16), lineWidth: 1))
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
+                activityPulse = true
             }
         }
+        .animation(.easeInOut(duration: 0.25), value: skyIndex)
+    }
+
+    /// The app's five places — Passport · Shop · Home · Friends · Settings —
+    /// with Home at the centre. A premium glass bar, always visible.
+    private var bottomNavBar: some View {
+        HStack(spacing: 0) {
+            navTab(title: "Passport", system: "book.closed.fill", active: false) { router.openPassport() }
+            navTab(title: "Shop", system: "bag.fill", active: false) { router.openStore() }
+            navTab(title: "Home", system: "house.fill", active: true) { }
+            navTab(title: "Friends", system: "person.2.fill", active: false) { router.openFriends() }
+            navTab(title: "Settings", system: "gearshape.fill", active: false) { router.openSettings() }
+        }
+        .padding(.vertical, Layout.pad(10, 12))
+        .padding(.horizontal, AppSpacing.xs)
+        .background(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .fill(Color.black.opacity(0.26)))
+                .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .strokeBorder(.white.opacity(0.12), lineWidth: 1))
+        )
+        .shadow(color: .black.opacity(0.3), radius: 14, y: 8)
+    }
+
+    private func navTab(title: String, system: String, active: Bool,
+                        action: @escaping () -> Void) -> some View {
+        Button {
+            guard !active else { return }
+            appModel.tapFeedback()
+            action()
+        } label: {
+            VStack(spacing: 3) {
+                Image(systemName: system)
+                    .font(.system(size: Layout.pad(17, 20), weight: .semibold))
+                Text(title)
+                    .font(.system(size: Layout.pad(10, 11.5), weight: .semibold, design: .rounded))
+            }
+            .foregroundStyle(active ? AppColors.gold : .white.opacity(0.72))
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(SoftPressStyle(scale: 0.94))
+        .accessibilityLabel(title)
     }
 
     /// The locked-Sky call to action: unmistakable but elegant.
@@ -370,21 +464,6 @@ struct HomeView: View {
         .buttonStyle(SoftPressStyle(scale: 0.99))
     }
 
-    private func compactNav(title: String, systemImage: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: AppSpacing.xs) {
-                Image(systemName: systemImage).font(.system(size: 14, weight: .semibold))
-                Text(title).font(AppTypography.callout)
-            }
-            .foregroundStyle(.white.opacity(0.9))
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(.white.opacity(0.08)))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(.white.opacity(0.1), lineWidth: 1))
-        }
-        .buttonStyle(SoftPressStyle(scale: 0.98))
-    }
 }
 
 // MARK: - Unlock a Sky (Premium or invite 3 friends)
@@ -398,7 +477,7 @@ private struct SkyUnlockSheet: View {
     @EnvironmentObject private var router: AppRouter
     @Environment(\.dismiss) private var dismiss
 
-    private var invites: Int { appModel.profile.acceptedInviteCount }
+    private var invites: Int { appModel.inviteProgress(for: sky) }
 
     var body: some View {
         ZStack {
@@ -445,7 +524,7 @@ private struct SkyUnlockSheet: View {
 
     private var inviteBlock: some View {
         VStack(spacing: AppSpacing.sm) {
-            ShareLink(item: appModel.inviteShareMessage()) {
+            ShareLink(item: appModel.inviteShareMessage(for: sky)) {
                 HStack(spacing: 8) {
                     Image(systemName: "person.2.fill")
                         .font(.system(size: 15, weight: .bold))
@@ -466,7 +545,7 @@ private struct SkyUnlockSheet: View {
                         .fill(i < invites ? AppColors.gold : AppColors.textPrimary.opacity(0.14))
                         .frame(width: 9, height: 9)
                 }
-                Text("\(min(invites, SkyUnlock.invitesNeeded))/\(SkyUnlock.invitesNeeded) friends joined")
+                Text("\(invites)/\(SkyUnlock.invitesNeeded) friends joined for \(sky.name)")
                     .font(AppTypography.caption)
                     .foregroundStyle(AppColors.textSecondary)
             }
@@ -475,7 +554,7 @@ private struct SkyUnlockSheet: View {
             // Testing only — never compiled into release: simulates the referral
             // backend confirming one accepted invite.
             Button("DEBUG: simulate accepted invite") {
-                appModel.debugSimulateAcceptedInvite()
+                appModel.debugSimulateAcceptedInvite(forSkyID: sky.id)
             }
             .font(AppTypography.caption)
             .foregroundStyle(AppColors.textTertiary)

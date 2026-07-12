@@ -76,7 +76,7 @@ struct LandingView: View {
             Text("You landed")
                 .font(AppTypography.serifHero)
                 .foregroundStyle(AppColors.textPrimary)
-            Text("\(Formatters.durationLabel(minutes: max(1, summary.focusedMinutes))) focused · \(Formatters.flightDistanceKm(summary.distanceKm)) flown")
+            Text("\(Formatters.durationLabel(minutes: max(1, summary.focusedMinutes))) of pure focus")
                 .font(AppTypography.subhead)
                 .foregroundStyle(AppColors.textSecondary)
                 .lineLimit(1).minimumScaleFactor(0.7)
@@ -121,8 +121,6 @@ struct LandingView: View {
     private var statsStrip: some View {
         HStack(spacing: 0) {
             stat(value: "\(summary.focusedMinutes)", unit: "min", label: "Focused")
-            divider
-            stat(value: Formatters.flightDistanceKm(summary.distanceKm), unit: "", label: "Distance")
             divider
             stat(value: Formatters.miles(earnedMiles), unit: "", label: adState == .doubled ? "Coins ×2" : "Focus Coins")
             divider

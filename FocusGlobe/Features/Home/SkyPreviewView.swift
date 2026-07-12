@@ -35,8 +35,13 @@ struct SkyPreviewView: View {
 
     @ViewBuilder private func background(W: CGFloat, H: CGFloat) -> some View {
         LinearGradient(colors: sky.paletteColors, startPoint: .top, endPoint: .bottom)
-        if let asset = sky.previewImageName, UIImage(named: asset) != nil {
-            Image(asset).resizable().scaledToFill()
+        // Bundled Sky art wins when present: the shared naming convention first
+        // (Sky_<ID>_Background_Portrait/_Landscape), then the legacy field.
+        if let ui = UIImage(named: sky.backgroundAssetName(landscape: W > H)) {
+            Image(uiImage: ui).resizable().scaledToFill()
+                .frame(width: W, height: H).clipped()
+        } else if let asset = sky.previewImageName, let ui = UIImage(named: asset) {
+            Image(uiImage: ui).resizable().scaledToFill()
                 .frame(width: W, height: H).clipped()
         }
     }

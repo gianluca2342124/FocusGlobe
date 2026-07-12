@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 /// Hosts the live focus session and, on completion, the completion screen —
@@ -50,6 +51,10 @@ struct FocusSessionView: View {
     /// centre. Eased up once on appear, then the balloon steady-follows.
     @State private var takeoffLift: CGFloat = 0
     @State private var uiIn = false
+    /// The in-flight "invite a friend to this Sky" sheet.
+    @State private var showInvite = false
+    /// The "Playing …" soundscape toast shown briefly at take-off.
+    @State private var soundToastVisible = false
     /// The wall-clock anchor for everything the pilot sees. Captured **once** on
     /// appear (resume-aware); shifted forward when a pause ends so paused time
     /// never counts. Never touched inside `body`.
@@ -97,8 +102,15 @@ struct FocusSessionView: View {
                                              animated: !reduceMotion,
                                              openingBias: matchedSky?.flightOpening,
                                              skyPool: matchedSky?.flightPool,
-                                             skyParticles: matchedSky?.flightParticles ?? .none)
+                                             skyParticles: matchedSky?.flightParticles ?? .none,
+                                             focusSky: matchedSky)
                     .transition(.opacity)
+                if !(appModel.profile.soloFlights ?? false) {
+                    AmbientPilotsLayer(skyID: matchedSky?.id ?? "classic",
+                                       elapsed: { displayElapsed(at: Date()) },
+                                       animated: !reduceMotion)
+                        .transition(.opacity)
+                }
                 balloon
                     .transition(.opacity)
             case .cabin:
@@ -107,7 +119,9 @@ struct FocusSessionView: View {
                           animated: !reduceMotion,
                           openingBias: matchedSky?.flightOpening,
                           skyPool: matchedSky?.flightPool,
-                          skyParticles: matchedSky?.flightParticles ?? .none)
+                          skyParticles: matchedSky?.flightParticles ?? .none,
+                          focusSky: matchedSky,
+                          equippedItemIDs: appModel.profile.equippedCabinItemIDs ?? [])
                     .transition(.opacity)
             }
 
@@ -129,8 +143,14 @@ struct FocusSessionView: View {
 
             topControls.opacity(uiIn ? 1 : 0)
             bottomBar.opacity(uiIn ? 1 : 0)
+
+            if soundToastVisible {
+                soundToast
+                    .transition(.opacity.combined(with: .offset(y: -8)))
+            }
         }
         .animation(.easeInOut(duration: 0.35), value: vm.isPaused)
+        .animation(.easeInOut(duration: 0.4), value: soundToastVisible)
         // The engine heartbeat (display never depends on it): refresh the session
         // engine and land a finite flight the moment it is due. `.task` is
         // lifecycle-bound — it cancels itself when the flight screen goes away.
@@ -152,16 +172,20 @@ struct FocusSessionView: View {
                 pausedAt = nil
             }
         }
-        .confirmationDialog("Leave this flight?",
+        .confirmationDialog("Give up this flight?",
                             isPresented: $vm.showCancelConfirm,
                             titleVisibility: .visible) {
-            Button("Leave", role: .destructive) {
+            Button("Give up", role: .destructive) {
                 vm.confirmCancel()
                 router.finishToHome()
             }
-            Button("Keep focusing", role: .cancel) { vm.dismissCancel() }
+            Button("Keep flying", role: .cancel) { vm.dismissCancel() }
         } message: {
-            Text("You can pick up where you left off from Home.")
+            Text("Your progress pauses here: no Focus Coins are earned, today's missions don't count this flight, and your streak only grows when you land. You can resume from Home.")
+        }
+        .sheet(isPresented: $showInvite) {
+            FlightInviteSheet(sky: matchedSky ?? appModel.selectedSky)
+                .environmentObject(appModel)
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
@@ -184,6 +208,11 @@ struct FocusSessionView: View {
             // The controls surface a beat after the world, so entering the
             // flight reads as arriving in a place, not loading a screen.
             withAnimation(.easeOut(duration: 0.8).delay(reduceMotion ? 0 : 0.25)) { uiIn = true }
+            // "Playing 'Wind'" — a quiet confirmation that the soundscape is on.
+            if appModel.settings.soundEnabled && !vm.isAudioMuted {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) { soundToastVisible = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.6) { soundToastVisible = false }
+            }
             guard !reduceMotion else { takeoffLift = 1; return }
             // The cinematic take-off pull-back: ~3.2 s (present but never slow)
             // to ease the balloon from close-and-low up to its cruising size and
@@ -209,13 +238,27 @@ struct FocusSessionView: View {
             // that it just breathes (sway + bob + drift).
             let restY = h * (0.82 - 0.32 * takeoffLift)
             let takeoffScale = 1 + (1 - takeoffLift) * 1.4
-            FlightBalloonView(size: balloonSize, showGlow: true)
-                .scaleEffect(takeoffScale)
-                .rotationEffect(.degrees(Double(balloonSway) * 0.6))
-                .offset(x: balloonSway + balloonDrift, y: balloonBob)
-                .position(x: geo.size.width / 2, y: restY)
-                .shadow(color: .black.opacity(0.28),
-                        radius: 10 + 8 * (1 - takeoffLift), y: 6 + 8 * (1 - takeoffLift))
+            ZStack {
+                // The equipped Store trail hangs beneath the basket and inherits
+                // the same breathing offsets, so it reads as part of the balloon.
+                // (It fades itself in only after the take-off camera settles.)
+                if let trail = appModel.equippedTrail {
+                    BalloonTrailView(item: trail,
+                                     elapsed: { displayElapsed(at: Date()) },
+                                     animated: !reduceMotion)
+                        .frame(width: CGFloat(64), height: CGFloat(180))
+                        .offset(x: balloonSway + balloonDrift, y: balloonBob)
+                        .position(x: geo.size.width / 2,
+                                  y: restY + balloonSize * CGFloat(0.62) + CGFloat(90))
+                }
+                FlightBalloonView(size: balloonSize, showGlow: true)
+                    .scaleEffect(takeoffScale)
+                    .rotationEffect(.degrees(Double(balloonSway) * 0.6))
+                    .offset(x: balloonSway + balloonDrift, y: balloonBob)
+                    .position(x: geo.size.width / 2, y: restY)
+                    .shadow(color: .black.opacity(0.28),
+                            radius: 10 + 8 * (1 - takeoffLift), y: 6 + 8 * (1 - takeoffLift))
+            }
         }
         .allowsHitTesting(false)
     }
@@ -225,12 +268,20 @@ struct FocusSessionView: View {
     private var topControls: some View {
         VStack {
             HStack(alignment: .top) {
-                AppIconButton(systemImage: "xmark", size: Layout.pad(44, 54), tint: .white,
-                              accessibilityLabel: "End flight") { vm.requestCancel() }
+                HoldToGiveUpButton(size: Layout.pad(44, 54)) {
+                    appModel.haptics.tap()
+                    vm.requestCancel()
+                }
                 Spacer()
                 statusPill
                 Spacer()
                 HStack(spacing: Layout.pad(8, 12)) {
+                    AppIconButton(systemImage: "person.badge.plus",
+                                  size: Layout.pad(44, 54), tint: .white,
+                                  accessibilityLabel: "Invite a friend to this Sky") {
+                        appModel.tapFeedback()
+                        showInvite = true
+                    }
                     AppIconButton(systemImage: viewMode == .cabin ? "mountain.2.fill" : "cup.and.saucer.fill",
                                   size: Layout.pad(44, 54), tint: .white,
                                   accessibilityLabel: viewMode == .cabin ? "Exterior view" : "Cabin view") {
@@ -349,6 +400,27 @@ struct FocusSessionView: View {
         .frame(maxWidth: .infinity)
     }
 
+    /// The "Playing …" soundscape toast — a small glass capsule under the pill.
+    private var soundToast: some View {
+        VStack {
+            HStack(spacing: 7) {
+                Image(systemName: appModel.selectedJourneyAudio.systemImage)
+                    .font(.system(size: 12, weight: .bold))
+                Text("Playing \u{201C}\(appModel.selectedJourneyAudio.displayName)\u{201D}")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .background(Capsule().fill(.ultraThinMaterial))
+            .overlay(Capsule().fill(Color.black.opacity(0.22)))
+            .overlay(Capsule().strokeBorder(.white.opacity(0.16), lineWidth: 1))
+            .padding(.top, Layout.pad(64, 78))
+            Spacer()
+        }
+        .allowsHitTesting(false)
+    }
+
     /// A quiet, secondary control beneath the hero timer — deliberately
     /// understated so the time stays the focus.
     private func subtleControl(icon: String, title: String, action: @escaping () -> Void) -> some View {
@@ -368,3 +440,242 @@ struct FocusSessionView: View {
     }
 }
 
+
+// MARK: - Hold to give up (never one accidental tap)
+
+/// The flight's exit control: press and HOLD — a ring fills while holding, with
+/// haptic feedback — and only a completed hold opens the give-up confirmation.
+/// Releasing early cancels. A stray tap can never end a focus flight.
+private struct HoldToGiveUpButton: View {
+    var size: CGFloat = 44
+    let onComplete: () -> Void
+
+    @State private var progress: CGFloat = 0
+    @State private var holding = false
+
+    private let holdDuration: Double = 1.2
+
+    var body: some View {
+        ZStack {
+            Circle().fill(.white.opacity(0.10))
+            Circle().strokeBorder(.white.opacity(0.14), lineWidth: 1)
+            Circle()
+                .trim(from: 0, to: progress)
+                .stroke(Color(hex: 0xE9654B),
+                        style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .padding(2)
+            Image(systemName: "xmark")
+                .font(.system(size: size * 0.34, weight: .bold))
+                .foregroundStyle(.white)
+        }
+        .frame(width: size, height: size)
+        .scaleEffect(holding ? 0.94 : 1)
+        .onLongPressGesture(minimumDuration: holdDuration, maximumDistance: 60) {
+            progress = 0
+            holding = false
+            onComplete()
+        } onPressingChanged: { pressing in
+            holding = pressing
+            if pressing {
+                withAnimation(.linear(duration: holdDuration)) { progress = 1 }
+            } else {
+                withAnimation(.easeOut(duration: 0.2)) { progress = 0 }
+            }
+        }
+        .accessibilityLabel("Give up flight")
+        .accessibilityHint("Press and hold to open the give-up confirmation.")
+    }
+}
+
+// MARK: - In-flight invite (friends join this Sky)
+
+/// A small sheet to invite a friend into the current Sky mid-flight: share the
+/// per-Sky link and see that Sky's honest invite progress. Accepted invites are
+/// only ever credited by the verified referral path — never from this sheet.
+private struct FlightInviteSheet: View {
+    let sky: FocusSky
+    @EnvironmentObject private var appModel: AppModel
+
+    var body: some View {
+        ZStack {
+            AppBackground().ignoresSafeArea()
+            VStack(spacing: AppSpacing.lg) {
+                VStack(spacing: 6) {
+                    Text("Invite a friend to \(sky.name)")
+                        .font(AppTypography.serifTitle2)
+                        .foregroundStyle(AppColors.textPrimary)
+                        .multilineTextAlignment(.center)
+                    Text("They join your Sky when they accept — and 3 accepted invites unlock it for good.")
+                        .font(AppTypography.callout)
+                        .foregroundStyle(AppColors.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.top, AppSpacing.xl)
+
+                ShareLink(item: appModel.inviteShareMessage(for: sky)) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 15, weight: .bold))
+                        Text("Share invite")
+                            .font(AppTypography.headline)
+                    }
+                    .foregroundStyle(AppColors.ctaText)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 54)
+                    .background(RoundedRectangle(cornerRadius: AppSpacing.pillRadius, style: .continuous)
+                        .fill(AppColors.ctaFill))
+                }
+                .simultaneousGesture(TapGesture().onEnded { appModel.tapFeedback() })
+
+                if !appModel.isSkyUnlocked(sky) || appModel.inviteProgress(for: sky) > 0 {
+                    HStack(spacing: 8) {
+                        ForEach(0..<SkyUnlock.invitesNeeded, id: \.self) { i in
+                            Circle()
+                                .fill(i < appModel.inviteProgress(for: sky)
+                                      ? AppColors.gold : AppColors.textPrimary.opacity(0.14))
+                                .frame(width: 9, height: 9)
+                        }
+                        Text("\(appModel.inviteProgress(for: sky))/\(SkyUnlock.invitesNeeded) joined")
+                            .font(AppTypography.caption)
+                            .foregroundStyle(AppColors.textSecondary)
+                    }
+                }
+                Spacer()
+            }
+            .padding(.horizontal, AppSpacing.screen)
+            .frame(maxWidth: 520)
+            .frame(maxWidth: .infinity)
+        }
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
+    }
+}
+
+// MARK: - Equipped balloon trail (Store cosmetic)
+
+/// The equipped Store trail — a soft wake the balloon leaves beneath itself
+/// while it climbs. Three styles (stardust sparkles, a silk ribbon, a comet
+/// streak), all pure `Canvas`, tinted from the `StoreItem`, and driven by the
+/// pause-aware flight clock so the wake breathes with the flight and freezes
+/// on pause. It fades itself in only after the take-off camera settles.
+private struct BalloonTrailView: View {
+    let item: StoreItem
+    let elapsed: () -> Double
+    var animated: Bool = true
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !animated)) { _ in
+            Canvas { ctx, size in
+                let e = elapsed()
+                let fadeIn = max(0.0, min(1.0, (e - 5.0) / 3.0))
+                guard fadeIn > 0.01 else { return }
+                switch item.id {
+                case "trail-ribbon": drawRibbon(&ctx, s: size, e: e, alpha: fadeIn)
+                case "trail-comet":  drawComet(&ctx, s: size, e: e, alpha: fadeIn)
+                default:             drawStardust(&ctx, s: size, e: e, alpha: fadeIn)
+                }
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    /// Scattered four-point sparkles shed from the basket, sinking and fading.
+    private func drawStardust(_ c: inout GraphicsContext, s: CGSize, e: Double, alpha: Double) {
+        var rng = SeededRNG(seed: 0x57A2)
+        for _ in 0..<14 {
+            let phase = rng.unit()
+            let speed = 0.05 + rng.unit() * 0.045
+            let swaySpeed = 0.6 + rng.unit() * 0.5
+            let swayPhase = rng.unit() * Double.pi * 2
+            let twinkleSpeed = 2.2 + rng.unit() * 2.0
+            let baseR = 0.9 + rng.unit() * 1.5
+            let f = (e * speed + phase).truncatingRemainder(dividingBy: 1.0)
+            let fall = 1.0 - f
+            let sway = Foundation.sin(e * swaySpeed + swayPhase)
+            let twinkle = 0.55 + 0.45 * Foundation.sin(e * twinkleSpeed + swayPhase * 3.0)
+            let a = alpha * fall * twinkle * 0.85
+            guard a > 0.02 else { continue }
+            let x = s.width * CGFloat(0.5) + CGFloat(sway) * s.width * CGFloat(0.22)
+            let y = CGFloat(f) * s.height
+            let r = CGFloat(baseR) * CGFloat(0.6 + 0.4 * fall)
+            let center = CGPoint(x: x, y: y)
+            let g = Gradient(colors: [item.tint.opacity(a), item.tint.opacity(0)])
+            c.fill(Path(ellipseIn: CGRect(x: center.x - r * 3, y: center.y - r * 3,
+                                          width: r * 6, height: r * 6)),
+                   with: .radialGradient(g, center: center, startRadius: 0, endRadius: r * 3))
+            var star = Path()
+            star.move(to: CGPoint(x: center.x - r * 1.8, y: center.y))
+            star.addLine(to: CGPoint(x: center.x + r * 1.8, y: center.y))
+            star.move(to: CGPoint(x: center.x, y: center.y - r * 1.8))
+            star.addLine(to: CGPoint(x: center.x, y: center.y + r * 1.8))
+            c.stroke(star, with: .color(.white.opacity(a * 0.9)), lineWidth: CGFloat(0.8))
+        }
+    }
+
+    /// A silk line rippling behind the basket, fading out below.
+    private func drawRibbon(_ c: inout GraphicsContext, s: CGSize, e: Double, alpha: Double) {
+        let g = Gradient(colors: [item.tint.opacity(alpha * 0.8),
+                                  item.tint.opacity(alpha * 0.35),
+                                  item.tint.opacity(0)])
+        let shading = GraphicsContext.Shading.linearGradient(
+            g,
+            startPoint: CGPoint(x: s.width / 2, y: 0),
+            endPoint: CGPoint(x: s.width / 2, y: s.height))
+        let amp = s.width * CGFloat(0.16)
+        for (offsetPhase, width) in [(0.0, 2.2), (0.9, 1.0)] {
+            var line = Path()
+            let steps = 26
+            for i in 0...steps {
+                let f = Double(i) / Double(steps)
+                let wave = Foundation.sin(f * 4.4 + e * 1.1 + offsetPhase)
+                let x = s.width * CGFloat(0.5) + CGFloat(wave) * amp * CGFloat(0.35 + 0.6 * f)
+                let y = CGFloat(f) * s.height
+                let pt = CGPoint(x: x, y: y)
+                if i == 0 { line.move(to: pt) } else { line.addLine(to: pt) }
+            }
+            c.stroke(line, with: shading,
+                     style: StrokeStyle(lineWidth: CGFloat(width), lineCap: .round))
+        }
+    }
+
+    /// A tapered streak with a slow lateral breathing, plus shed sparks.
+    private func drawComet(_ c: inout GraphicsContext, s: CGSize, e: Double, alpha: Double) {
+        let midX = s.width * CGFloat(0.5)
+        let ampX = s.width * CGFloat(0.08)
+        func xAt(_ f: Double) -> CGFloat {
+            let wave = Foundation.sin(e * 0.8 + f * 2.6)
+            return midX + CGFloat(wave) * ampX * CGFloat(f)
+        }
+        let segments = 12
+        for i in 0..<segments {
+            let f0 = Double(i) / Double(segments)
+            let f1 = Double(i + 1) / Double(segments)
+            var seg = Path()
+            seg.move(to: CGPoint(x: xAt(f0), y: CGFloat(f0) * s.height))
+            seg.addLine(to: CGPoint(x: xAt(f1), y: CGFloat(f1) * s.height))
+            let a = alpha * (1.0 - f0) * 0.55
+            let w = CGFloat(5.5) * CGFloat(1.0 - f0) + CGFloat(0.6)
+            c.stroke(seg, with: .color(item.tint.opacity(a)), lineWidth: w)
+        }
+        var rng = SeededRNG(seed: 0xC03E)
+        for _ in 0..<7 {
+            let phase = rng.unit()
+            let speed = 0.06 + rng.unit() * 0.05
+            let baseR = 0.8 + rng.unit() * 1.1
+            let f = (e * speed + phase).truncatingRemainder(dividingBy: 1.0)
+            let a = alpha * (1.0 - f) * 0.8
+            guard a > 0.02 else { continue }
+            let wave = Foundation.sin(e * 1.3 + phase * 9.0)
+            let x = midX + CGFloat(wave) * s.width * CGFloat(0.16) * CGFloat(f)
+            let y = CGFloat(f) * s.height
+            let r = CGFloat(baseR)
+            let g = Gradient(colors: [Color.white.opacity(a), item.tint.opacity(0)])
+            c.fill(Path(ellipseIn: CGRect(x: x - r * 2.5, y: y - r * 2.5,
+                                          width: r * 5, height: r * 5)),
+                   with: .radialGradient(g, center: CGPoint(x: x, y: y),
+                                         startRadius: 0, endRadius: r * 2.5))
+        }
+    }
+}

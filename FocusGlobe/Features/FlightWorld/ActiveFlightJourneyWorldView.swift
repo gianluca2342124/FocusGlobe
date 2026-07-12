@@ -172,8 +172,21 @@ struct ActiveFlightJourneyWorldView: View {
     var skyPool: [WorldKind]? = nil
     /// The Sky's own weather riding inside the scrolling world.
     var skyParticles: FocusSky.FlightParticle = .none
+    /// **The modern path.** When the flight's Sky is known, the whole session is
+    /// rendered by the stable per-Sky scene (`SkyFlightSceneView`) — one place,
+    /// one identity, no chapter cycling, no seams. The legacy chapter tape below
+    /// remains only for sessions without a resolvable Sky (old resumes).
+    var focusSky: FocusSky? = nil
 
     var body: some View {
+        if let focusSky {
+            SkyFlightSceneView(sky: focusSky, elapsed: elapsed, animated: animated)
+        } else {
+            legacyTape
+        }
+    }
+
+    private var legacyTape: some View {
         GeometryReader { geo in
             let W = geo.size.width
             let H = max(1, geo.size.height)

@@ -39,6 +39,17 @@ struct UserProfile: Codable, Equatable {
     var spentFocusCoins: Int? = nil
     /// Store items this pilot owns. Optional for the same decoding reason.
     var ownedStoreItemIDs: Set<String>? = nil
+    /// The equipped trail effect (a `StoreItem` id of kind `.trail`).
+    var equippedTrailID: String? = nil
+    /// Equipped cabin decorations (`StoreItem` ids of kind `.cabinDecoration`).
+    var equippedCabinItemIDs: Set<String>? = nil
+    /// Fly without ambient fellow pilots (solo/offline mode).
+    var soloFlights: Bool? = nil
+    /// Per-Sky unlocks earned by invites: a Sky unlocks individually once its
+    /// own 3 invites are accepted. (Premium bypasses this while active.)
+    var unlockedSkyIDs: Set<String>? = nil
+    /// Accepted invites counted per Sky (the honest, backend-fed tally).
+    var inviteProgressBySkyID: [String: Int]? = nil
 
     static let empty = UserProfile()
 }

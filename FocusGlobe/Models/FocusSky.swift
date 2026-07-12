@@ -86,6 +86,21 @@ struct FocusSky: Identifiable, Hashable {
     var paletteColors: [Color] { moodPalette.map { Color(hex: $0) } }
     var glowColor: Color { Color(hex: glowHex) }
 
+    // MARK: Asset naming (drop-in art; procedural fallbacks always compile)
+
+    /// "paris-sunset" → "ParisSunset": the asset-safe PascalCase base name.
+    var assetBaseName: String {
+        id.split(separator: "-").map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined()
+    }
+    /// Full-screen background art: `Sky_ParisSunset_Background_Portrait` /
+    /// `…_Landscape`. Missing assets fall back to the procedural scene.
+    func backgroundAssetName(landscape: Bool) -> String {
+        "Sky_\(assetBaseName)_Background_\(landscape ? "Landscape" : "Portrait")"
+    }
+    /// The take-off ground plate (`Sky_ParisSunset_Ground`) — shown only during
+    /// lift-off, never tiled or repeated.
+    var groundAssetName: String { "Sky_\(assetBaseName)_Ground" }
+
     /// The ritual/backdrop scene this Sky maps to (never nil — falls back gold).
     var scene: SkyScene { SkyScene.all.first { $0.id == visualPresetID } ?? .goldenHour }
 
@@ -196,16 +211,17 @@ struct FocusSky: Identifiable, Hashable {
 
 // MARK: - Unlock rules
 
-/// Pure unlock logic for Skies — free Sky always; Premium unlocks all; inviting
-/// 3 friends unlocks all. Kept as pure functions so a future backend-driven
-/// entitlement can slot in without touching call sites.
+/// Pure unlock logic for Skies — the free Sky always; Premium unlocks all while
+/// active; and inviting 3 friends unlocks **only that specific Sky** (each
+/// locked Sky needs its own 3 accepted invites). Pure functions so the
+/// backend-driven entitlement slots in without touching call sites.
 enum SkyUnlock {
     static let invitesNeeded = 3
 
-    static func isUnlocked(_ sky: FocusSky, isPro: Bool, acceptedInvites: Int) -> Bool {
+    static func isUnlocked(_ sky: FocusSky, isPro: Bool, unlockedSkyIDs: Set<String>) -> Bool {
         if sky.isDefaultFree { return true }
         if isPro { return true }
-        return acceptedInvites >= invitesNeeded
+        return unlockedSkyIDs.contains(sky.id)
     }
 }
 

@@ -30,7 +30,7 @@ final class SoundService {
     private var currentOptionID: String?
     /// Clearly present during the flight (the ambience is a core part of the
     /// experience), but still calm enough to focus over.
-    private let targetVolume: Float = 0.72
+    private let targetVolume: Float = 0.88
 
     /// Whether the current journey audio is muted (volume 0 but still "playing",
     /// so pause/resume are unaffected).

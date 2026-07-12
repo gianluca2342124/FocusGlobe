@@ -3,7 +3,7 @@ import SwiftUI
 /// The **Passport** — a premium *flight logbook* / travel journal. It reads
 /// top-to-bottom as a collectible record: a warm hero summary (the journal
 /// cover), refined flight stats, today's flight objectives, discovered skies
-/// (stamps), visited places, flight ambience, widgets and collectible badges.
+/// (stamps), recent landings, flight ambience, widgets and collectible badges.
 ///
 /// Presentation only — every number is derived from the on-device session
 /// history / `UserProgress`; nothing here writes persistence, analytics or
@@ -24,16 +24,13 @@ struct PassportView: View {
 
     private var completedFlights: [FocusSessionRecord] { appModel.history.filter { $0.completed } }
     private var totalFocusMinutes: Int { completedFlights.reduce(0) { $0 + $1.focusedSeconds } / 60 }
-    private var totalDistanceKm: Double { completedFlights.reduce(0) { $0 + $1.distanceKm } }
     private var flightsCompleted: Int { max(progress.landings, completedFlights.count) }
     private var skiesDiscovered: Int { Set(completedFlights.map { $0.destinationName }).count }
     private var totalSkies: Int { max(SkyScene.all.count, skiesDiscovered) }
 
-    /// Longest single flight — by focus time (falls back to a dash when empty).
-    private var longestFlightLabel: String {
-        progress.bestFocusSeconds > 0
-            ? Formatters.durationLabel(minutes: max(1, progress.bestFocusMinutes))
-            : "—"
+    /// Friends who accepted an invite, across every Sky.
+    private var friendsInvited: Int {
+        (appModel.profile.inviteProgressBySkyID ?? [:]).values.reduce(0, +)
     }
 
     /// Most-visited destination across completed flights (a "home sky").
@@ -55,7 +52,7 @@ struct PassportView: View {
                     missionsSection
                     focusCategoriesSection
                     discoveredSkiesSection
-                    VisitedPlacesSection()
+                    recentLandingsSection
                     flightSoundSection
                     WidgetsGallerySection()
                     achievementsSection
@@ -136,9 +133,9 @@ struct PassportView: View {
         HStack(spacing: AppSpacing.sm) {
             heroChip(icon: "paperplane.fill", value: "\(flightsCompleted)",
                      label: "flights", tint: AppColors.gold)
-            heroChip(icon: "location.fill",
-                     value: totalDistanceKm > 0 ? Formatters.distance(km: totalDistanceKm) : "0 km",
-                     label: "traveled", tint: AppColors.teal)
+            heroChip(icon: "circle.hexagongrid.circle.fill",
+                     value: Formatters.miles(appModel.focusCoins),
+                     label: "Focus Coins", tint: AppColors.teal)
             heroChip(icon: "moon.stars.fill", value: "\(skiesDiscovered)",
                      label: "skies", tint: AppColors.brand)
         }
@@ -172,26 +169,61 @@ struct PassportView: View {
 
     private var statsGrid: some View {
         LazyVGrid(columns: cardColumns, spacing: AppSpacing.sm) {
-            StatTile(systemImage: "hourglass",
-                     value: totalFocusMinutes > 0 ? Formatters.durationLabel(minutes: totalFocusMinutes) : "—",
-                     label: "Total focus time", accent: AppColors.brand)
             StatTile(systemImage: "paperplane.fill",
                      value: "\(flightsCompleted)", label: "Flights", accent: AppColors.gold)
-            StatTile(systemImage: "point.topleft.down.to.point.bottomright.curvepath",
-                     value: totalDistanceKm > 0 ? Formatters.distance(km: totalDistanceKm) : "—",
-                     label: "Distance", accent: AppColors.teal)
             StatTile(systemImage: "flame.fill",
                      value: "\(progress.currentStreak)", label: "Day streak", accent: AppColors.danger)
             StatTile(systemImage: "trophy.fill",
                      value: progress.bestFocusSeconds > 0 ? Formatters.durationLabel(minutes: max(1, progress.bestFocusMinutes)) : "—",
                      label: "Best focus", accent: AppColors.gold)
-            StatTile(systemImage: "clock.arrow.circlepath",
-                     value: longestFlightLabel, label: "Longest flight", accent: AppColors.success)
             StatTile(systemImage: "heart.fill",
                      value: favoriteSky ?? "—", label: "Favorite sky", accent: AppColors.terracotta)
             StatTile(systemImage: "moon.stars.fill",
                      value: "\(skiesDiscovered)/\(totalSkies)", label: "Skies discovered", accent: AppColors.brand)
+            StatTile(systemImage: "circle.hexagongrid.circle.fill",
+                     value: Formatters.miles(progress.totalFocusMiles),
+                     label: "Focus Coins earned", accent: AppColors.teal)
+            StatTile(systemImage: "person.2.fill",
+                     value: "\(friendsInvited)", label: "Friends invited", accent: AppColors.success)
         }
+    }
+
+    // MARK: Recent landings (the last pages of the journal)
+
+    @ViewBuilder private var recentLandingsSection: some View {
+        let recent = Array(completedFlights.sorted { $0.date > $1.date }.prefix(3))
+        if !recent.isEmpty {
+            VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                SectionLabel(text: "Recent landings")
+                VStack(spacing: AppSpacing.xs + 2) {
+                    ForEach(recent) { record in
+                        recentLandingRow(record)
+                    }
+                }
+            }
+        }
+    }
+
+    private func recentLandingRow(_ record: FocusSessionRecord) -> some View {
+        HStack(spacing: AppSpacing.sm) {
+            MiniBalloonView(size: 22, showGlow: false)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(record.destinationName)
+                    .font(.system(size: 14, weight: .semibold, design: .serif))
+                    .foregroundStyle(AppColors.textPrimary)
+                    .lineLimit(1)
+                Text("\(Formatters.durationLabel(minutes: max(1, record.focusedMinutes))) focused")
+                    .font(AppTypography.caption)
+                    .foregroundStyle(AppColors.textSecondary)
+            }
+            Spacer()
+            Text(record.date.formatted(.relative(presentation: .named)))
+                .font(AppTypography.caption)
+                .foregroundStyle(AppColors.textTertiary)
+        }
+        .padding(.horizontal, AppSpacing.md)
+        .padding(.vertical, AppSpacing.sm)
+        .glassBackground(cornerRadius: 16, shadowRadius: 10, shadowY: 5)
     }
 
     // MARK: Today's objectives (daily missions)
@@ -638,8 +670,6 @@ private struct JourneySoundCard: View {
     }
 
     private var statusText: String {
-        if selected { return "Playing on flights" }
-        if option.isPremium { return unlocked ? "Ultra" : "Unlock with Ultra" }
-        return "Free"
+        selected ? "Playing on flights" : "Tap to select"
     }
 }

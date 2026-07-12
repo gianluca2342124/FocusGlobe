@@ -10,6 +10,9 @@ struct SettingsView: View {
     #if canImport(RevenueCatUI)
     @State private var showCustomerCenter = false
     #endif
+    #if DEBUG
+    @State private var showResetConfirm = false
+    #endif
 
     var body: some View {
         ZStack {
@@ -26,6 +29,9 @@ struct SettingsView: View {
                     FocusShieldSettingsSection(service: appModel.focusShield)
                     ultraSection
                     generalSection
+                    #if DEBUG
+                    debugSection
+                    #endif
                     versionFooter
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -183,6 +189,35 @@ struct SettingsView: View {
             .font(.system(size: 12, weight: .semibold))
             .foregroundStyle(AppColors.textTertiary)
     }
+
+    #if DEBUG
+    // Developer-only (never compiled into release builds): a full local data
+    // reset so fresh-user onboarding can be re-tested without reinstalling.
+    private var debugSection: some View {
+        SettingsCard(title: "Developer") {
+            Button {
+                appModel.tapFeedback()
+                showResetConfirm = true
+            } label: {
+                SettingsRow(systemImage: "trash.fill", title: "Reset all data",
+                            subtitle: "Wipe everything and replay onboarding",
+                            tint: AppColors.danger,
+                            trailing: AnyView(EmptyView()))
+            }
+            .buttonStyle(SoftPressStyle())
+        }
+        .confirmationDialog("Reset all data?",
+                            isPresented: $showResetConfirm,
+                            titleVisibility: .visible) {
+            Button("Erase everything", role: .destructive) {
+                appModel.debugResetAllData()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Deletes flights, coins, streaks, unlocks and your profile on this device. The app returns to first launch.")
+        }
+    }
+    #endif
 
     private var versionFooter: some View {
         Text("Version \(appVersion)")

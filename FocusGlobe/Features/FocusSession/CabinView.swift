@@ -25,6 +25,10 @@ struct CabinView: View {
     var openingBias: Int? = nil
     var skyPool: [WorldKind]? = nil
     var skyParticles: FocusSky.FlightParticle = .none
+    var focusSky: FocusSky? = nil
+    /// Owned Store cabin decorations the pilot has placed (`StoreItem` ids) —
+    /// purely additive dressing; the cabin stands alone without any of them.
+    var equippedItemIDs: Set<String> = []
 
     var body: some View {
         GeometryReader { geo in
@@ -51,6 +55,7 @@ struct CabinView: View {
             topWarmth(W: W, H: H, t: t)
             sill(W: W, H: H)
             sillProps(W: W, H: H, t: t)
+            equippedProps(W: W, H: H, t: t)
             floorPet(W: W, H: H, t: t)
             assetOverlay
         }
@@ -85,7 +90,8 @@ struct CabinView: View {
             // The SAME live world as the exterior, seen through the glass.
             ActiveFlightJourneyWorldView(elapsed: elapsed, seed: seed,
                                          animated: animated, openingBias: openingBias,
-                                         skyPool: skyPool, skyParticles: skyParticles)
+                                         skyPool: skyPool, skyParticles: skyParticles,
+                                         focusSky: focusSky)
                 .frame(width: winW, height: winH)
                 .clipShape(shape)
             // Inner radial shade so the edges read darker → depth.
@@ -182,13 +188,29 @@ struct CabinView: View {
         }
     }
 
+    // MARK: 5b — Placed Store decorations (bought + equipped in the Store)
+
+    @ViewBuilder private func equippedProps(W: CGFloat, H: CGFloat, t: Double) -> some View {
+        let sillTopY = H * 0.30 + (H * 0.42) / 2 - 6 - (H * 0.045) / 2
+        if equippedItemIDs.contains("cabin-plant") {
+            CabinFern(t: animated ? t : 0)
+                .frame(width: W * 0.13, height: W * 0.16)
+                .position(x: W * 0.14, y: sillTopY - W * 0.055)
+        }
+        if equippedItemIDs.contains("cabin-teapot") {
+            CabinTeapot()
+                .frame(width: W * 0.16, height: W * 0.12)
+                .position(x: W * 0.85, y: sillTopY - W * 0.042)
+        }
+    }
+
     // MARK: 6 — Floor pet (a curled, softly-breathing cat on a cushion)
 
     private func floorPet(W: CGFloat, H: CGFloat, t: Double) -> some View {
         let petY = H * 0.9
         let breathe = animated ? CGFloat(Foundation.sin(t * 1.3)) : 0
         let scaleY = 1 + breathe * 0.02
-        return CabinPet()
+        return CabinPet(quilted: equippedItemIDs.contains("cabin-quilt"))
             .frame(width: W * 0.34, height: H * 0.14)
             .scaleEffect(x: 1, y: scaleY, anchor: .bottom)
             .position(x: W / 2, y: petY)
@@ -296,17 +318,30 @@ private struct CabinBook: View {
 /// A curled sleeping cat/fox silhouette (body + head + 2 ears + tail) resting on
 /// a small cushion. Composed only of ellipses and tiny shapes.
 private struct CabinPet: View {
+    /// "Aurora Quilt" equipped: the cushion wears cold-sky colours + stitching.
+    var quilted: Bool = false
+
     var body: some View {
         GeometryReader { g in
             let w = g.size.width
             let h = g.size.height
             ZStack {
-                // Cushion.
+                // Cushion (the Aurora Quilt re-dresses it when equipped).
                 Ellipse()
-                    .fill(LinearGradient(colors: [Color(hex: 0x7E4A5A), Color(hex: 0x5E3543)],
+                    .fill(LinearGradient(colors: quilted
+                                            ? [Color(hex: 0x4CC9A0), Color(hex: 0x3B5876)]
+                                            : [Color(hex: 0x7E4A5A), Color(hex: 0x5E3543)],
                                          startPoint: .top, endPoint: .bottom))
                     .frame(width: w * 0.92, height: h * 0.34)
                     .position(x: w * 0.5, y: h * 0.82)
+                if quilted {
+                    // Quilt stitching — a soft dashed seam across the cushion.
+                    Ellipse()
+                        .stroke(.white.opacity(0.22),
+                                style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                        .frame(width: w * 0.7, height: h * 0.2)
+                        .position(x: w * 0.5, y: h * 0.82)
+                }
                 // Tail curling around the body.
                 CabinTailShape()
                     .stroke(Color(hex: 0xB89878),
@@ -387,6 +422,117 @@ struct CabinEarShape: Shape {
         p.move(to: CGPoint(x: rect.minX, y: rect.maxY))
         p.addLine(to: CGPoint(x: rect.midX, y: rect.minY))
         p.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        p.closeSubpath()
+        return p
+    }
+}
+
+// MARK: - Store decorations (drawn only when bought + placed)
+
+/// The "Tiny Fern" Store decoration — a terracotta pot with arcing mint
+/// fronds that sway almost imperceptibly.
+private struct CabinFern: View {
+    var t: Double
+
+    var body: some View {
+        GeometryReader { g in
+            let w = g.size.width
+            let h = g.size.height
+            ZStack {
+                fronds
+                RoundedRectangle(cornerRadius: w * 0.1, style: .continuous)
+                    .fill(LinearGradient(colors: [AppColors.terracotta, Color(hex: 0x8A3A28)],
+                                         startPoint: .top, endPoint: .bottom))
+                    .frame(width: w * 0.44, height: h * 0.30)
+                    .position(x: w * 0.5, y: h * 0.85)
+            }
+            .shadow(color: .black.opacity(0.3), radius: 5, y: 3)
+        }
+    }
+
+    /// A fan of six quad-curve fronds rooted at the pot's mouth.
+    private var fronds: some View {
+        Canvas { ctx, size in
+            let baseX = Double(size.width) * 0.5
+            let baseY = Double(size.height) * 0.72
+            for k in 0..<6 {
+                let f = Double(k) / 5.0
+                let spread = (f - 0.5) * 2.0
+                let sway = Foundation.sin(t * 0.9 + Double(k)) * 0.04
+                let lift = 0.55 + 0.16 * Foundation.sin(f * .pi)
+                let tipX = baseX + (spread * 0.42 + sway) * Double(size.width)
+                let tipY = baseY - lift * Double(size.height)
+                let ctrlX = baseX + spread * 0.14 * Double(size.width)
+                let ctrlY = baseY - 0.34 * Double(size.height)
+                var p = Path()
+                p.move(to: CGPoint(x: baseX, y: baseY))
+                p.addQuadCurve(to: CGPoint(x: tipX, y: tipY),
+                               control: CGPoint(x: ctrlX, y: ctrlY))
+                ctx.stroke(p, with: .color(Color(hex: 0x6FD8B8).opacity(0.9)),
+                           style: StrokeStyle(lineWidth: CGFloat(1.6), lineCap: .round))
+            }
+        }
+    }
+}
+
+/// The "Ceramic Teapot" Store decoration — warm glaze, spout, handle, lid.
+private struct CabinTeapot: View {
+    var body: some View {
+        GeometryReader { g in
+            let w = g.size.width
+            let h = g.size.height
+            ZStack {
+                // Body.
+                Ellipse()
+                    .fill(LinearGradient(colors: [Color(hex: 0xE9C07A), Color(hex: 0xC49855)],
+                                         startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: w * 0.62, height: h * 0.62)
+                    .position(x: w * 0.48, y: h * 0.62)
+                // Spout.
+                CabinSpoutShape()
+                    .fill(Color(hex: 0xD9B06A))
+                    .frame(width: w * 0.22, height: h * 0.30)
+                    .position(x: w * 0.13, y: h * 0.52)
+                // Handle.
+                Circle()
+                    .trim(from: 0.55, to: 0.95)
+                    .stroke(Color(hex: 0xD9B06A),
+                            style: StrokeStyle(lineWidth: w * 0.045, lineCap: .round))
+                    .frame(width: w * 0.30, height: w * 0.30)
+                    .position(x: w * 0.80, y: h * 0.52)
+                // Lid.
+                Capsule()
+                    .fill(Color(hex: 0xD9B06A))
+                    .frame(width: w * 0.24, height: h * 0.08)
+                    .position(x: w * 0.48, y: h * 0.30)
+                Circle()
+                    .fill(Color(hex: 0xF3ECDD))
+                    .frame(width: w * 0.08, height: w * 0.08)
+                    .position(x: w * 0.48, y: h * 0.22)
+                // Glaze highlight.
+                Ellipse()
+                    .fill(.white.opacity(0.18))
+                    .frame(width: w * 0.16, height: h * 0.26)
+                    .rotationEffect(.degrees(-24))
+                    .position(x: w * 0.36, y: h * 0.50)
+            }
+            .shadow(color: .black.opacity(0.3), radius: 5, y: 3)
+        }
+    }
+}
+
+/// A short curved teapot spout.
+private struct CabinSpoutShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        p.move(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        p.addQuadCurve(to: CGPoint(x: rect.minX, y: rect.minY),
+                       control: CGPoint(x: rect.minX + rect.width * 0.2,
+                                        y: rect.maxY - rect.height * 0.1))
+        p.addLine(to: CGPoint(x: rect.minX + rect.width * 0.35, y: rect.minY))
+        p.addQuadCurve(to: CGPoint(x: rect.maxX, y: rect.maxY - rect.height * 0.45),
+                       control: CGPoint(x: rect.minX + rect.width * 0.45,
+                                        y: rect.maxY - rect.height * 0.35))
         p.closeSubpath()
         return p
     }

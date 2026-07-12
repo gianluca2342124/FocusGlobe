@@ -149,10 +149,25 @@ private struct StoreItemCard: View {
     private var owned: Bool { appModel.ownsStoreItem(item) }
     private var affordable: Bool { appModel.focusCoins >= item.price }
 
+    /// Whether the owned cosmetic is currently visible (equipped trail /
+    /// placed cabin decoration). Charms are display-only for now.
+    private var equipped: Bool {
+        switch item.kind {
+        case .trail: return appModel.equippedTrail?.id == item.id
+        case .cabinDecoration: return appModel.isCabinItemEquipped(item)
+        case .charm: return false
+        }
+    }
+
     var body: some View {
         Button {
-            guard !owned else { return }
-            if item.isPremium && !appModel.isPro {
+            if owned {
+                switch item.kind {
+                case .trail: appModel.equipTrail(item)
+                case .cabinDecoration: appModel.toggleCabinItem(item)
+                case .charm: appModel.haptics.tap()
+                }
+            } else if item.isPremium && !appModel.isPro {
                 appModel.tapFeedback()
                 router.presentPaywall()
             } else if appModel.purchaseStoreItem(item) {
@@ -186,7 +201,10 @@ private struct StoreItemCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .glassBackground(cornerRadius: 20, tintOpacity: 0.24, shadowRadius: 8, shadowY: 4)
             .overlay {
-                if owned {
+                if equipped {
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .strokeBorder(AppColors.gold.opacity(0.65), lineWidth: 1.5)
+                } else if owned {
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
                         .strokeBorder(AppColors.success.opacity(0.5), lineWidth: 1.5)
                 }
@@ -196,11 +214,24 @@ private struct StoreItemCard: View {
         .accessibilityLabel("\(item.name). \(priceAccessibility)")
     }
 
+    private var ownedStatusText: String {
+        switch item.kind {
+        case .charm: return "Owned"
+        case .trail: return equipped ? "Equipped" : "Tap to equip"
+        case .cabinDecoration: return equipped ? "In your cabin" : "Tap to place"
+        }
+    }
+
+    private var ownedStatusIcon: String {
+        if equipped { return "checkmark.seal.fill" }
+        return item.kind == .charm ? "checkmark.circle.fill" : "sparkles"
+    }
+
     @ViewBuilder private var priceRow: some View {
         if owned {
-            Label("Owned", systemImage: "checkmark.circle.fill")
+            Label(ownedStatusText, systemImage: ownedStatusIcon)
                 .font(.system(size: 12.5, weight: .bold, design: .rounded))
-                .foregroundStyle(AppColors.success)
+                .foregroundStyle(equipped ? AppColors.gold : AppColors.success)
         } else if item.isPremium {
             Label("Premium", systemImage: "crown.fill")
                 .font(.system(size: 12.5, weight: .bold, design: .rounded))
@@ -217,7 +248,7 @@ private struct StoreItemCard: View {
     }
 
     private var priceAccessibility: String {
-        if owned { return "Owned." }
+        if owned { return "\(ownedStatusText)." }
         if item.isPremium { return "Premium item." }
         return "\(item.price) Focus Coins."
     }

@@ -24,6 +24,7 @@ struct RootView: View {
                             case .history: HistoryView()
                             case .settings: SettingsView()
                             case .store: StoreView()
+                            case .friends: FriendsView()
                             }
                         }
                 }

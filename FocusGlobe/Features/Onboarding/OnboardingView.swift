@@ -244,7 +244,7 @@ struct OnboardingView: View {
     private var soundscapeStep: some View {
         questionScaffold(
             title: "Pick your focus atmosphere",
-            subtitle: "Wind is free — every soundscape opens with Premium.") {
+            subtitle: "Every soundscape is free. Wind is the classic.") {
             VStack(spacing: AppSpacing.xs) {
                 ForEach(JourneyAudioOption.all.prefix(5)) { option in
                     soundRow(option)
