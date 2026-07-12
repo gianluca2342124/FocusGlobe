@@ -13,7 +13,7 @@ struct RootView: View {
                     .transition(.opacity)
             } else {
                 NavigationStack(path: $router.path) {
-                    HomeView()
+                    AppShell()
                         .navigationDestination(for: AppRouter.Destination.self) { destination in
                             switch destination {
                             case .routeSelection: RouteSelectionView()

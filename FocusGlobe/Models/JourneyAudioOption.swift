@@ -29,6 +29,28 @@ struct JourneyAudioOption: Identifiable, Hashable {
     /// own file (never silently falling back to Wind) when the file is present.
     var assetCandidates: [String] { [loopFileName, assetName] }
 
+    /// Optional bundled cover art for the soundscape carousel/cards —
+    /// `SoundCover_<PascalId>` (e.g. `SoundCover_AlphaWaves`). Rendered when
+    /// present; otherwise a premium procedural gradient card stands in.
+    var coverAssetName: String {
+        "SoundCover_" + id.split(separator: "-").map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined()
+    }
+
+    /// The soundscape's signature colour — drives the procedural cover gradient
+    /// and any accenting when no cover image is present.
+    var accent: Color {
+        switch id {
+        case "wind":        return Color(hex: 0x6FB7C9)
+        case "focus-music": return Color(hex: 0x8F7BE8)
+        case "alpha-waves": return Color(hex: 0x6E7BE0)
+        case "rain":        return Color(hex: 0x5A8FC9)
+        case "ocean":       return Color(hex: 0x2E9CA6)
+        case "relaxing":    return Color(hex: 0x5FB98C)
+        case "jazz":        return Color(hex: 0xD9A24E)
+        default:            return Color(hex: 0x6FB7C9)
+        }
+    }
+
     // MARK: Catalog
 
     /// All options in display order. `Wind` first (free), then the premium set.

@@ -25,6 +25,31 @@ struct StoreItem: Identifiable, Hashable {
 
     var tint: Color { Color(hex: tintHex) }
 
+    /// Optional bundled cover art — `StoreItem_<id>` (e.g. `StoreItem_trail-comet`).
+    /// The card renders this if present, else a tinted procedural icon.
+    var imageAssetName: String { "StoreItem_\(id)" }
+
+    // MARK: Rarity (derived from price / premium — labels the card)
+
+    enum Rarity: String {
+        case common = "Common", rare = "Rare", ultra = "Ultra", premium = "Premium"
+        var tint: Color {
+            switch self {
+            case .common:  return Color(hex: 0x9AA7B4)
+            case .rare:    return Color(hex: 0x5AA9E6)
+            case .ultra:   return Color(hex: 0xB07BE8)
+            case .premium: return Color(hex: 0xE7B94E)
+            }
+        }
+    }
+
+    var rarity: Rarity {
+        if isPremium { return .premium }
+        if price >= 220 { return .ultra }
+        if price >= 130 { return .rare }
+        return .common
+    }
+
     // MARK: Catalog (cosmetic foundation — grows freely later)
 
     static let all: [StoreItem] = [

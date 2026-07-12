@@ -141,7 +141,7 @@ struct FlightSetupView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private enum Step { case duration, pack, protect, ticket }
+    private enum Step { case duration, pack, ticket }
     @State private var step: Step = .duration
     @State private var minutes = 25
     @State private var infinite = false
@@ -179,19 +179,14 @@ struct FlightSetupView: View {
                         PackFocusView(selected: $focus) {
                             appModel.haptics.tap()
                             appModel.uiSound.play(.transition)
-                            withAnimation(AppMotion.soft) { step = .protect }
-                        }
-                        .transition(stepTransition)
-                    case .protect:
-                        FlightModeView(blockApps: $blockApps) {
-                            appModel.tapFeedback()
-                            appModel.uiSound.play(.transition)
                             withAnimation(AppMotion.soft) { step = .ticket }
                         }
                         .transition(stepTransition)
                     case .ticket:
                         CheckInTicketView(minutes: minutes, infinite: infinite,
-                                          focus: focus, skyName: focusSky.name) {
+                                          focus: focus, skyName: focusSky.name,
+                                          skyAccent: focusSky.glowColor,
+                                          blockApps: $blockApps) {
                             takeOff()
                         }
                         .transition(stepTransition)
@@ -218,8 +213,7 @@ struct FlightSetupView: View {
                 switch step {
                 case .duration: dismiss()
                 case .pack:     withAnimation(AppMotion.soft) { step = .duration }
-                case .protect:  withAnimation(AppMotion.soft) { step = .pack }
-                case .ticket:   withAnimation(AppMotion.soft) { step = .protect }
+                case .ticket:   withAnimation(AppMotion.soft) { step = .pack }
                 }
             }
             Spacer()
@@ -239,7 +233,6 @@ struct FlightSetupView: View {
         switch step {
         case .duration: return "Choose your time"
         case .pack:     return "Pack your focus"
-        case .protect:  return "Flight Mode"
         case .ticket:   return "Check in"
         }
     }
@@ -925,143 +918,178 @@ private struct PackDragHint: View {
     }
 }
 
-// MARK: - Step 3 · Flight Mode (protected flight)
+// MARK: - Flight Mode (compact sheet, opened from the boarding pass)
 
-/// A compact, premium pre-flight control: ground distracting apps for the
-/// journey. Framed as boarding preparation, not a settings screen — so
-/// distraction blocking feels like a core part of taking off. Enforcement rides
-/// the (currently parked) Focus Shield infrastructure; this surfaces the intent.
-struct FlightModeView: View {
+/// The compact **Flight Mode** editor — a half-sheet opened from the row under
+/// the boarding pass (Flight Mode is no longer a full ritual step). Ground
+/// distracting apps, choose solo/online, and pick the soundscape, then Done.
+/// Enforcement rides the (currently parked) Focus Shield infrastructure; this
+/// surfaces the intent, honestly.
+struct FlightModeSheet: View {
     @Binding var blockApps: Bool
-    let onContinue: () -> Void
     @EnvironmentObject private var appModel: AppModel
+    @Environment(\.dismiss) private var dismiss
+
+    private var solo: Bool { appModel.profile.soloFlights ?? false }
 
     var body: some View {
-        VStack(spacing: 0) {
-            Spacer(minLength: 0)
-            card
-                .padding(.horizontal, AppSpacing.screen)
-                .clusterMaxWidth()
-            Spacer(minLength: 0)
-            AppPrimaryButton(title: "Ready for takeoff", systemImage: "airplane.departure") {
-                appModel.tapFeedback()
-                onContinue()
-            }
-            .padding(.horizontal, AppSpacing.screen)
-            .padding(.bottom, AppSpacing.lg)
-            .clusterMaxWidth()
-        }
-    }
-
-    private var card: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.md) {
-            HStack(spacing: AppSpacing.sm) {
-                ZStack {
-                    Circle().fill(AppColors.gold.opacity(0.16)).frame(width: 52, height: 52)
-                    Image(systemName: "airplane")
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(AppColors.gold)
-                        .rotationEffect(.degrees(-45))
-                }
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Protected flight")
-                        .font(.system(size: 22, weight: .semibold, design: .serif))
-                        .foregroundStyle(.white)
-                    Text("Ground distracting apps so the journey stays yours.")
-                        .font(.system(size: 14, weight: .regular, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.68))
+        ZStack {
+            AppBackground().ignoresSafeArea()
+            ScrollView {
+                VStack(alignment: .leading, spacing: AppSpacing.md) {
+                    header
+                    blockRow
+                    if blockApps { scopeRow }
+                    crewRow
+                    soundscapeRow
+                    Text("Protected flights ground your chosen apps for the whole journey, so the sky stays yours.")
+                        .font(.system(size: 12.5, weight: .regular, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.55))
                         .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-
-            Divider().overlay(Color.white.opacity(0.12))
-
-            Button {
-                withAnimation(.snappy(duration: 0.25)) { blockApps.toggle() }
-                appModel.haptics.tap()
-            } label: {
-                HStack(spacing: AppSpacing.sm) {
-                    Image(systemName: blockApps ? "moon.zzz.fill" : "bell.fill")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(blockApps ? AppColors.gold : .white.opacity(0.6))
-                        .frame(width: 26)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("Block distracting apps")
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.white)
-                        Text(blockApps ? "Distractions grounded for the flight"
-                                       : "Notifications and apps stay on")
-                            .font(.system(size: 12.5, weight: .regular, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.6))
-                            .lineLimit(1).minimumScaleFactor(0.8)
+                    AppPrimaryButton(title: "Done", systemImage: "checkmark") {
+                        appModel.tapFeedback(); dismiss()
                     }
-                    Spacer()
-                    fauxSwitch
+                    .padding(.top, AppSpacing.xs)
                 }
-            }
-            .buttonStyle(SoftPressStyle(scale: 0.99))
-
-            // Fellow pilots: ambient balloons share the Sky unless the pilot
-            // prefers a solo flight. Presentation-only; honest by design.
-            Button {
-                withAnimation(.snappy(duration: 0.25)) {
-                    appModel.profile.soloFlights = !(appModel.profile.soloFlights ?? false)
-                }
-                appModel.haptics.tap()
-            } label: {
-                HStack(spacing: AppSpacing.sm) {
-                    Image(systemName: (appModel.profile.soloFlights ?? false) ? "person.fill" : "person.3.fill")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle((appModel.profile.soloFlights ?? false) ? .white.opacity(0.6) : AppColors.gold)
-                        .frame(width: 26)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text((appModel.profile.soloFlights ?? false) ? "Solo flight" : "Fly with others")
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.white)
-                        Text((appModel.profile.soloFlights ?? false)
-                             ? "Only your balloon in the Sky"
-                             : "Other balloons share your Sky")
-                            .font(.system(size: 12.5, weight: .regular, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.6))
-                            .lineLimit(1).minimumScaleFactor(0.8)
-                    }
-                    Spacer()
-                    Image(systemName: (appModel.profile.soloFlights ?? false) ? "circle" : "checkmark.circle.fill")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle((appModel.profile.soloFlights ?? false) ? .white.opacity(0.4) : AppColors.gold)
-                }
-            }
-            .buttonStyle(SoftPressStyle(scale: 0.99))
-
-            // The flight's soundscape, so the whole pre-flight state reads in
-            // one glance. Changeable in Passport → Flight ambience.
-            HStack(spacing: AppSpacing.sm) {
-                Image(systemName: appModel.selectedJourneyAudio.systemImage)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(AppColors.gold)
-                    .frame(width: 26)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Soundscape")
-                        .font(.system(size: 12.5, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.6))
-                    Text(appModel.selectedJourneyAudio.displayName)
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white)
-                }
-                Spacer()
+                .padding(AppSpacing.lg)
+                .frame(maxWidth: 520)
+                .frame(maxWidth: .infinity)
             }
         }
-        .padding(AppSpacing.lg)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Color.black.opacity(0.28)))
-                .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .strokeBorder(.white.opacity(0.12), lineWidth: 1))
-        )
+        .preferredColorScheme(.dark)
     }
 
-    /// A soft sliding switch (the knob eases across as the toggle flips).
+    private var header: some View {
+        HStack(spacing: AppSpacing.sm) {
+            ZStack {
+                Circle().fill(AppColors.gold.opacity(0.16)).frame(width: 46, height: 46)
+                Image(systemName: "airplane")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(AppColors.gold)
+                    .rotationEffect(.degrees(-45))
+            }
+            Text("Flight Mode")
+                .font(.system(size: 24, weight: .semibold, design: .serif))
+                .foregroundStyle(.white)
+            Spacer()
+        }
+    }
+
+    private var blockRow: some View {
+        Button {
+            withAnimation(.snappy(duration: 0.25)) { blockApps.toggle() }
+            appModel.haptics.tap()
+        } label: {
+            rowShell {
+                Image(systemName: blockApps ? "moon.zzz.fill" : "bell.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(blockApps ? AppColors.gold : .white.opacity(0.6))
+                    .frame(width: 26)
+                rowText("Block distracting apps",
+                        blockApps ? "Distractions grounded for the flight" : "Notifications and apps stay on")
+                Spacer()
+                fauxSwitch
+            }
+        }
+        .buttonStyle(SoftPressStyle(scale: 0.99))
+    }
+
+    // The apps in scope. Focus Shield's app picker is parked, so this states the
+    // honest default scope rather than presenting a non-functional picker.
+    private var scopeRow: some View {
+        rowShell {
+            Image(systemName: "square.grid.2x2.fill")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.6)).frame(width: 26)
+            rowText("What's grounded", "All distracting apps · per-app picker coming soon")
+            Spacer()
+        }
+    }
+
+    private var crewRow: some View {
+        Button {
+            withAnimation(.snappy(duration: 0.25)) {
+                appModel.profile.soloFlights = !solo
+            }
+            appModel.haptics.tap()
+        } label: {
+            rowShell {
+                Image(systemName: solo ? "person.fill" : "person.3.fill")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(solo ? .white.opacity(0.6) : AppColors.gold).frame(width: 26)
+                rowText(solo ? "Solo flight" : "Fly with others",
+                        solo ? "Only your balloon in the Sky" : "Other balloons share your Sky")
+                Spacer()
+                Image(systemName: solo ? "circle" : "checkmark.circle.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(solo ? .white.opacity(0.4) : AppColors.gold)
+            }
+        }
+        .buttonStyle(SoftPressStyle(scale: 0.99))
+    }
+
+    private var soundscapeRow: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.xs) {
+            Text("SOUNDSCAPE")
+                .font(.system(size: 11, weight: .heavy, design: .rounded))
+                .tracking(1.2)
+                .foregroundStyle(.white.opacity(0.5))
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: AppSpacing.xs) {
+                    ForEach(JourneyAudioOption.all) { option in
+                        soundChip(option)
+                    }
+                }
+                .padding(.horizontal, 2)
+            }
+        }
+    }
+
+    private func soundChip(_ option: JourneyAudioOption) -> some View {
+        let selected = appModel.selectedJourneyAudio.id == option.id
+        return Button {
+            appModel.selectJourneyAudio(option)
+            appModel.haptics.tap()
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: option.systemImage).font(.system(size: 13, weight: .bold))
+                Text(option.displayName).font(.system(size: 13.5, weight: .bold, design: .rounded))
+            }
+            .foregroundStyle(selected ? Color(hex: 0x14120E) : .white)
+            .padding(.horizontal, AppSpacing.sm)
+            .frame(height: 40)
+            .background(Capsule().fill(selected ? AnyShapeStyle(option.accent) : AnyShapeStyle(Color.white.opacity(0.08))))
+            .overlay(Capsule().strokeBorder(.white.opacity(selected ? 0 : 0.12), lineWidth: 1))
+        }
+        .buttonStyle(SoftPressStyle())
+    }
+
+    // MARK: Row helpers
+
+    private func rowShell<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        HStack(spacing: AppSpacing.sm) { content() }
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.vertical, AppSpacing.sm + 2)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(.white.opacity(0.06))
+                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(.white.opacity(0.1), lineWidth: 1))
+            )
+    }
+
+    private func rowText(_ title: String, _ subtitle: String) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(title)
+                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white)
+            Text(subtitle)
+                .font(.system(size: 12.5, weight: .regular, design: .rounded))
+                .foregroundStyle(.white.opacity(0.6))
+                .lineLimit(1).minimumScaleFactor(0.8)
+        }
+    }
+
     private var fauxSwitch: some View {
         Capsule()
             .fill(blockApps ? AppColors.gold : Color.white.opacity(0.16))
@@ -1086,6 +1114,12 @@ struct CheckInTicketView: View {
     let infinite: Bool
     let focus: FocusPreset?
     let skyName: String
+    /// The selected Sky's accent — tints the FOCUS label, the ticket balloon and
+    /// the "Ready" stamp, so the pass belongs to this Sky.
+    var skyAccent: Color = AppColors.terracotta
+    /// The Flight-Mode "ground distracting apps" intent, edited via the compact
+    /// row beneath the ticket (no longer a full ritual step).
+    @Binding var blockApps: Bool
     let onValidated: () -> Void
     @EnvironmentObject private var appModel: AppModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -1097,6 +1131,7 @@ struct CheckInTicketView: View {
     @State private var stampIn = false
     @State private var flyAway = false
     @State private var started = false
+    @State private var showFlightMode = false
     /// The scheduled check-in beats, cancellable so backing out of this step
     /// mid-validation can never launch a flight behind the user's back.
     @State private var pendingBeats: [DispatchWorkItem] = []
@@ -1129,6 +1164,12 @@ struct CheckInTicketView: View {
                         .transition(.opacity.combined(with: .scale(scale: 0.96)))
                 }
             }
+            if !checked && !started {
+                flightModeRow
+                    .padding(.horizontal, AppSpacing.screen)
+                    .clusterMaxWidth()
+                    .transition(.opacity)
+            }
             hint
             Spacer(minLength: 0)
         }
@@ -1137,6 +1178,61 @@ struct CheckInTicketView: View {
             pendingBeats.forEach { $0.cancel() }
             pendingBeats.removeAll()
         }
+        .sheet(isPresented: $showFlightMode) {
+            FlightModeSheet(blockApps: $blockApps)
+                .environmentObject(appModel)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+    }
+
+    /// The compact Flight-Mode summary under the ticket: a one-line status
+    /// (Protected/Online · soundscape) with an Edit affordance opening the sheet.
+    /// Flight Mode is no longer a full ritual step — it lives here, out of the way.
+    private var flightModeRow: some View {
+        Button {
+            appModel.tapFeedback()
+            showFlightMode = true
+        } label: {
+            HStack(spacing: AppSpacing.sm) {
+                Image(systemName: "airplane")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(AppColors.gold)
+                    .rotationEffect(.degrees(-45))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Flight Mode")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                    Text(flightModeSummary)
+                        .font(.system(size: 11.5, weight: .medium, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.62))
+                        .lineLimit(1)
+                }
+                Spacer()
+                Text("Edit")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppColors.gold)
+                    .padding(.horizontal, 12).padding(.vertical, 6)
+                    .background(Capsule().fill(.white.opacity(0.1)))
+                    .overlay(Capsule().strokeBorder(.white.opacity(0.14), lineWidth: 1))
+            }
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.vertical, AppSpacing.sm)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.black.opacity(0.28)))
+                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(.white.opacity(0.12), lineWidth: 1))
+            )
+        }
+        .buttonStyle(SoftPressStyle(scale: 0.99))
+    }
+
+    private var flightModeSummary: String {
+        let protection = blockApps ? "Protected" : "Open"
+        let crew = (appModel.profile.soloFlights ?? false) ? "Solo" : "Online"
+        return "\(protection) · \(crew) · \(appModel.selectedJourneyAudio.displayName)"
     }
 
     @ViewBuilder private var hint: some View {
@@ -1172,6 +1268,7 @@ struct CheckInTicketView: View {
             // the perforation, bending out in 3D and following the finger sideways
             // — never a fade, never a rigid block flying off flat.
             barcodeStrip
+                .padding(.top, -4)   // tighten the gap between body and barcode
                 .rotation3DEffect(.degrees(Double(min(30, effTear * 0.12))),
                                   axis: (x: 0.18, y: 1, z: 0), anchor: .topLeading, perspective: 0.8)
                 .rotationEffect(.degrees(Double(min(10, effTear * 0.05))), anchor: .topLeading)
@@ -1197,11 +1294,11 @@ struct CheckInTicketView: View {
             ticketHeader
                 .padding(.horizontal, AppSpacing.lg).padding(.top, AppSpacing.lg)
             ticketBody
-                .padding(.horizontal, AppSpacing.lg).padding(.top, AppSpacing.md)
-            Spacer(minLength: AppSpacing.md)
+                .padding(.horizontal, AppSpacing.lg).padding(.top, AppSpacing.sm)
+            Spacer(minLength: AppSpacing.sm)
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 336)
+        .frame(height: 300)
         .background(paperFill(topRounded: true))
         .overlay(alignment: .bottomLeading) { notch.offset(x: -9, y: 9) }
         .overlay(alignment: .bottomTrailing) { notch.offset(x: 9, y: 9) }
@@ -1253,7 +1350,7 @@ struct CheckInTicketView: View {
                     .font(.system(size: 22, weight: .bold, design: .serif))
                     .foregroundStyle(ink)
                 Spacer()
-                MiniBalloonView(size: 34, envelope: AppColors.terracotta, showGlow: false)
+                MiniBalloonView(size: 34, envelope: skyAccent, showGlow: false)
             }
             Text("BOARDING PASS")
                 .font(.system(size: 11, weight: .heavy, design: .monospaced))
@@ -1292,7 +1389,7 @@ struct CheckInTicketView: View {
                 fieldLabel("FOCUS")
                 Text((focus?.title ?? "Focus").uppercased())
                     .font(.system(size: 30, weight: .bold, design: .rounded))
-                    .foregroundStyle(AppColors.terracotta)
+                    .foregroundStyle(skyAccent)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
             }
@@ -1383,7 +1480,7 @@ struct CheckInTicketView: View {
 
     @ViewBuilder private var stamp: some View {
         if stampIn {
-            InkStamp(text: "Ready", color: AppColors.terracotta, rotation: -8)
+            InkStamp(text: "Ready", color: skyAccent, rotation: -8)
                 .scaleEffect(1.55)
                 .offset(x: 60, y: -30)
                 .transition(.scale(scale: 1.9).combined(with: .opacity))

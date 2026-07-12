@@ -51,8 +51,10 @@ struct FocusSessionView: View {
     /// centre. Eased up once on appear, then the balloon steady-follows.
     @State private var takeoffLift: CGFloat = 0
     @State private var uiIn = false
-    /// The in-flight "invite a friend to this Sky" sheet.
+    /// The in-flight "flight room" invite sheet.
     @State private var showInvite = false
+    /// The single compact flight-controls panel (replaces the old button cluster).
+    @State private var showControlsPanel = false
     /// The "Playing …" soundscape toast shown briefly at take-off.
     @State private var soundToastVisible = false
     /// The wall-clock anchor for everything the pilot sees. Captured **once** on
@@ -146,7 +148,11 @@ struct FocusSessionView: View {
 
             if soundToastVisible {
                 soundToast
-                    .transition(.opacity.combined(with: .offset(y: -8)))
+                    .transition(.opacity.combined(with: .offset(x: -10)))
+            }
+
+            if showControlsPanel {
+                flightControlsOverlay
             }
         }
         .animation(.easeInOut(duration: 0.35), value: vm.isPaused)
@@ -172,19 +178,19 @@ struct FocusSessionView: View {
                 pausedAt = nil
             }
         }
-        .confirmationDialog("Give up this flight?",
+        .confirmationDialog("Leave this flight?",
                             isPresented: $vm.showCancelConfirm,
                             titleVisibility: .visible) {
-            Button("Give up", role: .destructive) {
+            Button("Leave", role: .destructive) {
                 vm.confirmCancel()
                 router.finishToHome()
             }
             Button("Keep flying", role: .cancel) { vm.dismissCancel() }
         } message: {
-            Text("Your progress pauses here: no Focus Coins are earned, today's missions don't count this flight, and your streak only grows when you land. You can resume from Home.")
+            Text("You'll lose this flight's progress: no Focus Coins earned, today's missions won't count it, and your streak only grows when you land. You can resume from Home.")
         }
         .sheet(isPresented: $showInvite) {
-            FlightInviteSheet(sky: matchedSky ?? appModel.selectedSky)
+            FlightRoomSheet(sky: matchedSky ?? appModel.selectedSky)
                 .environmentObject(appModel)
         }
         .onChange(of: scenePhase) { _, phase in
@@ -275,24 +281,14 @@ struct FocusSessionView: View {
                 Spacer()
                 statusPill
                 Spacer()
-                HStack(spacing: Layout.pad(8, 12)) {
-                    AppIconButton(systemImage: "person.badge.plus",
-                                  size: Layout.pad(44, 54), tint: .white,
-                                  accessibilityLabel: "Invite a friend to this Sky") {
-                        appModel.tapFeedback()
-                        showInvite = true
-                    }
-                    AppIconButton(systemImage: viewMode == .cabin ? "mountain.2.fill" : "cup.and.saucer.fill",
-                                  size: Layout.pad(44, 54), tint: .white,
-                                  accessibilityLabel: viewMode == .cabin ? "Exterior view" : "Cabin view") {
-                        appModel.tapFeedback()
-                        withAnimation(.easeInOut(duration: 0.5)) {
-                            viewMode = (viewMode == .cabin ? .exterior : .cabin)
-                        }
-                    }
-                    AppIconButton(systemImage: vm.muteIconName, size: Layout.pad(44, 54), tint: .white,
-                                  accessibilityLabel: vm.isAudioMuted ? "Unmute" : "Mute") {
-                        vm.toggleMute()
+                // One compact controls button replaces the old three-button
+                // cluster — it opens the flight-controls panel below.
+                AppIconButton(systemImage: "slider.horizontal.3",
+                              size: Layout.pad(44, 54), tint: .white,
+                              accessibilityLabel: "Flight controls") {
+                    appModel.tapFeedback()
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.84)) {
+                        showControlsPanel.toggle()
                     }
                 }
             }
@@ -319,25 +315,28 @@ struct FocusSessionView: View {
 
     private var pausedOverlay: some View {
         ZStack {
-            // A soft dim settles the moving world so the pause reads instantly.
+            // A soft dim settles the frozen world so the pause reads instantly.
             Color.black.opacity(0.4).ignoresSafeArea()
-            VStack(spacing: Layout.pad(18, 26)) {
-                // A large elegant pause glyph — two softly-glowing rounded bars.
-                HStack(spacing: Layout.pad(15, 22)) {
-                    Capsule().fill(.white.opacity(0.92))
-                        .frame(width: Layout.pad(19, 28), height: Layout.pad(66, 96))
-                    Capsule().fill(.white.opacity(0.92))
-                        .frame(width: Layout.pad(19, 28), height: Layout.pad(66, 96))
+            // A single large, semi-transparent pause glyph — no "Paused" label.
+            // Tapping it resumes instantly. The world + ambient pilots are already
+            // frozen (their motion clock is the paused-aware displayElapsed).
+            Button {
+                vm.togglePause()
+            } label: {
+                HStack(spacing: Layout.pad(16, 24)) {
+                    Capsule().fill(.white.opacity(0.9))
+                        .frame(width: Layout.pad(22, 32), height: Layout.pad(74, 108))
+                    Capsule().fill(.white.opacity(0.9))
+                        .frame(width: Layout.pad(22, 32), height: Layout.pad(74, 108))
                 }
-                .shadow(color: .black.opacity(0.45), radius: 20, y: 8)
-                Text("Paused")
-                    .font(.system(size: Layout.pad(19, 25), weight: .semibold, design: .rounded))
-                    .tracking(4)
-                    .foregroundStyle(.white.opacity(0.82))
+                .shadow(color: .black.opacity(0.45), radius: 22, y: 8)
+                .padding(Layout.pad(28, 40))
+                .contentShape(Rectangle())
             }
-            .offset(y: -Layout.pad(44, 66))   // rest a little above the hero timer
+            .buttonStyle(SoftPressStyle(scale: 0.94))
+            .offset(y: -Layout.pad(40, 60))   // rest a little above the hero timer
+            .accessibilityLabel("Paused. Tap to resume.")
         }
-        .allowsHitTesting(false)              // never blocks the Resume control
         .transition(.opacity)
     }
 
@@ -400,23 +399,41 @@ struct FocusSessionView: View {
         .frame(maxWidth: .infinity)
     }
 
-    /// The "Playing …" soundscape toast — a small glass capsule under the pill.
+    /// A premium music-style "now playing" card that slides in from the lower
+    /// left — "Playing" small over the soundscape name large — then fades. It sits
+    /// low and to the side so it never covers the balloon or the hero timer.
     private var soundToast: some View {
         VStack {
-            HStack(spacing: 7) {
-                Image(systemName: appModel.selectedJourneyAudio.systemImage)
-                    .font(.system(size: 12, weight: .bold))
-                Text("Playing \u{201C}\(appModel.selectedJourneyAudio.displayName)\u{201D}")
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-            }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 9)
-            .background(Capsule().fill(.ultraThinMaterial))
-            .overlay(Capsule().fill(Color.black.opacity(0.22)))
-            .overlay(Capsule().strokeBorder(.white.opacity(0.16), lineWidth: 1))
-            .padding(.top, Layout.pad(64, 78))
             Spacer()
+            HStack {
+                HStack(spacing: 11) {
+                    ZStack {
+                        Circle().fill(appModel.selectedJourneyAudio.accent.opacity(0.9))
+                            .frame(width: 38, height: 38)
+                        Image(systemName: appModel.selectedJourneyAudio.systemImage)
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("PLAYING")
+                            .font(.system(size: 9.5, weight: .heavy, design: .rounded))
+                            .tracking(1.6)
+                            .foregroundStyle(.white.opacity(0.6))
+                        Text(appModel.selectedJourneyAudio.displayName)
+                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+                .background(Capsule().fill(.ultraThinMaterial))
+                .overlay(Capsule().fill(Color.black.opacity(0.24)))
+                .overlay(Capsule().strokeBorder(.white.opacity(0.16), lineWidth: 1))
+                .shadow(color: .black.opacity(0.3), radius: 12, y: 6)
+                Spacer()
+            }
+            .padding(.horizontal, AppSpacing.screen)
+            .padding(.bottom, Layout.pad(150, 200))   // clear of the hero timer
         }
         .allowsHitTesting(false)
     }
@@ -438,14 +455,45 @@ struct FocusSessionView: View {
         .buttonStyle(SoftPressStyle())
         .accessibilityLabel(title)
     }
+
+    // The compact flight-controls panel, anchored under the controls button.
+    // A near-invisible tap-catcher closes it; the flight stays visible behind.
+    private var flightControlsOverlay: some View {
+        ZStack(alignment: .topTrailing) {
+            Color.black.opacity(0.001).ignoresSafeArea()
+                .onTapGesture { withAnimation(.easeOut(duration: 0.2)) { showControlsPanel = false } }
+            FlightControlsPanel(
+                muted: vm.isAudioMuted,
+                isCabin: viewMode == .cabin,
+                planLabel: isInfinity ? "Endless" : Formatters.durationLabel(minutes: vm.route.durationMinutes),
+                onToggleMute: { vm.toggleMute() },
+                onToggleCabin: {
+                    appModel.tapFeedback()
+                    withAnimation(.easeInOut(duration: 0.5)) {
+                        viewMode = (viewMode == .cabin ? .exterior : .cabin)
+                    }
+                },
+                onInvite: {
+                    withAnimation(.easeOut(duration: 0.2)) { showControlsPanel = false }
+                    appModel.tapFeedback()
+                    showInvite = true
+                }
+            )
+            .environmentObject(appModel)
+            .padding(.top, Layout.pad(92, 108))
+            .padding(.horizontal, AppSpacing.screen)
+            .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .topTrailing)))
+        }
+    }
 }
 
 
 // MARK: - Hold to give up (never one accidental tap)
 
-/// The flight's exit control: press and HOLD — a ring fills while holding, with
-/// haptic feedback — and only a completed hold opens the give-up confirmation.
-/// Releasing early cancels. A stray tap can never end a focus flight.
+/// The flight's exit control: a small **X** at rest that, on press-and-hold,
+/// expands into a "Hold to leave" capsule with a progress fill and haptics. Only
+/// a completed hold opens the leave confirmation; releasing early cancels. A
+/// stray tap can never end a focus flight.
 private struct HoldToGiveUpButton: View {
     var size: CGFloat = 44
     let onComplete: () -> Void
@@ -454,23 +502,34 @@ private struct HoldToGiveUpButton: View {
     @State private var holding = false
 
     private let holdDuration: Double = 1.2
+    private var width: CGFloat { holding ? size * 3.9 : size }
 
     var body: some View {
-        ZStack {
-            Circle().fill(.white.opacity(0.10))
-            Circle().strokeBorder(.white.opacity(0.14), lineWidth: 1)
-            Circle()
-                .trim(from: 0, to: progress)
-                .stroke(Color(hex: 0xE9654B),
-                        style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-                .padding(2)
-            Image(systemName: "xmark")
-                .font(.system(size: size * 0.34, weight: .bold))
-                .foregroundStyle(.white)
+        ZStack(alignment: .leading) {
+            Capsule().fill(.white.opacity(0.12))
+            // The fill sweeps across as the hold completes.
+            Capsule().fill(Color(hex: 0xE9654B).opacity(0.55))
+                .frame(width: width * progress)
+            HStack(spacing: 6) {
+                Image(systemName: "xmark")
+                    .font(.system(size: size * 0.34, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: size, height: size)
+                if holding {
+                    Text("Hold to leave")
+                        .font(.system(size: size * 0.30, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .fixedSize()
+                        .padding(.trailing, 14)
+                        .transition(.opacity)
+                }
+            }
         }
-        .frame(width: size, height: size)
-        .scaleEffect(holding ? 0.94 : 1)
+        .frame(width: width, height: size, alignment: .leading)
+        .clipShape(Capsule())
+        .overlay(Capsule().strokeBorder(.white.opacity(0.14), lineWidth: 1))
+        .scaleEffect(holding ? 0.97 : 1)
+        .animation(.spring(response: 0.28, dampingFraction: 0.8), value: holding)
         .onLongPressGesture(minimumDuration: holdDuration, maximumDistance: 60) {
             progress = 0
             holding = false
@@ -483,17 +542,19 @@ private struct HoldToGiveUpButton: View {
                 withAnimation(.easeOut(duration: 0.2)) { progress = 0 }
             }
         }
-        .accessibilityLabel("Give up flight")
-        .accessibilityHint("Press and hold to open the give-up confirmation.")
+        .accessibilityLabel("Leave flight")
+        .accessibilityHint("Press and hold to open the leave confirmation.")
     }
 }
 
-// MARK: - In-flight invite (friends join this Sky)
+// MARK: - Flight room (invite someone to this journey)
 
-/// A small sheet to invite a friend into the current Sky mid-flight: share the
-/// per-Sky link and see that Sky's honest invite progress. Accepted invites are
-/// only ever credited by the verified referral path — never from this sheet.
-private struct FlightInviteSheet: View {
+/// The in-flight **flight room** — a small lobby for the current journey: your
+/// balloon in the first seat, open seats waiting with a +, and one Share button
+/// to invite someone into this Sky right now. No unlock/counter language here —
+/// this is simply "come fly with me". Seats stay open until a real backend fills
+/// them, so nothing dishonest is shown.
+private struct FlightRoomSheet: View {
     let sky: FocusSky
     @EnvironmentObject private var appModel: AppModel
 
@@ -502,16 +563,22 @@ private struct FlightInviteSheet: View {
             AppBackground().ignoresSafeArea()
             VStack(spacing: AppSpacing.lg) {
                 VStack(spacing: 6) {
-                    Text("Invite a friend to \(sky.name)")
+                    Text("Your flight room")
                         .font(AppTypography.serifTitle2)
                         .foregroundStyle(AppColors.textPrimary)
-                        .multilineTextAlignment(.center)
-                    Text("They join your Sky when they accept — and 3 accepted invites unlock it for good.")
+                    Text("Invite a friend to share \(sky.name) with you.")
                         .font(AppTypography.callout)
                         .foregroundStyle(AppColors.textSecondary)
                         .multilineTextAlignment(.center)
                 }
                 .padding(.top, AppSpacing.xl)
+
+                HStack(spacing: AppSpacing.md) {
+                    seat(index: 0)
+                    seat(index: 1)
+                    seat(index: 2)
+                    seat(index: 3)
+                }
 
                 ShareLink(item: appModel.inviteShareMessage(for: sky)) {
                     HStack(spacing: 8) {
@@ -528,19 +595,6 @@ private struct FlightInviteSheet: View {
                 }
                 .simultaneousGesture(TapGesture().onEnded { appModel.tapFeedback() })
 
-                if !appModel.isSkyUnlocked(sky) || appModel.inviteProgress(for: sky) > 0 {
-                    HStack(spacing: 8) {
-                        ForEach(0..<SkyUnlock.invitesNeeded, id: \.self) { i in
-                            Circle()
-                                .fill(i < appModel.inviteProgress(for: sky)
-                                      ? AppColors.gold : AppColors.textPrimary.opacity(0.14))
-                                .frame(width: 9, height: 9)
-                        }
-                        Text("\(appModel.inviteProgress(for: sky))/\(SkyUnlock.invitesNeeded) joined")
-                            .font(AppTypography.caption)
-                            .foregroundStyle(AppColors.textSecondary)
-                    }
-                }
                 Spacer()
             }
             .padding(.horizontal, AppSpacing.screen)
@@ -549,6 +603,32 @@ private struct FlightInviteSheet: View {
         }
         .presentationDetents([.medium])
         .presentationDragIndicator(.visible)
+    }
+
+    /// Seat 0 is you; the rest are open until someone joins.
+    private func seat(index: Int) -> some View {
+        VStack(spacing: 7) {
+            ZStack {
+                Circle()
+                    .fill(index == 0 ? AppColors.gold.opacity(0.16) : AppColors.textPrimary.opacity(0.05))
+                    .frame(width: 56, height: 56)
+                Circle()
+                    .strokeBorder(index == 0 ? AppColors.gold.opacity(0.5) : AppColors.textPrimary.opacity(0.14),
+                                  style: StrokeStyle(lineWidth: 1.5, dash: index == 0 ? [] : [4, 4]))
+                    .frame(width: 56, height: 56)
+                if index == 0 {
+                    MiniBalloonView(size: 34, showGlow: false)
+                } else {
+                    Image(systemName: "plus")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(AppColors.textTertiary)
+                }
+            }
+            Text(index == 0 ? "You" : "Open")
+                .font(AppTypography.micro)
+                .foregroundStyle(index == 0 ? AppColors.gold : AppColors.textTertiary)
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 
@@ -677,5 +757,155 @@ private struct BalloonTrailView: View {
                    with: .radialGradient(g, center: CGPoint(x: x, y: y),
                                          startRadius: 0, endRadius: r * 2.5))
         }
+    }
+}
+
+// MARK: - Flight controls panel (one button → every in-flight control)
+
+/// The compact glass panel opened by the single flight-controls button. It keeps
+/// the journey visible behind it and gathers every in-flight control in one
+/// place: cabin/exterior, sound (mute + change), solo/online, Focus Shield,
+/// invite, and the flight-time readout. Values arrive as plain props/closures so
+/// it never reaches into the session view's private state.
+private struct FlightControlsPanel: View {
+    let muted: Bool
+    let isCabin: Bool
+    let planLabel: String
+    let onToggleMute: () -> Void
+    let onToggleCabin: () -> Void
+    let onInvite: () -> Void
+    @EnvironmentObject private var appModel: AppModel
+
+    private var solo: Bool { appModel.profile.soloFlights ?? false }
+    private var shielded: Bool { appModel.profile.focusShieldOptIn }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            Text("FLIGHT CONTROLS")
+                .font(.system(size: 10.5, weight: .heavy, design: .rounded))
+                .tracking(1.4)
+                .foregroundStyle(.white.opacity(0.5))
+
+            row(icon: isCabin ? "mountain.2.fill" : "macwindow",
+                title: isCabin ? "Exterior view" : "Cabin view",
+                subtitle: isCabin ? "Look out at the Sky" : "Cozy up inside",
+                action: onToggleCabin)
+
+            row(icon: muted ? "speaker.slash.fill" : "speaker.wave.2.fill",
+                title: muted ? "Muted" : "Sound on",
+                subtitle: appModel.selectedJourneyAudio.displayName,
+                action: onToggleMute)
+
+            soundChips
+
+            row(icon: solo ? "person.fill" : "person.3.fill",
+                title: solo ? "Solo flight" : "Fly with others",
+                subtitle: solo ? "No other balloons" : "Ambient pilots shown") {
+                withAnimation(.snappy(duration: 0.2)) { appModel.profile.soloFlights = !solo }
+                appModel.haptics.tap()
+            }
+
+            row(icon: shielded ? "shield.fill" : "shield.slash",
+                title: shielded ? "Focus Shield on" : "Focus Shield off",
+                subtitle: "Ground distracting apps") {
+                withAnimation(.snappy(duration: 0.2)) { appModel.profile.focusShieldOptIn = !shielded }
+                appModel.haptics.tap()
+            }
+
+            inviteButton
+            timerRow
+        }
+        .padding(AppSpacing.md)
+        .frame(width: Layout.pad(270, 300))
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Color.black.opacity(0.34)))
+                .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .strokeBorder(.white.opacity(0.14), lineWidth: 1))
+        )
+        .shadow(color: .black.opacity(0.4), radius: 20, y: 12)
+    }
+
+    private func row(icon: String, title: String, subtitle: String,
+                     action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: AppSpacing.sm) {
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(AppColors.gold)
+                    .frame(width: 24)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title)
+                        .font(.system(size: 14.5, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white)
+                    Text(subtitle)
+                        .font(.system(size: 11.5, weight: .regular, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.6))
+                        .lineLimit(1).minimumScaleFactor(0.8)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, 7).padding(.horizontal, 9)
+            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(.white.opacity(0.05)))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(SoftPressStyle(scale: 0.98))
+    }
+
+    private var soundChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(JourneyAudioOption.all) { option in
+                    let selected = appModel.selectedJourneyAudio.id == option.id
+                    Button {
+                        appModel.selectJourneyAudio(option)
+                        appModel.haptics.tap()
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: option.systemImage).font(.system(size: 11, weight: .bold))
+                            Text(option.displayName).font(.system(size: 12, weight: .bold, design: .rounded))
+                        }
+                        .foregroundStyle(selected ? Color(hex: 0x14120E) : .white)
+                        .padding(.horizontal, 10).frame(height: 32)
+                        .background(Capsule().fill(selected ? AnyShapeStyle(option.accent)
+                                                            : AnyShapeStyle(Color.white.opacity(0.08))))
+                    }
+                    .buttonStyle(SoftPressStyle())
+                }
+            }
+            .padding(.horizontal, 2)
+        }
+    }
+
+    private var inviteButton: some View {
+        Button(action: onInvite) {
+            HStack(spacing: 8) {
+                Image(systemName: "person.badge.plus").font(.system(size: 14, weight: .bold))
+                Text("Invite to flight").font(.system(size: 14, weight: .bold, design: .rounded))
+                Spacer()
+                Image(systemName: "chevron.right").font(.system(size: 11, weight: .bold)).opacity(0.6)
+            }
+            .foregroundStyle(Color(hex: 0x14120E))
+            .padding(.vertical, 10).padding(.horizontal, 12)
+            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(AppColors.gold))
+        }
+        .buttonStyle(SoftPressStyle(scale: 0.98))
+    }
+
+    private var timerRow: some View {
+        HStack(spacing: AppSpacing.sm) {
+            Image(systemName: "clock")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.55)).frame(width: 24)
+            Text("Flight time")
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundStyle(.white.opacity(0.7))
+            Spacer()
+            Text(planLabel)
+                .font(.system(size: 13, weight: .heavy, design: .rounded))
+                .foregroundStyle(.white)
+        }
+        .padding(.vertical, 7).padding(.horizontal, 9)
     }
 }

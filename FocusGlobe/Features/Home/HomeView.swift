@@ -17,6 +17,7 @@ struct HomeView: View {
     @State private var showUnlock = false
     @State private var balloonFloat: CGFloat = 0
     @State private var activityPulse = false
+    @State private var streakPulse = false
     /// The Sky the pager is resting on (an index into `FocusSky.all`).
     @State private var skyIndex = 0
     @State private var didInitSky = false
@@ -59,20 +60,24 @@ struct HomeView: View {
 
             // The pilot's balloon — the fixed visual anchor while Skies change.
             GeometryReader { geo in
-                let size = max(70, min(90, geo.size.height * 0.11))
+                let size = max(76, min(98, geo.size.height * 0.12))
                 FlightBalloonView(size: size, showGlow: true)
-                    .position(x: geo.size.width / 2, y: geo.size.height * 0.38 + balloonFloat)
+                    .position(x: geo.size.width / 2, y: geo.size.height * 0.40 + balloonFloat)
                     .shadow(color: .black.opacity(0.28), radius: 12, y: 7)
             }
             .allowsHitTesting(false)
             .opacity(handingOff ? 0 : 1)
 
+            // Big translucent arrows flank the hero at the screen edges, so
+            // changing Sky is instantly discoverable — no instructional text.
+            edgeArrows
+                .opacity(handingOff ? 0 : 1)
+
             VStack(spacing: 0) {
                 topBar
                 greetingBlock
-                skyLabel
                 Spacer()
-                bottomPanel
+                bottomCluster
                     .clusterMaxWidth()
             }
             .padding(.horizontal, AppSpacing.screen)
@@ -90,6 +95,9 @@ struct HomeView: View {
             maybeShowPremiumIntro()
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 3.4).repeatForever(autoreverses: true)) { balloonFloat = -10 }
+            if appModel.progress.currentStreak > 0 {
+                withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) { streakPulse = true }
+            }
         }
         // Travelling the pager: a soft haptic, and unlocked Skies become the
         // active choice immediately (locked ones stay preview-only).
@@ -181,26 +189,42 @@ struct HomeView: View {
         }
     }
 
-    // MARK: Top bar — streak ember + crown
+    // MARK: Top bar — streak ember (left) · coins + premium (right)
 
     private var topBar: some View {
-        HStack(spacing: AppSpacing.xs) {
+        HStack(alignment: .top, spacing: AppSpacing.xs) {
+            streakChip
             Spacer()
             coinsChip
-            if !appModel.isPro {
+            if appModel.isPro {
+                proChip
+            } else {
                 CrownButton(size: Layout.pad(42, 50)) { appModel.tapFeedback(); router.presentPaywall() }
             }
-            streakButton
         }
         .padding(.top, AppSpacing.xs)
+    }
+
+    /// The Pro badge — a subtle gold "Ultra" capsule with a soft glow.
+    private var proChip: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "crown.fill")
+                .font(.system(size: Layout.pad(12, 14), weight: .bold))
+            Text("Ultra")
+                .font(.system(size: Layout.pad(13, 15), weight: .heavy, design: .rounded))
+        }
+        .foregroundStyle(Color(hex: 0x2B2510))
+        .padding(.horizontal, Layout.pad(11, 14))
+        .padding(.vertical, Layout.pad(8, 10))
+        .background(Capsule().fill(AppColors.gold))
+        .shadow(color: AppColors.gold.opacity(0.55), radius: 8, y: 0)
+        .accessibilityLabel("FocusGlobe Ultra is active")
     }
 
     private var coinsChip: some View {
         Button { appModel.tapFeedback(); router.openStore() } label: {
             HStack(spacing: 5) {
-                Image(systemName: "circle.hexagongrid.circle.fill")
-                    .font(.system(size: Layout.pad(13, 15), weight: .bold))
-                    .foregroundStyle(AppColors.gold)
+                FocusCoinIcon(size: Layout.pad(15, 17))
                 Text(Formatters.miles(appModel.focusCoins))
                     .font(.system(size: Layout.pad(14, 17), weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
@@ -214,26 +238,36 @@ struct HomeView: View {
         .accessibilityLabel("\(appModel.focusCoins) Focus Coins. Opens the Store.")
     }
 
-    private var streakButton: some View {
-        Button {
+    /// The streak ember — a warm flame that glows and softly pulses while the
+    /// streak is alive (the app's most emotional number, upper-left).
+    private var streakChip: some View {
+        let streak = appModel.progress.currentStreak
+        let alive = streak > 0
+        return Button {
             appModel.tapFeedback()
             showStreak = true
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: "flame.fill")
-                    .font(.system(size: Layout.pad(14, 17), weight: .bold))
-                    .foregroundStyle(AppColors.gold)
-                Text("\(appModel.progress.currentStreak)")
+                    .font(.system(size: Layout.pad(15, 18), weight: .bold))
+                    .foregroundStyle(
+                        LinearGradient(colors: alive ? [Color(hex: 0xFFB65C), Color(hex: 0xF2643C)]
+                                                     : [.white.opacity(0.5), .white.opacity(0.5)],
+                                       startPoint: .top, endPoint: .bottom))
+                Text("\(streak)")
                     .font(.system(size: Layout.pad(15, 19), weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
             }
             .padding(.horizontal, Layout.pad(12, 15))
             .padding(.vertical, Layout.pad(8, 10))
             .background(Capsule().fill(.white.opacity(0.1)))
-            .overlay(Capsule().strokeBorder(.white.opacity(0.12), lineWidth: 1))
+            .overlay(Capsule().strokeBorder(
+                (alive ? Color(hex: 0xF2643C).opacity(0.4) : Color.white.opacity(0.12)), lineWidth: 1))
+            .shadow(color: Color(hex: 0xF2643C).opacity(alive ? (streakPulse ? 0.6 : 0.28) : 0),
+                    radius: streakPulse ? 12 : 7, y: 0)
         }
         .buttonStyle(SoftPressStyle())
-        .accessibilityLabel("\(appModel.progress.currentStreak) day streak. Opens streak details.")
+        .accessibilityLabel("\(streak) day streak. Opens streak details.")
     }
 
     // MARK: Greeting + selected Sky
@@ -258,70 +292,67 @@ struct HomeView: View {
         return viewModel.greeting
     }
 
-    /// The selected Sky's name (with a lock when preview-only) plus the arrows +
-    /// dots that make switching self-evident — no instructional text anywhere.
-    private var skyLabel: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Text(currentSky.name)
-                    .font(.system(size: Layout.pad(22, 27), weight: .semibold, design: .serif))
-                    .foregroundStyle(AppColors.gold)
-                if !currentSkyUnlocked {
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: Layout.pad(13, 15), weight: .bold))
-                        .foregroundStyle(.white.opacity(0.75))
-                }
-            }
-            skySwitcher
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.top, AppSpacing.xs)
-        .shadow(color: .black.opacity(0.35), radius: 6, y: 1)
-        .animation(.easeInOut(duration: 0.25), value: skyIndex)
-    }
+    // MARK: Edge arrows (flank the hero at the screen edges)
 
-    /// Left/right arrows + one dot per Sky: the selector is visually obvious.
-    private var skySwitcher: some View {
-        HStack(spacing: AppSpacing.sm) {
-            skyArrow(system: "chevron.left", enabled: skyIndex > 0) {
+    /// Large translucent circular arrows pinned to the left/right screen edges,
+    /// vertically level with the hero balloon. The pager still swipes; these make
+    /// the interaction obvious for anyone who doesn't think to swipe.
+    private var edgeArrows: some View {
+        HStack {
+            edgeArrow(system: "chevron.left", enabled: skyIndex > 0) {
                 withAnimation(.easeInOut(duration: 0.35)) { skyIndex = max(0, skyIndex - 1) }
             }
-            HStack(spacing: 5) {
-                ForEach(FocusSky.all.indices, id: \.self) { i in
-                    Capsule()
-                        .fill(i == skyIndex ? AppColors.gold : .white.opacity(0.30))
-                        .frame(width: i == skyIndex ? 16 : 5, height: 5)
-                }
-            }
-            skyArrow(system: "chevron.right", enabled: skyIndex < FocusSky.all.count - 1) {
+            Spacer()
+            edgeArrow(system: "chevron.right", enabled: skyIndex < FocusSky.all.count - 1) {
                 withAnimation(.easeInOut(duration: 0.35)) {
                     skyIndex = min(FocusSky.all.count - 1, skyIndex + 1)
                 }
             }
         }
+        .padding(.horizontal, AppSpacing.xs)
+        .offset(y: -28)
     }
 
-    private func skyArrow(system: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+    private func edgeArrow(system: String, enabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: system)
-                .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(.white.opacity(enabled ? 0.9 : 0.3))
-                .frame(width: 30, height: 30)
-                .background(Circle().fill(.white.opacity(0.10)))
-                .overlay(Circle().strokeBorder(.white.opacity(0.12), lineWidth: 1))
+                .font(.system(size: Layout.pad(19, 23), weight: .bold))
+                .foregroundStyle(.white.opacity(enabled ? 0.92 : 0.3))
+                .frame(width: Layout.pad(48, 56), height: Layout.pad(48, 56))
+                .background(Circle().fill(.ultraThinMaterial))
+                .overlay(Circle().fill(Color.black.opacity(0.18)))
+                .overlay(Circle().strokeBorder(.white.opacity(0.16), lineWidth: 1))
+                .shadow(color: .black.opacity(0.28), radius: 9, y: 4)
         }
         .buttonStyle(SoftPressStyle())
         .disabled(!enabled)
+        .opacity(enabled ? 1 : 0.45)
+        .accessibilityLabel(system == "chevron.left" ? "Previous Sky" : "Next Sky")
     }
 
-    // MARK: Bottom panel
+    // MARK: Bottom cluster — Sky name · dots · activity · Start Focus
 
-    private var bottomPanel: some View {
-        VStack(spacing: AppSpacing.sm) {
-            HStack {
-                Spacer()
-                activityIsland
+    private var bottomCluster: some View {
+        VStack(spacing: AppSpacing.md) {
+            VStack(spacing: 10) {
+                HStack(spacing: 8) {
+                    Text(currentSky.name)
+                        .font(.system(size: Layout.pad(27, 33), weight: .semibold, design: .serif))
+                        .foregroundStyle(AppColors.gold)
+                        .lineLimit(1).minimumScaleFactor(0.6)
+                    if !currentSkyUnlocked {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: Layout.pad(14, 16), weight: .bold))
+                            .foregroundStyle(.white.opacity(0.75))
+                    }
+                }
+                .shadow(color: .black.opacity(0.35), radius: 6, y: 1)
+                skyDots
             }
+            .animation(.easeInOut(duration: 0.25), value: skyIndex)
+
+            activityIsland
+
             if currentSkyUnlocked {
                 AppPrimaryButton(title: "Start Focus", systemImage: "arrow.up") {
                     appModel.tapFeedback()
@@ -331,8 +362,17 @@ struct HomeView: View {
             } else {
                 lockedCTA
             }
-            missionsCard
-            bottomNavBar
+        }
+    }
+
+    /// One dot per Sky, the selected one stretched into a gold capsule.
+    private var skyDots: some View {
+        HStack(spacing: 5) {
+            ForEach(FocusSky.all.indices, id: \.self) { i in
+                Capsule()
+                    .fill(i == skyIndex ? AppColors.gold : .white.opacity(0.30))
+                    .frame(width: i == skyIndex ? 16 : 5, height: 5)
+            }
         }
     }
 
@@ -363,49 +403,6 @@ struct HomeView: View {
         .animation(.easeInOut(duration: 0.25), value: skyIndex)
     }
 
-    /// The app's five places — Passport · Shop · Home · Friends · Settings —
-    /// with Home at the centre. A premium glass bar, always visible.
-    private var bottomNavBar: some View {
-        HStack(spacing: 0) {
-            navTab(title: "Passport", system: "book.closed.fill", active: false) { router.openPassport() }
-            navTab(title: "Shop", system: "bag.fill", active: false) { router.openStore() }
-            navTab(title: "Home", system: "house.fill", active: true) { }
-            navTab(title: "Friends", system: "person.2.fill", active: false) { router.openFriends() }
-            navTab(title: "Settings", system: "gearshape.fill", active: false) { router.openSettings() }
-        }
-        .padding(.vertical, Layout.pad(10, 12))
-        .padding(.horizontal, AppSpacing.xs)
-        .background(
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .fill(Color.black.opacity(0.26)))
-                .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .strokeBorder(.white.opacity(0.12), lineWidth: 1))
-        )
-        .shadow(color: .black.opacity(0.3), radius: 14, y: 8)
-    }
-
-    private func navTab(title: String, system: String, active: Bool,
-                        action: @escaping () -> Void) -> some View {
-        Button {
-            guard !active else { return }
-            appModel.tapFeedback()
-            action()
-        } label: {
-            VStack(spacing: 3) {
-                Image(systemName: system)
-                    .font(.system(size: Layout.pad(17, 20), weight: .semibold))
-                Text(title)
-                    .font(.system(size: Layout.pad(10, 11.5), weight: .semibold, design: .rounded))
-            }
-            .foregroundStyle(active ? AppColors.gold : .white.opacity(0.72))
-            .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(SoftPressStyle(scale: 0.94))
-        .accessibilityLabel(title)
-    }
-
     /// The locked-Sky call to action: unmistakable but elegant.
     private var lockedCTA: some View {
         Button {
@@ -430,38 +427,6 @@ struct HomeView: View {
         }
         .buttonStyle(SoftPressStyle())
         .accessibilityLabel("Unlock \(currentSky.name). Premium or invite three friends.")
-    }
-
-    private var missionsCard: some View {
-        let missions = appModel.dailyMissions
-        let done = missions.filter { $0.isComplete }.count
-        return Button { appModel.tapFeedback(); router.openPassport() } label: {
-            HStack(spacing: AppSpacing.sm) {
-                Image(systemName: "target")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(AppColors.gold)
-                    .frame(width: 22)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Daily Missions").font(AppTypography.callout).foregroundStyle(.white)
-                    Text("\(done) of \(missions.count) complete")
-                        .font(AppTypography.caption).foregroundStyle(.white.opacity(0.6))
-                }
-                Spacer()
-                HStack(spacing: 5) {
-                    ForEach(missions) { mission in
-                        Circle()
-                            .fill(mission.isComplete ? AppColors.gold : .white.opacity(0.22))
-                            .frame(width: 6, height: 6)
-                    }
-                }
-            }
-            .padding(.horizontal, AppSpacing.md)
-            .padding(.vertical, 12)
-            .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(.white.opacity(0.08)))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(.white.opacity(0.1), lineWidth: 1))
-        }
-        .buttonStyle(SoftPressStyle(scale: 0.99))
     }
 
 }

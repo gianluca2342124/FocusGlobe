@@ -1,18 +1,36 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
-/// The FocusGlobe **Store** — a calm, premium shop for cosmetics, paid with
+/// The FocusGlobe **Store** — a calm, premium collectible shop paid with
 /// **Focus Coins** (earned by landing flights) or unlocked with Premium.
 ///
-/// Foundation scope: daily rotating items (deterministic locally, refresh
-/// countdown to midnight), balloon skins (the existing `BalloonSkin` system —
-/// milestone/Pro unlocks preserved, selection preserved), and owned items.
-/// Everything renders procedurally; no item requires bundled art.
+/// Category tabs (Today · Balloons · Trails · Cabin) organise a growing catalog;
+/// a featured "Today's Finds" row leads the Today tab. Every item renders its
+/// bundled art (`StoreItem_<id>`) when present and a premium procedural card
+/// otherwise, so nothing depends on assets. Purchase / own / equip all persist.
 struct StoreView: View {
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
     @Environment(\.horizontalSizeClass) private var hSize
 
+    @State private var category: ShopCategory = .today
+
     private var cardColumns: [GridItem] { Layout.cardColumns(regular: hSize == .regular) }
+
+    private enum ShopCategory: String, CaseIterable, Identifiable {
+        case today = "Today", balloons = "Balloons", trails = "Trails", cabin = "Cabin"
+        var id: String { rawValue }
+        var icon: String {
+            switch self {
+            case .today:    return "sparkles"
+            case .balloons: return "circle.circle"
+            case .trails:   return "wind"
+            case .cabin:    return "house.fill"
+            }
+        }
+    }
 
     var body: some View {
         ZStack {
@@ -21,9 +39,8 @@ struct StoreView: View {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
                     header
                     coinsCard
-                    dailySection
-                    skinsSection
-                    ownedSection
+                    categoryChips
+                    categoryContent
                 }
                 .padding(AppSpacing.screen)
                 .padding(.top, AppSpacing.xs)
@@ -38,7 +55,7 @@ struct StoreView: View {
 
     private var header: some View {
         HStack(alignment: .top) {
-            ScreenHeader(title: "Store", subtitle: "Cosmetics for your balloon and cabin")
+            ScreenHeader(title: "Store", subtitle: "Collectibles for your balloon and cabin")
             Spacer()
             if !appModel.isPro {
                 CrownButton { appModel.tapFeedback(); router.presentPaywall() }
@@ -50,9 +67,7 @@ struct StoreView: View {
         HStack(spacing: AppSpacing.sm) {
             ZStack {
                 Circle().fill(AppColors.gold.opacity(0.16)).frame(width: 46, height: 46)
-                Image(systemName: "circle.hexagongrid.circle.fill")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(AppColors.gold)
+                FocusCoinIcon(size: 26)
             }
             VStack(alignment: .leading, spacing: 1) {
                 Text("\(Formatters.miles(appModel.focusCoins)) Focus Coins")
@@ -70,21 +85,87 @@ struct StoreView: View {
                          shadowRadius: 16, shadowY: 8)
     }
 
-    // MARK: Daily items
+    // MARK: Category chips
 
-    private var dailySection: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            HStack {
-                SectionLabel(text: "Today's items")
-                Spacer()
-                TimelineView(.periodic(from: .now, by: 60)) { ctx in
-                    Text("Refreshes in \(refreshLabel(at: ctx.date))")
-                        .font(AppTypography.micro)
-                        .foregroundStyle(AppColors.textTertiary)
+    private var categoryChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: AppSpacing.xs) {
+                ForEach(ShopCategory.allCases) { cat in
+                    categoryChip(cat)
                 }
             }
+            .padding(.horizontal, 2)
+        }
+    }
+
+    private func categoryChip(_ cat: ShopCategory) -> some View {
+        let active = category == cat
+        return Button {
+            appModel.tapFeedback()
+            withAnimation(.easeInOut(duration: 0.2)) { category = cat }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: cat.icon).font(.system(size: 12, weight: .bold))
+                Text(cat.rawValue).font(.system(size: 14, weight: .bold, design: .rounded))
+            }
+            .foregroundStyle(active ? Color(hex: 0x2B2510) : AppColors.textSecondary)
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.vertical, AppSpacing.xs + 2)
+            .background(
+                Capsule().fill(active ? AnyShapeStyle(AppColors.gold)
+                                      : AnyShapeStyle(AppColors.textPrimary.opacity(0.06)))
+            )
+            .overlay(Capsule().strokeBorder(.white.opacity(active ? 0 : 0.08), lineWidth: 1))
+        }
+        .buttonStyle(SoftPressStyle(scale: 0.95))
+    }
+
+    // MARK: Category content
+
+    @ViewBuilder private var categoryContent: some View {
+        switch category {
+        case .today:    todaySection
+        case .balloons: skinsSection
+        case .trails:   itemsSection(title: "Trails", items: items(of: [.trail]))
+        case .cabin:    itemsSection(title: "Cabin & charms", items: items(of: [.cabinDecoration, .charm]))
+        }
+    }
+
+    private func items(of kinds: [StoreItem.Kind]) -> [StoreItem] {
+        StoreItem.all.filter { kinds.contains($0.kind) }
+    }
+
+    // Today: a featured "finds" row (larger cards) + the rest of the catalog.
+    private var todaySection: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.lg) {
+            VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                HStack {
+                    SectionLabel(text: "Today's finds")
+                    Spacer()
+                    TimelineView(.periodic(from: .now, by: 60)) { ctx in
+                        Label("Refreshes in \(refreshLabel(at: ctx.date))", systemImage: "clock")
+                            .font(AppTypography.micro)
+                            .foregroundStyle(AppColors.textTertiary)
+                    }
+                }
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: AppSpacing.sm) {
+                        ForEach(StoreItem.dailyItems()) { item in
+                            StoreItemCard(item: item, featured: true)
+                        }
+                    }
+                    .padding(.horizontal, 2).padding(.vertical, 2)
+                }
+            }
+            ownedSection
+        }
+    }
+
+    private func itemsSection(title: String, items: [StoreItem]) -> some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            SectionLabel(text: title)
             LazyVGrid(columns: cardColumns, spacing: AppSpacing.sm) {
-                ForEach(StoreItem.dailyItems()) { item in
+                ForEach(items) { item in
                     StoreItemCard(item: item)
                 }
             }
@@ -128,7 +209,7 @@ struct StoreView: View {
         let owned = StoreItem.all.filter { appModel.ownsStoreItem($0) }
         if !owned.isEmpty {
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                SectionLabel(text: "Owned")
+                SectionLabel(text: "Your collection")
                 LazyVGrid(columns: cardColumns, spacing: AppSpacing.sm) {
                     ForEach(owned) { item in
                         StoreItemCard(item: item)
@@ -139,18 +220,19 @@ struct StoreView: View {
     }
 }
 
-// MARK: - One Store item card
+// MARK: - One Store item card (grid + featured sizes)
 
 private struct StoreItemCard: View {
     let item: StoreItem
+    var featured: Bool = false
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
 
     private var owned: Bool { appModel.ownsStoreItem(item) }
     private var affordable: Bool { appModel.focusCoins >= item.price }
 
-    /// Whether the owned cosmetic is currently visible (equipped trail /
-    /// placed cabin decoration). Charms are display-only for now.
+    /// Whether the owned cosmetic is currently visible (equipped trail / placed
+    /// cabin decoration). Charms are display-only for now.
     private var equipped: Bool {
         switch item.kind {
         case .trail: return appModel.equippedTrail?.id == item.id
@@ -159,32 +241,12 @@ private struct StoreItemCard: View {
         }
     }
 
+    private var artHeight: CGFloat { featured ? CGFloat(120) : CGFloat(66) }
+
     var body: some View {
-        Button {
-            if owned {
-                switch item.kind {
-                case .trail: appModel.equipTrail(item)
-                case .cabinDecoration: appModel.toggleCabinItem(item)
-                case .charm: appModel.haptics.tap()
-                }
-            } else if item.isPremium && !appModel.isPro {
-                appModel.tapFeedback()
-                router.presentPaywall()
-            } else if appModel.purchaseStoreItem(item) {
-                // purchase feedback plays inside the model
-            } else {
-                appModel.haptics.tap()   // can't afford yet — quiet nudge
-            }
-        } label: {
+        Button(action: act) {
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(item.tint.opacity(0.16))
-                    Image(systemName: item.systemImage)
-                        .font(.system(size: 26, weight: .semibold))
-                        .foregroundStyle(item.tint)
-                }
-                .frame(height: 64)
+                art
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.name)
                         .font(.system(size: 15, weight: .bold, design: .rounded))
@@ -198,12 +260,14 @@ private struct StoreItemCard: View {
                 priceRow
             }
             .padding(AppSpacing.md)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(width: featured ? CGFloat(168) : nil, alignment: .leading)
+            .frame(maxWidth: featured ? nil : .infinity, alignment: .leading)
             .glassBackground(cornerRadius: 20, tintOpacity: 0.24, shadowRadius: 8, shadowY: 4)
             .overlay {
                 if equipped {
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .strokeBorder(AppColors.gold.opacity(0.65), lineWidth: 1.5)
+                        .strokeBorder(AppColors.gold.opacity(0.7), lineWidth: 1.5)
+                        .shadow(color: AppColors.gold.opacity(0.4), radius: 6)
                 } else if owned {
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
                         .strokeBorder(AppColors.success.opacity(0.5), lineWidth: 1.5)
@@ -211,7 +275,64 @@ private struct StoreItemCard: View {
             }
         }
         .buttonStyle(SoftPressStyle(scale: 0.98))
-        .accessibilityLabel("\(item.name). \(priceAccessibility)")
+        .accessibilityLabel("\(item.name). \(item.rarity.rawValue). \(priceAccessibility)")
+    }
+
+    private func act() {
+        if owned {
+            switch item.kind {
+            case .trail: appModel.equipTrail(item)
+            case .cabinDecoration: appModel.toggleCabinItem(item)
+            case .charm: appModel.haptics.tap()
+            }
+        } else if item.isPremium && !appModel.isPro {
+            appModel.tapFeedback()
+            router.presentPaywall()
+        } else if appModel.purchaseStoreItem(item) {
+            // purchase feedback plays inside the model
+        } else {
+            appModel.haptics.tap()   // can't afford yet — quiet nudge
+        }
+    }
+
+    // Bundled art wins; otherwise a tinted procedural icon. A rarity chip rides
+    // the top-left corner.
+    private var art: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(item.tint.opacity(0.16))
+            artContent
+        }
+        .frame(height: artHeight)
+        .frame(maxWidth: .infinity)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(alignment: .topLeading) { rarityChip.padding(6) }
+    }
+
+    @ViewBuilder private var artContent: some View {
+        #if canImport(UIKit)
+        if let ui = UIImage(named: item.imageAssetName) {
+            Image(uiImage: ui).resizable().scaledToFill()
+        } else {
+            Image(systemName: item.systemImage)
+                .font(.system(size: featured ? 40 : 26, weight: .semibold))
+                .foregroundStyle(item.tint)
+        }
+        #else
+        Image(systemName: item.systemImage)
+            .font(.system(size: featured ? 40 : 26, weight: .semibold))
+            .foregroundStyle(item.tint)
+        #endif
+    }
+
+    private var rarityChip: some View {
+        Text(item.rarity.rawValue.uppercased())
+            .font(.system(size: 8.5, weight: .heavy, design: .rounded))
+            .tracking(0.4)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 6).padding(.vertical, 3)
+            .background(Capsule().fill(item.rarity.tint.opacity(0.9)))
+            .shadow(color: .black.opacity(0.25), radius: 2, y: 1)
     }
 
     private var ownedStatusText: String {
@@ -238,12 +359,11 @@ private struct StoreItemCard: View {
                 .foregroundStyle(AppColors.gold)
         } else {
             HStack(spacing: 4) {
-                Image(systemName: "circle.hexagongrid.circle.fill")
-                    .font(.system(size: 12, weight: .bold))
+                FocusCoinIcon(size: 13)
                 Text("\(item.price)")
                     .font(.system(size: 13.5, weight: .heavy, design: .rounded))
+                    .foregroundStyle(affordable ? AppColors.gold : AppColors.textTertiary)
             }
-            .foregroundStyle(affordable ? AppColors.gold : AppColors.textTertiary)
         }
     }
 

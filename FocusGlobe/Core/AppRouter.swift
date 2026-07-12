@@ -36,6 +36,22 @@ final class AppRouter: ObservableObject {
         case friends
     }
 
+    /// The five persistent tabs of the app shell. Home is the centre. Switching
+    /// a tab swaps the shell's content in place — it never pushes a page, so the
+    /// bottom bar stays visible and there is no back button on a tab root.
+    enum Tab: Hashable { case passport, shop, home, friends, settings }
+
+    /// The visible tab. `path` is the *pushed* flow on top of the shell (the
+    /// ritual/boarding/history), which is empty while you are simply on a tab.
+    @Published var selectedTab: Tab = .home
+
+    /// Switch tabs inside the shell. Clears any pushed flow first so a tab
+    /// always shows its own root, never a stale pushed screen underneath.
+    func select(_ tab: Tab) {
+        if !path.isEmpty { path.removeAll() }
+        selectedTab = tab
+    }
+
     @Published var path: [Destination] = []
     @Published var activeJourney: Journey?
     @Published var showPaywall = false
@@ -62,11 +78,13 @@ final class AppRouter: ObservableObject {
             path.append(.boarding(route, focus))
         }
     }
-    func openPassport() { path.append(.passport) }
-    func openStore() { path.append(.store) }
-    func openFriends() { path.append(.friends) }
+    // The four tab destinations switch the shell tab in place (no push); History
+    // remains a genuine pushed detail off the Passport tab.
+    func openPassport() { select(.passport) }
+    func openStore() { select(.shop) }
+    func openFriends() { select(.friends) }
     func openHistory() { path.append(.history) }
-    func openSettings() { path.append(.settings) }
+    func openSettings() { select(.settings) }
     func presentPaywall() { showPaywall = true }
 
     // MARK: Deep links (widgets)
@@ -81,19 +99,19 @@ final class AppRouter: ObservableObject {
         switch target {
         case "choose", "journey", "start":
             // The flight setup flow lives on Home now (no map route selection).
-            path.removeAll()
+            path.removeAll(); selectedTab = .home
         case "passport", "stats", "goals", "missions", "collection":
-            path = [.passport]
+            path.removeAll(); selectedTab = .passport
         case "streak", "resume", "current", "home", "":
             // Home is where the live streak lives and it auto-offers a resume
             // when an unfinished journey is saved.
-            path.removeAll()
+            path.removeAll(); selectedTab = .home
         case "pro", "paywall":
             // A locked (non-Pro) widget taps straight into the paywall.
-            path.removeAll()
+            path.removeAll(); selectedTab = .home
             presentPaywall()
         default:
-            path.removeAll()
+            path.removeAll(); selectedTab = .home
         }
     }
 
@@ -107,6 +125,7 @@ final class AppRouter: ObservableObject {
     func finishToHome() {
         activeJourney = nil
         path.removeAll()
+        selectedTab = .home
     }
 
     /// Dismiss the journey cover and go choose another route.
@@ -123,9 +142,10 @@ final class AppRouter: ObservableObject {
         pendingNewFlight = true
     }
 
-    /// Dismiss the journey cover and open the Passport.
+    /// Dismiss the journey cover and open the Passport tab.
     func finishToPassport() {
         activeJourney = nil
-        path = [.passport]
+        path.removeAll()
+        selectedTab = .passport
     }
 }
