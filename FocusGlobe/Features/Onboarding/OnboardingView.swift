@@ -62,30 +62,19 @@ struct OnboardingView: View {
 
     // MARK: Header — back + progress
 
+    // Progress only — no back arrow (a clean, forward-moving onboarding).
     private var header: some View {
-        HStack(spacing: AppSpacing.sm) {
-            if step > 0 {
-                AppIconButton(systemImage: "chevron.left", size: 38, tint: .white,
-                              accessibilityLabel: "Back") {
-                    appModel.tapFeedback()
-                    withAnimation(AppMotion.soft) { step = max(0, step - 1) }
-                }
-            } else {
-                Color.clear.frame(width: 38, height: 38)
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule().fill(.white.opacity(0.12))
+                Capsule().fill(AppColors.gold)
+                    .frame(width: geo.size.width * CGFloat(step + 1) / CGFloat(Self.stepCount))
             }
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(.white.opacity(0.12))
-                    Capsule().fill(AppColors.gold)
-                        .frame(width: geo.size.width * CGFloat(step + 1) / CGFloat(Self.stepCount))
-                }
-            }
-            .frame(height: 4)
-            .animation(.easeOut(duration: 0.3), value: step)
-            Color.clear.frame(width: 38, height: 38)
         }
+        .frame(height: 4)
+        .animation(.easeOut(duration: 0.3), value: step)
         .padding(.horizontal, AppSpacing.screen)
-        .padding(.top, AppSpacing.sm)
+        .padding(.top, AppSpacing.md)
     }
 
     @ViewBuilder private var stepBody: some View {
@@ -361,7 +350,7 @@ struct OnboardingView: View {
     private var shieldStep: some View {
         questionScaffold(
             title: "Protect your flight",
-            subtitle: "Focus Shield keeps distracting apps grounded while you fly, so a focus session stays a focus session.") {
+            subtitle: "Focus Shield keeps distracting apps grounded while you fly. A protected flight makes distractions feel further away, so it's easier to stay with your plan.") {
             shieldPreviewCard
         } footer: {
             VStack(spacing: AppSpacing.sm) {
@@ -403,12 +392,12 @@ struct OnboardingView: View {
         )
     }
 
-    /// The shield hero — bundled `OnboardingHero_FocusShield` if present, else
-    /// the procedural shield glyph.
+    /// The shield hero — bundled `protectyourflight` (or `OnboardingHero_FocusShield`)
+    /// if present, else the procedural shield glyph.
     @ViewBuilder private var shieldHero: some View {
         #if canImport(UIKit)
-        if let ui = UIImage(named: "OnboardingHero_FocusShield") {
-            Image(uiImage: ui).resizable().scaledToFit().frame(height: 116)
+        if let ui = UIImage(named: "protectyourflight") ?? UIImage(named: "OnboardingHero_FocusShield") {
+            Image(uiImage: ui).resizable().scaledToFit().frame(maxHeight: 150)
         } else {
             shieldGlyph
         }
@@ -529,8 +518,9 @@ struct OnboardingView: View {
     private var favourStep: some View {
         questionScaffold(
             title: "A little favour… ❤️",
-            subtitle: "FocusGlobe was built on a simple belief: focus should feel calm, beautiful, and worth returning to. Phones usually pull us away — FocusGlobe tries to turn yours into a ritual for focus instead. If it helps you, a review genuinely helps a tiny team keep building.") {
+            subtitle: "FocusGlobe was built on a simple belief: focus should feel calm, beautiful, and worth returning to. Phones usually pull us away — FocusGlobe tries to turn yours into a tiny journey instead. If it helps you, a review genuinely helps a tiny team keep building.") {
             VStack(spacing: AppSpacing.md) {
+                favourHero
                 Text("— the FocusGlobe team")
                     .font(AppTypography.serifCaption)
                     .italic()
@@ -552,14 +542,23 @@ struct OnboardingView: View {
         }
     }
 
+    /// The bundled `alittlefavour` art if present — a warm emotional hero.
+    @ViewBuilder private var favourHero: some View {
+        #if canImport(UIKit)
+        if let ui = UIImage(named: "alittlefavour") {
+            Image(uiImage: ui).resizable().scaledToFit().frame(maxHeight: 150)
+        }
+        #endif
+    }
+
     // Static, illustrative review cards (App Store-style copy — not live data).
     private var reviewCarousel: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: AppSpacing.sm) {
-                OnboardingReviewCard(name: "Maya", quote: "The calmest focus app I've used. I actually look forward to starting a session.")
-                OnboardingReviewCard(name: "Daniel", quote: "Beautiful, and it genuinely keeps me off my phone while I work.")
-                OnboardingReviewCard(name: "Priya", quote: "The balloon flights make focusing feel special. My streak is at 40 days.")
-                OnboardingReviewCard(name: "Leo", quote: "Simple, gorgeous, and it works. My studying completely changed.")
+                OnboardingReviewCard(name: "Maya", quote: "The first focus timer I actually want to open.")
+                OnboardingReviewCard(name: "Daniel", quote: "It makes studying feel calm instead of stressful.")
+                OnboardingReviewCard(name: "Priya", quote: "The balloon idea is weirdly motivating.")
+                OnboardingReviewCard(name: "Leo", quote: "Beautiful, and it genuinely keeps me off my phone.")
             }
             .padding(.horizontal, 2).padding(.vertical, 4)
         }
@@ -610,8 +609,8 @@ struct OnboardingView: View {
                                          center: .center, startRadius: 4, endRadius: 150))
                 .frame(width: 270, height: 200)
             #if canImport(UIKit)
-            if let ui = UIImage(named: "PremiumHero_FocusGlobeUltra") {
-                Image(uiImage: ui).resizable().scaledToFit().frame(height: 190)
+            if let ui = UIImage(named: "PaywallBalloonHero") ?? UIImage(named: "PremiumHero_FocusGlobeUltra") {
+                Image(uiImage: ui).resizable().scaledToFit().frame(maxHeight: 200)
             } else {
                 proceduralHero
             }
@@ -651,13 +650,12 @@ struct OnboardingView: View {
 
     private var premiumBenefits: some View {
         VStack(spacing: AppSpacing.xs) {
-            premiumBenefit("moon.stars.fill", "Unlock all premium Skies")
-            premiumBenefit("shield.fill", "Advanced Focus Shield")
+            premiumBenefit("moon.stars.fill", "All premium Skies")
             premiumBenefit("circle.circle.fill", "Premium balloon skins")
-            premiumBenefit("music.note", "Premium soundscapes & ambience")
+            premiumBenefit("person.2.fill", "Fly with friends")
             premiumBenefit("bolt.fill", "2× Focus Coins on every flight")
-            premiumBenefit("house.fill", "Cabin & cosmetic extras")
             premiumBenefit("hand.thumbsup.fill", "No ads, ever")
+            premiumBenefit("heart.fill", "Support FocusGlobe")
         }
     }
 

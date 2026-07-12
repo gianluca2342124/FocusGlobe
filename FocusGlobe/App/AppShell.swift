@@ -49,26 +49,30 @@ struct AppTabBar: View {
     ]
 
     var body: some View {
+        // A rigid, app-like bar pinned to the bottom edge: the tab row sits above
+        // the home-indicator safe area, and the material fills all the way down to
+        // the screen edge so nothing floats. Rounded only at the top.
         HStack(spacing: 0) {
             ForEach(items) { item in
                 tab(item)
             }
         }
-        .padding(.vertical, Layout.pad(9, 11))
-        .padding(.horizontal, Layout.pad(6, 10))
-        .background(
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .fill(Color.black.opacity(0.28)))
-                .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .strokeBorder(.white.opacity(0.14), lineWidth: 1))
-        )
-        .shadow(color: .black.opacity(0.32), radius: 16, y: 9)
-        .frame(maxWidth: Layout.pad(CGFloat(520), CGFloat(620)))
-        .padding(.horizontal, AppSpacing.md)
-        .padding(.bottom, Layout.pad(6, 10))
+        .padding(.top, Layout.pad(9, 11))
+        .padding(.bottom, Layout.pad(4, 6))
+        .padding(.horizontal, Layout.pad(6, 12))
+        .frame(maxWidth: Layout.pad(CGFloat(640), CGFloat(760)))
         .frame(maxWidth: .infinity)
+        .background(
+            UnevenRoundedRectangle(topLeadingRadius: 22, bottomLeadingRadius: 0,
+                                   bottomTrailingRadius: 0, topTrailingRadius: 22, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(UnevenRoundedRectangle(topLeadingRadius: 22, bottomLeadingRadius: 0,
+                                                bottomTrailingRadius: 0, topTrailingRadius: 22, style: .continuous)
+                    .fill(Color.black.opacity(0.34)))
+                .overlay(alignment: .top) { Rectangle().fill(.white.opacity(0.12)).frame(height: 1) }
+                .ignoresSafeArea(edges: .bottom)
+        )
+        .shadow(color: .black.opacity(0.28), radius: 12, y: -2)
     }
 
     private func tab(_ item: Item) -> some View {

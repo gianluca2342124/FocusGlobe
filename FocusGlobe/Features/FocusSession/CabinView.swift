@@ -49,7 +49,20 @@ struct CabinView: View {
         // Gentle float so the cabin feels suspended, not static.
         let floatY = animated ? CGFloat(Foundation.sin(t * 0.5)) * 4 : 0
         let floatRot = animated ? CGFloat(Foundation.sin(t * 0.32)) * 0.35 : 0
-        return ZStack {
+        return Group {
+            if let asset = cabinAssetName(W: W, H: H) {
+                assetCabin(asset: asset, W: W, H: H, t: t)
+            } else {
+                proceduralCabin(W: W, H: H, t: t)
+            }
+        }
+        .rotationEffect(.degrees(Double(floatRot)))
+        .offset(y: floatY)
+        .allowsHitTesting(false)
+    }
+
+    private func proceduralCabin(W: CGFloat, H: CGFloat, t: Double) -> some View {
+        ZStack {
             interiorBackground(W: W, H: H)
             skyWindow(W: W, H: H, t: t)
             topWarmth(W: W, H: H, t: t)
@@ -59,9 +72,60 @@ struct CabinView: View {
             floorPet(W: W, H: H, t: t)
             assetOverlay
         }
-        .rotationEffect(.degrees(Double(floatRot)))
-        .offset(y: floatY)
-        .allowsHitTesting(false)
+    }
+
+    // MARK: Bundled cabin art (cabin_iphone / cabin_ipad / cabin_mac)
+
+    /// The device-appropriate cabin image, or nil to use the procedural cabin.
+    /// Chosen by aspect ratio: wide → Mac, large square-ish → iPad, else iPhone.
+    private func cabinAssetName(W: CGFloat, H: CGFloat) -> String? {
+        #if canImport(UIKit)
+        let candidate: String
+        let aspect = W / max(1, H)
+        if aspect > 1.2 { candidate = "cabin_mac" }
+        else if min(W, H) > 700 { candidate = "cabin_ipad" }
+        else { candidate = "cabin_iphone" }
+        return UIImage(named: candidate) != nil ? candidate : nil
+        #else
+        return nil
+        #endif
+    }
+
+    /// The live flight world sits BEHIND the cabin art; the art's transparent
+    /// window region reveals it, so you look *out* at the Sky. Equipped Store
+    /// decorations rest on the sill on top.
+    private func assetCabin(asset: String, W: CGFloat, H: CGFloat, t: Double) -> some View {
+        ZStack {
+            Color(hex: 0x120C08)
+            ActiveFlightJourneyWorldView(elapsed: elapsed, seed: seed,
+                                         animated: animated, openingBias: openingBias,
+                                         skyPool: skyPool, skyParticles: skyParticles,
+                                         focusSky: focusSky)
+                .frame(width: W, height: H).clipped()
+            #if canImport(UIKit)
+            if let ui = UIImage(named: asset) {
+                Image(uiImage: ui).resizable().scaledToFill()
+                    .frame(width: W, height: H).clipped()
+            }
+            #endif
+            assetEquippedProps(W: W, H: H, t: t)
+        }
+        .frame(width: W, height: H)
+    }
+
+    // Equipped decorations placed over the cabin sill (approximate per-asset
+    // anchors; subtle and premium, never overcrowded).
+    @ViewBuilder private func assetEquippedProps(W: CGFloat, H: CGFloat, t: Double) -> some View {
+        if equippedItemIDs.contains("cabin-plant") {
+            CabinFern(t: animated ? t : 0)
+                .frame(width: W * 0.12, height: W * 0.15)
+                .position(x: W * 0.30, y: H * 0.50)
+        }
+        if equippedItemIDs.contains("cabin-teapot") {
+            CabinTeapot()
+                .frame(width: W * 0.15, height: W * 0.11)
+                .position(x: W * 0.70, y: H * 0.50)
+        }
     }
 
     // MARK: 1 — Interior background (warm amber walls + soft lantern glow)

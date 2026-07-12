@@ -148,7 +148,7 @@ struct FocusSessionView: View {
 
             if soundToastVisible {
                 soundToast
-                    .transition(.opacity.combined(with: .offset(x: -10)))
+                    .transition(.opacity.combined(with: .offset(y: -8)))
             }
 
             if showControlsPanel {
@@ -299,16 +299,14 @@ struct FocusSessionView: View {
         .transition(.opacity)
     }
 
+    /// A subtle FocusGlobe watermark where the status label used to be — quiet,
+    /// low-opacity branding that never competes with the flight.
     private var statusPill: some View {
-        HStack(spacing: 6) {
-            Circle().fill(AppColors.success).frame(width: 7, height: 7)
-            Text(vm.statusLabel).font(AppTypography.caption)
-        }
-        .foregroundStyle(.white)
-        .padding(.horizontal, AppSpacing.sm)
-        .padding(.vertical, 8)
-        .background(Capsule().fill(.white.opacity(0.1)))
-        .overlay(Capsule().strokeBorder(.white.opacity(0.12), lineWidth: 1))
+        Text("FocusGlobe")
+            .font(.system(size: Layout.pad(13, 15), weight: .semibold, design: .serif))
+            .foregroundStyle(.white.opacity(0.4))
+            .tracking(0.5)
+            .accessibilityHidden(true)
     }
 
     // MARK: Paused state — a large, calm, unmistakable pause treatment
@@ -399,12 +397,11 @@ struct FocusSessionView: View {
         .frame(maxWidth: .infinity)
     }
 
-    /// A premium music-style "now playing" card that slides in from the lower
-    /// left — "Playing" small over the soundscape name large — then fades. It sits
-    /// low and to the side so it never covers the balloon or the hero timer.
+    /// A premium music-style "now playing" card near the top (just below the
+    /// status/controls) — "Playing" small over the soundscape name large — that
+    /// fades in and out and never covers the balloon or the hero timer.
     private var soundToast: some View {
         VStack {
-            Spacer()
             HStack {
                 HStack(spacing: 11) {
                     ZStack {
@@ -433,7 +430,8 @@ struct FocusSessionView: View {
                 Spacer()
             }
             .padding(.horizontal, AppSpacing.screen)
-            .padding(.bottom, Layout.pad(150, 200))   // clear of the hero timer
+            .padding(.top, Layout.pad(78, 96))   // just below the status/controls row
+            Spacer()
         }
         .allowsHitTesting(false)
     }
@@ -465,7 +463,6 @@ struct FocusSessionView: View {
             FlightControlsPanel(
                 muted: vm.isAudioMuted,
                 isCabin: viewMode == .cabin,
-                planLabel: isInfinity ? "Endless" : Formatters.durationLabel(minutes: vm.route.durationMinutes),
                 onToggleMute: { vm.toggleMute() },
                 onToggleCabin: {
                     appModel.tapFeedback()
@@ -770,7 +767,6 @@ private struct BalloonTrailView: View {
 private struct FlightControlsPanel: View {
     let muted: Bool
     let isCabin: Bool
-    let planLabel: String
     let onToggleMute: () -> Void
     let onToggleCabin: () -> Void
     let onInvite: () -> Void
@@ -813,7 +809,6 @@ private struct FlightControlsPanel: View {
             }
 
             inviteButton
-            timerRow
         }
         .padding(AppSpacing.md)
         .frame(width: Layout.pad(270, 300))
@@ -891,21 +886,5 @@ private struct FlightControlsPanel: View {
             .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(AppColors.gold))
         }
         .buttonStyle(SoftPressStyle(scale: 0.98))
-    }
-
-    private var timerRow: some View {
-        HStack(spacing: AppSpacing.sm) {
-            Image(systemName: "clock")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.55)).frame(width: 24)
-            Text("Flight time")
-                .font(.system(size: 13, weight: .medium, design: .rounded))
-                .foregroundStyle(.white.opacity(0.7))
-            Spacer()
-            Text(planLabel)
-                .font(.system(size: 13, weight: .heavy, design: .rounded))
-                .foregroundStyle(.white)
-        }
-        .padding(.vertical, 7).padding(.horizontal, 9)
     }
 }

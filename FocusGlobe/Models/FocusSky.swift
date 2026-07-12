@@ -11,7 +11,18 @@ import SwiftUI
 /// The catalog is data-only, so adding Skies later is a one-entry change.
 struct FocusSky: Identifiable, Hashable {
     enum Category: String { case city, nature, cosmic }
-    enum UnlockRequirement { case free, premiumOrInvites }
+
+    /// How a Sky is earned. Every non-free requirement is **also** satisfied by
+    /// Premium. Free-path requirements (invites / focus minutes / streak days)
+    /// are checked against live on-device progress; invite unlocks additionally
+    /// persist once the referral pipeline confirms them.
+    enum UnlockRequirement: Hashable {
+        case free
+        case premium                 // Premium only
+        case invite(Int)             // invite N friends OR Premium
+        case focusMinutes(Int)       // reach N lifetime focus minutes OR Premium
+        case streakDays(Int)         // reach an N-day streak OR Premium
+    }
     /// A tasteful signature accent drawn in the full-screen preview.
     enum Accent { case none, moon, aurora, planet, lanterns, rain, bigStars }
 
@@ -71,14 +82,52 @@ struct FocusSky: Identifiable, Hashable {
         case "rainy-tokyo":      return ([.nightValley, .violetTwilight], .rain)
         case "swiss-alps":       return ([.snowSky, .cloudOcean], .snow)
         case "sahara-night":     return ([.nightValley, .starfield], .none)
-        case "santorini-dawn":   return ([.roseDawn, .cloudOcean], .none)
         default:                 return ([.goldenHorizon, .cloudOcean, .roseDawn], .none)
         }
     }
 
-    var isDefaultFree: Bool { unlockRequirement == .free }
-    var isPremium: Bool { unlockRequirement == .premiumOrInvites }
-    var requiresPremiumOrInvites: Bool { unlockRequirement == .premiumOrInvites }
+    var isDefaultFree: Bool { if case .free = unlockRequirement { return true }; return false }
+    /// "Premium-gated" in the loose sense: anything that isn't the free Sky.
+    var isPremium: Bool { !isDefaultFree }
+    var requiresPremiumOrInvites: Bool { !isDefaultFree }
+
+    /// The invite count this Sky needs on its free path (nil if not invite-based).
+    var invitesRequired: Int? {
+        if case .invite(let n) = unlockRequirement { return n }
+        return nil
+    }
+
+    /// A short label for the Sky's free unlock path (used on the unlock sheet).
+    var unlockMethodLabel: String {
+        switch unlockRequirement {
+        case .free:              return "Free"
+        case .premium:           return "Premium only"
+        case .invite(let n):     return "Invite \(n) friend\(n == 1 ? "" : "s")"
+        case .focusMinutes(let n): return "\(n) focus minutes"
+        case .streakDays(let n): return "\(n)-day streak"
+        }
+    }
+
+    /// Progress on the free path as "current/target", or nil for free / premium-only.
+    func unlockProgressText(focusMinutes: Int, streakDays: Int, invites: Int) -> String? {
+        switch unlockRequirement {
+        case .free, .premium:      return nil
+        case .invite(let n):       return "\(min(invites, n))/\(n) friends"
+        case .focusMinutes(let n): return "\(min(focusMinutes, n))/\(n) min"
+        case .streakDays(let n):   return "\(min(streakDays, n))/\(n) days"
+        }
+    }
+
+    /// Fractional progress (0…1) on the free path, or nil when none applies.
+    func unlockFraction(focusMinutes: Int, streakDays: Int, invites: Int) -> Double? {
+        switch unlockRequirement {
+        case .free, .premium:      return nil
+        case .invite(let n):       return n <= 0 ? 1 : min(1, Double(invites) / Double(n))
+        case .focusMinutes(let n): return n <= 0 ? 1 : min(1, Double(focusMinutes) / Double(n))
+        case .streakDays(let n):   return n <= 0 ? 1 : min(1, Double(streakDays) / Double(n))
+        }
+    }
+
     var isCitySky: Bool { category == .city }
     var isNatureSky: Bool { category == .nature }
     var isCosmicSky: Bool { category == .cosmic }
@@ -115,85 +164,80 @@ struct FocusSky: Identifiable, Hashable {
         estimatedActivityRange: 140...320, soundscapeID: "wind",
         visualPresetID: "sky-golden-hour", flightOpening: 1)
 
+    // Strategic order: free → early aspirational → varied unlock paths →
+    // ultimate premium. Each Sky earns its place a different way.
     static let all: [FocusSky] = [
         goldenHour,
         FocusSky(id: "paris-sunset", name: "Paris Sunset", subtitle: "City Sky",
                  description: "A romantic warm dusk over the rooftops, the tower resting far below.",
-                 category: .city, unlockRequirement: .premiumOrInvites,
+                 category: .city, unlockRequirement: .invite(3),
                  moodPalette: [0x33234E, 0x8E4A66, 0xE08A6A, 0xF2BE8C], glowHex: 0xF6B27A,
                  landmark: .tower, accent: .none, stars: 0.12,
                  estimatedActivityRange: 90...260, soundscapeID: "jazz",
                  visualPresetID: "sky-golden-hour", flightOpening: 1),
         FocusSky(id: "fiji-lagoon", name: "Fiji Lagoon", subtitle: "Nature Sky",
                  description: "Turquoise air over a quiet lagoon, soft islands drifting far below.",
-                 category: .nature, unlockRequirement: .premiumOrInvites,
+                 category: .nature, unlockRequirement: .premium,
                  moodPalette: [0x0E3A4E, 0x1E6E7E, 0x4FB4B4, 0xBFE8D8], glowHex: 0xA8F0DC,
                  landmark: .island, accent: .none, stars: 0.05,
                  estimatedActivityRange: 60...180, soundscapeID: "ocean",
                  visualPresetID: "sky-golden-hour", flightOpening: 1),
         FocusSky(id: "kyoto-lanterns", name: "Kyoto Lanterns", subtitle: "City Sky",
                  description: "A calm Japanese evening — lantern glow and quiet temple roofs below.",
-                 category: .city, unlockRequirement: .premiumOrInvites,
+                 category: .city, unlockRequirement: .invite(5),
                  moodPalette: [0x1E1638, 0x442A52, 0x8E4658, 0xE09A6E], glowHex: 0xF2AA6A,
                  landmark: .pagoda, accent: .lanterns, stars: 0.25,
                  estimatedActivityRange: 70...200, soundscapeID: "relaxing",
                  visualPresetID: "sky-silent-dawn", flightOpening: 2),
         FocusSky(id: "aurora-snowfield", name: "Aurora Snowfield", subtitle: "Nature Sky",
                  description: "Curtains of green and violet breathing over silent snow.",
-                 category: .nature, unlockRequirement: .premiumOrInvites,
+                 category: .nature, unlockRequirement: .focusMinutes(1000),
                  moodPalette: [0x040A18, 0x0C2238, 0x14524E, 0x54E0A8], glowHex: 0x54E0A8,
                  landmark: .aurora, accent: .aurora, stars: 0.7,
                  estimatedActivityRange: 50...170, soundscapeID: "wind",
                  visualPresetID: "sky-starfield", flightOpening: 2),
-        FocusSky(id: "moon-garden", name: "Moon Garden", subtitle: "Cosmic Sky",
-                 description: "A vast pale moon and quiet night clouds, lit in cream.",
-                 category: .cosmic, unlockRequirement: .premiumOrInvites,
-                 moodPalette: [0x0E1428, 0x1E2A44, 0x3A4A66, 0x8A98B4], glowHex: 0xEDF2FB,
-                 landmark: .generic, accent: .moon, stars: 0.55,
-                 estimatedActivityRange: 60...190, soundscapeID: "relaxing",
-                 visualPresetID: "sky-starfield", flightOpening: 3),
-        FocusSky(id: "galaxy-drift", name: "Galaxy Drift", subtitle: "Cosmic Sky",
-                 description: "Purple-blue nebula mist and distant stars, drifting slowly.",
-                 category: .cosmic, unlockRequirement: .premiumOrInvites,
-                 moodPalette: [0x0A0620, 0x1C1048, 0x3A2E7E, 0x6E4AE8], glowHex: 0x8F7BE8,
-                 landmark: .generic, accent: .planet, stars: 0.9,
-                 estimatedActivityRange: 80...240, soundscapeID: "alpha-waves",
-                 visualPresetID: "sky-starfield", flightOpening: 2),
-        FocusSky(id: "deep-space", name: "Deep Space", subtitle: "Cosmic Sky",
-                 description: "Planets, a dense starfield, and complete cosmic silence.",
-                 category: .cosmic, unlockRequirement: .premiumOrInvites,
-                 moodPalette: [0x020308, 0x060B18, 0x0E1430, 0x1C2448], glowHex: 0x6E7EC8,
-                 landmark: .generic, accent: .planet, stars: 1.0,
-                 estimatedActivityRange: 40...150, soundscapeID: "alpha-waves",
-                 visualPresetID: "sky-starfield", flightOpening: 0),
         FocusSky(id: "rainy-tokyo", name: "Rainy Tokyo", subtitle: "City Sky",
                  description: "Soft rain over a muted neon skyline — cozy, blue, and quiet.",
-                 category: .city, unlockRequirement: .premiumOrInvites,
+                 category: .city, unlockRequirement: .streakDays(3),
                  moodPalette: [0x0C1224, 0x1A2440, 0x2E3A60, 0x50548E], glowHex: 0x8FA6D8,
                  landmark: .skyline, accent: .rain, stars: 0.2,
                  estimatedActivityRange: 100...280, soundscapeID: "rain",
                  visualPresetID: "sky-starfield", flightOpening: 0),
+        FocusSky(id: "moon-garden", name: "Moon Garden", subtitle: "Cosmic Sky",
+                 description: "A vast pale moon and quiet night clouds, lit in cream.",
+                 category: .cosmic, unlockRequirement: .focusMinutes(3000),
+                 moodPalette: [0x0E1428, 0x1E2A44, 0x3A4A66, 0x8A98B4], glowHex: 0xEDF2FB,
+                 landmark: .generic, accent: .moon, stars: 0.55,
+                 estimatedActivityRange: 60...190, soundscapeID: "relaxing",
+                 visualPresetID: "sky-starfield", flightOpening: 3),
         FocusSky(id: "swiss-alps", name: "Swiss Alps", subtitle: "Nature Sky",
                  description: "High snowy peaks in a cold, clean sunrise glow.",
-                 category: .nature, unlockRequirement: .premiumOrInvites,
+                 category: .nature, unlockRequirement: .streakDays(7),
                  moodPalette: [0x1A2E44, 0x3A5C7C, 0x7C9CB8, 0xE8EEF4], glowHex: 0xF6D9B4,
                  landmark: .mountain, accent: .none, stars: 0.1,
                  estimatedActivityRange: 50...160, soundscapeID: "wind",
                  visualPresetID: "sky-silent-dawn", flightOpening: 2),
         FocusSky(id: "sahara-night", name: "Sahara Night", subtitle: "Nature Sky",
                  description: "Warm dunes under a huge, star-heavy desert night.",
-                 category: .nature, unlockRequirement: .premiumOrInvites,
+                 category: .nature, unlockRequirement: .invite(1),
                  moodPalette: [0x0A0A1E, 0x201838, 0x4A2E44, 0x8E5A46], glowHex: 0xE8B080,
                  landmark: .desert, accent: .bigStars, stars: 0.8,
                  estimatedActivityRange: 40...140, soundscapeID: "wind",
                  visualPresetID: "sky-starfield", flightOpening: 3),
-        FocusSky(id: "santorini-dawn", name: "Santorini Dawn", subtitle: "City Sky",
-                 description: "A Mediterranean sunrise — cream domes far below, ocean glow ahead.",
-                 category: .city, unlockRequirement: .premiumOrInvites,
-                 moodPalette: [0x2C2452, 0x8A5C88, 0xF0A88E, 0xF6CCB2], glowHex: 0xFFB79E,
-                 landmark: .dome, accent: .none, stars: 0.06,
-                 estimatedActivityRange: 60...190, soundscapeID: "ocean",
-                 visualPresetID: "sky-silent-dawn", flightOpening: 1),
+        FocusSky(id: "galaxy-drift", name: "Galaxy Drift", subtitle: "Cosmic Sky",
+                 description: "Purple-blue nebula mist and distant stars, drifting slowly.",
+                 category: .cosmic, unlockRequirement: .premium,
+                 moodPalette: [0x0A0620, 0x1C1048, 0x3A2E7E, 0x6E4AE8], glowHex: 0x8F7BE8,
+                 landmark: .generic, accent: .planet, stars: 0.9,
+                 estimatedActivityRange: 80...240, soundscapeID: "alpha-waves",
+                 visualPresetID: "sky-starfield", flightOpening: 2),
+        FocusSky(id: "deep-space", name: "Deep Space", subtitle: "Cosmic Sky",
+                 description: "Planets, a dense starfield, and complete cosmic silence.",
+                 category: .cosmic, unlockRequirement: .focusMinutes(10000),
+                 moodPalette: [0x020308, 0x060B18, 0x0E1430, 0x1C2448], glowHex: 0x6E7EC8,
+                 landmark: .generic, accent: .planet, stars: 1.0,
+                 estimatedActivityRange: 40...150, soundscapeID: "alpha-waves",
+                 visualPresetID: "sky-starfield", flightOpening: 0),
     ]
 
     static func byID(_ id: String?) -> FocusSky? {
@@ -216,12 +260,19 @@ struct FocusSky: Identifiable, Hashable {
 /// locked Sky needs its own 3 accepted invites). Pure functions so the
 /// backend-driven entitlement slots in without touching call sites.
 enum SkyUnlock {
+    /// Legacy constant kept for any older reference; per-Sky invite counts now
+    /// come from `sky.invitesRequired`.
     static let invitesNeeded = 3
 
-    static func isUnlocked(_ sky: FocusSky, isPro: Bool, unlockedSkyIDs: Set<String>) -> Bool {
-        if sky.isDefaultFree { return true }
-        if isPro { return true }
-        return unlockedSkyIDs.contains(sky.id)
+    static func isUnlocked(_ sky: FocusSky, isPro: Bool, unlockedSkyIDs: Set<String>,
+                           focusMinutes: Int, streakDays: Int, invites: Int) -> Bool {
+        switch sky.unlockRequirement {
+        case .free:                return true
+        case .premium:             return isPro
+        case .invite(let n):       return isPro || unlockedSkyIDs.contains(sky.id) || invites >= n
+        case .focusMinutes(let n): return isPro || focusMinutes >= n
+        case .streakDays(let n):   return isPro || streakDays >= n
+        }
     }
 }
 

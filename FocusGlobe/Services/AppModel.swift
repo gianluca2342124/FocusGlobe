@@ -248,22 +248,36 @@ final class AppModel: ObservableObject {
     /// all while active; otherwise the Sky must have earned its own 3 accepted
     /// invites (per-Sky unlocks — never global).
     func isSkyUnlocked(_ sky: FocusSky) -> Bool {
-        SkyUnlock.isUnlocked(sky, isPro: isPro, unlockedSkyIDs: profile.unlockedSkyIDs ?? [])
+        SkyUnlock.isUnlocked(sky, isPro: isPro, unlockedSkyIDs: profile.unlockedSkyIDs ?? [],
+                             focusMinutes: lifetimeFocusMinutes,
+                             streakDays: progress.currentStreak,
+                             invites: rawInviteCount(for: sky))
     }
 
-    /// Accepted invites counted toward unlocking this specific Sky.
+    /// Lifetime completed focus minutes — drives minute-based Sky unlocks.
+    var lifetimeFocusMinutes: Int {
+        history.filter { $0.completed }.reduce(0) { $0 + $1.focusedSeconds } / 60
+    }
+
+    private func rawInviteCount(for sky: FocusSky) -> Int {
+        (profile.inviteProgressBySkyID ?? [:])[sky.id] ?? 0
+    }
+
+    /// Accepted invites counted toward unlocking this specific Sky (capped at the
+    /// Sky's own required count).
     func inviteProgress(for sky: FocusSky) -> Int {
-        min(SkyUnlock.invitesNeeded, (profile.inviteProgressBySkyID ?? [:])[sky.id] ?? 0)
+        min(sky.invitesRequired ?? SkyUnlock.invitesNeeded, rawInviteCount(for: sky))
     }
 
     /// The backend/universal-link entry point: one verified accepted invite for
-    /// one specific Sky. At 3, that Sky (and only that Sky) unlocks. Production
-    /// must only ever call this from a trusted source — never fabricate it.
+    /// one specific Sky. At the Sky's required count, that Sky (and only that
+    /// Sky) unlocks. Production must only ever call this from a trusted source.
     func registerAcceptedInvite(forSkyID skyID: String) {
         var perSky = profile.inviteProgressBySkyID ?? [:]
         perSky[skyID, default: 0] += 1
         profile.inviteProgressBySkyID = perSky
-        if perSky[skyID, default: 0] >= SkyUnlock.invitesNeeded {
+        let need = FocusSky.byID(skyID)?.invitesRequired ?? SkyUnlock.invitesNeeded
+        if perSky[skyID, default: 0] >= need {
             var unlocked = profile.unlockedSkyIDs ?? []
             unlocked.insert(skyID)
             profile.unlockedSkyIDs = unlocked

@@ -11,7 +11,6 @@ struct HomeView: View {
     @EnvironmentObject private var router: AppRouter
     @StateObject private var viewModel = HomeViewModel()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var showResume = false
     @State private var showStreak = false
     @State private var showSetup = false
     @State private var showUnlock = false
@@ -59,11 +58,13 @@ struct HomeView: View {
             .allowsHitTesting(false)
 
             // The pilot's balloon — the fixed visual anchor while Skies change.
+            // Larger and more emotionally central on Home (the flight keeps its
+            // own small balloon).
             GeometryReader { geo in
-                let size = max(76, min(98, geo.size.height * 0.12))
+                let size = max(104, min(140, geo.size.height * 0.17))
                 FlightBalloonView(size: size, showGlow: true)
-                    .position(x: geo.size.width / 2, y: geo.size.height * 0.40 + balloonFloat)
-                    .shadow(color: .black.opacity(0.28), radius: 12, y: 7)
+                    .position(x: geo.size.width / 2, y: geo.size.height * 0.38 + balloonFloat)
+                    .shadow(color: .black.opacity(0.3), radius: 16, y: 9)
             }
             .allowsHitTesting(false)
             .opacity(handingOff ? 0 : 1)
@@ -91,7 +92,6 @@ struct HomeView: View {
                 skyIndex = FocusSky.all.firstIndex(of: appModel.selectedSky) ?? 0
                 didInitSky = true
             }
-            maybeShowResume()
             maybeShowPremiumIntro()
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 3.4).repeatForever(autoreverses: true)) { balloonFloat = -10 }
@@ -131,18 +131,6 @@ struct HomeView: View {
                        width: Layout.streakPanelWidth, height: Layout.streakPanelHeight) {
             StreakDetailsView().environmentObject(appModel)
         }
-        .adaptiveModal(isPresented: $showResume,
-                       width: Layout.resumePanelWidth, height: Layout.resumePanelHeight) {
-            ResumeJourneySheet(
-                snapshot: appModel.resumableJourney,
-                onContinue: { showResume = false; continueResumableJourney() },
-                onStartNew: {
-                    showResume = false
-                    appModel.clearResumableJourney()
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { showSetup = true }
-                }
-            )
-        }
     }
 
     // MARK: Ticket → flight hand-off (no Home flash)
@@ -166,12 +154,7 @@ struct HomeView: View {
                             route: takeoff.route, intention: takeoff.intention)
     }
 
-    // MARK: Resume / premium intro (unchanged logic)
-
-    private func maybeShowResume() {
-        guard appModel.resumableJourney != nil, router.activeJourney == nil else { return }
-        showResume = true
-    }
+    // MARK: Resume / premium intro
 
     private func continueResumableJourney() {
         guard let journey = appModel.makeResumeJourney() else { return }
@@ -181,7 +164,7 @@ struct HomeView: View {
     }
 
     private func maybeShowPremiumIntro() {
-        guard appModel.resumableJourney == nil, !showResume else { return }
+        guard appModel.resumableJourney == nil else { return }
         guard appModel.shouldShowPremiumIntro, !router.showPaywall else { return }
         appModel.markPremiumIntroSeen()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
@@ -224,13 +207,14 @@ struct HomeView: View {
     private var coinsChip: some View {
         Button { appModel.tapFeedback(); router.openStore() } label: {
             HStack(spacing: 5) {
-                FocusCoinIcon(size: Layout.pad(15, 17))
+                FocusCoinIcon(size: Layout.pad(22, 25))
                 Text(Formatters.miles(appModel.focusCoins))
                     .font(.system(size: Layout.pad(14, 17), weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
             }
-            .padding(.horizontal, Layout.pad(11, 14))
-            .padding(.vertical, Layout.pad(8, 10))
+            .padding(.leading, Layout.pad(8, 11))
+            .padding(.trailing, Layout.pad(11, 14))
+            .padding(.vertical, Layout.pad(6, 8))
             .background(Capsule().fill(.white.opacity(0.1)))
             .overlay(Capsule().strokeBorder(.white.opacity(0.12), lineWidth: 1))
         }
@@ -299,25 +283,30 @@ struct HomeView: View {
     /// the interaction obvious for anyone who doesn't think to swipe.
     private var edgeArrows: some View {
         HStack {
-            edgeArrow(system: "chevron.left", enabled: skyIndex > 0) {
-                withAnimation(.easeInOut(duration: 0.35)) { skyIndex = max(0, skyIndex - 1) }
-            }
+            edgeArrow(system: "chevron.left") { stepSky(-1) }
             Spacer()
-            edgeArrow(system: "chevron.right", enabled: skyIndex < FocusSky.all.count - 1) {
-                withAnimation(.easeInOut(duration: 0.35)) {
-                    skyIndex = min(FocusSky.all.count - 1, skyIndex + 1)
-                }
-            }
+            edgeArrow(system: "chevron.right") { stepSky(1) }
         }
         .padding(.horizontal, AppSpacing.xs)
         .offset(y: -28)
     }
 
-    private func edgeArrow(system: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+    /// Move one Sky in either direction, wrapping around the ends (last → first
+    /// and first → last) with a soft haptic tick on the wrap.
+    private func stepSky(_ delta: Int) {
+        let n = FocusSky.all.count
+        guard n > 0 else { return }
+        let wrapping = (delta > 0 && skyIndex == n - 1) || (delta < 0 && skyIndex == 0)
+        if wrapping { appModel.haptics.bubble() }
+        let next = ((skyIndex + delta) % n + n) % n
+        withAnimation(.easeInOut(duration: 0.35)) { skyIndex = next }
+    }
+
+    private func edgeArrow(system: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: system)
                 .font(.system(size: Layout.pad(19, 23), weight: .bold))
-                .foregroundStyle(.white.opacity(enabled ? 0.92 : 0.3))
+                .foregroundStyle(.white.opacity(0.92))
                 .frame(width: Layout.pad(48, 56), height: Layout.pad(48, 56))
                 .background(Circle().fill(.ultraThinMaterial))
                 .overlay(Circle().fill(Color.black.opacity(0.18)))
@@ -325,8 +314,6 @@ struct HomeView: View {
                 .shadow(color: .black.opacity(0.28), radius: 9, y: 4)
         }
         .buttonStyle(SoftPressStyle())
-        .disabled(!enabled)
-        .opacity(enabled ? 1 : 0.45)
         .accessibilityLabel(system == "chevron.left" ? "Previous Sky" : "Next Sky")
     }
 
@@ -353,6 +340,10 @@ struct HomeView: View {
 
             activityIsland
 
+            if appModel.resumableJourney != nil {
+                resumeBanner
+            }
+
             if currentSkyUnlocked {
                 AppPrimaryButton(title: "Start Focus", systemImage: "arrow.up") {
                     appModel.tapFeedback()
@@ -363,6 +354,43 @@ struct HomeView: View {
                 lockedCTA
             }
         }
+    }
+
+    /// A subtle, non-blocking resume card (replaces the old modal pop-up): shown
+    /// only when an unfinished flight is saved. Tapping continues it.
+    private var resumeBanner: some View {
+        Button {
+            appModel.tapFeedback()
+            continueResumableJourney()
+        } label: {
+            HStack(spacing: AppSpacing.sm) {
+                Image(systemName: "arrow.up.circle.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(AppColors.gold)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Resume your flight")
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                    Text("You have an unfinished flight")
+                        .font(.system(size: 11.5, weight: .medium, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.6))
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.5))
+            }
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.vertical, 11)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.black.opacity(0.26)))
+                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(AppColors.gold.opacity(0.3), lineWidth: 1))
+            )
+        }
+        .buttonStyle(SoftPressStyle(scale: 0.99))
     }
 
     /// One dot per Sky, the selected one stretched into a gold capsule.
@@ -385,7 +413,7 @@ struct HomeView: View {
                 .fill(Color(hex: 0x4ADE80))
                 .frame(width: 8, height: 8)
                 .shadow(color: Color(hex: 0x4ADE80).opacity(0.8), radius: activityPulse ? 5 : 2)
-            Text("\(SkyActivity.count(for: currentSky)) focusing now")
+            Text("\(SkyActivity.count(for: currentSky)) users focusing now")
                 .font(.system(size: Layout.pad(13, 15), weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
         }
@@ -443,6 +471,10 @@ private struct SkyUnlockSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     private var invites: Int { appModel.inviteProgress(for: sky) }
+    private var progressText: String? {
+        sky.unlockProgressText(focusMinutes: appModel.lifetimeFocusMinutes,
+                               streakDays: appModel.progress.currentStreak, invites: invites)
+    }
 
     var body: some View {
         ZStack {
@@ -474,7 +506,7 @@ private struct SkyUnlockSheet: View {
                             router.presentPaywall()
                         }
                     }
-                    inviteBlock
+                    requirementBlock
                 }
                 .padding(.horizontal, AppSpacing.screen)
 
@@ -487,43 +519,61 @@ private struct SkyUnlockSheet: View {
         .presentationDragIndicator(.visible)
     }
 
-    private var inviteBlock: some View {
-        VStack(spacing: AppSpacing.sm) {
-            ShareLink(item: appModel.inviteShareMessage(for: sky)) {
+    /// The free-path block, adapting to the Sky's specific requirement: an
+    /// invite share + progress, or a focus-minutes / streak progress line.
+    @ViewBuilder private var requirementBlock: some View {
+        switch sky.unlockRequirement {
+        case .premium:
+            Text("This Sky is available with Premium.")
+                .font(AppTypography.caption)
+                .foregroundStyle(AppColors.textSecondary)
+        case .invite(let need):
+            VStack(spacing: AppSpacing.sm) {
+                ShareLink(item: appModel.inviteShareMessage(for: sky)) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "person.2.fill").font(.system(size: 15, weight: .bold))
+                        Text("Invite \(need) friend\(need == 1 ? "" : "s")").font(AppTypography.headline)
+                    }
+                    .foregroundStyle(AppColors.textPrimary)
+                    .frame(maxWidth: .infinity).frame(height: 52)
+                    .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.2,
+                                     shadowRadius: 8, shadowY: 4)
+                }
+                .simultaneousGesture(TapGesture().onEnded { appModel.tapFeedback() })
                 HStack(spacing: 8) {
-                    Image(systemName: "person.2.fill")
-                        .font(.system(size: 15, weight: .bold))
-                    Text("Invite 3 friends")
-                        .font(AppTypography.headline)
+                    ForEach(0..<need, id: \.self) { i in
+                        Circle()
+                            .fill(i < invites ? AppColors.gold : AppColors.textPrimary.opacity(0.14))
+                            .frame(width: 9, height: 9)
+                    }
+                    Text("\(invites)/\(need) friends joined")
+                        .font(AppTypography.caption)
+                        .foregroundStyle(AppColors.textSecondary)
                 }
-                .foregroundStyle(AppColors.textPrimary)
-                .frame(maxWidth: .infinity)
-                .frame(height: 52)
-                .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.2,
-                                 shadowRadius: 8, shadowY: 4)
-            }
-            .simultaneousGesture(TapGesture().onEnded { appModel.tapFeedback() })
-
-            HStack(spacing: 8) {
-                ForEach(0..<SkyUnlock.invitesNeeded, id: \.self) { i in
-                    Circle()
-                        .fill(i < invites ? AppColors.gold : AppColors.textPrimary.opacity(0.14))
-                        .frame(width: 9, height: 9)
+                #if DEBUG
+                Button("DEBUG: simulate accepted invite") {
+                    appModel.debugSimulateAcceptedInvite(forSkyID: sky.id)
                 }
-                Text("\(invites)/\(SkyUnlock.invitesNeeded) friends joined for \(sky.name)")
-                    .font(AppTypography.caption)
-                    .foregroundStyle(AppColors.textSecondary)
+                .font(AppTypography.caption)
+                .foregroundStyle(AppColors.textTertiary)
+                #endif
             }
-
-            #if DEBUG
-            // Testing only — never compiled into release: simulates the referral
-            // backend confirming one accepted invite.
-            Button("DEBUG: simulate accepted invite") {
-                appModel.debugSimulateAcceptedInvite(forSkyID: sky.id)
+        case .focusMinutes, .streakDays:
+            VStack(spacing: 8) {
+                Text("Or earn it for free")
+                    .font(AppTypography.caption).foregroundStyle(AppColors.textSecondary)
+                if let frac = sky.unlockFraction(focusMinutes: appModel.lifetimeFocusMinutes,
+                                                 streakDays: appModel.progress.currentStreak, invites: invites) {
+                    ProgressView(value: frac).tint(AppColors.gold)
+                        .frame(maxWidth: 260)
+                }
+                if let t = progressText {
+                    Text("\(sky.unlockMethodLabel) · \(t)")
+                        .font(AppTypography.caption).foregroundStyle(AppColors.textTertiary)
+                }
             }
-            .font(AppTypography.caption)
-            .foregroundStyle(AppColors.textTertiary)
-            #endif
+        case .free:
+            EmptyView()
         }
     }
 }
