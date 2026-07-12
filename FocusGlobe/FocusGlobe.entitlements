@@ -29,8 +29,6 @@
 	</array>
 	<key>com.apple.developer.in-app-payments</key>
 	<array/>
-	<key>com.apple.developer.networking.wifi-info</key>
-	<true/>
 	<key>com.apple.developer.shared-with-you</key>
 	<true/>
 	<key>com.apple.developer.ubiquity-container-identifiers</key>
@@ -41,10 +39,6 @@
 	<true/>
 	<key>com.apple.developer.wifi-aware</key>
 	<array/>
-	<key>com.apple.developer.wifi-infrastructure</key>
-	<array>
-		<string>WiFiNetworkSharing</string>
-	</array>
 	<key>com.apple.security.application-groups</key>
 	<array>
 		<string>group.com.focusglobe.app</string>
