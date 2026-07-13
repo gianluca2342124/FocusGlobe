@@ -26,6 +26,10 @@ struct CabinView: View {
     var skyPool: [WorldKind]? = nil
     var skyParticles: FocusSky.FlightParticle = .none
     var focusSky: FocusSky? = nil
+    /// Whether fellow pilots share this Sky (mirrors the exterior; hidden for a
+    /// solo flight). When true, the same ambient balloons drift **through the
+    /// window** so the cabin looks out on the very same shared journey.
+    var showPilots: Bool = true
     /// Owned Store cabin decorations the pilot has placed (`StoreItem` ids) —
     /// purely additive dressing; the cabin stands alone without any of them.
     var equippedItemIDs: Set<String> = []
@@ -102,6 +106,14 @@ struct CabinView: View {
                                          skyPool: skyPool, skyParticles: skyParticles,
                                          focusSky: focusSky)
                 .frame(width: W, height: H).clipped()
+            // The SAME fellow pilots as the exterior, drifting behind the cabin
+            // art so they read *through the window* (non-interactive in here).
+            if showPilots {
+                AmbientPilotsLayer(skyID: focusSky?.id ?? "classic",
+                                   elapsed: elapsed, animated: animated)
+                    .frame(width: W, height: H).clipped()
+                    .allowsHitTesting(false)
+            }
             #if canImport(UIKit)
             if let ui = UIImage(named: asset) {
                 Image(uiImage: ui).resizable().scaledToFill()
@@ -158,6 +170,14 @@ struct CabinView: View {
                                          focusSky: focusSky)
                 .frame(width: winW, height: winH)
                 .clipShape(shape)
+            // The same fellow pilots drifting past, clipped inside the glass.
+            if showPilots {
+                AmbientPilotsLayer(skyID: focusSky?.id ?? "classic",
+                                   elapsed: elapsed, animated: animated)
+                    .frame(width: winW, height: winH)
+                    .clipShape(shape)
+                    .allowsHitTesting(false)
+            }
             // Inner radial shade so the edges read darker → depth.
             shape
                 .fill(RadialGradient(colors: [.clear, .black.opacity(0.55)],

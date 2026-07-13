@@ -123,7 +123,7 @@ struct StreakDetailsView: View {
     // MARK: This week
 
     private var weekRow: some View {
-        let days = last7Days()
+        let days = weekDays()
         return GlassCard {
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
                 Text("THIS WEEK")
@@ -199,8 +199,15 @@ struct StreakDetailsView: View {
             } else if day.isToday {
                 Circle().fill(AppColors.gold.opacity(0.10))
                 Circle().strokeBorder(AppColors.gold.opacity(0.7), lineWidth: 2)
+            } else if day.isPast {
+                // A clearly missed day: a quiet grey ✕ (shown for new users too).
+                Circle().fill(AppColors.textPrimary.opacity(0.06))
+                Image(systemName: "xmark")
+                    .font(.system(size: size * 0.34, weight: .bold))
+                    .foregroundStyle(AppColors.textTertiary.opacity(0.75))
             } else {
-                Circle().fill(AppColors.textPrimary.opacity(0.08))
+                // A future day: empty and subtle.
+                Circle().fill(AppColors.textPrimary.opacity(0.06))
             }
         }
         .frame(width: size, height: size)
@@ -281,17 +288,26 @@ struct StreakDetailsView: View {
 
     // MARK: Helpers
 
-    private struct Day { let date: Date; let label: String; let active: Bool; let isToday: Bool }
+    private struct Day {
+        let date: Date; let label: String; let active: Bool
+        let isToday: Bool; let isPast: Bool; let isFuture: Bool
+    }
 
-    private func last7Days() -> [Day] {
+    /// The current calendar week (respects the locale's first weekday): completed
+    /// days flame, today is ringed, missed *past* days get a grey ✕, and future
+    /// days stay empty/subtle.
+    private func weekDays() -> [Day] {
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
         let landedDays = Set(appModel.history.filter { $0.completed }.map { cal.startOfDay(for: $0.date) })
         let fmt = DateFormatter(); fmt.dateFormat = "EEEEE"   // single-letter weekday
-        return (0..<7).reversed().map { offset in
-            let d = cal.date(byAdding: .day, value: -offset, to: today) ?? today
+        let startOfWeek = cal.dateInterval(of: .weekOfYear, for: today)?.start ?? today
+        return (0..<7).map { offset in
+            let d = cal.startOfDay(for: cal.date(byAdding: .day, value: offset, to: startOfWeek) ?? today)
             return Day(date: d, label: fmt.string(from: d),
-                       active: landedDays.contains(d), isToday: cal.isDate(d, inSameDayAs: today))
+                       active: landedDays.contains(d),
+                       isToday: cal.isDate(d, inSameDayAs: today),
+                       isPast: d < today, isFuture: d > today)
         }
     }
 }

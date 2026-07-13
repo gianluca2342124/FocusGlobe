@@ -54,6 +54,14 @@ struct UserProfile: Codable, Equatable {
     var lastDailyGiftDay: Int? = nil
     /// Whether the pilot prefers a distraction-free "clean" flight (minimal chrome).
     var cleanFlightMode: Bool? = nil
+    /// Unix time of the last successful Free Coin Spin (a light anti-spam cooldown).
+    var lastCoinSpinAt: Double? = nil
+    /// Unix time at which an *equipped* Coins Boost expires (nil = no boost armed).
+    /// While armed and unexpired, the next flight's coins are doubled up to 1 hour.
+    var coinBoostExpiresAt: Double? = nil
+    /// Unix time the Coins Boost gift popup was last offered (so it isn't shown
+    /// every launch).
+    var lastBoostGiftAt: Double? = nil
 
     static let empty = UserProfile()
 }

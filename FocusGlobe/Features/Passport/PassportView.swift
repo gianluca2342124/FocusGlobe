@@ -180,8 +180,6 @@ struct PassportView: View {
             StatTile(systemImage: "circle.hexagongrid.circle.fill",
                      value: Formatters.miles(progress.totalFocusMiles),
                      label: "Focus Coins earned", accent: AppColors.teal)
-            StatTile(systemImage: "person.2.fill",
-                     value: "\(friendsInvited)", label: "Friends invited", accent: AppColors.success)
         }
     }
 

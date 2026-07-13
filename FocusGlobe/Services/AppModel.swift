@@ -377,6 +377,99 @@ final class AppModel: ObservableObject {
         return Self.dailyGiftCoins
     }
 
+    // MARK: - Free Coin Spin (rewarded) & Coins Boost
+
+    /// The weighted spin ladder — small wins common, big wins rare (25 ultra rare).
+    static let coinSpinPrizes: [(coins: Int, weight: Int)] = [
+        (1, 26), (2, 22), (3, 18), (4, 12), (5, 9), (10, 7), (15, 4), (20, 1), (25, 1)
+    ]
+
+    /// A light anti-spam gate: at most one successful spin every 90 seconds. The
+    /// rewarded ad itself is the real throttle; this only stops rapid re-taps.
+    var canCoinSpin: Bool {
+        guard let last = profile.lastCoinSpinAt else { return true }
+        return Date().timeIntervalSince1970 - last >= 90
+    }
+
+    /// Show a rewarded ad, then (on reward) grant a weighted spin prize and return
+    /// it. Returns `nil` when no reward was earned (ad unavailable / dismissed) or
+    /// the cooldown hasn't elapsed — the caller shows a gentle message.
+    func spinCoinReward() async -> Int? {
+        guard canCoinSpin else { return nil }
+        let earned = await ads.showRewarded(.doubleMiles, isPro: isPro)
+        guard earned else { return nil }
+        let prize = Self.weightedSpinPrize()
+        profile.lastCoinSpinAt = Date().timeIntervalSince1970
+        addCoins(prize, source: "coin_spin")
+        return prize
+    }
+
+    private static func weightedSpinPrize() -> Int {
+        let total = coinSpinPrizes.reduce(0) { $0 + $1.weight }
+        var roll = Int.random(in: 0..<max(1, total))
+        for p in coinSpinPrizes {
+            if roll < p.weight { return p.coins }
+            roll -= p.weight
+        }
+        return 1
+    }
+
+    /// Add Focus Coins to the balance (spins, gifts). Lifetime-earned rises, so
+    /// spending never un-earns a badge.
+    func addCoins(_ n: Int, source: String) {
+        guard n > 0 else { return }
+        var p = progress
+        p.totalFocusMiles += n
+        progress = p
+        persistAll()
+        haptics.rewardClaim()
+        uiSound.play(.claim)
+        analytics.log(.rewardClaimed, ["source": source, "miles": n])
+    }
+
+    /// Whether an equipped Coins Boost is armed and still valid (24h window).
+    var isCoinBoostArmed: Bool {
+        guard let expiry = profile.coinBoostExpiresAt else { return false }
+        return Date().timeIntervalSince1970 < expiry
+    }
+
+    /// Seconds until the armed boost expires (0 when none).
+    var coinBoostRemaining: TimeInterval {
+        guard let expiry = profile.coinBoostExpiresAt else { return 0 }
+        return max(0, expiry - Date().timeIntervalSince1970)
+    }
+
+    /// Accept the gift: arm the boost for the next eligible flight (valid 24h).
+    /// Only one boost at a time — accepting again simply resets the window.
+    func armCoinBoost() {
+        profile.coinBoostExpiresAt = Date().timeIntervalSince1970 + 24 * 60 * 60
+        persistAll()
+        haptics.rewardClaim()
+        analytics.log(.rewardClaimed, ["source": "coin_boost_armed", "miles": 0])
+    }
+
+    /// Consume the boost if armed (called once at flight completion). Returns
+    /// whether it was active so the caller applies the doubling; also clears a
+    /// stale/expired boost so it can never linger.
+    @discardableResult
+    private func consumeCoinBoostIfArmed() -> Bool {
+        let armed = isCoinBoostArmed
+        profile.coinBoostExpiresAt = nil
+        return armed
+    }
+
+    /// Offer the Coins Boost gift occasionally: never on a brand-new account,
+    /// never while one is armed, and at most every ~3 days.
+    var shouldOfferCoinBoost: Bool {
+        guard progress.landings >= 1, !isCoinBoostArmed else { return false }
+        guard let last = profile.lastBoostGiftAt else { return true }
+        return Date().timeIntervalSince1970 - last > 3 * 24 * 60 * 60
+    }
+
+    func markCoinBoostOffered() {
+        profile.lastBoostGiftAt = Date().timeIntervalSince1970
+    }
+
     // MARK: - Clean flight mode
 
     var isCleanFlightMode: Bool { profile.cleanFlightMode ?? false }
@@ -744,6 +837,12 @@ final class AppModel: ObservableObject {
         // Focus Coins scale with *actual completed focus minutes* (never distance
         // or planned time), so infinity/short sessions can't be farmed for coins.
         let baseMiles = FocusEconomy.coins(forFocusedSeconds: focusedSeconds)
+        // An equipped Coins Boost doubles the coins for up to the first hour, once
+        // (then it's consumed). Applied to the *final* amount so a later rewarded
+        // double — if the pilot also watches an ad — doubles the boosted total.
+        let boostBonus = consumeCoinBoostIfArmed()
+            ? FocusEconomy.coins(forFocusedSeconds: min(focusedSeconds, 3600)) : 0
+        let awardedMiles = baseMiles + boostBonus
         let isNewRoute = !progress.completedRouteIDs.contains(route.id)
         let isNewBest = focusedSeconds > progress.bestFocusSeconds
 
@@ -760,7 +859,7 @@ final class AppModel: ObservableObject {
             plannedMinutes: route.durationMinutes,
             focusedSeconds: focusedSeconds,
             distanceKm: distanceKm,
-            focusMiles: baseMiles,
+            focusMiles: awardedMiles,
             intention: finalIntention,
             completed: true
         )
@@ -768,7 +867,7 @@ final class AppModel: ObservableObject {
         history.insert(record, at: 0)
 
         var p = progress
-        p.totalFocusMiles += baseMiles
+        p.totalFocusMiles += awardedMiles
         p.landings += 1
         p.bestFocusSeconds = max(p.bestFocusSeconds, focusedSeconds)
         p.completedRouteIDs.insert(route.id)
@@ -806,7 +905,7 @@ final class AppModel: ObservableObject {
             intention: finalIntention,
             focusedSeconds: focusedSeconds,
             distanceKm: distanceKm,
-            baseMiles: baseMiles,
+            baseMiles: awardedMiles,
             postcard: postcard,
             streak: p.currentStreak,
             isNewRoute: isNewRoute,

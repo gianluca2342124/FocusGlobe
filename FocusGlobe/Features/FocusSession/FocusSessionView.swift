@@ -57,6 +57,10 @@ struct FocusSessionView: View {
     @State private var showControlsPanel = false
     /// Clean mode: hide chrome down to a tiny timer + a reveal button.
     @State private var cleanMode = false
+    /// True while the give-up button is being held. Used only to fade the centre
+    /// watermark on compact iPhone so the expanding capsule never crowds it.
+    @State private var holdingGiveUp = false
+    @Environment(\.horizontalSizeClass) private var hSize
     /// The "Playing …" soundscape toast shown briefly at take-off.
     @State private var soundToastVisible = false
     /// The wall-clock anchor for everything the pilot sees. Captured **once** on
@@ -125,6 +129,7 @@ struct FocusSessionView: View {
                           skyPool: matchedSky?.flightPool,
                           skyParticles: matchedSky?.flightParticles ?? .none,
                           focusSky: matchedSky,
+                          showPilots: !(appModel.profile.soloFlights ?? false),
                           equippedItemIDs: appModel.profile.equippedCabinItemIDs ?? [])
                     .transition(.opacity)
             }
@@ -266,22 +271,30 @@ struct FocusSessionView: View {
 
     private var topControls: some View {
         VStack {
-            HStack(alignment: .top) {
-                HoldToGiveUpButton(size: Layout.pad(44, 54)) {
-                    appModel.haptics.tap()
-                    vm.requestCancel()
-                }
-                Spacer()
+            // The watermark is centred in a ZStack **behind** the button row, so
+            // its position is fixed to the screen centre and can never be pushed
+            // sideways when the give-up capsule expands (Phase 11). On compact
+            // iPhone it fades out while the button is held; iPad/Mac keep it.
+            ZStack {
                 statusPill
-                Spacer()
-                // One compact controls button replaces the old three-button
-                // cluster — it opens the flight-controls panel below.
-                AppIconButton(systemImage: "slider.horizontal.3",
-                              size: Layout.pad(44, 54), tint: .white,
-                              accessibilityLabel: "Flight controls") {
-                    appModel.tapFeedback()
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.84)) {
-                        showControlsPanel.toggle()
+                    .opacity(holdingGiveUp && hSize == .compact ? 0 : 1)
+                    .animation(.easeInOut(duration: 0.2), value: holdingGiveUp)
+                HStack(alignment: .top) {
+                    HoldToGiveUpButton(size: Layout.pad(44, 54),
+                                       onHoldingChanged: { holdingGiveUp = $0 }) {
+                        appModel.haptics.tap()
+                        vm.requestCancel()
+                    }
+                    Spacer()
+                    // One compact controls button replaces the old three-button
+                    // cluster — it opens the flight-controls panel below.
+                    AppIconButton(systemImage: "slider.horizontal.3",
+                                  size: Layout.pad(44, 54), tint: .white,
+                                  accessibilityLabel: "Flight controls") {
+                        appModel.tapFeedback()
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.84)) {
+                            showControlsPanel.toggle()
+                        }
                     }
                 }
             }
@@ -538,6 +551,7 @@ struct FocusSessionView: View {
 /// stray tap can never end a focus flight.
 private struct HoldToGiveUpButton: View {
     var size: CGFloat = 44
+    var onHoldingChanged: ((Bool) -> Void)? = nil
     let onComplete: () -> Void
 
     @State private var progress: CGFloat = 0
@@ -575,9 +589,11 @@ private struct HoldToGiveUpButton: View {
         .onLongPressGesture(minimumDuration: holdDuration, maximumDistance: 60) {
             progress = 0
             holding = false
+            onHoldingChanged?(false)
             onComplete()
         } onPressingChanged: { pressing in
             holding = pressing
+            onHoldingChanged?(pressing)
             if pressing {
                 withAnimation(.linear(duration: holdDuration)) { progress = 1 }
             } else {
