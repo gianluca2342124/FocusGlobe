@@ -47,15 +47,11 @@ struct PassportView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
                     header
-                    heroLogbookCard
                     statsGrid
+                    achievementsSection
                     missionsSection
-                    focusCategoriesSection
-                    discoveredSkiesSection
-                    recentLandingsSection
                     flightSoundSection
                     WidgetsGallerySection()
-                    achievementsSection
                 }
                 .padding(AppSpacing.screen)
                 .padding(.top, AppSpacing.xs)
@@ -169,6 +165,9 @@ struct PassportView: View {
 
     private var statsGrid: some View {
         LazyVGrid(columns: cardColumns, spacing: AppSpacing.sm) {
+            StatTile(systemImage: "hourglass",
+                     value: totalFocusMinutes > 0 ? Formatters.durationLabel(minutes: totalFocusMinutes) : "—",
+                     label: "Total focus", accent: AppColors.brand)
             StatTile(systemImage: "paperplane.fill",
                      value: "\(flightsCompleted)", label: "Flights", accent: AppColors.gold)
             StatTile(systemImage: "flame.fill",
@@ -178,8 +177,6 @@ struct PassportView: View {
                      label: "Best focus", accent: AppColors.gold)
             StatTile(systemImage: "heart.fill",
                      value: favoriteSky ?? "—", label: "Favorite sky", accent: AppColors.terracotta)
-            StatTile(systemImage: "moon.stars.fill",
-                     value: "\(skiesDiscovered)/\(totalSkies)", label: "Skies discovered", accent: AppColors.brand)
             StatTile(systemImage: "circle.hexagongrid.circle.fill",
                      value: Formatters.miles(progress.totalFocusMiles),
                      label: "Focus Coins earned", accent: AppColors.teal)
@@ -362,21 +359,54 @@ struct PassportView: View {
 
     // MARK: Achievements (collectible badges)
 
+    private func visited(_ name: String) -> Bool {
+        completedFlights.contains { $0.destinationName == name }
+    }
+    private func visitedCount(_ name: String) -> Int {
+        completedFlights.filter { $0.destinationName == name }.count
+    }
+    private func flewAtHour(_ test: (Int) -> Bool) -> Bool {
+        completedFlights.contains { test(Calendar.current.component(.hour, from: $0.date)) }
+    }
+
     private var achievements: [Achievement] {
         let flights = flightsCompleted
         let mins = totalFocusMinutes
         let best = progress.bestFocusMinutes
         let streak = max(progress.currentStreak, progress.longestStreak)
-        let skies = skiesDiscovered
+        let coins = progress.totalFocusMiles
+        let ownsCabin = StoreItem.all.contains { $0.kind == .cabinDecoration && appModel.ownsStoreItem($0) }
+        let skinsOwned = BalloonSkin.all.filter { appModel.isSkinUnlocked($0) }.count
         return [
-            Achievement("airplane.departure", "First flight", flights >= 1, AppColors.brand),
-            Achievement("5.circle.fill", "5 flights", flights >= 5, AppColors.brand),
-            Achievement("25.circle.fill", "25 flights", flights >= 25, AppColors.gold),
-            Achievement("flame.fill", "3-day streak", streak >= 3, AppColors.danger),
-            Achievement("bolt.heart.fill", "7-day streak", streak >= 7, AppColors.danger),
-            Achievement("hourglass.bottomhalf.filled", "Deep focus", best >= 60, AppColors.success),
-            Achievement("clock.badge.checkmark.fill", "10 hours", mins >= 600, AppColors.gold),
-            Achievement("moon.stars.fill", "Sky collector", skies >= SkyScene.all.count, AppColors.teal),
+            Achievement("airplane.departure", "First Flight", flights >= 1, AppColors.brand),
+            Achievement("25.circle.fill", "25-Min Pilot", best >= 25, AppColors.brand),
+            Achievement("hourglass.bottomhalf.filled", "1 Hour Focused", best >= 60, AppColors.success),
+            Achievement("5.circle.fill", "5 Flights", flights >= 5, AppColors.brand),
+            Achievement("10.circle.fill", "10 Flights", flights >= 10, AppColors.gold),
+            Achievement("airplane.circle.fill", "25 Flights", flights >= 25, AppColors.gold),
+            Achievement("clock.fill", "100 Focus Minutes", mins >= 100, AppColors.teal),
+            Achievement("clock.badge.checkmark.fill", "500 Focus Minutes", mins >= 500, AppColors.teal),
+            Achievement("infinity.circle.fill", "1,000 Focus Minutes", mins >= 1000, AppColors.gold),
+            Achievement("flame.fill", "3-Day Streak", streak >= 3, AppColors.danger),
+            Achievement("bolt.heart.fill", "7-Day Streak", streak >= 7, AppColors.danger),
+            Achievement("flame.circle.fill", "14-Day Streak", streak >= 14, AppColors.danger),
+            Achievement("moon.stars.fill", "Night Owl", flewAtHour { $0 >= 22 || $0 < 4 }, AppColors.brand),
+            Achievement("sunrise.fill", "Early Bird", flewAtHour { $0 >= 4 && $0 < 8 }, AppColors.gold),
+            Achievement("sun.max.fill", "Golden Hour Regular", visitedCount("Golden Hour") >= 5, AppColors.gold),
+            Achievement("building.2.fill", "Paris Pilot", visited("Paris Sunset"), AppColors.terracotta),
+            Achievement("beach.umbrella.fill", "Fiji Pilot", visited("Fiji Lagoon"), AppColors.teal),
+            Achievement("lantern", "Kyoto Lantern", visited("Kyoto Lanterns"), AppColors.gold),
+            Achievement("sparkles", "Aurora Explorer", visited("Aurora Snowfield"), AppColors.success),
+            Achievement("moon.fill", "Moon Visitor", visited("Moon Garden"), AppColors.brand),
+            Achievement("moon.stars.circle.fill", "Deep Space Pilot", visited("Deep Space"), AppColors.teal),
+            Achievement("circle.hexagongrid.circle.fill", "Focus Coin Saver", coins >= 100, AppColors.gold),
+            Achievement("leaf.fill", "Cabin Decorator", ownsCabin, AppColors.success),
+            Achievement("circle.grid.2x2.fill", "Skin Collector", skinsOwned >= 3, AppColors.brand),
+            Achievement("person.2.fill", "Friend Flight", friendsInvited >= 1, AppColors.success),
+            Achievement("crown.fill", "Premium Pilot", appModel.isPro, AppColors.gold),
+            Achievement("arrow.uturn.up.circle.fill", "Comeback Pilot",
+                        progress.longestStreak > progress.currentStreak && progress.currentStreak >= 1,
+                        AppColors.terracotta),
         ]
     }
 

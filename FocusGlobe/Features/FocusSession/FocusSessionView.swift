@@ -55,6 +55,8 @@ struct FocusSessionView: View {
     @State private var showInvite = false
     /// The single compact flight-controls panel (replaces the old button cluster).
     @State private var showControlsPanel = false
+    /// Clean mode: hide chrome down to a tiny timer + a reveal button.
+    @State private var cleanMode = false
     /// The "Playing …" soundscape toast shown briefly at take-off.
     @State private var soundToastVisible = false
     /// The wall-clock anchor for everything the pilot sees. Captured **once** on
@@ -143,8 +145,12 @@ struct FocusSessionView: View {
                 pausedOverlay
             }
 
-            topControls.opacity(uiIn ? 1 : 0)
-            bottomBar.opacity(uiIn ? 1 : 0)
+            if cleanMode {
+                cleanModeChrome.opacity(uiIn ? 1 : 0)
+            } else {
+                topControls.opacity(uiIn ? 1 : 0)
+                bottomBar.opacity(uiIn ? 1 : 0)
+            }
 
             if soundToastVisible {
                 soundToast
@@ -204,6 +210,7 @@ struct FocusSessionView: View {
             // Anchor the display clock exactly once. Seeding from the engine's
             // live elapsed makes a resumed flight continue from the right point;
             // a fresh flight anchors at now.
+            cleanMode = appModel.isCleanFlightMode
             if flightStartedAt == nil {
                 let anchor = Date().addingTimeInterval(-vm.timer.liveElapsed)
                 flightStartedAt = anchor
@@ -344,6 +351,51 @@ struct FocusSessionView: View {
         .transition(.opacity)
     }
 
+    // MARK: Clean mode — a tiny timer + a reveal button, nothing else
+
+    private var cleanModeChrome: some View {
+        VStack {
+            HStack {
+                Spacer()
+                Button {
+                    appModel.tapFeedback()
+                    withAnimation(.easeInOut(duration: 0.3)) { cleanMode = false }
+                } label: {
+                    Image(systemName: "eye.fill")
+                        .font(.system(size: Layout.pad(15, 18), weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.85))
+                        .frame(width: Layout.pad(40, 48), height: Layout.pad(40, 48))
+                        .background(Circle().fill(.ultraThinMaterial))
+                        .overlay(Circle().strokeBorder(.white.opacity(0.14), lineWidth: 1))
+                }
+                .buttonStyle(SoftPressStyle())
+                .accessibilityLabel("Show flight controls")
+            }
+            Spacer()
+            TimelineView(.periodic(from: .now, by: 0.5)) { ctx in
+                cleanTimer(now: ctx.date)
+            }
+        }
+        .padding(.horizontal, AppSpacing.screen)
+        .padding(.top, AppSpacing.xs)
+        .padding(.bottom, Layout.pad(34, 50))
+        .transition(.opacity)
+    }
+
+    private func cleanTimer(now: Date) -> some View {
+        let elapsed = displayElapsed(at: now)
+        let remainingSecs = max(0, Int((durationSeconds - elapsed).rounded(.up)))
+        let secs = isInfinity ? Int(elapsed.rounded(.down)) : remainingSecs
+        let value = secs >= 3600 ? Formatters.countdown(secs) : Formatters.flightClock(secs)
+        return Text(value)
+            .font(.system(size: Layout.pad(30, 40), weight: .semibold, design: .rounded))
+            .monospacedDigit()
+            .foregroundStyle(.white.opacity(0.85))
+            .contentTransition(.numericText(countsDown: !isInfinity))
+            .shadow(color: .black.opacity(0.4), radius: 8, y: 2)
+            .frame(maxWidth: .infinity)
+    }
+
     private func heroTimer(now: Date) -> some View {
         let elapsed = displayElapsed(at: now)
         let elapsedSecs = Int(elapsed.rounded(.down))
@@ -460,6 +512,13 @@ struct FocusSessionView: View {
                     withAnimation(.easeOut(duration: 0.2)) { showControlsPanel = false }
                     appModel.tapFeedback()
                     showInvite = true
+                },
+                onCleanMode: {
+                    appModel.setCleanFlightMode(true)
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        showControlsPanel = false
+                        cleanMode = true
+                    }
                 }
             )
             .environmentObject(appModel)
@@ -628,6 +687,7 @@ private struct FlightControlsPanel: View {
     let onToggleMute: () -> Void
     let onToggleCabin: () -> Void
     let onInvite: () -> Void
+    let onCleanMode: () -> Void
     @EnvironmentObject private var appModel: AppModel
 
     private var solo: Bool { appModel.profile.soloFlights ?? false }
@@ -665,6 +725,9 @@ private struct FlightControlsPanel: View {
                 withAnimation(.snappy(duration: 0.2)) { appModel.profile.focusShieldOptIn = !shielded }
                 appModel.haptics.tap()
             }
+
+            row(icon: "eye.slash", title: "Clean mode",
+                subtitle: "Hide controls, keep a tiny timer", action: onCleanMode)
 
             inviteButton
         }

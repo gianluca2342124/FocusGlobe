@@ -102,6 +102,11 @@ struct SettingsView: View {
                           subtitle: "Streak, focus & goal nudges",
                           isOn: Binding(get: { appModel.notifications.isEnabled },
                                         set: { appModel.tapFeedback(); appModel.setNotificationsEnabled($0) }))
+                RowDivider()
+                ToggleRow(systemImage: "eye.slash", title: "Clean flight mode",
+                          subtitle: "Start flights with minimal controls",
+                          isOn: Binding(get: { appModel.isCleanFlightMode },
+                                        set: { appModel.tapFeedback(); appModel.setCleanFlightMode($0) }))
             }
         }
     }
