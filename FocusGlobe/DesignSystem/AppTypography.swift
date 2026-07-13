@@ -36,9 +36,11 @@ enum AppTypography {
 
     /// Big display serif — screen heroes and the destination on the expedition page.
     static let serifHero    = Font.system(size: 34 * s, weight: .bold,     design: .serif)
-    /// Section / sheet titles in the journal voice.
-    static let serifTitle   = Font.system(size: 27 * s, weight: .semibold, design: .serif)
-    static let serifTitle2  = Font.system(size: 22 * s, weight: .semibold, design: .serif)
+    /// Section / sheet / popup titles. Modernised to bold SF Rounded (the serif is
+    /// now reserved for the Home greeting and a few display heroes) so popups read
+    /// clean and premium with a strong hierarchy. Token names kept to avoid churn.
+    static let serifTitle   = Font.system(size: 28 * s, weight: .bold, design: .rounded)
+    static let serifTitle2  = Font.system(size: 22 * s, weight: .bold, design: .rounded)
     /// A destination / place name as it would be lettered on a map or postcard.
     static let destination  = Font.system(size: 24 * s, weight: .medium,   design: .serif)
     /// Journal prose — italic-friendly serif body for quotes and field notes.

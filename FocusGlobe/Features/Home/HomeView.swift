@@ -69,8 +69,8 @@ struct HomeView: View {
             // Larger and more emotionally central on Home (the flight keeps its
             // own small balloon).
             GeometryReader { geo in
-                // Larger and truly centred in the main visual area (Phase 9).
-                let size = max(124, min(184, geo.size.height * 0.21))
+                // Larger again and truly centred in the main visual area.
+                let size = max(132, min(198, geo.size.height * 0.225))
                 FlightBalloonView(size: size, showGlow: true)
                     .position(x: geo.size.width / 2, y: geo.size.height * 0.45 + balloonFloat)
                     .shadow(color: .black.opacity(0.3), radius: 18, y: 10)
@@ -628,14 +628,29 @@ private struct SkyPreviewFlightView: View {
     @ViewBuilder private var secondaryButton: some View {
         switch sky.unlockRequirement {
         case .invite(let n):
+            // Invites are the only requirement that opens the share sheet.
+            let cur = min(appModel.inviteProgress(for: sky), n)
             ShareLink(item: appModel.inviteShareMessage(for: sky)) {
-                secondaryLabel(title: "Invite \(n) Friend\(n == 1 ? "" : "s")", icon: "person.2.fill")
+                progressPill(title: "\(cur)/\(n) friends invited", icon: "person.2.fill",
+                             fraction: n <= 0 ? 1 : Double(cur) / Double(n))
             }
             .simultaneousGesture(TapGesture().onEnded { appModel.tapFeedback() })
-        case .focusMinutes:
-            softSecondary(title: "Focus more minutes") { dismiss() }
-        case .streakDays:
-            softSecondary(title: "Keep your streak") { dismiss() }
+        case .focusMinutes(let n):
+            // Focus-minute / streak goals are earned by flying — no share sheet;
+            // closing the preview returns to Home to start focusing.
+            let cur = min(appModel.lifetimeFocusMinutes, n)
+            Button { appModel.tapFeedback(); dismiss() } label: {
+                progressPill(title: "\(cur.formatted())/\(n.formatted()) focus minutes", icon: "timer",
+                             fraction: n <= 0 ? 1 : Double(cur) / Double(n))
+            }
+            .buttonStyle(SoftPressStyle())
+        case .streakDays(let n):
+            let cur = min(appModel.progress.currentStreak, n)
+            Button { appModel.tapFeedback(); dismiss() } label: {
+                progressPill(title: "\(cur)/\(n) streak days", icon: "flame.fill",
+                             fraction: n <= 0 ? 1 : Double(cur) / Double(n))
+            }
+            .buttonStyle(SoftPressStyle())
         default:
             softSecondary(title: "Continue flying") { dismiss() }
         }
@@ -653,15 +668,29 @@ private struct SkyPreviewFlightView: View {
         .buttonStyle(SoftPressStyle())
     }
 
-    private func secondaryLabel(title: String, icon: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon).font(.system(size: 15, weight: .bold))
-            Text(title).font(.system(size: 15, weight: .semibold, design: .rounded))
+    /// A large, readable requirement button: an icon + "current/target" label over
+    /// a slim gold progress bar, so the unlock method is understood instantly.
+    private func progressPill(title: String, icon: String, fraction: Double) -> some View {
+        VStack(spacing: 7) {
+            HStack(spacing: 8) {
+                Image(systemName: icon).font(.system(size: 15, weight: .bold))
+                Text(title).font(.system(size: 15, weight: .bold, design: .rounded))
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(.white)
+            GeometryReader { g in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(.white.opacity(0.16))
+                    Capsule().fill(AppColors.gold)
+                        .frame(width: max(6, g.size.width * CGFloat(min(1, max(0, fraction)))))
+                }
+            }
+            .frame(height: 6)
         }
-        .foregroundStyle(.white)
-        .frame(maxWidth: .infinity).frame(height: 50)
-        .background(Capsule().fill(.white.opacity(0.14)))
-        .overlay(Capsule().strokeBorder(.white.opacity(0.2), lineWidth: 1))
+        .padding(.horizontal, 16)
+        .padding(.vertical, 13)
+        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(.white.opacity(0.14)))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(.white.opacity(0.2), lineWidth: 1))
     }
 
     // Rotating headline copy — three lines, adapted to the Sky.

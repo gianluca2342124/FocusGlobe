@@ -22,7 +22,7 @@ struct SettingsView: View {
             // sideways (matches Passport and the other screens).
             ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
-                    ScreenHeader(title: "Settings")
+                    ScreenHeader(title: "Settings", showsBack: false)
 
                     appearanceSection
                     experienceSection

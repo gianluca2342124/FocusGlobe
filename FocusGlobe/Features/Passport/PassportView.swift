@@ -72,7 +72,7 @@ struct PassportView: View {
 
     private var header: some View {
         HStack(alignment: .top) {
-            ScreenHeader(title: "Passport", subtitle: "Your flight logbook")
+            ScreenHeader(title: "Passport", subtitle: "Your flight logbook", showsBack: false)
             Spacer()
             // The crown only opens the paywall — hide it once Pro.
             if !appModel.isPro {

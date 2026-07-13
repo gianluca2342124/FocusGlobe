@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 // MARK: - Free Coin Spin button (Home, near the streak)
 
@@ -11,37 +14,36 @@ struct CoinSpinButton: View {
     var body: some View {
         Button(action: action) {
             ZStack {
-                Image(systemName: "video.fill")
-                    .font(.system(size: Layout.pad(15, 17), weight: .bold))
-                    .foregroundStyle(.white)
-                FocusCoinIcon(size: Layout.pad(14, 16))
+                Image(systemName: "play.rectangle.fill")
+                    .font(.system(size: Layout.pad(15, 17), weight: .semibold))
+                    .foregroundStyle(AppColors.gold)
+                FocusCoinIcon(size: Layout.pad(13, 15))
                     .offset(x: Layout.pad(9, 10), y: -Layout.pad(8, 9))
             }
             .frame(width: Layout.pad(26, 30), height: Layout.pad(24, 27))
-            .padding(.horizontal, Layout.pad(10, 13))
+            .padding(.horizontal, Layout.pad(10, 12))
             .padding(.vertical, Layout.pad(7, 9))
-            .background(Capsule().fill(LinearGradient(
-                colors: [Color(hex: 0xF2A23C), Color(hex: 0xE9654B)],
-                startPoint: .top, endPoint: .bottom)))
-            .overlay(Capsule().strokeBorder(.white.opacity(0.28), lineWidth: 1))
-            .shadow(color: Color(hex: 0xF2A23C).opacity(0.5), radius: 8, y: 2)
+            // The same calm dark-glass family as the streak / coins chips, with
+            // only a subtle gold accent — noticeable, never protagonist.
+            .background(Capsule().fill(.white.opacity(0.1)))
+            .overlay(Capsule().strokeBorder(AppColors.gold.opacity(0.25), lineWidth: 1))
         }
         .buttonStyle(SoftPressStyle())
         .phaseAnimator([0, 1, 2, 3, 4]) { content, phase in
             content.rotationEffect(.degrees(shakeAngle(phase)))
         } animation: { phase in
-            // The long rest (phase 0) sets the ~3 s cadence; 1–4 are the quick shake.
-            phase == 0 ? .easeInOut(duration: 2.6) : .spring(response: 0.14, dampingFraction: 0.32)
+            // The long rest (phase 0) sets the ~3 s cadence; 1–4 are a gentle shake.
+            phase == 0 ? .easeInOut(duration: 3.0) : .spring(response: 0.16, dampingFraction: 0.4)
         }
         .accessibilityLabel("Free Coin Spin. Watch a video to win Focus Coins.")
     }
 
     private func shakeAngle(_ p: Int) -> Double {
         switch p {
-        case 1: return -12
-        case 2: return 12
-        case 3: return -8
-        case 4: return 8
+        case 1: return -6
+        case 2: return 6
+        case 3: return -4
+        case 4: return 4
         default: return 0
         }
     }
@@ -65,7 +67,7 @@ struct CoinSpinSheet: View {
     var body: some View {
         ZStack {
             AppBackground().ignoresSafeArea()
-            VStack(spacing: AppSpacing.lg) {
+            VStack(spacing: AppSpacing.sm) {
                 header
                 switch phase {
                 case .intro:    intro
@@ -74,55 +76,72 @@ struct CoinSpinSheet: View {
                 }
                 Spacer(minLength: 0)
             }
-            .padding(AppSpacing.screen)
+            .padding(.horizontal, AppSpacing.screen)
+            .padding(.bottom, AppSpacing.md)
             .frame(maxWidth: 460)
             .frame(maxWidth: .infinity)
         }
-        .presentationDetents([.large])
+        // A premium half-sheet, not full screen.
+        .presentationDetents([.fraction(0.66), .large])
         .presentationDragIndicator(.visible)
     }
 
+    // Just an X — the big headline lives with the artwork below.
     private var header: some View {
         HStack {
-            Text("Free Coin Spin")
-                .font(AppTypography.serifTitle2)
-                .foregroundStyle(AppColors.textPrimary)
             Spacer()
             Button { appModel.tapFeedback(); dismiss() } label: {
                 Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 26))
+                    .font(.system(size: 28))
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(AppColors.textTertiary)
             }
         }
-        .padding(.top, AppSpacing.md)
+        .padding(.top, AppSpacing.sm)
+    }
+
+    /// The `freecoinspin` artwork if present; a soft procedural fallback otherwise
+    /// (a diffused radial, no hard circular glow edge).
+    @ViewBuilder private var heroImage: some View {
+        if let ui = UIImage(named: "freecoinspin") {
+            Image(uiImage: ui).resizable().scaledToFit()
+        } else {
+            ZStack {
+                Circle()
+                    .fill(RadialGradient(colors: [AppColors.gold.opacity(0.28), .clear],
+                                         center: .center, startRadius: 2, endRadius: 130))
+                    .frame(width: 220, height: 220)
+                    .blur(radius: 10)
+                Image(systemName: "video.fill")
+                    .font(.system(size: 52, weight: .bold))
+                    .foregroundStyle(AppColors.brand)
+                HStack(spacing: -10) {
+                    FocusCoinIcon(size: 28)
+                    FocusCoinIcon(size: 40)
+                    FocusCoinIcon(size: 28)
+                }
+                .offset(y: 46)
+            }
+        }
     }
 
     private var intro: some View {
-        VStack(spacing: AppSpacing.md) {
-            ZStack {
-                Circle()
-                    .fill(RadialGradient(colors: [AppColors.gold.opacity(0.30), .clear],
-                                         center: .center, startRadius: 2, endRadius: 120))
-                    .frame(width: 220, height: 220)
-                Image(systemName: "video.fill")
-                    .font(.system(size: 62, weight: .bold))
-                    .foregroundStyle(AppColors.brand)
-                HStack(spacing: -10) {
-                    FocusCoinIcon(size: 32)
-                    FocusCoinIcon(size: 44)
-                    FocusCoinIcon(size: 32)
-                }
-                .offset(y: 56)
-            }
-            .frame(height: 200)
-            Text("Watch a short video for 1 prize spin.")
+        VStack(spacing: AppSpacing.sm) {
+            heroImage.frame(height: 138)
+            Text("Free Coin Spin")
+                .font(.system(size: 27, weight: .heavy, design: .rounded))
+                .foregroundStyle(AppColors.textPrimary)
+            Text("WIN UP TO 25 COINS!")
+                .font(.system(size: 15, weight: .heavy, design: .rounded))
+                .tracking(0.5)
+                .foregroundStyle(AppColors.gold)
+            Text("Watch a short video and spin for a reward.")
                 .font(AppTypography.callout)
                 .foregroundStyle(AppColors.textSecondary)
                 .multilineTextAlignment(.center)
-            Text("Win up to 25 FocusCoins.")
-                .font(.system(size: 15, weight: .bold, design: .rounded))
-                .foregroundStyle(AppColors.gold)
+            Text("1 · 2 · 3 · 5 · 10 · 15 · 20 · 25")
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundStyle(AppColors.textTertiary)
             if let note {
                 Text(note)
                     .font(AppTypography.caption)
@@ -140,10 +159,10 @@ struct CoinSpinSheet: View {
     }
 
     private var spinning: some View {
-        VStack(spacing: AppSpacing.lg) {
+        VStack(spacing: AppSpacing.md) {
             SpinWheel(prizes: prizes, rotation: rotation)
-                .frame(width: 264, height: 264)
-                .padding(.top, AppSpacing.lg)
+                .frame(width: 224, height: 224)
+                .padding(.top, AppSpacing.xs)
             Text("Spinning…")
                 .font(AppTypography.headline)
                 .foregroundStyle(AppColors.textSecondary)
@@ -151,20 +170,21 @@ struct CoinSpinSheet: View {
     }
 
     private var result: some View {
-        VStack(spacing: AppSpacing.md) {
+        VStack(spacing: AppSpacing.sm) {
             ZStack {
                 Circle()
                     .fill(RadialGradient(colors: [AppColors.gold.opacity(0.4), .clear],
                                          center: .center, startRadius: 2, endRadius: 120))
-                    .frame(width: 220, height: 220)
-                FocusCoinIcon(size: 96)
+                    .frame(width: 190, height: 190)
+                    .blur(radius: 6)
+                FocusCoinIcon(size: 88)
             }
-            .frame(height: 200)
+            .frame(height: 170)
             Text("You won")
                 .font(AppTypography.callout)
                 .foregroundStyle(AppColors.textSecondary)
             Text("\(prize ?? 0) FocusCoins")
-                .font(.system(size: 34, weight: .heavy, design: .rounded))
+                .font(.system(size: 36, weight: .heavy, design: .rounded))
                 .foregroundStyle(AppColors.gold)
             AppPrimaryButton(title: "Awesome", systemImage: "checkmark") {
                 appModel.tapFeedback(); dismiss()

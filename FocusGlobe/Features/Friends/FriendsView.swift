@@ -14,7 +14,7 @@ struct FriendsView: View {
             AppBackground()
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
-                    ScreenHeader(title: "Friends", subtitle: "Focus feels better together")
+                    ScreenHeader(title: "Friends", subtitle: "Focus feels better together", showsBack: false)
                     emptyState
                     inviteHero
                     howItWorks

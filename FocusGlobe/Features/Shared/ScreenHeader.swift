@@ -22,9 +22,11 @@ struct ScreenHeader: View {
                 if let trailing { trailing }
             }
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(AppTypography.serifTitle)
+                    // Modern, bold, clean page titles (SF Rounded) — the serif is
+                    // reserved for the Home greeting only.
+                    .font(AppTypography.hero)
                     .foregroundStyle(AppColors.textPrimary)
                 if let subtitle {
                     Text(subtitle)

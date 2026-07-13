@@ -54,7 +54,7 @@ struct StoreView: View {
 
     private var header: some View {
         HStack(alignment: .top) {
-            ScreenHeader(title: "Store", subtitle: "Collectibles for your balloon and cabin")
+            ScreenHeader(title: "Store", subtitle: "Collectibles for your balloon and cabin", showsBack: false)
             Spacer()
             if !appModel.isPro {
                 CrownButton { appModel.tapFeedback(); router.presentPaywall() }
@@ -419,45 +419,67 @@ private struct DailyGiftSheet: View {
     var body: some View {
         ZStack {
             AppBackground().ignoresSafeArea()
-            VStack(spacing: AppSpacing.lg) {
-                Spacer()
-                ZStack {
-                    Circle().fill(AppColors.gold.opacity(0.14)).frame(width: 130, height: 130)
-                    SmilingBalloon()
-                        .frame(width: 78, height: 96)
-                        .offset(y: bob)
+            VStack(spacing: AppSpacing.md) {
+                HStack {
+                    Spacer()
+                    Button { appModel.tapFeedback(); dismiss() } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 28))
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(AppColors.textTertiary)
+                    }
                 }
-                VStack(spacing: 6) {
-                    Text("Daily gift")
-                        .font(AppTypography.serifTitle2)
-                        .foregroundStyle(AppColors.textPrimary)
-                    Text("You received 5 Focus Coins for coming back today.")
-                        .font(AppTypography.callout)
-                        .foregroundStyle(AppColors.textSecondary)
-                        .multilineTextAlignment(.center)
-                }
-                HStack(spacing: 7) {
-                    FocusCoinIcon(size: 24)
-                    Text("+\(AppModel.dailyGiftCoins)")
-                        .font(.system(size: 22, weight: .heavy, design: .rounded))
+                Spacer(minLength: 0)
+                giftHero
+                Text("Daily Gift")
+                    .font(.system(size: 28, weight: .heavy, design: .rounded))
+                    .foregroundStyle(AppColors.textPrimary)
+                Text("Welcome back — your focus coins are ready.")
+                    .font(AppTypography.callout)
+                    .foregroundStyle(AppColors.textSecondary)
+                    .multilineTextAlignment(.center)
+                HStack(spacing: 9) {
+                    FocusCoinIcon(size: 30)
+                    Text("+\(AppModel.dailyGiftCoins) FocusCoins")
+                        .font(.system(size: 24, weight: .heavy, design: .rounded))
                         .foregroundStyle(AppColors.gold)
                 }
-                Spacer()
+                .padding(.vertical, 4)
+                Spacer(minLength: 0)
                 AppPrimaryButton(title: "Collect", systemImage: "gift.fill") {
                     appModel.claimDailyGift()
                     dismiss()
                 }
-                .padding(.horizontal, AppSpacing.screen)
-                .padding(.bottom, AppSpacing.xl)
             }
+            .padding(.horizontal, AppSpacing.screen)
+            .padding(.top, AppSpacing.sm)
+            .padding(.bottom, AppSpacing.lg)
             .frame(maxWidth: 460)
             .frame(maxWidth: .infinity)
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.fraction(0.6), .medium])
         .presentationDragIndicator(.visible)
         .onAppear {
             withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) { bob = -9 }
         }
+    }
+
+    /// The `dailygift` artwork if present; the smiling-balloon mascot otherwise —
+    /// over a soft diffused warm glow with no hard circular edge.
+    @ViewBuilder private var giftHero: some View {
+        ZStack {
+            Circle()
+                .fill(RadialGradient(colors: [AppColors.gold.opacity(0.3), .clear],
+                                     center: .center, startRadius: 2, endRadius: 130))
+                .frame(width: 240, height: 240)
+                .blur(radius: 12)
+            if let ui = UIImage(named: "dailygift") {
+                Image(uiImage: ui).resizable().scaledToFit().frame(height: 150).offset(y: bob)
+            } else {
+                SmilingBalloon().frame(width: 84, height: 104).offset(y: bob)
+            }
+        }
+        .frame(height: 160)
     }
 }
 

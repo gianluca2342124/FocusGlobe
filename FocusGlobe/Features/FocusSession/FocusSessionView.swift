@@ -514,12 +514,17 @@ struct FocusSessionView: View {
             FlightControlsPanel(
                 muted: vm.isAudioMuted,
                 isCabin: viewMode == .cabin,
-                onToggleMute: { vm.toggleMute() },
+                onToggleMute: {
+                    vm.toggleMute()
+                    // Every panel action closes the panel immediately (Phase 9).
+                    withAnimation(.easeOut(duration: 0.2)) { showControlsPanel = false }
+                },
                 onToggleCabin: {
                     appModel.tapFeedback()
                     withAnimation(.easeInOut(duration: 0.5)) {
                         viewMode = (viewMode == .cabin ? .exterior : .cabin)
                     }
+                    withAnimation(.easeOut(duration: 0.2)) { showControlsPanel = false }
                 },
                 onInvite: {
                     withAnimation(.easeOut(duration: 0.2)) { showControlsPanel = false }
