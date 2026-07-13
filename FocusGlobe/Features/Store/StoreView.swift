@@ -6,31 +6,19 @@ import UIKit
 /// The FocusGlobe **Store** — a calm, premium collectible shop paid with
 /// **Focus Coins** (earned by landing flights) or unlocked with Premium.
 ///
-/// Category tabs (Today · Balloons · Trails · Cabin) organise a growing catalog;
-/// a featured "Today's Finds" row leads the Today tab. Every item renders its
-/// bundled art (`StoreItem_<id>`) when present and a premium procedural card
-/// otherwise, so nothing depends on assets. Purchase / own / equip all persist.
+/// One premium vertical scroll: a daily gift, today's items, balloon skins,
+/// cabin items, and a badges teaser — no segmented control hiding products.
+/// Every item renders its bundled art (`StoreItem_<id>`) when present and a
+/// premium procedural card otherwise, so nothing depends on assets. Purchase /
+/// own / equip all persist. (Trails were retired.)
 struct StoreView: View {
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
     @Environment(\.horizontalSizeClass) private var hSize
 
-    @State private var category: ShopCategory = .today
+    @State private var showDailyGift = false
 
     private var cardColumns: [GridItem] { Layout.cardColumns(regular: hSize == .regular) }
-
-    private enum ShopCategory: String, CaseIterable, Identifiable {
-        case today = "Today", balloons = "Balloons", trails = "Trails", cabin = "Cabin"
-        var id: String { rawValue }
-        var icon: String {
-            switch self {
-            case .today:    return "sparkles"
-            case .balloons: return "circle.circle"
-            case .trails:   return "wind"
-            case .cabin:    return "house.fill"
-            }
-        }
-    }
 
     var body: some View {
         ZStack {
@@ -39,8 +27,11 @@ struct StoreView: View {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
                     header
                     coinsCard
-                    categoryChips
-                    categoryContent
+                    todayItemsSection
+                    skinsSection
+                    cabinSection
+                    ownedSection
+                    badgesTeaser
                 }
                 .padding(AppSpacing.screen)
                 .padding(.top, AppSpacing.xs)
@@ -49,6 +40,14 @@ struct StoreView: View {
             }
         }
         .focusScreenChrome()
+        .onAppear {
+            if appModel.canClaimDailyGift {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { showDailyGift = true }
+            }
+        }
+        .sheet(isPresented: $showDailyGift) {
+            DailyGiftSheet().environmentObject(appModel)
+        }
     }
 
     // MARK: Header + balance
@@ -85,80 +84,60 @@ struct StoreView: View {
                          shadowRadius: 16, shadowY: 8)
     }
 
-    // MARK: Category chips
+    // MARK: Today's items (featured horizontal row, refreshes at midnight)
 
-    private var categoryChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: AppSpacing.xs) {
-                ForEach(ShopCategory.allCases) { cat in
-                    categoryChip(cat)
+    private var todayItemsSection: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            HStack {
+                SectionLabel(text: "Today's items")
+                Spacer()
+                TimelineView(.periodic(from: .now, by: 60)) { ctx in
+                    Label("Refreshes in \(refreshLabel(at: ctx.date))", systemImage: "clock")
+                        .font(AppTypography.micro)
+                        .foregroundStyle(AppColors.textTertiary)
                 }
             }
-            .padding(.horizontal, 2)
-        }
-    }
-
-    private func categoryChip(_ cat: ShopCategory) -> some View {
-        let active = category == cat
-        return Button {
-            appModel.tapFeedback()
-            withAnimation(.easeInOut(duration: 0.2)) { category = cat }
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: cat.icon).font(.system(size: 12, weight: .bold))
-                Text(cat.rawValue).font(.system(size: 14, weight: .bold, design: .rounded))
-            }
-            .foregroundStyle(active ? Color(hex: 0x2B2510) : AppColors.textSecondary)
-            .padding(.horizontal, AppSpacing.md)
-            .padding(.vertical, AppSpacing.xs + 2)
-            .background(
-                Capsule().fill(active ? AnyShapeStyle(AppColors.gold)
-                                      : AnyShapeStyle(AppColors.textPrimary.opacity(0.06)))
-            )
-            .overlay(Capsule().strokeBorder(.white.opacity(active ? 0 : 0.08), lineWidth: 1))
-        }
-        .buttonStyle(SoftPressStyle(scale: 0.95))
-    }
-
-    // MARK: Category content
-
-    @ViewBuilder private var categoryContent: some View {
-        switch category {
-        case .today:    todaySection
-        case .balloons: skinsSection
-        case .trails:   itemsSection(title: "Trails", items: items(of: [.trail]))
-        case .cabin:    itemsSection(title: "Cabin & charms", items: items(of: [.cabinDecoration, .charm]))
-        }
-    }
-
-    private func items(of kinds: [StoreItem.Kind]) -> [StoreItem] {
-        StoreItem.all.filter { kinds.contains($0.kind) }
-    }
-
-    // Today: a featured "finds" row (larger cards) + the rest of the catalog.
-    private var todaySection: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.lg) {
-            VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                HStack {
-                    SectionLabel(text: "Today's finds")
-                    Spacer()
-                    TimelineView(.periodic(from: .now, by: 60)) { ctx in
-                        Label("Refreshes in \(refreshLabel(at: ctx.date))", systemImage: "clock")
-                            .font(AppTypography.micro)
-                            .foregroundStyle(AppColors.textTertiary)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: AppSpacing.sm) {
+                    ForEach(StoreItem.dailyItems()) { item in
+                        StoreItemCard(item: item, featured: true)
                     }
                 }
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: AppSpacing.sm) {
-                        ForEach(StoreItem.dailyItems()) { item in
-                            StoreItemCard(item: item, featured: true)
-                        }
-                    }
-                    .padding(.horizontal, 2).padding(.vertical, 2)
-                }
+                .padding(.horizontal, 2).padding(.vertical, 2)
             }
-            ownedSection
         }
+    }
+
+    private var cabinSection: some View {
+        itemsSection(title: "Cabin & charms",
+                     items: StoreItem.all.filter { $0.kind == .cabinDecoration || $0.kind == .charm })
+    }
+
+    // A gentle bridge to the collectible badges (which live in the Passport).
+    private var badgesTeaser: some View {
+        Button { appModel.tapFeedback(); router.openPassport() } label: {
+            HStack(spacing: AppSpacing.sm) {
+                Image(systemName: "rosette")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(AppColors.gold)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Badges")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundStyle(AppColors.textPrimary)
+                    Text("Earn collectible badges as you fly")
+                        .font(AppTypography.caption)
+                        .foregroundStyle(AppColors.textSecondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(AppColors.textTertiary)
+            }
+            .padding(AppSpacing.md)
+            .frame(maxWidth: .infinity)
+            .glassBackground(cornerRadius: 18, tintOpacity: 0.22, shadowRadius: 6, shadowY: 3)
+        }
+        .buttonStyle(SoftPressStyle(scale: 0.99))
     }
 
     private func itemsSection(title: String, items: [StoreItem]) -> some View {
@@ -424,5 +403,104 @@ private struct SkinCard: View {
         }
         .buttonStyle(SoftPressStyle(scale: 0.98))
         .accessibilityLabel("\(skin.name) balloon skin. \(unlocked ? (selected ? "Selected." : "Tap to select.") : skin.requirementText)")
+    }
+}
+
+// MARK: - Daily gift
+
+/// The once-a-day welcome-back gift: a friendly balloon, a warm line, and a
+/// Collect button that grants +5 Focus Coins. Shown at most once per calendar
+/// day (persisted); Premium pilots receive it too.
+private struct DailyGiftSheet: View {
+    @EnvironmentObject private var appModel: AppModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var bob: CGFloat = 0
+
+    var body: some View {
+        ZStack {
+            AppBackground().ignoresSafeArea()
+            VStack(spacing: AppSpacing.lg) {
+                Spacer()
+                ZStack {
+                    Circle().fill(AppColors.gold.opacity(0.14)).frame(width: 130, height: 130)
+                    SmilingBalloon()
+                        .frame(width: 78, height: 96)
+                        .offset(y: bob)
+                }
+                VStack(spacing: 6) {
+                    Text("Daily gift")
+                        .font(AppTypography.serifTitle2)
+                        .foregroundStyle(AppColors.textPrimary)
+                    Text("You received 5 Focus Coins for coming back today.")
+                        .font(AppTypography.callout)
+                        .foregroundStyle(AppColors.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                HStack(spacing: 7) {
+                    FocusCoinIcon(size: 24)
+                    Text("+\(AppModel.dailyGiftCoins)")
+                        .font(.system(size: 22, weight: .heavy, design: .rounded))
+                        .foregroundStyle(AppColors.gold)
+                }
+                Spacer()
+                AppPrimaryButton(title: "Collect", systemImage: "gift.fill") {
+                    appModel.claimDailyGift()
+                    dismiss()
+                }
+                .padding(.horizontal, AppSpacing.screen)
+                .padding(.bottom, AppSpacing.xl)
+            }
+            .frame(maxWidth: 460)
+            .frame(maxWidth: .infinity)
+        }
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) { bob = -9 }
+        }
+    }
+}
+
+/// A cheerful procedural balloon with a soft smile — the daily-gift mascot.
+private struct SmilingBalloon: View {
+    var body: some View {
+        GeometryReader { g in
+            let w = g.size.width, h = g.size.height
+            ZStack {
+                BalloonEnvelope()
+                    .fill(LinearGradient(colors: [Color(hex: 0xFFD98A), Color(hex: 0xF6B24A)],
+                                         startPoint: .top, endPoint: .bottom))
+                    .frame(width: w, height: h * 0.82)
+                    .position(x: w / 2, y: h * 0.41)
+                    .shadow(color: AppColors.gold.opacity(0.4), radius: 12, y: 4)
+                // Two happy closed eyes + a gentle smile.
+                EyeArc().stroke(Color(hex: 0x8A5A1E), style: StrokeStyle(lineWidth: 2.4, lineCap: .round))
+                    .frame(width: w * 0.14, height: h * 0.06).position(x: w * 0.37, y: h * 0.34)
+                EyeArc().stroke(Color(hex: 0x8A5A1E), style: StrokeStyle(lineWidth: 2.4, lineCap: .round))
+                    .frame(width: w * 0.14, height: h * 0.06).position(x: w * 0.63, y: h * 0.34)
+                SmileArc().stroke(Color(hex: 0x8A5A1E), style: StrokeStyle(lineWidth: 2.6, lineCap: .round))
+                    .frame(width: w * 0.28, height: h * 0.10).position(x: w / 2, y: h * 0.46)
+            }
+        }
+    }
+}
+
+private struct EyeArc: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        p.move(to: CGPoint(x: rect.minX, y: rect.maxY))
+        p.addQuadCurve(to: CGPoint(x: rect.maxX, y: rect.maxY),
+                       control: CGPoint(x: rect.midX, y: rect.minY))
+        return p
+    }
+}
+
+private struct SmileArc: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        p.move(to: CGPoint(x: rect.minX, y: rect.minY))
+        p.addQuadCurve(to: CGPoint(x: rect.maxX, y: rect.minY),
+                       control: CGPoint(x: rect.midX, y: rect.maxY))
+        return p
     }
 }

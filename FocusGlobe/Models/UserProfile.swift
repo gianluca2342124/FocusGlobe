@@ -50,6 +50,10 @@ struct UserProfile: Codable, Equatable {
     var unlockedSkyIDs: Set<String>? = nil
     /// Accepted invites counted per Sky (the honest, backend-fed tally).
     var inviteProgressBySkyID: [String: Int]? = nil
+    /// The day-ordinal on which the Shop daily gift was last collected (once/day).
+    var lastDailyGiftDay: Int? = nil
+    /// Whether the pilot prefers a distraction-free "clean" flight (minimal chrome).
+    var cleanFlightMode: Bool? = nil
 
     static let empty = UserProfile()
 }

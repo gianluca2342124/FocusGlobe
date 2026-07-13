@@ -161,8 +161,8 @@ final class FocusSessionViewModel: ObservableObject {
     var statusLabel: String {
         switch phase {
         case .boarding, .takingOff: return "Focusing"
-        case .cruising:             return "Deep Focus"
-        case .approaching:          return "Deep Focus"
+        case .cruising:             return "In flight"
+        case .approaching:          return "In flight"
         case .landing:              return "Arriving"
         }
     }

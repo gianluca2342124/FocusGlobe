@@ -52,25 +52,22 @@ struct StoreItem: Identifiable, Hashable {
 
     // MARK: Catalog (cosmetic foundation — grows freely later)
 
+    // Trails were retired; `Kind.trail` remains only so any previously-persisted
+    // `equippedTrailID` still decodes harmlessly. Prices are tuned for the small
+    // per-session coin economy (see `FocusEconomy`).
     static let all: [StoreItem] = [
         StoreItem(id: "charm-compass", name: "Brass Compass", subtitle: "A charm for the basket",
-                  kind: .charm, price: 120, isPremium: false, systemImage: "location.north.circle.fill", tintHex: 0xD9A94F),
+                  kind: .charm, price: 60, isPremium: false, systemImage: "location.north.circle.fill", tintHex: 0xD9A94F),
         StoreItem(id: "charm-pennant", name: "Cream Pennant", subtitle: "A little flag in the wind",
-                  kind: .charm, price: 90, isPremium: false, systemImage: "flag.fill", tintHex: 0xF4EFE4),
+                  kind: .charm, price: 40, isPremium: false, systemImage: "flag.fill", tintHex: 0xF4EFE4),
         StoreItem(id: "charm-lantern", name: "Paper Lantern", subtitle: "Warm light for night skies",
-                  kind: .charm, price: 150, isPremium: false, systemImage: "lightbulb.fill", tintHex: 0xFFC873),
-        StoreItem(id: "trail-stardust", name: "Stardust Trail", subtitle: "A faint sparkle behind you",
-                  kind: .trail, price: 220, isPremium: false, systemImage: "sparkles", tintHex: 0x8F7BE8),
-        StoreItem(id: "trail-ribbon", name: "Gold Ribbon", subtitle: "A silk line through the sky",
-                  kind: .trail, price: 260, isPremium: false, systemImage: "scribble.variable", tintHex: 0xD8B56D),
+                  kind: .charm, price: 75, isPremium: false, systemImage: "lightbulb.fill", tintHex: 0xFFC873),
         StoreItem(id: "cabin-plant", name: "Tiny Fern", subtitle: "A cabin companion",
-                  kind: .cabinDecoration, price: 110, isPremium: false, systemImage: "leaf.fill", tintHex: 0x6FD8B8),
+                  kind: .cabinDecoration, price: 50, isPremium: false, systemImage: "leaf.fill", tintHex: 0x6FD8B8),
         StoreItem(id: "cabin-teapot", name: "Ceramic Teapot", subtitle: "For longer flights",
-                  kind: .cabinDecoration, price: 140, isPremium: false, systemImage: "mug.fill", tintHex: 0xE9C07A),
+                  kind: .cabinDecoration, price: 70, isPremium: false, systemImage: "mug.fill", tintHex: 0xE9C07A),
         StoreItem(id: "cabin-quilt", name: "Aurora Quilt", subtitle: "Woven from cold skies",
                   kind: .cabinDecoration, price: 0, isPremium: true, systemImage: "square.grid.3x3.topleft.filled", tintHex: 0x54E0A8),
-        StoreItem(id: "trail-comet", name: "Comet Trail", subtitle: "For cosmic pilots",
-                  kind: .trail, price: 0, isPremium: true, systemImage: "moon.stars.fill", tintHex: 0x6E9EE8),
     ]
 
     static func byID(_ id: String) -> StoreItem? { all.first { $0.id == id } }

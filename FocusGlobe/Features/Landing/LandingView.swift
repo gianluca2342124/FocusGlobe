@@ -1,252 +1,161 @@
 import SwiftUI
 import UIKit
 
-/// The arrival screen — a "destination postcard unlocked" reward moment. The
-/// hero is the premium postcard with a passport-style LANDED stamp; stats are
-/// quiet; the ad action is demoted to a subtle secondary option.
+/// The completion sequence — a minimal, premium two-card flow over the **frozen**
+/// Sky the pilot just flew. First a "Success!" card (Time · Focus Coins ·
+/// Distance, with an optional rewarded "Double" ), then a streak card; a single
+/// completion interstitial plays for free users before returning Home. No
+/// postcards, no passport/share buttons, no old "You landed" screen.
 struct LandingView: View {
     let summary: LandingSummary
 
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var earnedMiles: Int
     @State private var adState: AdState = .available
+    @State private var phase: Phase = .success
     @State private var appeared = false
-    @State private var celebrateStreak = false
-    @State private var shareImage: UIImage?
-    @State private var showShare = false
-    /// True once the user watched the rewarded "double miles" ad — used to skip
-    /// the completion interstitial so two ads never stack in one landing.
+    /// True once the user watched the rewarded "double" ad — used to skip the
+    /// completion interstitial so two ads never stack in one landing.
     @State private var didWatchRewarded = false
 
     private enum AdState { case available, loading, doubled }
+    private enum Phase { case success, streak }
 
     init(summary: LandingSummary) {
         self.summary = summary
         _earnedMiles = State(initialValue: summary.baseMiles)
     }
 
-    private var theme: RouteTheme { summary.route.colorTheme }
+    private var matchedSky: FocusSky { FocusSky.matching(routeID: summary.route.id) ?? .goldenHour }
 
     var body: some View {
         ZStack {
-            AppBackground()
-            RadialGradient(colors: [theme.soft.opacity(0.32), .clear],
-                           center: .top, startRadius: 8, endRadius: 380)
-                .ignoresSafeArea()
-
-            ScrollView {
-                VStack(spacing: AppSpacing.lg) {
-                    title
-                    if summary.streakIncreased { streakCelebration }
-                    heroPostcard
-                    statsStrip
-                    actions
-                }
-                .padding(AppSpacing.screen)
-                .padding(.top, AppSpacing.xl)
-                .padding(.bottom, AppSpacing.xxl)
-                .contentMaxWidth(Layout.readable)   // wider centred column on iPad/Mac
-                // A peaceful arrival: the whole page settles in with a gentle
-                // scale + fade (the container above already crossfades).
-                .scaleEffect(appeared ? 1 : 0.97)
-                .opacity(appeared ? 1 : 0)
-            }
-
-            // A premium, one-shot confetti burst when the landing appears.
-            LandingConfettiView(colors: [theme.accent, theme.soft, AppColors.gold, .white])
+            // The Sky the pilot just flew, held frozen behind a soft scrim.
+            SkyPreviewView(sky: matchedSky, animated: false)
+                .overlay(Color.black.opacity(0.5).ignoresSafeArea())
                 .allowsHitTesting(false)
-        }
-        .focusScreenChrome()
-        .onAppear {
-            withAnimation(.spring(response: 0.7, dampingFraction: 0.7).delay(0.05)) { appeared = true }
-            if summary.streakIncreased {
-                withAnimation(.spring(response: 0.55, dampingFraction: 0.55).delay(0.35)) { celebrateStreak = true }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { appModel.haptics.tap() }
+
+            if phase == .success && !reduceMotion {
+                LandingConfettiView(colors: [matchedSky.glowColor, AppColors.gold, .white])
+                    .allowsHitTesting(false)
             }
+
+            Group {
+                switch phase {
+                case .success: successCard
+                case .streak:  streakCard
+                }
+            }
+            .padding(AppSpacing.screen)
+            .frame(maxWidth: 460)
+            .frame(maxWidth: .infinity)
+            .scaleEffect(appeared ? 1 : 0.96)
+            .opacity(appeared ? 1 : 0)
         }
-        .sheet(isPresented: $showShare) {
-            if let shareImage { ActivityView(items: [shareImage, shareText]) }
+        .preferredColorScheme(.dark)
+        .onAppear {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.75).delay(0.05)) { appeared = true }
+            appModel.haptics.rewardClaim()
         }
     }
 
-    private var title: some View {
-        VStack(spacing: 5) {
-            Text("You landed")
+    // MARK: Success card
+
+    private var successCard: some View {
+        VStack(spacing: AppSpacing.lg) {
+            Text("Success!")
                 .font(AppTypography.serifHero)
                 .foregroundStyle(AppColors.textPrimary)
-            Text("\(Formatters.durationLabel(minutes: max(1, summary.focusedMinutes))) of pure focus")
-                .font(AppTypography.subhead)
-                .foregroundStyle(AppColors.textSecondary)
-                .lineLimit(1).minimumScaleFactor(0.7)
-            Text(summary.route.destinationName)
-                .font(.system(size: 14, weight: .medium, design: .serif))
-                .italic()
-                .foregroundStyle(AppColors.gold)
-        }
-        .frame(maxWidth: .infinity)
-    }
 
-    // A calm one-time streak moment — a warm flame pill that springs in with a
-    // soft glow. No confetti; premium and quiet.
-    private var streakCelebration: some View {
-        StreakPill(days: summary.streak)
-            .scaleEffect(celebrateStreak ? 1 : 0.5)
-            .opacity(celebrateStreak ? 1 : 0)
-            .shadow(color: Color(hex: 0xF2643C).opacity(celebrateStreak ? 0.55 : 0), radius: 16, y: 0)
-            .frame(maxWidth: .infinity)
-    }
-
-    private var heroPostcard: some View {
-        DestinationPostcard(title: summary.postcard.title, place: summary.postcard.place,
-                            mood: summary.postcard.mood, theme: theme,
-                            landmark: summary.postcard.landmark ?? .generic)
-            .overlay(alignment: .topLeading) { landedStamp.padding(AppSpacing.md) }
-            .scaleEffect(appeared ? 1 : 0.94)
-            .opacity(appeared ? 1 : 0)
-    }
-
-    private var landedStamp: some View {
-        Text("ARRIVED")
-            .font(.system(size: 13, weight: .heavy, design: .serif))
-            .tracking(1.5)
-            .foregroundStyle(.white)
-            .padding(.horizontal, 10).padding(.vertical, 5)
-            .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(.white.opacity(0.85), lineWidth: 2))
-            .rotationEffect(.degrees(-8))
-            .opacity(0.9)
-    }
-
-    private var statsStrip: some View {
-        HStack(spacing: 0) {
-            stat(value: "\(summary.focusedMinutes)", unit: "min", label: "Focused")
-            divider
-            stat(value: Formatters.miles(earnedMiles), unit: "", label: adState == .doubled ? "Coins ×2" : "Focus Coins")
-            divider
-            stat(value: "\(summary.streak)", unit: summary.streak == 1 ? "day" : "days", label: "Streak")
-        }
-        .padding(.vertical, AppSpacing.md)
-        .frame(maxWidth: .infinity)
-        .glassBackground(cornerRadius: AppSpacing.cardRadius, tintOpacity: 0.18, shadowRadius: 10, shadowY: 5)
-    }
-
-    private func stat(value: String, unit: String, label: String) -> some View {
-        VStack(spacing: 3) {
-            HStack(alignment: .firstTextBaseline, spacing: 2) {
-                Text(value).font(.system(size: 19, weight: .bold, design: .rounded))
-                    .foregroundStyle(AppColors.textPrimary)
-                if !unit.isEmpty {
-                    Text(unit).font(AppTypography.micro).foregroundStyle(AppColors.textSecondary)
-                }
+            HStack(spacing: 0) {
+                statTile(icon: "clock.fill",
+                         value: Formatters.durationLabel(minutes: max(1, summary.focusedMinutes)),
+                         label: "Time", tint: AppColors.brand)
+                divider
+                coinTile
+                divider
+                statTile(icon: "location.fill",
+                         value: Formatters.distance(km: summary.distanceKm),
+                         label: "Distance", tint: AppColors.teal)
             }
+            .padding(.vertical, AppSpacing.md)
+            .glassBackground(cornerRadius: AppSpacing.cardRadius, tintOpacity: 0.2, shadowRadius: 12, shadowY: 6)
+
+            VStack(spacing: AppSpacing.sm) {
+                ExpeditionButton(title: "Continue", systemImage: "arrow.right") {
+                    appModel.uiSound.play(.claim)
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) { phase = .streak }
+                }
+                if !appModel.isPro { doubleReward }
+            }
+        }
+        .padding(AppSpacing.lg)
+        .glassBackground(cornerRadius: 28, tint: AppColors.goldFoil, tintOpacity: 0.12,
+                         shadowRadius: 26, shadowY: 14)
+    }
+
+    private var coinTile: some View {
+        VStack(spacing: 3) {
+            FocusCoinIcon(size: 22)
+            Text(Formatters.miles(earnedMiles))
+                .font(.system(size: 19, weight: .bold, design: .rounded))
+                .foregroundStyle(AppColors.textPrimary)
+                .contentTransition(.numericText())
+            Text(adState == .doubled ? "Coins ×2" : "Focus Coins")
+                .font(AppTypography.micro).foregroundStyle(AppColors.textTertiary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func statTile(icon: String, value: String, label: String, tint: Color) -> some View {
+        VStack(spacing: 3) {
+            Image(systemName: icon).font(.system(size: 18, weight: .semibold)).foregroundStyle(tint)
+            Text(value)
+                .font(.system(size: 19, weight: .bold, design: .rounded))
+                .foregroundStyle(AppColors.textPrimary)
+                .lineLimit(1).minimumScaleFactor(0.6)
             Text(label).font(AppTypography.micro).foregroundStyle(AppColors.textTertiary)
         }
         .frame(maxWidth: .infinity)
     }
 
     private var divider: some View {
-        Rectangle().fill(AppColors.hairline).frame(width: 1, height: 28)
+        Rectangle().fill(AppColors.hairline).frame(width: 1, height: 40)
     }
 
-    private var actions: some View {
-        VStack(spacing: AppSpacing.sm) {
-            ExpeditionButton(title: "Continue", systemImage: "checkmark") {
-                appModel.haptics.rewardClaim()
-                appModel.uiSound.play(.claim)
-                appModel.analytics.log(.rewardClaimed, ["route": summary.route.id, "miles": earnedMiles])
-                finish(toPassport: false)
-            }
-            // Double-your-miles sits directly under Continue.
-            if !appModel.isPro { doubleReward }
-            Button {
-                appModel.tapFeedback()
-                startAnotherFlight()
-            } label: {
-                Text("Start another flight")
-                    .font(AppTypography.headline)
-                    .foregroundStyle(AppColors.textPrimary)
-                    .frame(maxWidth: .infinity).frame(height: 52)
-                    .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.18,
-                                     shadowRadius: 8, shadowY: 4)
-            }
-            .buttonStyle(SoftPressStyle())
-            HStack(spacing: AppSpacing.sm) {
-                AppSecondaryButton(title: "Share Postcard", systemImage: "square.and.arrow.up") {
-                    sharePostcard()
-                }
-                AppSecondaryButton(title: "Passport", systemImage: "book.closed") {
-                    appModel.tapFeedback()
-                    finish(toPassport: true)
-                }
-            }
-        }
-    }
-
-    /// Land, then glide straight into a fresh setup: Home opens the flight
-    /// ritual as soon as the journey cover has dismissed. Same single-ad rule
-    /// as every other exit from the Landing screen.
-    private func startAnotherFlight() {
-        let go = { router.startAnotherFlight() }
-        if didWatchRewarded {
-            go()
-        } else {
-            appModel.ads.presentJourneyCompleteInterstitial(isPro: appModel.isPro) { go() }
-        }
-    }
-
-    // A real secondary reward card. The headline never says "ad"; a small AD
-    // badge keeps it transparent, and the final doubled total is shown up front.
+    // The rewarded "Double" — X highlighted in accent; fails gracefully if no ad.
     private var doubleReward: some View {
         Button {
             appModel.tapFeedback()
             Task { await watchAdToDouble() }
         } label: {
-            HStack(spacing: AppSpacing.sm) {
-                ZStack {
-                    Circle().fill(AppColors.gold.opacity(0.16)).frame(width: 42, height: 42)
-                    Image(systemName: adState == .doubled ? "checkmark" : "bolt.fill")
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundStyle(adState == .doubled ? AppColors.success : AppColors.gold)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
-                        Text(adState == .doubled ? "Coins doubled" : "Double your Focus Coins")
-                            .font(AppTypography.callout)
-                            .foregroundStyle(AppColors.textPrimary)
-                        if adState == .available { adBadge }
-                    }
-                    Text(doubleRewardSubtitle)
-                        .font(AppTypography.caption)
-                        .foregroundStyle(AppColors.textSecondary)
-                }
-                Spacer()
+            HStack(spacing: 8) {
+                Image(systemName: adState == .doubled ? "checkmark" : "bolt.fill")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(adState == .doubled ? AppColors.success : AppColors.gold)
                 if adState == .loading {
-                    ProgressView().controlSize(.small).tint(AppColors.textSecondary)
-                } else if adState == .available {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(AppColors.textTertiary)
+                    Text("Playing…").font(AppTypography.headline).foregroundStyle(AppColors.textSecondary)
+                } else if adState == .doubled {
+                    Text("Coins doubled").font(AppTypography.headline).foregroundStyle(AppColors.textPrimary)
+                } else {
+                    HStack(spacing: 4) {
+                        Text("Double to").font(AppTypography.headline).foregroundStyle(AppColors.textPrimary)
+                        Text("\(summary.baseMiles * 2)").font(AppTypography.headline).foregroundStyle(AppColors.gold)
+                        Text("Coins").font(AppTypography.headline).foregroundStyle(AppColors.textPrimary)
+                    }
+                    adBadge
                 }
             }
-            .padding(AppSpacing.md)
-            .frame(maxWidth: .infinity)
-            .glassBackground(cornerRadius: AppSpacing.cardRadius, tintOpacity: 0.18, shadowRadius: 10, shadowY: 5)
-            .overlay(
-                RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
-                    .strokeBorder(AppColors.gold.opacity(adState == .doubled ? 0 : 0.35), lineWidth: 1)
-            )
+            .frame(maxWidth: .infinity).frame(height: 52)
+            .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.18, shadowRadius: 8, shadowY: 4)
+            .overlay(RoundedRectangle(cornerRadius: AppSpacing.pillRadius, style: .continuous)
+                .strokeBorder(AppColors.gold.opacity(adState == .doubled ? 0 : 0.35), lineWidth: 1))
         }
         .buttonStyle(SoftPressStyle())
         .disabled(adState != .available)
-    }
-
-    private var doubleRewardSubtitle: String {
-        switch adState {
-        case .doubled: return "Now \(Formatters.miles(earnedMiles)) Focus Coins"
-        case .loading: return "Playing…"
-        case .available: return "Double to \(Formatters.miles(summary.baseMiles * 2)) Focus Coins"
-        }
     }
 
     private var adBadge: some View {
@@ -258,30 +167,53 @@ struct LandingView: View {
                 .strokeBorder(AppColors.textTertiary.opacity(0.5), lineWidth: 1))
     }
 
-    private var shareText: String {
-        "I just drifted to \(summary.route.destinationName) on FocusGlobe — \(summary.focusedMinutes) min focused."
-    }
+    // MARK: Streak card
 
-    @MainActor private func sharePostcard() {
-        appModel.haptics.tap()
-        let card = DestinationPostcard(title: summary.postcard.title, place: summary.postcard.place,
-                                       mood: summary.postcard.mood, theme: theme,
-                                       landmark: summary.postcard.landmark ?? .generic)
-            .frame(width: 360, height: 172)
-        let renderer = ImageRenderer(content: card)
-        renderer.scale = UIScreen.main.scale
-        if let image = renderer.uiImage {
-            shareImage = image
-            showShare = true
+    private var streakCard: some View {
+        VStack(spacing: AppSpacing.lg) {
+            ZStack {
+                Circle().fill(RadialGradient(colors: [Color(hex: 0xF2643C).opacity(0.35), .clear],
+                                             center: .center, startRadius: 2, endRadius: 80))
+                    .frame(width: 140, height: 140)
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 66, weight: .bold))
+                    .foregroundStyle(LinearGradient(colors: [Color(hex: 0xFFB65C), Color(hex: 0xF2643C)],
+                                                    startPoint: .top, endPoint: .bottom))
+                    .shadow(color: Color(hex: 0xF2643C).opacity(0.5), radius: 16)
+            }
+            VStack(spacing: 6) {
+                Text("\(summary.streak)-day streak")
+                    .font(AppTypography.serifTitle2)
+                    .foregroundStyle(AppColors.textPrimary)
+                Text(streakQuote)
+                    .font(AppTypography.callout)
+                    .foregroundStyle(AppColors.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+            }
+            ExpeditionButton(title: "Continue", systemImage: "checkmark") { finish() }
         }
+        .padding(AppSpacing.lg)
+        .glassBackground(cornerRadius: 28, tint: AppColors.goldFoil, tintOpacity: 0.1,
+                         shadowRadius: 26, shadowY: 14)
     }
 
-    /// Leave the Landing screen. Free users see a single completion interstitial
-    /// here — unless they already watched the rewarded "double miles" ad, in which
-    /// case it is skipped so two ads never stack in one landing. (Pro users are
-    /// skipped inside `presentJourneyCompleteInterstitial`.)
-    private func finish(toPassport: Bool) {
-        let go = { toPassport ? router.finishToPassport() : router.finishToHome() }
+    private var streakQuote: String {
+        let quotes = [
+            "Small steps, every day.",
+            "Consistency is the quiet superpower.",
+            "You showed up — that's the hard part.",
+            "Discipline is choosing what you want most.",
+            "One calm flight at a time.",
+        ]
+        return quotes[max(0, summary.streak) % quotes.count]
+    }
+
+    // MARK: Flow
+
+    private func finish() {
+        appModel.haptics.rewardClaim()
+        let go = { router.finishToHome() }
         if didWatchRewarded {
             go()
         } else {
@@ -302,22 +234,13 @@ struct LandingView: View {
                 adState = .doubled
             }
         } else {
-            adState = .available
+            adState = .available   // no ad (e.g. simulator) — leave the offer intact
         }
     }
 }
 
-/// A thin UIKit share-sheet wrapper.
-private struct ActivityView: UIViewControllerRepresentable {
-    let items: [Any]
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
-    }
-    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
-}
-
-/// A tasteful, one-shot confetti burst for the landing screen — small soft
-/// pieces in the route/gold palette that drift down and fade once on appear.
+/// A tasteful, one-shot confetti burst — small soft pieces in the Sky/gold
+/// palette that drift down and fade once on appear.
 private struct LandingConfettiView: View {
     let colors: [Color]
     private let pieces: [Piece]

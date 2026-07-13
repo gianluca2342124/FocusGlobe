@@ -350,6 +350,38 @@ final class AppModel: ObservableObject {
         (profile.ownedStoreItemIDs ?? []).contains(item.id)
     }
 
+    // MARK: - Daily gift (Shop)
+
+    static let dailyGiftCoins = 5
+
+    private var todayDayOrdinal: Int {
+        Calendar.current.ordinality(of: .day, in: .era, for: Date()) ?? 0
+    }
+
+    /// True at most once per calendar day, until the gift is collected.
+    var canClaimDailyGift: Bool { profile.lastDailyGiftDay != todayDayOrdinal }
+
+    /// Collect the daily gift: +5 Focus Coins, once per day. Returns the amount
+    /// granted (0 if already claimed today). Premium pilots receive it too.
+    @discardableResult
+    func claimDailyGift() -> Int {
+        guard canClaimDailyGift else { return 0 }
+        profile.lastDailyGiftDay = todayDayOrdinal
+        var p = progress
+        p.totalFocusMiles += Self.dailyGiftCoins
+        progress = p
+        persistAll()
+        haptics.rewardClaim()
+        uiSound.play(.claim)
+        analytics.log(.rewardClaimed, ["source": "daily_gift", "miles": Self.dailyGiftCoins])
+        return Self.dailyGiftCoins
+    }
+
+    // MARK: - Clean flight mode
+
+    var isCleanFlightMode: Bool { profile.cleanFlightMode ?? false }
+    func setCleanFlightMode(_ on: Bool) { profile.cleanFlightMode = on }
+
     /// Buy a cosmetic with Focus Coins (or claim a premium item when Pro).
     /// Returns `true` on success.
     @discardableResult
@@ -709,7 +741,9 @@ final class AppModel: ObservableObject {
         // Distance (and miles) reflect the *real* journey: the user's live
         // location → the chosen destination.
         let distanceKm = GeoMath.distanceKm(from: origin.coordinate, to: route.destination)
-        let baseMiles = max(1, Int(distanceKm.rounded()))
+        // Focus Coins scale with *actual completed focus minutes* (never distance
+        // or planned time), so infinity/short sessions can't be farmed for coins.
+        let baseMiles = FocusEconomy.coins(forFocusedSeconds: focusedSeconds)
         let isNewRoute = !progress.completedRouteIDs.contains(route.id)
         let isNewBest = focusedSeconds > progress.bestFocusSeconds
 
