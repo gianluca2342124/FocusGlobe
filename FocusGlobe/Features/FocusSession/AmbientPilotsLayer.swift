@@ -28,10 +28,10 @@ struct AmbientPilotsLayer: View {
         let skin: BalloonSkin
     }
 
-    /// How many fellow balloons share the Sky. Reduced now that every pilot
-    /// renders at the SAME size as the user balloon — same-size balloons read
-    /// as a crowd much faster than the old tiny specks did.
-    private static let count = 7
+    /// How many fellow balloons share the Sky — a lively population (every
+    /// pilot renders at the user balloon's exact size; spacing rules below keep
+    /// them from clumping or crowding the user).
+    private static let count = 10
 
     /// Weighted skin bag: the default/common skins dominate; rare/premium skins
     /// appear seldom (like real traffic), never one-of-each.
@@ -57,8 +57,22 @@ struct AmbientPilotsLayer: View {
         var list: [Pilot] = []
         for k in 0..<min(Self.count, indices.count) {
             let skin = Self.skinBag[Int(rng.unit() * Double(Self.skinBag.count)) % Self.skinBag.count]
-            list.append(Pilot(fx: 0.08 + rng.unit() * 0.84,
-                              fy: 0.10 + rng.unit() * 0.5,
+            // Seeded position with simple constraints: keep a horizontal gap from
+            // already-placed pilots and stay out of the user balloon's central
+            // column, so same-size pilots never clump or hide the hero.
+            var fx = 0.06 + rng.unit() * 0.88
+            var fy = 0.08 + rng.unit() * 0.52
+            var attempts = 0
+            while attempts < 8 {
+                let clashesCentre = fx > 0.40 && fx < 0.60 && fy > 0.30
+                let clashesPilot = list.contains { abs($0.fx - fx) < 0.13 && abs($0.fy - fy) < 0.12 }
+                if !clashesCentre && !clashesPilot { break }
+                fx = 0.06 + rng.unit() * 0.88
+                fy = 0.08 + rng.unit() * 0.52
+                attempts += 1
+            }
+            list.append(Pilot(fx: fx,
+                              fy: fy,
                               depth: rng.unit(),
                               phase: rng.unit() * 6.28,
                               minutesLeft: 3 + Int(rng.unit() * 55),
@@ -101,7 +115,7 @@ struct AmbientPilotsLayer: View {
         // formula) — never scaled down by depth. Depth reads through opacity
         // alone, so the user balloon stays dominant via full opacity + glow.
         let size = max(38, min(52, H * 0.07))
-        let alpha = 0.22 + p.depth * 0.2
+        let alpha = 0.18 + p.depth * 0.2
 
         ZStack(alignment: .bottom) {
             if selectedPilot == index {

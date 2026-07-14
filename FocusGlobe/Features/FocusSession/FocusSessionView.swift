@@ -108,9 +108,6 @@ struct FocusSessionView: View {
                 ActiveFlightJourneyWorldView(elapsed: { displayElapsed(at: Date()) },
                                              seed: worldSeed,
                                              animated: !reduceMotion,
-                                             openingBias: matchedSky?.flightOpening,
-                                             skyPool: matchedSky?.flightPool,
-                                             skyParticles: matchedSky?.flightParticles ?? .none,
                                              focusSky: matchedSky)
                     .transition(.opacity)
                 if !(appModel.profile.soloFlights ?? false) {
@@ -125,9 +122,6 @@ struct FocusSessionView: View {
                 CabinView(elapsed: { displayElapsed(at: Date()) },
                           seed: worldSeed,
                           animated: !reduceMotion,
-                          openingBias: matchedSky?.flightOpening,
-                          skyPool: matchedSky?.flightPool,
-                          skyParticles: matchedSky?.flightParticles ?? .none,
                           focusSky: matchedSky,
                           showPilots: !(appModel.profile.soloFlights ?? false),
                           equippedItemIDs: appModel.profile.equippedCabinItemIDs ?? [])

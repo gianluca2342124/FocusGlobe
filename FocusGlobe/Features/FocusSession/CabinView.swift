@@ -22,9 +22,6 @@ struct CabinView: View {
     /// When false every layer is frozen (Reduce Motion / low-power calm).
     var animated: Bool
     /// Same Sky identity as the exterior, so the window shows the SAME world.
-    var openingBias: Int? = nil
-    var skyPool: [WorldKind]? = nil
-    var skyParticles: FocusSky.FlightParticle = .none
     var focusSky: FocusSky? = nil
     /// Whether fellow pilots share this Sky (mirrors the exterior; hidden for a
     /// solo flight). When true, the same ambient balloons drift **through the
@@ -102,9 +99,7 @@ struct CabinView: View {
         ZStack {
             Color(hex: 0x120C08)
             ActiveFlightJourneyWorldView(elapsed: elapsed, seed: seed,
-                                         animated: animated, openingBias: openingBias,
-                                         skyPool: skyPool, skyParticles: skyParticles,
-                                         focusSky: focusSky)
+                                         animated: animated, focusSky: focusSky)
                 .frame(width: W, height: H).clipped()
             // The SAME fellow pilots as the exterior, drifting behind the cabin
             // art so they read *through the window* (non-interactive in here).
@@ -220,9 +215,7 @@ struct CabinView: View {
         return ZStack {
             // The SAME live world as the exterior, seen through the glass.
             ActiveFlightJourneyWorldView(elapsed: elapsed, seed: seed,
-                                         animated: animated, openingBias: openingBias,
-                                         skyPool: skyPool, skyParticles: skyParticles,
-                                         focusSky: focusSky)
+                                         animated: animated, focusSky: focusSky)
                 .frame(width: winW, height: winH)
                 .clipShape(shape)
             // The same fellow pilots drifting past, clipped inside the glass.

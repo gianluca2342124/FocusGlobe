@@ -52,76 +52,24 @@ struct FocusSky: Identifiable, Hashable {
     /// Closest existing ritual/backdrop preset (a `SkyScene` id) — the safe
     /// fallback mapping until every Sky has a bespoke visual preset.
     let visualPresetID: String
-    /// Which flight-world opening sequence best matches this Sky (0…3, see
-    /// `FlightWorldSequence.openings`); `nil` keeps the seeded random opening.
-    /// Superseded by `flightPool` for Sky-identity flights; kept as a fallback.
+    /// Legacy field from the retired chapter-tape flight world — kept only so
+    /// the catalog entries stay stable; the living-sky renderer ignores it.
     let flightOpening: Int?
 
-    /// The Sky-identity weather riding inside the flight's scrolling world.
+    /// The Sky's weather/identity particles inside the living flight sky.
     enum FlightParticle { case none, snow, rain, lanterns }
 
-    /// **The Sky's own flight.** A session stays inside this small family of
-    /// world chapters (its recognizable identity — evolving, never cycling into
-    /// unrelated landscapes), decorated by `flightParticles`. Populated after
-    /// the catalog via `flightIdentity(for:)` so this file stays data-first.
-    var flightPool: [WorldKind] { FocusSky.flightIdentity(for: id).pool }
-    var flightParticles: FlightParticle { FocusSky.flightIdentity(for: id).particles }
-
-    /// **The Sky's authored journey** — an ordered sequence of 5–6 distinct
-    /// visual chapters (each a full-screen composition in the world tape). The
-    /// first entry is the takeoff atmosphere; the sequence then plays in order
-    /// and loops with fresh per-instance seeds for long/endless flights, so the
-    /// world keeps evolving without exact repetition. No adjacent duplicates.
-    static func flightIdentity(for id: String) -> (pool: [WorldKind], particles: FlightParticle) {
+    /// Which particles this Sky's flight renders (snow/rain fall as weather;
+    /// lanterns are gentle local moments).
+    var flightParticles: FlightParticle {
         switch id {
-        case "golden-hour":
-            // warm takeoff → amber cloud valleys → sun breaking through →
-            // pink-rose upper light → cloud canyon reprise → golden finale
-            return ([.goldenHorizon, .cloudOcean, .sunBreak, .roseDawn, .cloudOcean, .goldenHorizon], .none)
-        case "paris-sunset":
-            // rose low dusk → evening window-lights → romantic cloud fields →
-            // violet-blue upper dusk → lights reprise → rose finale
-            return ([.roseDawn, .duskLights, .cloudOcean, .violetTwilight, .duskLights, .roseDawn], .none)
-        case "fiji-lagoon":
-            // turquoise lagoon air → tropical cloud masses → refracted sun →
-            // lagoon reprise → bright high-altitude cloud canyons
-            return ([.lagoonAir, .cloudOcean, .sunBreak, .lagoonAir, .cloudOcean], .none)
-        case "kyoto-lanterns":
-            // violet dusk → lantern festival → golden windows → moonlit calm →
-            // dense lantern reprise
-            return ([.violetTwilight, .lanternNight, .duskLights, .moonSky, .lanternNight], .lanterns)
-        case "aurora-snowfield":
-            // icy takeoff haze → broad aurora curtains → crystalline air →
-            // moon glow → aurora reprise → snow-lit calm
-            return ([.snowSky, .auroraField, .iceCrystal, .moonSky, .auroraField, .snowSky], .snow)
-        case "moon-garden":
-            // silver mist → an enormous passing moon → star fields →
-            // violet night → moon reprise
-            return ([.moonSky, .moonHalo, .starfield, .violetTwilight, .moonSky], .none)
-        case "galaxy-drift":
-            // first nebulae → dense stars → meteor field → deep-space dark →
-            // colourful nebula reprise
-            return ([.nebulaDream, .starfield, .cometField, .deepSpace, .nebulaDream], .none)
-        case "deep-space":
-            // near-black space → star-density rise → dark nebula silhouettes →
-            // meteor streaks → deep calm
-            return ([.deepSpace, .starfield, .nebulaDream, .cometField, .deepSpace], .none)
-        case "rainy-tokyo":
-            // neon rain haze → distant city glow → violet night → rain reprise →
-            // warm window lights in mist
-            return ([.cityRain, .nightValley, .violetTwilight, .cityRain, .duskLights], .rain)
-        case "swiss-alps":
-            // crisp snow air → cloud valleys → cold sunlight breaking → ice halo
-            // air → high cloud formations
-            return ([.snowSky, .cloudOcean, .sunBreak, .iceCrystal, .cloudOcean], .snow)
-        case "sahara-night":
-            // warm desert night → star-heavy sky → shooting-star field →
-            // moonlit calm → deep starfield
-            return ([.quietReturn, .starfield, .cometField, .moonSky, .starfield], .none)
-        default:
-            return ([.goldenHorizon, .cloudOcean, .sunBreak, .roseDawn], .none)
+        case "kyoto-lanterns":                 return .lanterns
+        case "aurora-snowfield", "swiss-alps": return .snow
+        case "rainy-tokyo":                    return .rain
+        default:                               return .none
         }
     }
+
 
     var isDefaultFree: Bool { if case .free = unlockRequirement { return true }; return false }
     /// "Premium-gated" in the loose sense: anything that isn't the free Sky.

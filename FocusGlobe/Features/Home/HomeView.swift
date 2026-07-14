@@ -543,8 +543,9 @@ private struct SkyPreviewFlightView: View {
             AmbientPilotsLayer(skyID: sky.id, elapsed: previewElapsed, animated: !reduceMotion)
                 .allowsHitTesting(false)
                 .ignoresSafeArea()
-            // A soft premium darkening so the copy and buttons read clearly.
-            LinearGradient(colors: [.black.opacity(0.5), .black.opacity(0.16), .black.opacity(0.66)],
+            // A soft premium darkening — light enough to appreciate the living
+            // sky, strong enough at the edges for the copy and buttons.
+            LinearGradient(colors: [.black.opacity(0.38), .black.opacity(0.1), .black.opacity(0.55)],
                            startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
