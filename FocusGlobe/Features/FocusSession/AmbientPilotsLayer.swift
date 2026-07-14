@@ -28,9 +28,10 @@ struct AmbientPilotsLayer: View {
         let skin: BalloonSkin
     }
 
-    /// How many fellow balloons share the Sky (kept modest so the user balloon
-    /// stays dominant). Between 10 and 20 per the design brief.
-    private static let count = 13
+    /// How many fellow balloons share the Sky. Reduced now that every pilot
+    /// renders at the SAME size as the user balloon — same-size balloons read
+    /// as a crowd much faster than the old tiny specks did.
+    private static let count = 7
 
     /// Weighted skin bag: the default/common skins dominate; rare/premium skins
     /// appear seldom (like real traffic), never one-of-each.
@@ -57,7 +58,7 @@ struct AmbientPilotsLayer: View {
         for k in 0..<min(Self.count, indices.count) {
             let skin = Self.skinBag[Int(rng.unit() * Double(Self.skinBag.count)) % Self.skinBag.count]
             list.append(Pilot(fx: 0.08 + rng.unit() * 0.84,
-                              fy: 0.10 + rng.unit() * 0.66,
+                              fy: 0.10 + rng.unit() * 0.5,
                               depth: rng.unit(),
                               phase: rng.unit() * 6.28,
                               minutesLeft: 3 + Int(rng.unit() * 55),
@@ -96,8 +97,11 @@ struct AmbientPilotsLayer: View {
         let sway = CGFloat(Foundation.sin(t * (0.13 + p.depth * 0.1) + p.phase * 1.3)) * (6 + CGFloat(p.depth) * 8)
         let x = CGFloat(p.fx) * W + sway
         let y = CGFloat(p.fy) * H + bob
-        let size = CGFloat(14 + p.depth * 14)
-        let alpha = 0.34 + p.depth * 0.36
+        // SAME display size as the central user balloon (its exact cruising
+        // formula) — never scaled down by depth. Depth reads through opacity
+        // alone, so the user balloon stays dominant via full opacity + glow.
+        let size = max(38, min(52, H * 0.07))
+        let alpha = 0.22 + p.depth * 0.2
 
         ZStack(alignment: .bottom) {
             if selectedPilot == index {

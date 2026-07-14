@@ -419,7 +419,7 @@ private struct DailyGiftSheet: View {
 
     var body: some View {
         ZStack {
-            AnimatedTileBackground(assetName: "Background_Store_Tile", overlayOpacity: 0.55)
+            AppBackground().ignoresSafeArea()
             VStack(spacing: AppSpacing.md) {
                 HStack {
                     Spacer()

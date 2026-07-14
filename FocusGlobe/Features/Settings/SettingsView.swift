@@ -16,7 +16,7 @@ struct SettingsView: View {
 
     var body: some View {
         ZStack {
-            AnimatedTileBackground(assetName: "Background_Settings_Tile", overlayOpacity: 0.6)
+            AppBackground()
             // Vertical-only scroll. The content is clamped to the viewport width
             // and horizontal bounce is disabled, so the page can never drift
             // sideways (matches Passport and the other screens).

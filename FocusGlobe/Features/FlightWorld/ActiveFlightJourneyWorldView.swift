@@ -128,6 +128,69 @@ struct ChapterSpec {
     let seed: UInt64
 }
 
+// MARK: - Per-Sky palette contract
+
+/// The gradient + light colours one chapter renders with.
+struct ChapterPalette {
+    let top: Color
+    let mid: Color
+    let light: Color
+}
+
+/// **The per-Sky palette contract.** Chapters are shared *composition*
+/// primitives (clouds, light shafts, lanterns…), but their colour field must
+/// belong to the selected Sky's family — Golden Hour can never drift into
+/// steel blue just because a shared chapter's default palette is cold. Any
+/// (sky, chapter) pair listed here renders with the Sky's own warm/cold family;
+/// unlisted pairs fall back to the chapter's default (used only where that
+/// default already matches the Sky's contract).
+enum SkyPaletteContract {
+    static func palette(skyID: String, kind: WorldKind) -> ChapterPalette {
+        if let c = overrides[skyID]?[kind] { return c }
+        return ChapterPalette(top: kind.topColor, mid: kind.midColor, light: kind.lightColor)
+    }
+
+    static func lightColor(skyID: String, kind: WorldKind) -> Color {
+        palette(skyID: skyID, kind: kind).light
+    }
+
+    private static func p(_ t: UInt, _ m: UInt, _ l: UInt) -> ChapterPalette {
+        ChapterPalette(top: Color(hex: t), mid: Color(hex: m), light: Color(hex: l))
+    }
+
+    /// Sky → (chapter → palette). Only cross-family pairs need entries.
+    private static let overrides: [String: [WorldKind: ChapterPalette]] = [
+        // Golden Hour: cream · gold · amber · coral · terracotta · auburn — never cold blue.
+        "golden-hour": [
+            .goldenHorizon: p(0x52303E, 0x8E5240, 0xF2C488),   // takeoff / warm dusk reprise
+            .cloudOcean:    p(0x8E4A42, 0xD08A52, 0xF2DFC0),   // amber cloud valleys
+            .sunBreak:      p(0x6E3A3A, 0xC9744A, 0xF6E2B0),   // honey light breaking through
+            .roseDawn:      p(0x5C3348, 0xA85862, 0xE8B4B8),   // intense coral-rose sunset
+        ],
+        // Fiji: turquoise · aqua · sea-green · white sunlight.
+        "fiji-lagoon": [
+            .cloudOcean:    p(0x186270, 0x46A0A8, 0xEAFBF4),
+            .sunBreak:      p(0x0F4656, 0x2E8E92, 0xF2FFF8),
+        ],
+        // Kyoto: warm violet · plum · lantern gold (its moon chapter stays warm-violet).
+        "kyoto-lanterns": [
+            .moonSky:       p(0x241A3E, 0x402C56, 0xE8C8A0),
+        ],
+        // Paris: peach · rose · warm violet — its cloud fields are romantic rose.
+        "paris-sunset": [
+            .cloudOcean:    p(0x6E3A52, 0xB86A6E, 0xF2BE8C),
+        ],
+        // Swiss Alps: clean sky blue · icy white · sparing gold.
+        "swiss-alps": [
+            .sunBreak:      p(0x2E4E6E, 0x7FA0BE, 0xF6D9B4),
+        ],
+        // Sahara: warm dark indigo · sand gold — its moonlit chapter stays warm.
+        "sahara-night": [
+            .moonSky:       p(0x1E1834, 0x3A2C4E, 0xE8B080),
+        ],
+    ]
+}
+
 /// Builds the seeded journey for a session: a curated opening sequence, then a
 /// gently shuffled loop pool that keeps long and endless flights evolving
 /// without obvious repetition. Precomputed once — ~15 hours of chapters.
@@ -308,14 +371,19 @@ private struct ChapterSectionView: View {
     let bottomEdge: Color
     let width: CGFloat
     let height: CGFloat
+    /// The Sky's palette for this chapter (see `SkyPaletteContract`); nil uses
+    /// the chapter's default colours (legacy skyless tape).
+    var palette: ChapterPalette? = nil
 
     /// Element sizes key off the shorter side so iPad/Mac stay elegant, never
     /// blown up; positions stay fractional so nothing crops oddly.
     private var ref: CGFloat { min(width, height) }
 
     var body: some View {
+        let top = palette?.top ?? spec.kind.topColor
+        let mid = palette?.mid ?? spec.kind.midColor
         ZStack {
-            LinearGradient(colors: [spec.kind.topColor, spec.kind.midColor, bottomEdge],
+            LinearGradient(colors: [top, mid, bottomEdge],
                            startPoint: .top, endPoint: .bottom)
             dressing
         }
@@ -363,14 +431,34 @@ private struct ChapterSectionView: View {
         }
     }
 
+    // A cloud *valley*, not a cloud wall: exactly two distinct banks with open
+    // sky between them, a lit gap the eye travels through, and a thin ribbon.
+    // Clouds never stack into a full-width mountain here.
     private var cloudOcean: some View {
-        ZStack {
-            glow(Color(hex: 0xF2DFC0), alpha: 0.18, radius: ref * 0.62, x: 0.5, y: 0.58)
-            puffRowsCanvas(rows: [
-                PuffRow(y: 0.42, count: 6, radius: 0.17, tint: Color(hex: 0xDCE8F6), alpha: 0.22),
-                PuffRow(y: 0.60, count: 5, radius: 0.23, tint: Color(hex: 0xE9F0FA), alpha: 0.30),
-                PuffRow(y: 0.80, count: 6, radius: 0.27, tint: Color(hex: 0xF2EFE6), alpha: 0.38),
-            ])
+        let leftLow = seededBool(salt: 30)
+        return ZStack {
+            glow(Color(hex: 0xF2DFC0), alpha: 0.22, radius: ref * 0.6,
+                 x: leftLow ? 0.68 : 0.32, y: 0.42)
+            cloudBank(salt: 31, xFrac: leftLow ? 0.24 : 0.76,
+                      yFrac: 0.68, scale: 0.30, alpha: 0.36)
+            cloudBank(salt: 32, xFrac: leftLow ? 0.78 : 0.22,
+                      yFrac: 0.30, scale: 0.20, alpha: 0.24)
+            wisp(y: 0.52, w: 0.55, alpha: 0.10)
+        }
+    }
+
+    /// One self-contained billowing bank (a single organic mass with a lit
+    /// crown) — used sparingly so the sky keeps open negative space.
+    private func cloudBank(salt: UInt64, xFrac: CGFloat, yFrac: CGFloat,
+                           scale: CGFloat, alpha: Double) -> some View {
+        Canvas { ctx, s in
+            var rng = SeededRNG(seed: spec.seed &+ salt)
+            let ref = min(s.width, s.height)
+            let cx = s.width * xFrac + CGFloat(rng.unit() - 0.5) * s.width * 0.08
+            let cy = s.height * yFrac + CGFloat(rng.unit() - 0.5) * s.height * 0.04
+            let halfW = ref * scale * CGFloat(0.9 + rng.unit() * 0.3)
+            drawCloud(&ctx, cx: cx, cy: cy, halfWidth: halfW,
+                      tint: Color(hex: 0xF4EFE2), alpha: alpha, highlight: true, rng: &rng)
         }
     }
 
@@ -439,14 +527,14 @@ private struct ChapterSectionView: View {
         }
     }
 
+    // Intense sunset: broad light veils and ONE soft cloud bank — mostly open
+    // glowing sky, never stacked rows.
     private var roseDawn: some View {
         ZStack {
-            glow(Color(hex: 0xE8B4B8), alpha: 0.22, radius: ref * 0.62, x: 0.42, y: 0.6)
-            puffRowsCanvas(rows: [
-                PuffRow(y: 0.5, count: 6, radius: 0.19, tint: Color(hex: 0xF4E6DC), alpha: 0.26),
-                PuffRow(y: 0.68, count: 5, radius: 0.24, tint: Color(hex: 0xF6EAE2), alpha: 0.32),
-                PuffRow(y: 0.85, count: 6, radius: 0.27, tint: Color(hex: 0xEFE0DC), alpha: 0.36),
-            ])
+            glow(Color(hex: 0xE8B4B8), alpha: 0.26, radius: ref * 0.66, x: 0.42, y: 0.52)
+            glow(Color(hex: 0xE8865A), alpha: 0.16, radius: ref * 0.5, x: 0.64, y: 0.74)
+            cloudBank(salt: 34, xFrac: 0.3, yFrac: 0.78, scale: 0.26, alpha: 0.3)
+            wisp(y: 0.4, w: 0.7, alpha: 0.12)
             starsCanvas(count: 16, brightness: 0.35, heightFraction: 0.3)
         }
     }
@@ -503,18 +591,33 @@ private struct ChapterSectionView: View {
 
     // MARK: Per-Sky authored chapters (the journey rebuild)
 
-    /// Sunlight breaking through a cloud valley: bright pool, light shafts,
-    /// backlit silhouettes.
+    /// Sunlight breaking through: a large diffused sun with a faint halo, wide
+    /// light shafts, one low backlit silhouette row — and open sky everywhere else.
     private var sunBreak: some View {
-        ZStack {
-            glow(Color(hex: 0xF6E2B0), alpha: 0.30, radius: ref * 0.66, x: 0.5, y: 0.40)
+        let sx = seededCG(0.36, 0.64, salt: 35)
+        return ZStack {
+            glow(Color(hex: 0xF6E2B0), alpha: 0.3, radius: ref * 0.7, x: Double(sx), y: 0.36)
+            sunDisc(x: sx, y: 0.34)
             lightShafts
             puffRowsCanvas(rows: [
-                PuffRow(y: 0.72, count: 5, radius: 0.24, tint: Color(hex: 0x3A3450), alpha: 0.42, highlight: false),
-                PuffRow(y: 0.88, count: 6, radius: 0.28, tint: Color(hex: 0x2C2842), alpha: 0.5, highlight: false),
+                PuffRow(y: 0.88, count: 4, radius: 0.24, tint: Color(hex: 0x3A3450), alpha: 0.4, highlight: false),
             ])
-            starsCanvas(count: 14, brightness: 0.3, heightFraction: 0.3)
         }
+    }
+
+    /// A big, softly-bounded sun with a faint halo ring — a recognisable hero.
+    private func sunDisc(x: CGFloat, y: CGFloat) -> some View {
+        let d = ref * 0.30
+        return ZStack {
+            Circle().fill(RadialGradient(
+                colors: [Color(hex: 0xFFF4DC).opacity(0.9), Color(hex: 0xF6D89A).opacity(0.5),
+                         Color(hex: 0xF2B46A).opacity(0.0)],
+                center: .center, startRadius: 0, endRadius: d * 0.85))
+                .frame(width: d * 1.7, height: d * 1.7)
+            Circle().strokeBorder(Color(hex: 0xFFF0C8).opacity(0.14), lineWidth: 1.5)
+                .frame(width: d * 1.35, height: d * 1.35)
+        }
+        .position(x: width * x, y: height * y)
     }
 
     /// Wide, soft light shafts spreading down from above the frame.
@@ -544,10 +647,8 @@ private struct ChapterSectionView: View {
     private var lagoonAir: some View {
         ZStack {
             glow(Color(hex: 0xA8F0DC), alpha: 0.22, radius: ref * 0.6, x: 0.5, y: 0.42)
-            puffRowsCanvas(rows: [
-                PuffRow(y: 0.38, count: 5, radius: 0.18, tint: Color(hex: 0xEAFBF4), alpha: 0.24),
-                PuffRow(y: 0.62, count: 6, radius: 0.24, tint: Color(hex: 0xDDF4EA), alpha: 0.3),
-            ])
+            cloudBank(salt: 36, xFrac: 0.3, yFrac: 0.34, scale: 0.18, alpha: 0.26)
+            cloudBank(salt: 37, xFrac: 0.74, yFrac: 0.6, scale: 0.24, alpha: 0.3)
             shimmerBand
             islandSilhouettes
         }
@@ -1388,7 +1489,9 @@ struct SkyJourneyTape: View {
     /// chapter as it takes over the frame).
     static func lighting(sky: FocusSky, elapsed: Double) -> SkyEnvironmentLighting {
         let info = chapterInfo(sky: sky, elapsed: elapsed)
-        let c = info.progress < 0.5 ? info.kind.lightColor : info.nextKind.lightColor
+        let c = info.progress < 0.5
+            ? SkyPaletteContract.lightColor(skyID: sky.id, kind: info.kind)
+            : SkyPaletteContract.lightColor(skyID: sky.id, kind: info.nextKind)
         var h: UInt64 = 0x11
         for u in sky.id.unicodeScalars { h = (h &* 31) &+ UInt64(u.value) }
         let x = 0.3 + Double(h % 5) * 0.1
@@ -1437,9 +1540,15 @@ struct SkyJourneyTape: View {
     @ViewBuilder
     private func cell(seq: [ChapterSpec], index: Int, t: Double, W: CGFloat, H: CGFloat) -> some View {
         let spec = seq[index]
-        let below = index > 0 ? seq[index - 1].kind.topColor : spec.kind.midColor
+        // Colours come from the Sky's palette contract, so shared chapter
+        // primitives can never pull a Sky outside its colour family; seams stay
+        // seamless because both cells resolve through the same contract.
+        let pal = SkyPaletteContract.palette(skyID: sky.id, kind: spec.kind)
+        let below = index > 0
+            ? SkyPaletteContract.palette(skyID: sky.id, kind: seq[index - 1].kind).top
+            : pal.mid
         ZStack {
-            ChapterSectionView(spec: spec, bottomEdge: below, width: W, height: H)
+            ChapterSectionView(spec: spec, bottomEdge: below, width: W, height: H, palette: pal)
                 .id(index)
             ChapterLifeCanvas(seed: spec.seed, kind: spec.kind,
                               particles: sky.flightParticles, t: t, width: W, height: H)

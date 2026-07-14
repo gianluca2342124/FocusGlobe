@@ -14,7 +14,7 @@ struct FriendsView: View {
 
     var body: some View {
         ZStack {
-            AnimatedTileBackground(assetName: "Background_Friends_Tile", overlayOpacity: 0.5)
+            AppBackground()
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
                     ScreenHeader(title: "Friends", subtitle: "Focus feels better together", showsBack: false)

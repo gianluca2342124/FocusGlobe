@@ -75,11 +75,15 @@ struct SkyFlightSceneView: View {
     private func lightingVeil(W: CGFloat, H: CGFloat, t: Double) -> some View {
         let info = SkyJourneyTape.chapterInfo(sky: sky, elapsed: t)
         let b = info.progress
+        // Light colours resolve through the Sky's palette contract — the veil
+        // can never tint a warm Sky cold.
+        let cur = SkyPaletteContract.lightColor(skyID: sky.id, kind: info.kind)
+        let nxt = SkyPaletteContract.lightColor(skyID: sky.id, kind: info.nextKind)
         return ZStack {
-            RadialGradient(colors: [info.kind.lightColor.opacity(0.15 * (1 - b)), .clear],
+            RadialGradient(colors: [cur.opacity(0.15 * (1 - b)), .clear],
                            center: UnitPoint(x: 0.42, y: 0.32),
                            startRadius: 2, endRadius: W * 0.95)
-            RadialGradient(colors: [info.nextKind.lightColor.opacity(0.15 * b), .clear],
+            RadialGradient(colors: [nxt.opacity(0.15 * b), .clear],
                            center: UnitPoint(x: 0.6, y: 0.24),
                            startRadius: 2, endRadius: W * 0.95)
         }
@@ -270,20 +274,94 @@ struct SkyFlightSceneView: View {
     @ViewBuilder private func signatureLife(W: CGFloat, H: CGFloat, t: Double) -> some View {
         switch sky.id {
         case "golden-hour":
-            ZStack { birdsFlock(W: W, H: H, t: t); distantBalloonSpeck(W: W, H: H, t: t) }
+            ZStack {
+                birdsFlock(W: W, H: H, t: t)
+                flockCrossing(W: W, H: H, t: t)
+                sunHaloEvent(W: W, H: H, t: t)
+                distantBalloonSpeck(W: W, H: H, t: t)
+            }
         case "paris-sunset":
             ZStack {
                 birdsFlock(W: W, H: H, t: t)
+                flockCrossing(W: W, H: H, t: t)
                 warmOrbs(W: W, H: H, t: t, tint: Color(hex: 0xF6C88A))
                 distantBalloonSpeck(W: W, H: H, t: t)
             }
         case "fiji-lagoon":
-            ZStack { islandsLow(W: W, H: H, t: t); distantBalloonSpeck(W: W, H: H, t: t) }
+            ZStack {
+                islandsLow(W: W, H: H, t: t)
+                flockCrossing(W: W, H: H, t: t)
+                sunHaloEvent(W: W, H: H, t: t)
+                distantBalloonSpeck(W: W, H: H, t: t)
+            }
         case "kyoto-lanterns":
             warmOrbs(W: W, H: H, t: t, tint: Color(hex: 0xFFC873))
+        case "swiss-alps":
+            ZStack {
+                birdsFlock(W: W, H: H, t: t)
+                flockCrossing(W: W, H: H, t: t)
+                sunHaloEvent(W: W, H: H, t: t)
+            }
         default:
             EmptyView()
         }
+    }
+
+    /// A **major event**: roughly every ~38 s a whole flock crosses the frame
+    /// horizontally over several seconds — obvious, alive, and gone again.
+    private func flockCrossing(W: CGFloat, H: CGFloat, t: Double) -> some View {
+        Canvas { ctx, s in
+            let period = 38.0
+            let cycle = (t / period).rounded(.down)
+            let phase = t / period - cycle
+            guard phase < 0.24 else { return }          // ~9 s crossing
+            let local = phase / 0.24
+            var rng = SeededRNG(seed: skySeed &+ UInt64(bitPattern: Int64(cycle)) &* 97 &+ 3)
+            let dir: Double = rng.unit() < 0.5 ? -1 : 1
+            let baseY = 0.16 + rng.unit() * 0.3
+            let x0 = dir > 0 ? -0.15 : 1.15
+            let x = x0 + dir * 1.3 * local
+            let a = Foundation.sin(.pi * min(1, local)) * 0.5 + 0.2
+            for i in 0..<7 {
+                let di = Double(i)
+                // A loose V: offsets fan out behind the leader.
+                let row = (di + 1) / 2
+                let side: Double = i % 2 == 0 ? 1 : -1
+                let bx = (x - dir * row * 0.035) * Double(s.width)
+                let by = (baseY + side * row * 0.022) * Double(s.height)
+                let flap = 0.5 + 0.5 * Foundation.sin(t * 3.6 + di * 1.4)
+                let wing = 3.2 + flap * 3.8
+                var p = Path()
+                p.move(to: CGPoint(x: bx - wing, y: by + wing * 0.5))
+                p.addLine(to: CGPoint(x: bx, y: by))
+                p.addLine(to: CGPoint(x: bx + wing, y: by + wing * 0.5))
+                ctx.stroke(p, with: .color(Color(hex: 0x2A2438).opacity(a)), lineWidth: 1.7)
+            }
+        }
+        .allowsHitTesting(false)
+    }
+
+    /// A rare halo event (~every 85 s): a faint double ring blooming around the
+    /// light and fading — quietly spectacular, never a hard circle (thin arcs).
+    private func sunHaloEvent(W: CGFloat, H: CGFloat, t: Double) -> some View {
+        Canvas { ctx, s in
+            let period = 85.0
+            let cycle = (t / period).rounded(.down)
+            let phase = t / period - cycle
+            guard phase < 0.18 else { return }
+            let local = phase / 0.18
+            var rng = SeededRNG(seed: skySeed &+ UInt64(bitPattern: Int64(cycle)) &* 61 &+ 9)
+            let cx = Double(s.width) * (0.36 + rng.unit() * 0.28)
+            let cy = Double(s.height) * (0.26 + rng.unit() * 0.12)
+            let a = Foundation.sin(.pi * local) * 0.18
+            let r1 = Double(min(s.width, s.height)) * (0.2 + 0.16 * local)
+            for (radius, alpha) in [(r1, a), (r1 * 1.4, a * 0.5)] {
+                let rect = CGRect(x: cx - radius, y: cy - radius, width: radius * 2, height: radius * 2)
+                ctx.stroke(Path(ellipseIn: rect),
+                           with: .color(sky.glowColor.opacity(alpha)), lineWidth: 2)
+            }
+        }
+        .allowsHitTesting(false)
     }
 
     private func birdsFlock(W: CGFloat, H: CGFloat, t: Double) -> some View {
@@ -515,7 +593,7 @@ struct SkyFlightSceneView: View {
             var rng = SeededRNG(seed: skySeed &+ 0x3F09)
             let span = Double(s.height) + Double(s.height) * 0.5
             let tint = sky.isCosmicSky ? Color(hex: 0x9FB4DC) : Color(hex: 0xF4ECDC)
-            for i in 0..<3 {
+            for i in 0..<2 {
                 let di = Double(i)
                 let fx = rng.unit()
                 let speed = 60.0 + rng.unit() * 34.0
@@ -524,9 +602,9 @@ struct SkyFlightSceneView: View {
                 if y < 0 { y += span }
                 y -= Double(s.height) * 0.25
                 let cx = fx * Double(s.width) + Foundation.sin(t * 0.2 + di) * Double(s.width) * 0.05
-                let ww = Double(s.width) * (0.6 + rng.unit() * 0.5)
-                let hh = Double(s.height) * 0.09
-                let g = Gradient(colors: [.clear, tint.opacity(0.1), .clear])
+                let ww = Double(s.width) * (0.5 + rng.unit() * 0.4)
+                let hh = Double(s.height) * 0.07
+                let g = Gradient(colors: [.clear, tint.opacity(0.07), .clear])
                 ctx.fill(Path(ellipseIn: CGRect(x: cx - ww / 2, y: y - hh / 2, width: ww, height: hh)),
                          with: .linearGradient(g, startPoint: CGPoint(x: cx - ww / 2, y: y),
                                                endPoint: CGPoint(x: cx + ww / 2, y: y)))
@@ -625,10 +703,12 @@ struct OrganicCloudLayer: View {
     let t: Double
 
     var body: some View {
+        // A strict cloud budget: at most TWO near-parallax banks alive at once,
+        // small and translucent — depth cues, never a fog wall. The chapters own
+        // the (equally budgeted) scenic clouds.
         Canvas { ctx, s in
-            drawBand(&ctx, s: s, salt: 1, scale: 0.17, speed: 16.0, alpha: 0.12, count: 3)
-            drawBand(&ctx, s: s, salt: 2, scale: 0.26, speed: 27.0, alpha: 0.16, count: 3)
-            drawBand(&ctx, s: s, salt: 3, scale: 0.36, speed: 42.0, alpha: 0.19, count: 2)
+            drawBand(&ctx, s: s, salt: 1, scale: 0.15, speed: 22.0, alpha: 0.09, count: 1)
+            drawBand(&ctx, s: s, salt: 3, scale: 0.24, speed: 40.0, alpha: 0.12, count: 1)
         }
         .allowsHitTesting(false)
     }

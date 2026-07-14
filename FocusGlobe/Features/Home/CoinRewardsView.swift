@@ -66,7 +66,16 @@ struct CoinSpinSheet: View {
 
     var body: some View {
         ZStack {
-            AnimatedTileBackground(assetName: "Background_FreeCoinSpin_Tile", overlayOpacity: 0.55)
+            // A calm premium half-sheet: deep dark base with a gold bloom and a
+            // restrained turquoise accent — static, never a moving tile.
+            ZStack {
+                Color(hex: 0x0D100E)
+                RadialGradient(colors: [AppColors.gold.opacity(0.16), .clear],
+                               center: UnitPoint(x: 0.5, y: 0.22), startRadius: 4, endRadius: 320)
+                RadialGradient(colors: [Color(hex: 0x2AC8B0).opacity(0.07), .clear],
+                               center: UnitPoint(x: 0.85, y: 0.9), startRadius: 4, endRadius: 300)
+            }
+            .ignoresSafeArea()
             VStack(spacing: AppSpacing.sm) {
                 header
                 switch phase {

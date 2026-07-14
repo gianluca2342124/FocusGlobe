@@ -20,7 +20,15 @@ struct StreakDetailsView: View {
 
     var body: some View {
         ZStack {
-            AnimatedTileBackground(assetName: "Background_Streak_Tile", overlayOpacity: 0.55)
+            // A warm static streak backdrop: dark charcoal into burgundy with a
+            // soft ember glow behind the fire — no moving tile.
+            ZStack {
+                LinearGradient(colors: [Color(hex: 0x17110F), Color(hex: 0x261016)],
+                               startPoint: .top, endPoint: .bottom)
+                RadialGradient(colors: [Color(hex: 0xF2643C).opacity(0.16), .clear],
+                               center: UnitPoint(x: 0.5, y: 0.24), startRadius: 4, endRadius: 340)
+            }
+            .ignoresSafeArea()
             ScrollView {
                 VStack(spacing: AppSpacing.lg) {
                     hero
