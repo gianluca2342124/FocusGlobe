@@ -28,7 +28,11 @@ struct GoogleJourneyMapView: UIViewRepresentable {
             longitude: data.vehicle.longitude,
             zoom: Float(zoom)
         )
-        let map = GMSMapView(frame: .zero, camera: camera)
+        // GMSMapView(frame:camera:) is deprecated — configure via options.
+        let options = GMSMapViewOptions()
+        options.frame = .zero
+        options.camera = camera
+        let map = GMSMapView(options: options)
         map.delegate = context.coordinator
         map.isMyLocationEnabled = false
         map.settings.compassButton = false

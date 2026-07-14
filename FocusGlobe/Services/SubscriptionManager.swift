@@ -76,11 +76,9 @@ final class SubscriptionManager: ObservableObject {
     /// entitlement as Pro, since FocusGlobe ships a single entitlement.
     static let entitlementID = "FocusGlobe Pro"
 
-    /// The RevenueCat public SDK key handed to `Purchases.configure`. Resolves via
-    /// `RevenueCatKeys.activeKey` — the Apple App Store key (`appl_…`) for
-    /// Release / TestFlight / App Store (and Debug by default). Never a Test Store
-    /// key in Release, which would make RevenueCat `fatalError` on launch.
-    static let apiKey = RevenueCatKeys.activeKey
+    // The RevenueCat public SDK key lives in the nonisolated `RevenueCatKeys`
+    // namespace (top of this file) so it can be referenced from any context —
+    // keeping it here on the @MainActor class was a Swift 6 isolation error.
 
     /// Dashboard product identifiers (used only to map packages to plans;
     /// purchases use the SDK `Package`, never these strings). These are the clean
@@ -146,7 +144,7 @@ final class SubscriptionManager: ObservableObject {
     // MARK: Configuration
 
     /// Configure RevenueCat once, early in the app lifecycle. Non-blocking.
-    func configure(apiKey: String = SubscriptionManager.apiKey) {
+    func configure(apiKey: String = RevenueCatKeys.activeKey) {
         guard !configured else { return }
         configured = true
         #if canImport(RevenueCat)
@@ -276,7 +274,7 @@ final class SubscriptionManager: ObservableObject {
         }()
         let offering = requestedUsable ?? currentUsable
 
-        rcLog("key prefix=\(String(Self.apiKey.prefix(5)))  requested offering=\(Self.offeringID)")
+        rcLog("key prefix=\(String(RevenueCatKeys.activeKey.prefix(5)))  requested offering=\(Self.offeringID)")
         rcLog("offerings returned all=[\(offerings.all.keys.sorted().joined(separator: ","))]  current=\(offerings.current?.identifier ?? "nil")")
         rcLog("selected offering=\(offering?.identifier ?? "nil")  packages=\(offering?.availablePackages.count ?? 0)")
         if requested == nil || (requested?.availablePackages.isEmpty ?? true) {

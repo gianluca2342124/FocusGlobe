@@ -14,15 +14,11 @@ import Foundation
 //  • A future backend hydrates these types 1:1; UI written against them today
 //    keeps working when real data arrives.
 
-/// A pilot this user is connected with (future: backed by a real account
-/// system / referral graph).
-struct FocusFriend: Identifiable, Codable, Hashable {
-    let id: String
-    var displayName: String
-    /// Whether this row is design-preview sample data. Sample friends must
-    /// never be rendered as real people in production UI.
-    var isSample: Bool = false
-}
+// NOTE: the canonical `FocusFriend` model now lives in
+// `Models/Online/FocusFriend.swift`, backed by the real FocusGlobe Online
+// (CloudKit) Crew system. The placeholder friend model that used to live here
+// was removed — it was never persisted or populated (the local fallback always
+// returned an empty list), so no saved data is affected.
 
 /// A pilot present in a Sky during a shared session (future live presence).
 struct SkyParticipant: Identifiable, Codable, Hashable {

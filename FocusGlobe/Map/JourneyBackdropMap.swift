@@ -235,7 +235,11 @@ struct GoogleBackdropMapView: UIViewRepresentable {
         let camera = GMSCameraPosition.camera(withLatitude: origin.coordinate.latitude,
                                               longitude: origin.coordinate.longitude,
                                               zoom: 10.5)
-        let map = GMSMapView(frame: .zero, camera: camera)
+        // GMSMapView(frame:camera:) is deprecated — configure via options.
+        let options = GMSMapViewOptions()
+        options.frame = .zero
+        options.camera = camera
+        let map = GMSMapView(options: options)
         map.mapStyle = try? GMSMapStyle(jsonString: MapStyles.graphite)
         map.isMyLocationEnabled = false
         map.settings.setAllGesturesEnabled(false)

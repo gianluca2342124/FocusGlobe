@@ -43,17 +43,15 @@ protocol InviteService {
     func acceptInvite(code: String, skyID: String)
 }
 
-/// The pilot's real connections.
-protocol FriendsService {
-    func friends() async -> [FocusFriend]
-}
+// NOTE: the old `FriendsService` seam was removed — real Crew connections are
+// now served by FocusGlobe Online (`FocusOnlineModel` + `FriendService`).
 
 /// The shipping fallback: compiles and runs with no backend, and is honest —
 /// it reports nobody, credits nothing, and invents nothing. Ambient visuals
 /// (`AmbientPilotsLayer`, `SkyActivity`) stay clearly ambient and separate.
 /// The pilot's real referral code lives on `AppModel` (persisted with the
 /// profile); this fallback just mirrors whatever the caller hands it.
-final class LocalSocialFallback: SkyPresenceService, InviteService, FriendsService {
+final class LocalSocialFallback: SkyPresenceService, InviteService {
     /// The persisted code, injected at construction (see `AppModel.referralCode()`).
     private let storedCode: String
 
@@ -75,7 +73,4 @@ final class LocalSocialFallback: SkyPresenceService, InviteService, FriendsServi
         // Production: the backend validates the code + new-user status first,
         // then the app calls AppModel.registerAcceptedInvite(forSkyID:).
     }
-
-    // Friends: honestly empty until real accounts exist.
-    func friends() async -> [FocusFriend] { [] }
 }

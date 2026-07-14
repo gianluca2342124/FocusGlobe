@@ -273,7 +273,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = FocusGlobeWidgetsExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 37;
+				CURRENT_PROJECT_VERSION = 38;
 				DEVELOPMENT_TEAM = QN8S876767;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = FocusGlobeWidgets/Info.plist;
@@ -305,7 +305,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = FocusGlobeWidgetsExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 37;
+				CURRENT_PROJECT_VERSION = 38;
 				DEVELOPMENT_TEAM = QN8S876767;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = FocusGlobeWidgets/Info.plist;
@@ -457,7 +457,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = FocusGlobe/FocusGlobe.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 37;
+				CURRENT_PROJECT_VERSION = 38;
 				DEVELOPMENT_TEAM = QN8S876767;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -467,9 +467,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = FocusGlobe/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = FocusGlobe;
-				INFOPLIST_KEY_NSContactsUsageDescription = "";
+				INFOPLIST_KEY_NSContactsUsageDescription = "FocusGlobe uses your contacts only when you choose someone to invite. Your contacts are never uploaded or stored.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "FocusGlobe begins each journey from where you are, so your focus route can start from your real city.";
-				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -501,7 +500,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = FocusGlobe/FocusGlobe.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 37;
+				CURRENT_PROJECT_VERSION = 38;
 				DEVELOPMENT_TEAM = QN8S876767;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -511,9 +510,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = FocusGlobe/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = FocusGlobe;
-				INFOPLIST_KEY_NSContactsUsageDescription = "";
+				INFOPLIST_KEY_NSContactsUsageDescription = "FocusGlobe uses your contacts only when you choose someone to invite. Your contacts are never uploaded or stored.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "FocusGlobe begins each journey from where you are, so your focus route can start from your real city.";
-				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
