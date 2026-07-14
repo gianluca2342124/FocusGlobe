@@ -67,22 +67,59 @@ struct FocusSky: Identifiable, Hashable {
     var flightPool: [WorldKind] { FocusSky.flightIdentity(for: id).pool }
     var flightParticles: FlightParticle { FocusSky.flightIdentity(for: id).particles }
 
-    /// Chapter family + weather per Sky. Every case maps onto existing, proven
-    /// chapter renderers — a new Sky is one line here.
+    /// **The Sky's authored journey** — an ordered sequence of 5–6 distinct
+    /// visual chapters (each a full-screen composition in the world tape). The
+    /// first entry is the takeoff atmosphere; the sequence then plays in order
+    /// and loops with fresh per-instance seeds for long/endless flights, so the
+    /// world keeps evolving without exact repetition. No adjacent duplicates.
     static func flightIdentity(for id: String) -> (pool: [WorldKind], particles: FlightParticle) {
         switch id {
-        case "golden-hour":      return ([.goldenHorizon, .cloudOcean, .roseDawn], .none)
-        case "paris-sunset":     return ([.roseDawn, .goldenHorizon, .violetTwilight], .none)
-        case "fiji-lagoon":      return ([.cloudOcean, .goldenHorizon], .none)
-        case "kyoto-lanterns":   return ([.violetTwilight, .nightValley], .lanterns)
-        case "aurora-snowfield": return ([.auroraField, .snowSky], .snow)
-        case "moon-garden":      return ([.moonSky, .quietReturn], .none)
-        case "galaxy-drift":     return ([.nebulaDream, .starfield], .none)
-        case "deep-space":       return ([.deepSpace, .starfield], .none)
-        case "rainy-tokyo":      return ([.nightValley, .violetTwilight], .rain)
-        case "swiss-alps":       return ([.snowSky, .cloudOcean], .snow)
-        case "sahara-night":     return ([.nightValley, .starfield], .none)
-        default:                 return ([.goldenHorizon, .cloudOcean, .roseDawn], .none)
+        case "golden-hour":
+            // warm takeoff → amber cloud valleys → sun breaking through →
+            // pink-rose upper light → cloud canyon reprise → golden finale
+            return ([.goldenHorizon, .cloudOcean, .sunBreak, .roseDawn, .cloudOcean, .goldenHorizon], .none)
+        case "paris-sunset":
+            // rose low dusk → evening window-lights → romantic cloud fields →
+            // violet-blue upper dusk → lights reprise → rose finale
+            return ([.roseDawn, .duskLights, .cloudOcean, .violetTwilight, .duskLights, .roseDawn], .none)
+        case "fiji-lagoon":
+            // turquoise lagoon air → tropical cloud masses → refracted sun →
+            // lagoon reprise → bright high-altitude cloud canyons
+            return ([.lagoonAir, .cloudOcean, .sunBreak, .lagoonAir, .cloudOcean], .none)
+        case "kyoto-lanterns":
+            // violet dusk → lantern festival → golden windows → moonlit calm →
+            // dense lantern reprise
+            return ([.violetTwilight, .lanternNight, .duskLights, .moonSky, .lanternNight], .lanterns)
+        case "aurora-snowfield":
+            // icy takeoff haze → broad aurora curtains → crystalline air →
+            // moon glow → aurora reprise → snow-lit calm
+            return ([.snowSky, .auroraField, .iceCrystal, .moonSky, .auroraField, .snowSky], .snow)
+        case "moon-garden":
+            // silver mist → an enormous passing moon → star fields →
+            // violet night → moon reprise
+            return ([.moonSky, .moonHalo, .starfield, .violetTwilight, .moonSky], .none)
+        case "galaxy-drift":
+            // first nebulae → dense stars → meteor field → deep-space dark →
+            // colourful nebula reprise
+            return ([.nebulaDream, .starfield, .cometField, .deepSpace, .nebulaDream], .none)
+        case "deep-space":
+            // near-black space → star-density rise → dark nebula silhouettes →
+            // meteor streaks → deep calm
+            return ([.deepSpace, .starfield, .nebulaDream, .cometField, .deepSpace], .none)
+        case "rainy-tokyo":
+            // neon rain haze → distant city glow → violet night → rain reprise →
+            // warm window lights in mist
+            return ([.cityRain, .nightValley, .violetTwilight, .cityRain, .duskLights], .rain)
+        case "swiss-alps":
+            // crisp snow air → cloud valleys → cold sunlight breaking → ice halo
+            // air → high cloud formations
+            return ([.snowSky, .cloudOcean, .sunBreak, .iceCrystal, .cloudOcean], .snow)
+        case "sahara-night":
+            // warm desert night → star-heavy sky → shooting-star field →
+            // moonlit calm → deep starfield
+            return ([.quietReturn, .starfield, .cometField, .moonSky, .starfield], .none)
+        default:
+            return ([.goldenHorizon, .cloudOcean, .sunBreak, .roseDawn], .none)
         }
     }
 
