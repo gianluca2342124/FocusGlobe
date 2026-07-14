@@ -16,7 +16,7 @@
 	<true/>
 	<key>com.apple.developer.icloud-container-identifiers</key>
 	<array>
-		<string>iCloud.com.gianlucacrous.FocusGlobe</string>
+		<string>iCloud.com.mobitegames.FocusGlobe</string>
 	</array>
 	<key>com.apple.developer.icloud-extended-share-access</key>
 	<array>
@@ -35,7 +35,7 @@
 	<true/>
 	<key>com.apple.developer.ubiquity-container-identifiers</key>
 	<array>
-		<string>iCloud.com.gianlucacrous.FocusGlobe</string>
+		<string>iCloud.com.mobitegames.FocusGlobe</string>
 	</array>
 	<key>com.apple.developer.ubiquity-kvstore-identifier</key>
 	<string>$(TeamIdentifierPrefix)$(CFBundleIdentifier)</string>
