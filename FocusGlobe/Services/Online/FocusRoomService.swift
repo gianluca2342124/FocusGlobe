@@ -46,9 +46,11 @@ actor FocusRoomService {
 
         let share = CKShare(rootRecord: root)
         share[CKShare.SystemFieldKey.title] = "FocusGlobe Flight" as CKRecordValue
-        // Link-based invitations: anyone with the private URL may join and
-        // write their own participant record. Documented in the schema notes.
-        share.publicPermission = .readWrite
+        // PRIVATE rooms are private: no public permission on the share. Only
+        // explicitly invited CKShare participants (added via the system
+        // sharing UI or a resolved contact lookup) can accept — a forwarded
+        // URL grants an uninvited account nothing.
+        share.publicPermission = .none
 
         _ = try await privateDB.modifyRecords(saving: [root, share], deleting: [],
                                               savePolicy: .ifServerRecordUnchanged, atomically: true)
@@ -210,14 +212,70 @@ actor FocusRoomService {
         return out.sorted { $0.joinedAt < $1.joinedAt }
     }
 
-    /// Refresh the share URL for an owned room (after relaunch).
-    func shareURL(for room: FocusRoom) async -> URL? {
-        guard room.isOwned else { return room.shareURL }
+    /// The live CKShare for an OWNED room (used by the system sharing UI and
+    /// participant management). Participants don't fetch the owner's share.
+    func share(for room: FocusRoom) async -> CKShare? {
+        guard room.isOwned else { return nil }
         let id = CKRecord.ID(recordName: "room-\(room.id)", zoneID: zoneID)
         guard let root = try? await privateDB.record(for: id),
               let shareRef = root.share else { return nil }
-        let share = try? await privateDB.record(for: shareRef.recordID) as? CKShare
-        return share?.url
+        return (try? await privateDB.record(for: shareRef.recordID)) as? CKShare
+    }
+
+    /// Refresh the share URL for an owned room (after relaunch). With
+    /// `publicPermission = .none` this URL only works for invited participants.
+    func shareURL(for room: FocusRoom) async -> URL? {
+        guard room.isOwned else { return room.shareURL }
+        return await share(for: room)?.url
+    }
+
+    /// Explicitly invite one person (resolved from an email or phone number
+    /// the user just picked) as a private read/write CKShare participant.
+    /// Nothing about the contact is stored — the lookup value is used once.
+    func addParticipant(to room: FocusRoom, email: String?, phone: String?) async throws {
+        guard room.isOwned else { throw OnlineError.requestFailed }
+        guard let share = await share(for: room) else { throw OnlineError.roomUnavailable }
+        let participant = try await lookupParticipant(email: email, phone: phone)
+        participant.permission = .readWrite
+        share.addParticipant(participant)
+        _ = try await privateDB.modifyRecords(saving: [share], deleting: [],
+                                              savePolicy: .ifServerRecordUnchanged, atomically: true)
+    }
+
+    private func lookupParticipant(email: String?, phone: String?) async throws -> CKShare.Participant {
+        let container = self.container
+        return try await withCheckedThrowingContinuation { continuation in
+            let handler: (CKShare.Participant?, Error?) -> Void = { participant, error in
+                if let participant {
+                    continuation.resume(returning: participant)
+                } else {
+                    continuation.resume(throwing: error ?? OnlineError.requestFailed)
+                }
+            }
+            if let email, !email.isEmpty {
+                container.fetchShareParticipant(withEmailAddress: email, completionHandler: handler)
+            } else if let phone, !phone.isEmpty {
+                container.fetchShareParticipant(withPhoneNumber: phone, completionHandler: handler)
+            } else {
+                continuation.resume(throwing: OnlineError.requestFailed)
+            }
+        }
+    }
+
+    /// The users who ACTUALLY accepted this room's invitation, identified by
+    /// their stable CloudKit user record ID (never display names, never
+    /// self-reported fields). Owner excluded by role. This is the only input
+    /// to invite-based Sky unlocks.
+    func acceptedShareParticipantIDs(for room: FocusRoom) async -> [String] {
+        guard let share = await share(for: room) else { return [] }
+        var out = Set<String>()
+        for participant in share.participants
+        where participant.role != .owner && participant.acceptanceStatus == .accepted {
+            if let stable = participant.userIdentity.userRecordID?.recordName {
+                out.insert(stable)
+            }
+        }
+        return Array(out)
     }
 
     private func zoneForRoom(_ room: FocusRoom, in db: CKDatabase) async throws -> CKRecordZone.ID? {

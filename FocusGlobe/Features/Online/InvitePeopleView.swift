@@ -1,10 +1,18 @@
 import SwiftUI
+import CloudKit
+#if canImport(UIKit)
+import UIKit
+#endif
 
-/// The invitation sheet: creates (or reuses) the CKShare-backed room for the
-/// context and offers every safe delivery route — share link, Messages/system
-/// share sheet (covers WhatsApp/AirDrop), copy link, and a deliberate
-/// pick-one-person contact flow. Contacts are requested ONLY here, behind an
-/// explanation, via the out-of-process picker; nothing is stored or uploaded.
+/// The invitation sheet. Room-backed contexts (private flight, existing room,
+/// Sky-unlock campaign) deliver invitations EXCLUSIVELY as private CKShare
+/// participants: the share's `publicPermission` is `.none`, so a forwarded
+/// URL grants an uninvited account nothing. Delivery goes through the system
+/// CloudKit sharing sheet (Messages / WhatsApp / AirDrop, private
+/// participants), or through a deliberately picked contact resolved into an
+/// explicit participant. There is no Copy Link for private rooms — a copied
+/// raw URL cannot carry private participant authorization.
+/// The `.app` context shares only marketing text (no CloudKit access at all).
 struct InvitePeopleView: View {
     enum Context {
         case preFlight(skyID: String)          // creates the pending flight room
@@ -19,21 +27,15 @@ struct InvitePeopleView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var invitation: RoomInvitation?
+    @State private var share: CKShare?
     @State private var loading = true
     @State private var showContactExplainer = false
     @State private var showContactPicker = false
+    @State private var showCloudSharing = false
+    @State private var contactStatus: String?
     @State private var copied = false
 
-    private var message: String {
-        switch context {
-        case .app:
-            return CloudShareService.appLink
-        case .skyUnlock(let sky):
-            return "Help me unlock \(sky.name) in FocusGlobe — accept my invite and we both fly. \(invitation?.url?.absoluteString ?? "")"
-        default:
-            return CloudShareService.roomInvitation(url: invitation?.url)
-        }
-    }
+    private var isAppContext: Bool { if case .app = context { return true }; return false }
 
     var body: some View {
         ZStack {
@@ -42,12 +44,12 @@ struct InvitePeopleView: View {
                 header
                 if loading {
                     ProgressView().tint(AppColors.gold).padding(.vertical, AppSpacing.xl)
-                } else if case .app = context {
-                    methods
-                } else if invitation?.url == nil {
+                } else if isAppContext {
+                    appMethods
+                } else if share == nil {
                     OnlineUnavailableView(availability: online.availability)
                 } else {
-                    methods
+                    roomMethods
                 }
                 Spacer(minLength: 0)
             }
@@ -65,7 +67,16 @@ struct InvitePeopleView: View {
             Text("Choose a contact to send your private FocusGlobe invitation. Your contacts stay on your device and are never uploaded.")
         }
         .sheet(isPresented: $showContactPicker) {
-            ContactPicker(onPick: { _ in showSystemShare() })
+            ContactPicker(onPick: { _, email, phone in
+                showContactPicker = false
+                Task { await inviteContact(email: email, phone: phone) }
+            })
+        }
+        .sheet(isPresented: $showCloudSharing) {
+            if let share {
+                CloudSharingView(share: share)
+                    .ignoresSafeArea()
+            }
         }
     }
 
@@ -75,18 +86,19 @@ struct InvitePeopleView: View {
             loading = false
         case .preFlight(let skyID):
             if let pending = online.pendingRoom {
-                let url = await online.shareURL(for: pending)
-                invitation = RoomInvitation(id: pending.id, room: pending, url: url)
+                invitation = RoomInvitation(id: pending.id, room: pending, url: pending.shareURL)
             } else {
                 invitation = await online.createRoom(skyID: skyID, title: "FocusGlobe Flight")
             }
+            if let room = invitation?.room { share = await online.share(for: room) }
             loading = false
         case .room(let room):
-            let url = await online.shareURL(for: room)
-            invitation = RoomInvitation(id: room.id, room: room, url: url)
+            invitation = RoomInvitation(id: room.id, room: room, url: room.shareURL)
+            share = await online.share(for: room)
             loading = false
         case .skyUnlock(let sky):
             invitation = await online.campaignInvitation(for: sky)
+            if let room = invitation?.room { share = await online.share(for: room) }
             loading = false
         }
     }
@@ -97,20 +109,27 @@ struct InvitePeopleView: View {
             Text("Invite Friends")
                 .font(.system(size: 24, weight: .bold, design: .rounded))
                 .foregroundStyle(AppColors.textPrimary)
-            Text("They join through one private link — no account needed beyond iCloud.")
+            Text(isAppContext
+                 ? "Share FocusGlobe with someone who needs calmer focus."
+                 : "Private iCloud invitations — only pilots you invite can join.")
                 .font(AppTypography.caption)
                 .foregroundStyle(AppColors.textSecondary)
                 .multilineTextAlignment(.center)
         }
     }
 
-    private var methods: some View {
+    // MARK: Private-room delivery (explicit CKShare participants only)
+
+    private var roomMethods: some View {
         VStack(spacing: AppSpacing.sm) {
-            ShareLink(item: message) {
-                methodRow(icon: "square.and.arrow.up", title: "Share invite link",
-                          subtitle: "Messages, WhatsApp, AirDrop and more")
+            Button {
+                appModel.tapFeedback()
+                showCloudSharing = true
+            } label: {
+                methodRow(icon: "square.and.arrow.up", title: "Send private invitation",
+                          subtitle: "Messages, WhatsApp, AirDrop — invited pilots only")
             }
-            .simultaneousGesture(TapGesture().onEnded { appModel.tapFeedback() })
+            .buttonStyle(SoftPressStyle())
 
             Button {
                 appModel.tapFeedback()
@@ -121,29 +140,51 @@ struct InvitePeopleView: View {
             }
             .buttonStyle(SoftPressStyle())
 
-            Button {
-                appModel.tapFeedback()
-                UIPasteboard.general.string = message
-                withAnimation { copied = true }
-            } label: {
-                methodRow(icon: copied ? "checkmark" : "doc.on.doc",
-                          title: copied ? "Copied" : "Copy Link",
-                          subtitle: "Paste it anywhere")
+            if let contactStatus {
+                Text(contactStatus)
+                    .font(AppTypography.caption)
+                    .foregroundStyle(AppColors.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 2)
             }
-            .buttonStyle(SoftPressStyle())
         }
     }
 
-    /// After a contact is deliberately picked, hand off to the system share
-    /// sheet with the invitation prefilled (nothing about the contact is kept).
-    private func showSystemShare() {
-        showContactPicker = false
-        let activity = UIActivityViewController(activityItems: [message], applicationActivities: nil)
-        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
-        if let root = scenes.first?.keyWindow?.rootViewController {
-            var top = root
-            while let presented = top.presentedViewController { top = presented }
-            top.present(activity, animated: true)
+    /// Resolve the picked contact into an explicit private participant, then
+    /// hand delivery to the system sharing sheet. If the address can't be
+    /// resolved to an iCloud user, fall back to the sharing sheet — never to
+    /// a public link.
+    private func inviteContact(email: String?, phone: String?) async {
+        guard let room = invitation?.room else { return }
+        if let error = await online.addRoomParticipant(room, email: email, phone: phone) {
+            contactStatus = error
+        } else {
+            contactStatus = "Invited — now send the invitation so they can accept."
+            share = await online.share(for: room)
+        }
+        showCloudSharing = true
+    }
+
+    // MARK: App sharing (marketing text only — no CloudKit involved)
+
+    private var appMethods: some View {
+        VStack(spacing: AppSpacing.sm) {
+            ShareLink(item: CloudShareService.appLink) {
+                methodRow(icon: "square.and.arrow.up", title: "Share FocusGlobe",
+                          subtitle: "Messages, WhatsApp, AirDrop and more")
+            }
+            .simultaneousGesture(TapGesture().onEnded { appModel.tapFeedback() })
+
+            Button {
+                appModel.tapFeedback()
+                UIPasteboard.general.string = CloudShareService.appLink
+                withAnimation { copied = true }
+            } label: {
+                methodRow(icon: copied ? "checkmark" : "doc.on.doc",
+                          title: copied ? "Copied" : "Copy message",
+                          subtitle: "Paste it anywhere")
+            }
+            .buttonStyle(SoftPressStyle())
         }
     }
 

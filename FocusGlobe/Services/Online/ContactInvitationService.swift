@@ -7,9 +7,10 @@ import ContactsUI
 /// stored after the flow ends. Presented only after an explicit tap plus a
 /// pre-permission explanation sheet.
 struct ContactPicker: UIViewControllerRepresentable {
-    /// Called with a display name + the best available phone/email (used only
-    /// to prefill the system message composer; discarded afterwards).
-    var onPick: (String) -> Void
+    /// Called with the display name + best available email/phone. Used ONCE to
+    /// resolve an explicit CKShare participant for the current invitation,
+    /// then discarded — never stored, never uploaded, never matched in bulk.
+    var onPick: (_ name: String, _ email: String?, _ phone: String?) -> Void
     var onCancel: () -> Void = {}
 
     func makeUIViewController(context: Context) -> CNContactPickerViewController {
@@ -21,15 +22,17 @@ struct ContactPicker: UIViewControllerRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator(onPick: onPick, onCancel: onCancel) }
 
     final class Coordinator: NSObject, CNContactPickerDelegate {
-        let onPick: (String) -> Void
+        let onPick: (String, String?, String?) -> Void
         let onCancel: () -> Void
-        init(onPick: @escaping (String) -> Void, onCancel: @escaping () -> Void) {
+        init(onPick: @escaping (String, String?, String?) -> Void, onCancel: @escaping () -> Void) {
             self.onPick = onPick
             self.onCancel = onCancel
         }
         func contactPicker(_ picker: CNContactPickerViewController, didSelect contact: CNContact) {
             let name = CNContactFormatter.string(from: contact, style: .fullName) ?? "a friend"
-            onPick(name)
+            let email = contact.emailAddresses.first.map { String($0.value) }
+            let phone = contact.phoneNumbers.first?.value.stringValue
+            onPick(name, email, phone)
         }
         func contactPickerDidCancel(_ picker: CNContactPickerViewController) { onCancel() }
     }

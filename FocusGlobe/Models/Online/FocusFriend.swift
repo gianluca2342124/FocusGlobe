@@ -2,7 +2,7 @@ import Foundation
 
 /// An accepted Crew connection, plus the lightweight profile we display.
 struct FocusFriend: Identifiable, Equatable, Sendable {
-    let id: String                 // connectionID
+    let id: String                 // the other pilot's publicID
     let publicID: String           // the other participant
     var displayName: String
     var balloonSkinID: String

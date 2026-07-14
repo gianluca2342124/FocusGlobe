@@ -21,6 +21,15 @@ actor OnlineNotificationService {
         requestSub.notificationInfo = silent
         _ = try? await container.publicCloudDatabase.save(requestSub)
 
+        // Answers to requests I sent (recipient-owned FriendResponse records).
+        let responseSub = CKQuerySubscription(
+            recordType: CloudKitConfig.RecordType.friendResponse,
+            predicate: NSPredicate(format: "senderPublicID == %@", publicID),
+            subscriptionID: "friend-responses-\(publicID)",
+            options: [.firesOnRecordCreation, .firesOnRecordUpdate])
+        responseSub.notificationInfo = silent
+        _ = try? await container.publicCloudDatabase.save(responseSub)
+
         // Any change in the shared database (rooms I've joined).
         let sharedSub = CKDatabaseSubscription(subscriptionID: "shared-db-changes")
         sharedSub.notificationInfo = silent
@@ -29,6 +38,7 @@ actor OnlineNotificationService {
 
     func removeSubscriptions(publicID: String) async {
         _ = try? await container.publicCloudDatabase.deleteSubscription(withID: "friend-requests-\(publicID)")
+        _ = try? await container.publicCloudDatabase.deleteSubscription(withID: "friend-responses-\(publicID)")
         _ = try? await container.sharedCloudDatabase.deleteSubscription(withID: "shared-db-changes")
     }
 

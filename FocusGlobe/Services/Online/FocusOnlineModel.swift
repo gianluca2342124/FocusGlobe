@@ -370,6 +370,25 @@ final class FocusOnlineModel: ObservableObject {
         await roomService.shareURL(for: room) ?? room.shareURL
     }
 
+    /// The room's live CKShare (owner only) — feeds the system sharing UI,
+    /// which also handles participant management (remove / stop sharing).
+    func share(for room: FocusRoom) async -> CKShare? {
+        await roomService.share(for: room)
+    }
+
+    /// Explicitly invite a picked contact as a private CKShare participant.
+    /// Returns a friendly error message, or nil on success. The email/phone is
+    /// used once for the CloudKit lookup and never stored.
+    func addRoomParticipant(_ room: FocusRoom, email: String?, phone: String?) async -> String? {
+        do {
+            try await roomService.addParticipant(to: room, email: email, phone: phone)
+            return nil
+        } catch {
+            lastErrorCategory = OnlineError.category(for: error)
+            return "That contact couldn't be added directly — use the invite sheet instead."
+        }
+    }
+
     /// A CKShare invitation was accepted (app-delegate hook).
     func handleAcceptedShare(_ metadata: CKShare.Metadata) async {
         do {
@@ -394,27 +413,25 @@ final class FocusOnlineModel: ObservableObject {
 
     func refreshSocial() async {
         guard availability.isAvailable, let me = profile else { return }
+        // Incoming requests are creator-verified; answering never touches the
+        // sender's record. Outgoing resolution mirrors accepted responses into
+        // MY private CrewMember records (each side owns its own membership).
         incomingRequests = await friendService.incomingRequests(for: me.publicID)
-        outgoingRequests = await friendService.outgoingRequests(for: me.publicID)
-        let connections = await friendService.connections(for: me.publicID)
-        let profiles = await profileService.fetchProfiles(publicIDs: connections.map(\.otherPublicID))
-        var list: [FocusFriend] = []
-        for connection in connections {
-            let p = profiles.first { $0.publicID == connection.otherPublicID }
-            var friend = FocusFriend(id: connection.connectionID,
-                                     publicID: connection.otherPublicID,
-                                     displayName: p?.displayName ?? "Sky Pilot",
-                                     balloonSkinID: p?.balloonSkinID ?? "default",
-                                     countryCode: p?.countryCode,
-                                     since: connection.since,
-                                     activePilot: nil)
+        outgoingRequests = await friendService.outgoingPendingRequests(for: me.publicID)
+        var list = await friendService.crewMembers()
+        let profiles = await profileService.fetchProfiles(publicIDs: list.map(\.publicID))
+        for index in list.indices {
+            if let p = profiles.first(where: { $0.publicID == list[index].publicID }) {
+                list[index].displayName = p.displayName
+                list[index].balloonSkinID = p.balloonSkinID
+                list[index].countryCode = p.countryCode
+            }
             // "Focusing now" only from a real fresh presence record.
             if let record = try? await CloudKitConfig.container.publicCloudDatabase
-                .record(for: CKRecord.ID(recordName: connection.otherPublicID)),
+                .record(for: CKRecord.ID(recordName: list[index].publicID)),
                let pilot = PresenceService.pilot(from: record), !pilot.isStale {
-                friend.activePilot = pilot
+                list[index].activePilot = pilot
             }
-            list.append(friend)
         }
         crew = list.sorted { $0.displayName < $1.displayName }
     }
@@ -448,7 +465,9 @@ final class FocusOnlineModel: ObservableObject {
     }
 
     func removeFriend(_ friend: FocusFriend) async {
-        await friendService.removeConnection(friend.id)
+        // Deletes MY OWN private CrewMember record only — never the other
+        // pilot's records.
+        await friendService.removeCrew(otherPublicID: friend.publicID)
         await refreshSocial()
     }
 
@@ -483,14 +502,17 @@ final class FocusOnlineModel: ObservableObject {
     }
 
     /// Recount verified acceptances for a Sky's campaign and cache the result.
+    /// Counts ONLY explicitly invited CKShare participants who actually
+    /// accepted, deduplicated by their stable CloudKit user record ID (owner
+    /// excluded by role) — never link opens, share-sheet taps, display names
+    /// or self-written participant records.
     func refreshCampaignProgress(skyID: String, required: Int) async {
         guard availability.isAvailable, let me = profile else { return }
         let rooms = await roomService.ownedRooms().filter { $0.purpose == .skyUnlock && $0.skyID == skyID }
         var unique = Set<String>()
         for room in rooms {
-            for participant in await roomService.participants(of: room)
-            where participant.publicID != me.publicID {
-                unique.insert(participant.publicID)
+            for stableID in await roomService.acceptedShareParticipantIDs(for: room) {
+                unique.insert(stableID)
             }
         }
         var progress = OnlineCache.campaignProgress
@@ -530,8 +552,10 @@ final class FocusOnlineModel: ObservableObject {
         if let publicID {
             await profileService.deleteProfile(publicID: publicID)
             await notificationService.removeSubscriptions(publicID: publicID)
+            // Each deletion below removes ONLY records this account owns.
             for request in outgoingRequests { try? await friendService.cancelRequest(request, me: profile ?? OnlineProfile(publicID: publicID, displayName: "", balloonSkinID: "", countryCode: nil, isDiscoverable: false, allowsFriendRequests: false, createdAt: Date(), updatedAt: Date())) }
-            for friend in crew { await friendService.removeConnection(friend.id) }
+            await friendService.deleteMyResponses(me: publicID)
+            await friendService.deleteAllCrew()
         }
         for room in await roomService.ownedRooms() { await roomService.closeRoom(room) }
         for room in joinedRooms { if let publicID { await roomService.leaveRoom(room, publicID: publicID) } }

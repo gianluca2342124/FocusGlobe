@@ -25,17 +25,101 @@ below, or every query in the app will fail with "field not marked queryable".
 
 | Database | Record types | Who reads / writes |
 |---|---|---|
-| **Private** | `FocusIdentity`, `SkyUnlockCampaign`, pre-share `FocusRoom` + children (in the custom zone `FocusGlobeRoomsZone`) | Only the record owner |
-| **Public** | `PublicProfile`, `SkyPresence`, `FriendRequest`, `FriendConnection` | Everyone reads; creator writes own records |
-| **Shared** | Accepted `FocusRoom`, `RoomParticipant`, `RoomFlightSession`, plus the `cloudkit.share` (CKShare) records | Share participants per CKShare permissions |
+| **Private** | `FocusIdentity`, `CrewMember`, `SkyUnlockCampaign`, pre-share `FocusRoom` + children (custom zone `FocusGlobeRoomsZone`) | Only the record owner |
+| **Public** | `PublicProfile`, `SkyPresence`, `FriendRequest`, `FriendResponse` | See ownership matrix (§3) |
+| **Shared** | Accepted `FocusRoom`, `RoomParticipant`, `RoomFlightSession`, plus the `cloudkit.share` (CKShare) records | Explicitly invited share participants only |
 
 Custom zone (private database): **`FocusGlobeRoomsZone`** — required because
 CKShare roots must live in a custom zone. Created lazily by
 `FocusRoomService.ensureZone()`.
 
----
+## 2. Private-room CKShare permission model (SECURITY-CRITICAL)
 
-## 2. Record types & fields
+Every `FocusRoom` share is created with:
+
+```swift
+share.publicPermission = .none
+```
+
+**No private room ever uses `.readWrite` or `.readOnly` public permission.**
+Access exists exclusively for explicitly invited `CKShare.Participant`s:
+
+- **System sharing sheet** (`UICloudSharingController`, wrapped by
+  `CloudSharingView`) with `availablePermissions = [.allowPrivate,
+  .allowReadWrite]` — the owner picks recipients through Messages / WhatsApp /
+  AirDrop; CloudKit records them as invited participants. The same sheet is
+  the owner's participant management UI (remove a participant, stop sharing).
+- **Contact lookup** (`FocusRoomService.addParticipant(to:email:phone:)`) —
+  a deliberately picked contact's email/phone is resolved once via
+  `fetchShareParticipant(withEmailAddress:/withPhoneNumber:)`, added with
+  `.readWrite` participant permission, and the share is saved. The lookup
+  value is never stored. If resolution fails, the app falls back to the
+  system sharing sheet — never to a public link.
+
+Consequences:
+- A forwarded room URL grants an uninvited iCloud account **nothing**.
+- There is **no Copy Link** action for private rooms (a raw copied URL cannot
+  carry private participant authorization, so the action was removed rather
+  than weakening the share).
+- The root record and its CKShare are saved **together atomically** at
+  creation; child records (`RoomParticipant`, `RoomFlightSession`) stay in
+  the same custom zone with `parent` set to the room root, so share
+  participants can read/write them per their participant permission.
+- Participants leave by deleting their own participant record (and can remove
+  themselves via the system share UI); the owner closes the room (status
+  `closed`) or stops sharing, which invalidates the invitation
+  (*"This Focus Room is no longer available."*).
+
+## 3. Ownership matrix — who creates / reads / updates / deletes what
+
+| Record | DB | Created by | Read by | Updated by | Deleted by |
+|---|---|---|---|---|---|
+| `FocusIdentity` | Private | Owner | Owner | Owner (alias) | Owner (Delete Online Data) |
+| `CrewMember` | Private | Owner (each side keeps its own) | Owner | Owner | Owner (remove crew / delete data) |
+| `SkyUnlockCampaign` | Private | Owner | Owner | Owner | Owner |
+| `FocusRoom` (+ children pre-share) | Private zone | Owner | Owner + invited participants (via share) | Owner (status/startedAt); participants write only their own child records | Owner |
+| `PublicProfile` | Public | The profiled user | Any authenticated user | Creator only | Creator only |
+| `SkyPresence` | Public | The present user | Any authenticated user | Creator only | Creator only |
+| `FriendRequest` | Public | **Sender** (immutable) | Sender + recipient (world-readable, see §5) | **Nobody** (immutable by design) | **Sender only** (cancel / resolved cleanup) |
+| `FriendResponse` | Public | **Recipient** | Sender + recipient (world-readable, see §5) | Creator (recipient) only | Creator (recipient) only |
+| CKShare + shared room records | Shared | Owner (share), participants (own child records) | Invited participants | Per CKShare participant permission | Owner (stop sharing); participant removes own records |
+
+**No user ever has to modify a record another user created.** The recipient
+answers a sender-owned `FriendRequest` by creating their own
+`FriendResponse` (deterministic ID `resp_<requestID>`, so duplicates
+collapse); request state is *derived* from request + response. After an
+accepted response, **each side creates its own private `CrewMember` record**
+in its own private database — there is no world-writable or shared friendship
+record, and no public `FriendConnection` graph exists any more.
+
+Crew removal: each user deletes their own `CrewMember`. No reciprocal
+tombstone record is created — the other pilot simply keeps their private
+entry, which can be removed on their side at any time; nothing in the app
+fabricates activity for a removed connection (activity comes only from live
+`SkyPresence` reads).
+
+## 4. Creator-identity verification (anti-impersonation)
+
+A `senderPublicID` field alone is never trusted:
+
+- `PublicProfile`'s record name **is** the publicID, and only its creator can
+  modify it (security role, §7). The profile's CloudKit
+  `creatorUserRecordID` therefore binds each publicID to one real account.
+- Incoming `FriendRequest`s are accepted only when the request record's
+  `creatorUserRecordID` **equals** the creator of the claimed sender's
+  `PublicProfile` (`FriendService.incomingRequests`). Spoofed requests are
+  ignored client-side even before role enforcement.
+- `FriendResponse`s are trusted only when created by the actual recipient's
+  account (same check against the recipient's profile creator).
+- Sky-unlock counting never reads self-reported fields at all (§6).
+- `SkyPresence`/`PublicProfile` use recordName == publicID + creator-only
+  write, so an attacker can neither overwrite nor duplicate someone else's
+  records once they exist.
+
+Apple ID, email, and phone numbers are never displayed in UI and never stored
+in any record.
+
+## 5. Record types & fields
 
 ### Private database
 
@@ -45,13 +129,20 @@ CKShare roots must live in a custom zone. Created lazily by
 |---|---|
 | `publicID` | String |
 | `anonymousHandle` | String |
-| `createdAt` | Date/Time |
-| `updatedAt` | Date/Time |
+| `createdAt` / `updatedAt` | Date/Time |
 | `schemaVersion` | Int(64) |
 
-One per iCloud account; created on first successful connection, reused across
-the user's devices. Contains no personal data — `publicID` is a random UUID
-and `anonymousHandle` is a generated `SkyPilot####` name (user-editable).
+#### `CrewMember` — record name `crew-<otherPublicID>` (default zone)
+
+| Field | Type |
+|---|---|
+| `otherPublicID` | String |
+| `displayName` | String (refreshed from the other pilot's PublicProfile) |
+| `balloonSkinID` | String |
+| `connectedAt` | Date/Time |
+| `sourceRequestID` | String |
+| `status` | String (`active`) |
+| `updatedAt` | Date/Time |
 
 #### `SkyUnlockCampaign` — record name `campaign-<skyID>` (default zone)
 
@@ -61,16 +152,11 @@ and `anonymousHandle` is a generated `SkyPilot####` name (user-editable).
 | `ownerPublicID` | String |
 | `skyID` | String |
 | `requiredAcceptedUsers` | Int(64) |
-| `acceptedUniquePublicIDs` | String (List) |
-| `createdAt` | Date/Time |
-| `updatedAt` | Date/Time |
+| `acceptedUniquePublicIDs` | String (List) — stable CloudKit user record IDs |
+| `createdAt` / `updatedAt` | Date/Time |
 | `unlockedAt` | Date/Time (nil until unlocked) |
 
-Private mirror of verified invite-unlock progress so it synchronises across
-the owner's devices. The source of truth is the set of **accepted CKShare
-participants** of the campaign's room — never share-button taps.
-
-#### `FocusRoom` (custom zone `FocusGlobeRoomsZone`, root record of the CKShare)
+#### `FocusRoom` (custom zone `FocusGlobeRoomsZone`, CKShare root)
 
 | Field | Type |
 |---|---|
@@ -82,41 +168,30 @@ participants** of the campaign's room — never share-button taps.
 | `expiresAt` | Date/Time (optional) |
 | `maximumParticipants` | Int(64) — app enforces 8 |
 | `status` | String — `lobby` / `active` / `ended` / `closed` |
-| `allowsLateJoin` | Int(64) (0/1) |
-| `requiresReadyState` | Int(64) (0/1) |
+| `allowsLateJoin` / `requiresReadyState` | Int(64) (0/1) |
 | `purpose` | String — `flight` / `skyUnlock` |
-| `startedAt` | Date/Time (optional; owner sets on start — every device computes its local countdown from this shared timestamp) |
+| `startedAt` | Date/Time (optional; owner sets on start — devices compute local countdowns from this shared timestamp) |
 | `schemaVersion` | Int(64) |
 
-#### `RoomParticipant` (same custom zone; `parent` reference → its `FocusRoom`)
-
-Record name: `participant-<roomID>-<publicID>` (idempotent upsert).
+#### `RoomParticipant` (same zone; `parent` → its `FocusRoom`) — record name `participant-<roomID>-<publicID>`
 
 | Field | Type |
 |---|---|
-| `roomPublicID` | String |
-| `publicID` | String |
-| `displayName` | String |
-| `balloonSkinID` | String |
+| `roomPublicID`, `publicID`, `displayName`, `balloonSkinID` | String |
 | `countryCode` | String (optional) |
 | `joinedAt` | Date/Time |
 | `status` | String — `joined` / `ready` / `flying` / `left` |
-| `readyAt` | Date/Time (optional) |
+| `readyAt`, `lastHeartbeatAt` | Date/Time (optional) |
 | `activeSessionID` | String (optional) |
-| `lastHeartbeatAt` | Date/Time (optional) |
 
-#### `RoomFlightSession` (same custom zone; `parent` reference → its `FocusRoom`)
+#### `RoomFlightSession` (same zone; `parent` → its `FocusRoom`)
 
 | Field | Type |
 |---|---|
-| `roomPublicID` | String |
-| `sessionID` | String |
-| `publicID` | String |
-| `startedAt` | Date/Time |
-| `expectedEndAt` | Date/Time (optional — nil = Infinite Mode) |
-| `lastHeartbeatAt` | Date/Time |
-| `isPaused` | Int(64) (0/1) |
-| `completedAt` | Date/Time (optional) |
+| `roomPublicID`, `sessionID`, `publicID` | String |
+| `startedAt`, `lastHeartbeatAt` | Date/Time |
+| `expectedEndAt`, `completedAt` | Date/Time (optional) |
+| `isPaused` | Int(64) |
 | `focusedSeconds` | Int(64) (optional) |
 | `completionState` | String (optional) |
 
@@ -126,84 +201,108 @@ Record name: `participant-<roomID>-<publicID>` (idempotent upsert).
 
 | Field | Type |
 |---|---|
-| `publicID` | String |
-| `displayName` | String (anonymous alias — never the onboarding name) |
-| `balloonSkinID` | String |
+| `publicID`, `displayName` (anonymous alias), `balloonSkinID` | String |
 | `countryCode` | String (optional) |
-| `isDiscoverable` | Int(64) (0/1) |
-| `allowsFriendRequests` | Int(64) (0/1) |
-| `createdAt` | Date/Time |
-| `updatedAt` | Date/Time |
+| `isDiscoverable`, `allowsFriendRequests` | Int(64) |
+| `createdAt` / `updatedAt` | Date/Time |
 
 #### `SkyPresence` — record name = `publicID` (ONE record per user, updated in place)
 
 | Field | Type |
 |---|---|
-| `publicID` | String |
-| `sessionID` | String |
-| `skyID` | String |
-| `mode` | String — `publicSky` (private rooms are NOT published here) |
-| `roomPublicID` | String (optional; unused for public flights) |
-| `startedAt` | Date/Time |
-| `expectedEndAt` | Date/Time (optional — nil = Infinite Mode, shown as "Infinite focus") |
-| `lastHeartbeatAt` | Date/Time (heartbeat ≈ every 45 s; stale after 120 s) |
-| `isPaused` | Int(64) (0/1) |
-| `focusCategory` | String (preset title only — no free text) |
-| `balloonSkinID` | String |
-| `displayName` | String |
-| `countryCode` | String (optional) |
-| `acceptsInvites` | Int(64) (0/1) |
-| `updatedAt` | Date/Time |
+| `publicID`, `sessionID`, `skyID`, `mode`, `focusCategory`, `balloonSkinID`, `displayName` | String |
+| `roomPublicID`, `countryCode` | String (optional) |
+| `startedAt`, `lastHeartbeatAt`, `updatedAt` | Date/Time |
+| `expectedEndAt` | Date/Time (optional — nil = Infinite Mode) |
+| `isPaused`, `acceptsInvites` | Int(64) |
 
-#### `FriendRequest` — record name = `req_<senderPublicID>_<recipientPublicID>` (deterministic)
+Heartbeat ≈ 45 s; stale after 120 s; remaining time interpolated locally from
+`expectedEndAt` (no per-second writes). Private-room membership is NOT
+published here.
+
+#### `FriendRequest` — record name = `req_<senderPublicID>_<recipientPublicID>` (SENDER-owned, immutable)
 
 | Field | Type |
 |---|---|
-| `requestID` | String |
-| `senderPublicID` | String |
-| `recipientPublicID` | String |
-| `senderDisplayName` | String |
-| `senderBalloonSkinID` | String |
+| `requestID`, `senderPublicID`, `recipientPublicID` | String |
+| `senderDisplayName`, `senderBalloonSkinID` | String |
 | `createdAt` | Date/Time |
-| `status` | String — `pending` / `accepted` / `declined` / `cancelled` |
-| `updatedAt` | Date/Time |
 
-#### `FriendConnection` — record name = `conn_<min(publicID)>_<max(publicID)>` (deterministic, ordered)
+#### `FriendResponse` — record name = `resp_<requestID>` (RECIPIENT-owned)
 
 | Field | Type |
 |---|---|
-| `connectionID` | String |
-| `participantA` | String (lexicographically smaller publicID) |
-| `participantB` | String (larger publicID) |
-| `createdAt` | Date/Time |
-| `status` | String — `active` |
-| `updatedAt` | Date/Time |
+| `responseID`, `requestID`, `senderPublicID`, `recipientPublicID` | String |
+| `response` | String — `accepted` / `declined` |
+| `createdAt` / `updatedAt` | Date/Time |
 
 ### Shared database
 
-Nothing is created here directly. When a recipient accepts a room's CKShare
-invitation URL, CloudKit materialises the owner's zone in the recipient's
-**shared** database: the accepted `FocusRoom`, its `RoomParticipant` /
-`RoomFlightSession` children, and the `cloudkit.share` (CKShare) record.
-The app enumerates `sharedCloudDatabase.allRecordZones()` to find joined rooms.
+Nothing is created here directly. When an **invited** participant accepts,
+CloudKit materialises the owner's zone in their shared database: the accepted
+`FocusRoom`, its children, and the `cloudkit.share` record. The app
+enumerates `sharedCloudDatabase.allRecordZones()` to find joined rooms.
 
 CKShare configuration used by the app:
-- `CKShare.SystemFieldKey.title` = `"FocusGlobe Flight"` (safe, no personal data)
-- `publicPermission = .readWrite` — **deliberate engineering call** so that
-  anyone the owner sends the link to can join with one tap (link-based join,
-  no per-person addressing). Access still requires possession of the URL;
-  the room enforces its own 8-participant limit and the owner can close the
-  room at any time (which deletes the root and invalidates the share).
-  An expired/deleted share surfaces in-app as
-  *"This Focus Room is no longer available."*
+- `CKShare.SystemFieldKey.title` = `"FocusGlobe Flight"` (no personal data)
+- `publicPermission = .none` (see §2)
+- Participants added with `.readWrite` participant permission so they can
+  write their own `RoomParticipant`/`RoomFlightSession` records.
 
----
+## 6. Invite-based Sky unlock counting (verified)
 
-## 3. Indexes you must create manually (CloudKit Dashboard → Schema → Indexes)
+`FocusRoomService.acceptedShareParticipantIDs(for:)` is the ONLY input:
 
-CloudKit Dashboard: select the record type → *Add Index*. `QUERYABLE` for
-predicate fields, `SORTABLE` where noted. In **Development** first; promote
-with the schema.
+- reads the campaign room's CKShare `participants` array;
+- counts only `acceptanceStatus == .accepted`;
+- excludes the owner by `role == .owner`;
+- deduplicates by `participant.userIdentity.userRecordID.recordName` — the
+  **stable CloudKit account identity**, never display names and never
+  self-written records;
+- link opens, share-sheet presentations, and forwarded URLs count for
+  nothing (with `.none` public permission an uninvited account cannot even
+  accept);
+- the same iCloud account can never count twice (set semantics), and the
+  owner can never count themselves;
+- reaching the target calls `AppModel.unlockSkyFromVerifiedInvites` —
+  idempotent, permanent, mirrored to the private `SkyUnlockCampaign` record
+  so it synchronises across the owner's devices.
+
+## 7. Security roles (CloudKit Dashboard → Schema → Security Roles)
+
+Public database record types:
+
+| Record type | World | Authenticated | Creator |
+|---|---|---|---|
+| `PublicProfile` | Read* | Create + Read | Create/Read/Write |
+| `SkyPresence` | Read* | Create + Read | Create/Read/Write |
+| `FriendRequest` | Read* | Create + Read | Create/Read/Write |
+| `FriendResponse` | Read* | Create + Read | Create/Read/Write |
+
+\* **Justification for read access** (CloudKit public-DB roles cannot express
+"only the addressed recipient may read"): profiles and presence are the
+product's discoverability surface (anonymous by construction — alias, skin,
+timing, category only); requests/responses must be readable by their
+counterpart to derive state, and they contain nothing beyond the two
+anonymous publicIDs, an alias and a skin ID. No email, phone, real name,
+location, or contact data ever enters a public record. If tighter-than-world
+read is required later, the request/response pair can move to a CKShare-based
+one-to-one channel; that trade-off is documented here deliberately.
+
+**No unrestricted authenticated WRITE/UPDATE exists anywhere**: only the
+creator can modify or delete their records. This is exactly what makes the
+request/response/crew model safe — no flow requires touching a foreign
+record.
+
+Private and shared databases need no role setup — private records are
+owner-only, and shared records are governed by each CKShare's explicitly
+invited participant permissions.
+
+## 8. Indexes you must create manually (Dashboard → Schema → Indexes)
+
+`QUERYABLE` for predicate fields, `SORTABLE` where noted; add in
+**Development**, promote with the schema. Also add the system field
+`recordName` as `QUERYABLE` on every type below (Dashboard metadata indexes).
 
 ```
 PublicProfile.publicID              QUERYABLE
@@ -216,12 +315,14 @@ SkyPresence.updatedAt               QUERYABLE + SORTABLE
 
 FriendRequest.senderPublicID        QUERYABLE
 FriendRequest.recipientPublicID     QUERYABLE
-FriendRequest.status                QUERYABLE
 FriendRequest.createdAt             QUERYABLE + SORTABLE
 
-FriendConnection.participantA       QUERYABLE
-FriendConnection.participantB       QUERYABLE
-FriendConnection.status             QUERYABLE
+FriendResponse.requestID            QUERYABLE
+FriendResponse.senderPublicID       QUERYABLE
+FriendResponse.recipientPublicID    QUERYABLE
+
+CrewMember.otherPublicID            QUERYABLE   (private DB queries)
+CrewMember.status                   QUERYABLE
 
 FocusRoom.roomPublicID              QUERYABLE
 FocusRoom.status                    QUERYABLE
@@ -239,83 +340,50 @@ SkyUnlockCampaign.skyID             QUERYABLE
 SkyUnlockCampaign.ownerPublicID     QUERYABLE
 ```
 
-Additionally, for every record type above also add the system field
-`recordName` as `QUERYABLE` (the Dashboard's *metadata indexes* section) —
-CloudKit requires it for `records(matching:)` queries that page.
+(The former `FriendConnection` type is removed. If it was already created in
+Development, delete the record type there before promoting.)
 
-> The app's public queries are: `SkyPresence` by `skyID` +
-> `lastHeartbeatAt > now-120s`; `FriendRequest` by `recipientPublicID`/
-> `senderPublicID` + `status == "pending"`; `FriendConnection` by
-> `participantA`/`participantB` + `status == "active"`. If one of the indexes
-> above is missing, exactly those calls fail server-side.
+## 9. Subscriptions (created by the app, listed for reference)
 
-## 4. Subscriptions (created by the app, listed for reference)
+- Public `CKQuerySubscription` `friend-requests-<publicID>` —
+  `recipientPublicID == me` (silent, content-available).
+- Public `CKQuerySubscription` `friend-responses-<publicID>` —
+  `senderPublicID == me` (answers to my requests; silent).
+- Shared `CKDatabaseSubscription` `shared-db-changes` (silent).
 
-- Public DB `CKQuerySubscription` — `FriendRequest` with
-  `recipientPublicID == <me>` (fires on create/update; silent push,
-  `shouldSendContentAvailable = true`), ID `friend-requests-<publicID>`.
-- Shared DB `CKDatabaseSubscription` — ID `shared-db-changes`
-  (silent push on any shared-zone change → room refresh).
+Silent pushes are best-effort; the app also refreshes on foreground and on a
+35 s poll during online flights.
 
-Silent pushes require the **Push Notifications** capability and the
-`remote-notification` background mode (already in the target), and are
-best-effort — the app also refreshes on foreground and on a 35 s poll during
-online flights, so nothing depends on push delivery.
+## 10. Exact Dashboard checklist (in order)
 
-## 5. Security roles (CloudKit Dashboard → Schema → Security Roles)
-
-Public database record types — set for `PublicProfile`, `SkyPresence`,
-`FriendRequest`, `FriendConnection`:
-
-| Role | Create | Read | Write |
-|---|---|---|---|
-| **World** | — | ✅ | — |
-| **Authenticated** | ✅ | ✅ | — |
-| **Creator** | ✅ | ✅ | ✅ |
-
-Rationale:
-- Any signed-in user can create their own records and read others (needed to
-  see pilots, look up profiles, and send requests).
-- Only the **creator** can modify/delete a record — nobody can edit another
-  pilot's profile or presence.
-- Note the one intentional consequence: a `FriendRequest` is created by the
-  sender, so the recipient "accepts" by creating the `FriendConnection` and
-  the sender's device reconciles request status (the app already treats the
-  connection record as the source of truth, so a stale `pending` request is
-  harmless and is cleaned up by the sender).
-
-Private and shared databases need no role setup — private records are
-owner-only by definition, and shared records are governed by each CKShare's
-participant permissions.
-
-## 6. Exact Dashboard checklist (do these in order)
-
-1. Sign in at <https://icloud.developer.apple.com/dashboard> → container
+1. <https://icloud.developer.apple.com/dashboard> → container
    `iCloud.com.mobitegames.FocusGlobe` → **Development**.
-2. Run the app once on a simulator/device signed into iCloud and open an
-   Online surface (e.g. toggle *Appear in Public Skies*, start an Online
-   flight) so the record types are auto-created — or create the record types
-   above by hand.
-3. Add **every index** from §3 (including the `recordName` metadata indexes).
-4. Set the **security roles** from §5 on the four public record types.
-5. Two-account test (see the release checklist in the repo report).
-6. **Deploy Schema Changes… → Production** manually before the App Store
-   build. Re-check the indexes exist in Production after promotion.
+2. Run the app once against Development (toggle *Appear in Public Skies*,
+   send a friend request, create a room) so record types auto-create — or
+   create them by hand per §5.
+3. Add every index from §8 (including `recordName` metadata indexes).
+4. Set the §7 security roles on the four public record types
+   (World read, Authenticated create+read, Creator write).
+5. Delete the obsolete `FriendConnection` type if present.
+6. Two-account device test (see the release checklist in the repo report).
+7. **Deploy Schema Changes… → Production** manually before the App Store
+   build; re-verify indexes and roles in Production afterwards.
 
-## 7. Privacy summary (for the Privacy Policy update)
+## 11. Privacy summary (for the Privacy Policy update)
 
-- FocusGlobe Online stores only: a random `publicID`, an editable anonymous
-  alias, a balloon-skin ID, an optional device-region country code, focus
-  session timing (start/expected end/heartbeat), a focus **category** title,
-  and friend/room relationships between anonymous IDs.
+- Stored online: a random `publicID`, an editable anonymous alias, a
+  balloon-skin ID, an optional device-region country code, focus-session
+  timing, a focus category title, friend requests/responses between
+  anonymous IDs, and room membership among explicitly invited participants.
 - Never stored or uploaded: Apple ID, email, phone number, real name,
-  onboarding answers, precise location, contacts (the contact picker runs
-  out-of-process; a chosen contact only pre-fills a local share sheet), or
-  any CloudKit internal user identifier.
+  onboarding answers, precise location, or contacts. The contact picker runs
+  out-of-process; a chosen email/phone is used once to resolve a CloudKit
+  share participant and is then discarded.
 - Contacts permission is requested only when the user taps *Invite from
-  Contacts*, with a pre-permission explanation; denial keeps every share
-  path available.
+  Contacts*, after an explanation; denial keeps the system sharing sheet
+  fully available.
 - *Settings → FocusGlobe Online → Delete Online Data* removes the public
-  profile, presence, friend requests/connections, owned rooms (closing their
-  shares), subscriptions, the private identity record, and the local online
-  cache — local flights, coins and streaks are untouched.
+  profile, presence, own requests/responses, private CrewMember records,
+  owned rooms (closing their shares), subscriptions, the private identity
+  record, and the local online cache — local flights, coins and streaks are
+  untouched.
