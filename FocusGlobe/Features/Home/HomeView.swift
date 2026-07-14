@@ -529,8 +529,11 @@ private struct SkyPreviewFlightView: View {
         if case .premium = sky.unlockRequirement { return true }
         return false
     }
-    /// A running preview clock — the world animates as a real ascent would.
-    private var previewElapsed: () -> Double { { Date().timeIntervalSince(start) } }
+    /// A **compressed highlight journey**: the exact same journey renderer and
+    /// chapter tape as a real flight, but the clock starts past the take-off
+    /// chapter and runs 2.5× faster — ~60 s of preview shows several authored
+    /// chapters (never just the first scene).
+    private var previewElapsed: () -> Double { { Date().timeIntervalSince(start) * 2.5 + 40 } }
 
     var body: some View {
         ZStack {

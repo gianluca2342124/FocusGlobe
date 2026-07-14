@@ -9,6 +9,11 @@ import SwiftUI
 enum WorldKind: CaseIterable {
     case nightValley, cloudOcean, moonSky, auroraField, violetTwilight, snowSky
     case goldenHorizon, roseDawn, starfield, deepSpace, nebulaDream, quietReturn
+    // Per-Sky authored chapters (the journey rebuild): sunlight breaking through
+    // clouds, turquoise lagoon air, lantern festivals, neon rain haze, evening
+    // window-lights, a giant passing moon, meteor fields, crystalline ice air.
+    case sunBreak, lagoonAir, lanternNight, cityRain, duskLights, moonHalo
+    case cometField, iceCrystal
 
     var displayName: String {
         switch self {
@@ -24,6 +29,14 @@ enum WorldKind: CaseIterable {
         case .deepSpace:      return "Deep Space"
         case .nebulaDream:    return "Nebula Dream"
         case .quietReturn:    return "Quiet Night"
+        case .sunBreak:       return "Sun Break"
+        case .lagoonAir:      return "Lagoon Air"
+        case .lanternNight:   return "Lantern Night"
+        case .cityRain:       return "City Rain"
+        case .duskLights:     return "Dusk Lights"
+        case .moonHalo:       return "Moon Halo"
+        case .cometField:     return "Comet Field"
+        case .iceCrystal:     return "Ice Crystal"
         }
     }
 
@@ -43,6 +56,14 @@ enum WorldKind: CaseIterable {
         case .deepSpace:      return Color(hex: 0x020308)
         case .nebulaDream:    return Color(hex: 0x120E2E)
         case .quietReturn:    return Color(hex: 0x0E1424)
+        case .sunBreak:       return Color(hex: 0x33395C)
+        case .lagoonAir:      return Color(hex: 0x14485A)
+        case .lanternNight:   return Color(hex: 0x1A1434)
+        case .cityRain:       return Color(hex: 0x0E1428)
+        case .duskLights:     return Color(hex: 0x2E2148)
+        case .moonHalo:       return Color(hex: 0x101A30)
+        case .cometField:     return Color(hex: 0x060A1C)
+        case .iceCrystal:     return Color(hex: 0x1E3448)
         }
     }
 
@@ -60,6 +81,42 @@ enum WorldKind: CaseIterable {
         case .deepSpace:      return Color(hex: 0x060B18)
         case .nebulaDream:    return Color(hex: 0x1E1846)
         case .quietReturn:    return Color(hex: 0x131B30)
+        case .sunBreak:       return Color(hex: 0x7A5F62)
+        case .lagoonAir:      return Color(hex: 0x2E7C86)
+        case .lanternNight:   return Color(hex: 0x3A2450)
+        case .cityRain:       return Color(hex: 0x223052)
+        case .duskLights:     return Color(hex: 0x5C3A5E)
+        case .moonHalo:       return Color(hex: 0x24344E)
+        case .cometField:     return Color(hex: 0x101A38)
+        case .iceCrystal:     return Color(hex: 0x3E5C74)
+        }
+    }
+
+    /// The dominant light this chapter casts on the atmosphere — drives the
+    /// journey's environment-lighting veil so illumination evolves with the
+    /// composition (see `SkyEnvironmentLighting`).
+    var lightColor: Color {
+        switch self {
+        case .nightValley:    return Color(hex: 0xE8C48A)
+        case .cloudOcean:     return Color(hex: 0xF2DFC0)
+        case .moonSky:        return Color(hex: 0xEDF2FB)
+        case .auroraField:    return Color(hex: 0x54E0A8)
+        case .violetTwilight: return Color(hex: 0xB9A8E8)
+        case .snowSky:        return Color(hex: 0xCFE2F2)
+        case .goldenHorizon:  return Color(hex: 0xEFD9A8)
+        case .roseDawn:       return Color(hex: 0xE8B4B8)
+        case .starfield:      return Color(hex: 0x8F7BE8)
+        case .deepSpace:      return Color(hex: 0x6E7EC8)
+        case .nebulaDream:    return Color(hex: 0x8A6CE8)
+        case .quietReturn:    return Color(hex: 0xE8B080)
+        case .sunBreak:       return Color(hex: 0xF6E2B0)
+        case .lagoonAir:      return Color(hex: 0xA8F0DC)
+        case .lanternNight:   return Color(hex: 0xFFC873)
+        case .cityRain:       return Color(hex: 0x8FA6D8)
+        case .duskLights:     return Color(hex: 0xF6C88A)
+        case .moonHalo:       return Color(hex: 0xEDF2FB)
+        case .cometField:     return Color(hex: 0xD9F0FF)
+        case .iceCrystal:     return Color(hex: 0xCFE2F2)
         }
     }
 }
@@ -180,7 +237,10 @@ struct ActiveFlightJourneyWorldView: View {
 
     var body: some View {
         if let focusSky {
-            SkyFlightSceneView(sky: focusSky, elapsed: elapsed, animated: animated)
+            // The authoritative journey renderer: the Sky's authored chapter tape
+            // riding under the per-Sky overlays (weather / life / celestial /
+            // ground). Exterior, Cabin and previews all pass through here.
+            SkyFlightSceneView(sky: focusSky, elapsed: elapsed, animated: animated, seed: seed)
         } else {
             legacyTape
         }
@@ -277,25 +337,29 @@ private struct ChapterSectionView: View {
         case .deepSpace:      deepSpace
         case .nebulaDream:    nebulaDream
         case .quietReturn:    quietReturn
+        case .sunBreak:       sunBreak
+        case .lagoonAir:      lagoonAir
+        case .lanternNight:   lanternNight
+        case .cityRain:       cityRain
+        case .duskLights:     duskLights
+        case .moonHalo:       moonHalo
+        case .cometField:     cometField
+        case .iceCrystal:     iceCrystal
         }
     }
 
     // MARK: Worlds
 
+    // Distant city glow inside night haze — NO terrain (mountains may never
+    // appear mid-flight; the take-off ground plate is the only ground, ever).
     private var nightValley: some View {
         ZStack {
-            starsCanvas(count: 40 + seededInt(0, 20, salt: 1), brightness: 0.55, heightFraction: 0.55)
-            glow(Color(hex: 0xE8C48A), alpha: 0.10, radius: ref * 0.55,
-                 x: 0.5, y: 0.62)
-            fogBand(y: 0.68, tint: Color(hex: 0xAAB8D0), alpha: 0.12)
-            RollingHillsShape(amplitude: 0.05, phase: seededCG(0, 6, salt: 2), waves: 1.35)
-                .fill(Color(hex: 0x1B2A45))
-                .frame(width: width, height: height)
-                .offset(y: height * 0.02)
-            RollingHillsShape(amplitude: 0.065, phase: seededCG(0, 6, salt: 3), waves: 1.8)
-                .fill(Color(hex: 0x0B101E))
-                .frame(width: width, height: height)
-                .offset(y: height * 0.12)
+            starsCanvas(count: 40 + seededInt(0, 20, salt: 1), brightness: 0.55, heightFraction: 0.65)
+            glow(Color(hex: 0xE8C48A), alpha: 0.12, radius: ref * 0.55,
+                 x: 0.5, y: 0.66)
+            fogBand(y: 0.6, tint: Color(hex: 0xAAB8D0), alpha: 0.12)
+            windowLights
+            fogBand(y: 0.86, tint: Color(hex: 0x1B2A45), alpha: 0.3)
         }
     }
 
@@ -426,15 +490,247 @@ private struct ChapterSectionView: View {
         }
     }
 
+    // A calm desert-night atmosphere: heavy stars over a warm horizon glow —
+    // no dunes/terrain (those live only in the take-off ground plate).
     private var quietReturn: some View {
         ZStack {
-            starsCanvas(count: 50, brightness: 0.5, heightFraction: 0.7)
-            fogBand(y: 0.72, tint: Color(hex: 0x9AA8C4), alpha: 0.08)
-            RollingHillsShape(amplitude: 0.04, phase: seededCG(0, 6, salt: 14), waves: 1.2)
-                .fill(Color(hex: 0x0A0F1E))
-                .frame(width: width, height: height)
-                .offset(y: height * 0.16)
+            starsCanvas(count: 70, brightness: 0.6, heightFraction: 0.85)
+            glow(Color(hex: 0xE8B080), alpha: 0.14, radius: ref * 0.62, x: 0.5, y: 0.9)
+            fogBand(y: 0.76, tint: Color(hex: 0x9AA8C4), alpha: 0.08)
+            wisp(y: 0.6, w: 0.5, alpha: 0.08)
         }
+    }
+
+    // MARK: Per-Sky authored chapters (the journey rebuild)
+
+    /// Sunlight breaking through a cloud valley: bright pool, light shafts,
+    /// backlit silhouettes.
+    private var sunBreak: some View {
+        ZStack {
+            glow(Color(hex: 0xF6E2B0), alpha: 0.30, radius: ref * 0.66, x: 0.5, y: 0.40)
+            lightShafts
+            puffRowsCanvas(rows: [
+                PuffRow(y: 0.72, count: 5, radius: 0.24, tint: Color(hex: 0x3A3450), alpha: 0.42, highlight: false),
+                PuffRow(y: 0.88, count: 6, radius: 0.28, tint: Color(hex: 0x2C2842), alpha: 0.5, highlight: false),
+            ])
+            starsCanvas(count: 14, brightness: 0.3, heightFraction: 0.3)
+        }
+    }
+
+    /// Wide, soft light shafts spreading down from above the frame.
+    private var lightShafts: some View {
+        Canvas { ctx, s in
+            var rng = SeededRNG(seed: spec.seed &+ 0x5AFF)
+            for _ in 0..<3 {
+                let cx = s.width * CGFloat(0.3 + rng.unit() * 0.4)
+                let topW = s.width * CGFloat(0.05 + rng.unit() * 0.04)
+                let botW = topW * 3.2
+                let tilt = CGFloat(rng.unit() - 0.5) * s.width * 0.35
+                var p = Path()
+                p.move(to: CGPoint(x: cx - topW, y: -10))
+                p.addLine(to: CGPoint(x: cx + topW, y: -10))
+                p.addLine(to: CGPoint(x: cx + botW + tilt, y: s.height * 0.85))
+                p.addLine(to: CGPoint(x: cx - botW + tilt, y: s.height * 0.85))
+                p.closeSubpath()
+                let g = Gradient(colors: [Color.white.opacity(0.12), Color.white.opacity(0)])
+                ctx.fill(p, with: .linearGradient(g, startPoint: CGPoint(x: cx, y: 0),
+                                                  endPoint: CGPoint(x: cx + tilt, y: s.height * 0.85)))
+            }
+        }
+    }
+
+    /// Turquoise tropical air: bright clouds, ocean shimmer, islands far below
+    /// (distant scenery leaving beneath — explicitly part of Fiji's concept).
+    private var lagoonAir: some View {
+        ZStack {
+            glow(Color(hex: 0xA8F0DC), alpha: 0.22, radius: ref * 0.6, x: 0.5, y: 0.42)
+            puffRowsCanvas(rows: [
+                PuffRow(y: 0.38, count: 5, radius: 0.18, tint: Color(hex: 0xEAFBF4), alpha: 0.24),
+                PuffRow(y: 0.62, count: 6, radius: 0.24, tint: Color(hex: 0xDDF4EA), alpha: 0.3),
+            ])
+            shimmerBand
+            islandSilhouettes
+        }
+    }
+
+    private var shimmerBand: some View {
+        Canvas { ctx, s in
+            var rng = SeededRNG(seed: spec.seed &+ 0x0CEA)
+            for _ in 0..<24 {
+                let x = CGFloat(rng.unit()) * s.width
+                let y = s.height * CGFloat(0.80 + rng.unit() * 0.16)
+                let w = CGFloat(8 + rng.unit() * 20)
+                ctx.fill(Path(ellipseIn: CGRect(x: x - w / 2, y: y - 1, width: w, height: 2)),
+                         with: .color(Color(hex: 0xBFF2E0).opacity(0.10 + rng.unit() * 0.2)))
+            }
+        }
+    }
+
+    private var islandSilhouettes: some View {
+        Canvas { ctx, s in
+            var rng = SeededRNG(seed: spec.seed &+ 0x151A)
+            for _ in 0..<3 {
+                let x = CGFloat(0.12 + rng.unit() * 0.76) * s.width
+                let y = s.height * CGFloat(0.88 + rng.unit() * 0.08)
+                let w = min(s.width, s.height) * CGFloat(0.10 + rng.unit() * 0.10)
+                ctx.fill(Path(ellipseIn: CGRect(x: x - w / 2, y: y - w * 0.16, width: w, height: w * 0.32)),
+                         with: .color(Color(hex: 0x0E3A40).opacity(0.30 + rng.unit() * 0.12)))
+            }
+        }
+    }
+
+    /// A dense lantern-festival chapter — warm lights at every depth.
+    private var lanternNight: some View {
+        ZStack {
+            glow(Color(hex: 0xB9A8E8), alpha: 0.12, radius: ref * 0.55, x: 0.4, y: 0.3)
+            starsCanvas(count: 40, brightness: 0.5, heightFraction: 0.8)
+            lanternField
+            fogBand(y: 0.82, tint: Color(hex: 0x2A1E44), alpha: 0.2)
+        }
+    }
+
+    private var lanternField: some View {
+        Canvas { ctx, s in
+            var rng = SeededRNG(seed: spec.seed &+ 0x1AFE)
+            let warm = Color(hex: 0xFFC873)
+            for _ in 0..<16 {
+                let x = CGFloat(rng.unit()) * s.width
+                let y = CGFloat(0.1 + rng.unit() * 0.85) * s.height
+                let r = CGFloat(1.6 + rng.unit() * 3.0)
+                let a = 0.25 + rng.unit() * 0.5
+                let g = Gradient(colors: [warm.opacity(a), warm.opacity(0)])
+                ctx.fill(Path(ellipseIn: CGRect(x: x - r * 3, y: y - r * 3, width: r * 6, height: r * 6)),
+                         with: .radialGradient(g, center: CGPoint(x: x, y: y),
+                                               startRadius: 0, endRadius: r * 3))
+                ctx.fill(Path(ellipseIn: CGRect(x: x - r / 2, y: y - r * 0.7, width: r, height: r * 1.4)),
+                         with: .color(warm.opacity(a)))
+            }
+        }
+    }
+
+    /// Neon reflections inside rainy night haze — Tokyo's glow chapter.
+    private var cityRain: some View {
+        ZStack {
+            fogBand(y: 0.3, tint: Color(hex: 0x8FA6D8), alpha: 0.08)
+            neonHaze
+            fogBand(y: 0.78, tint: Color(hex: 0x50548E), alpha: 0.16)
+            starsCanvas(count: 16, brightness: 0.3, heightFraction: 0.4)
+        }
+    }
+
+    private var neonHaze: some View {
+        Canvas { ctx, s in
+            var rng = SeededRNG(seed: spec.seed &+ 0x0C1A)
+            let cols = [Color(hex: 0xE86A9E), Color(hex: 0x6AC8E8), Color(hex: 0xE8C86A), Color(hex: 0x8F7BE8)]
+            for i in 0..<22 {
+                let x = CGFloat(rng.unit()) * s.width
+                let y = s.height * CGFloat(0.55 + rng.unit() * 0.42)
+                let r = CGFloat(2 + rng.unit() * 3)
+                let c = cols[i % cols.count]
+                let g = Gradient(colors: [c.opacity(0.28 + rng.unit() * 0.2), c.opacity(0)])
+                ctx.fill(Path(ellipseIn: CGRect(x: x - r * 3.4, y: y - r * 3.4, width: r * 6.8, height: r * 6.8)),
+                         with: .radialGradient(g, center: CGPoint(x: x, y: y),
+                                               startRadius: 0, endRadius: r * 3.4))
+            }
+        }
+    }
+
+    /// Warm evening window-lights below a violet-rose dusk — Paris / late Kyoto.
+    private var duskLights: some View {
+        ZStack {
+            glow(Color(hex: 0xE8A8B8), alpha: 0.2, radius: ref * 0.6, x: 0.42, y: 0.4)
+            starsCanvas(count: 30, brightness: 0.45, heightFraction: 0.6)
+            windowLights
+            wisp(y: 0.7, w: 0.6, alpha: 0.1)
+        }
+    }
+
+    private var windowLights: some View {
+        Canvas { ctx, s in
+            var rng = SeededRNG(seed: spec.seed &+ 0xD05C)
+            let warm = Color(hex: 0xF6C88A)
+            for _ in 0..<14 {
+                let x = CGFloat(rng.unit()) * s.width
+                let y = s.height * CGFloat(0.6 + rng.unit() * 0.36)
+                let r = CGFloat(1.2 + rng.unit() * 1.8)
+                let a = 0.3 + rng.unit() * 0.4
+                let g = Gradient(colors: [warm.opacity(a), warm.opacity(0)])
+                ctx.fill(Path(ellipseIn: CGRect(x: x - r * 2.6, y: y - r * 2.6, width: r * 5.2, height: r * 5.2)),
+                         with: .radialGradient(g, center: CGPoint(x: x, y: y),
+                                               startRadius: 0, endRadius: r * 2.6))
+            }
+        }
+    }
+
+    /// An enormous moon with halo rings filling much of the frame — the Moon
+    /// Garden's major visual event, travelling down with the chapter.
+    private var moonHalo: some View {
+        let side: CGFloat = seededBool(salt: 21) ? 0.64 : 0.36
+        let d = min(ref * 0.74, 560)
+        return ZStack {
+            starsCanvas(count: 90, brightness: 0.8, heightFraction: 1)
+            glow(Color(hex: 0xEDF2FB), alpha: 0.2, radius: d * 0.9, x: side, y: 0.34)
+            Circle().strokeBorder(Color(hex: 0xEDF2FB).opacity(0.10), lineWidth: 1.5)
+                .frame(width: d * 1.5, height: d * 1.5)
+                .position(x: width * side, y: height * 0.34)
+            Circle().strokeBorder(Color(hex: 0xEDF2FB).opacity(0.05), lineWidth: 1)
+                .frame(width: d * 1.9, height: d * 1.9)
+                .position(x: width * side, y: height * 0.34)
+            moonDisc(diameter: d, litFromLeft: side < 0.5)
+                .position(x: width * side, y: height * 0.34)
+            wisp(y: 0.68, w: 0.7, alpha: 0.1)
+        }
+    }
+
+    /// A meteor-rich cosmic chapter: dense stars and several baked streaks
+    /// (the living overlay adds moving ones on top).
+    private var cometField: some View {
+        ZStack {
+            glow(Color(hex: 0x8F7BE8), alpha: 0.1, radius: ref * 0.5, x: 0.3, y: 0.3)
+            starsCanvas(count: 150, brightness: 0.95, heightFraction: 1)
+            cometStreaks
+        }
+    }
+
+    private var cometStreaks: some View {
+        Canvas { ctx, s in
+            var rng = SeededRNG(seed: spec.seed &+ 0xC03E)
+            for _ in 0..<3 {
+                let x = CGFloat(rng.unit()) * s.width
+                let y = CGFloat(0.1 + rng.unit() * 0.6) * s.height
+                let len = CGFloat(60 + rng.unit() * 90)
+                let dir: CGFloat = rng.unit() < 0.5 ? -1 : 1
+                let head = CGPoint(x: x, y: y)
+                let tail = CGPoint(x: x + dir * len, y: y - len * 0.45)
+                var p = Path()
+                p.move(to: tail)
+                p.addLine(to: head)
+                let a = 0.3 + rng.unit() * 0.35
+                let g = Gradient(colors: [Color.white.opacity(0), Color(hex: 0xD9F0FF).opacity(a)])
+                ctx.stroke(p, with: .linearGradient(g, startPoint: tail, endPoint: head), lineWidth: 1.6)
+                ctx.fill(Path(ellipseIn: CGRect(x: head.x - 2, y: head.y - 2, width: 4, height: 4)),
+                         with: .color(.white.opacity(a + 0.2)))
+            }
+        }
+    }
+
+    /// Crystalline high-altitude cold air: sparkle, an ice halo arc, cold glow.
+    private var iceCrystal: some View {
+        ZStack {
+            glow(Color(hex: 0xCFE2F2), alpha: 0.2, radius: ref * 0.55, x: 0.62, y: 0.3)
+            starsCanvas(count: 40, brightness: 0.5, heightFraction: 0.8)
+            speckCanvas(count: 50, alpha: 0.4, salt: 0x1CE)
+            haloArc
+            fogBand(y: 0.8, tint: Color(hex: 0xD8E6F2), alpha: 0.1)
+        }
+    }
+
+    private var haloArc: some View {
+        Circle()
+            .trim(from: 0.05, to: 0.45)
+            .stroke(Color.white.opacity(0.10), lineWidth: 2)
+            .frame(width: ref * 0.8, height: ref * 0.8)
+            .position(x: width * 0.62, y: height * 0.3)
     }
 
     // MARK: Shared building blocks
@@ -784,10 +1080,10 @@ private struct ChapterLifeCanvas: View {
 
     /// Cold worlds get a soft snow flurry; space worlds get a distant galaxy.
     private var isCold: Bool {
-        switch kind { case .snowSky, .auroraField, .quietReturn: return true; default: return false }
+        switch kind { case .snowSky, .auroraField, .iceCrystal: return true; default: return false }
     }
     private var isSpace: Bool {
-        switch kind { case .starfield, .deepSpace, .nebulaDream: return true; default: return false }
+        switch kind { case .starfield, .deepSpace, .nebulaDream, .cometField: return true; default: return false }
     }
 
     var body: some View {
@@ -1017,5 +1313,137 @@ private struct ChapterLifeCanvas: View {
             c.stroke(p, with: .linearGradient(lg, startPoint: CGPoint(x: cx - dx, y: cy - dy),
                                               endPoint: CGPoint(x: cx + dx, y: cy + dy)), lineWidth: 1.1)
         }
+    }
+}
+
+// MARK: - The Sky journey tape (restored world-tape engine, per-Sky authored)
+
+/// The lightweight environment-light state the journey exposes so the balloon
+/// and nearby atmosphere can sit *inside* the changing world (subtle veils and
+/// rim tints — never a destructive recolour of balloon skins).
+struct SkyEnvironmentLighting {
+    let ambientColor: Color
+    let highlightColor: Color
+    let intensity: Double
+    let glowDirection: UnitPoint
+}
+
+/// **The journey engine** — the restored world tape (from the original
+/// `ActiveFlightJourneyWorldView` chapter system), pinned to one Sky's authored
+/// chapter sequence. Two full-screen chapters are stacked and slid downward by
+/// the pause-aware flight clock, so entire compositions enter from above,
+/// travel through the frame, and exit below — the background itself evolves,
+/// chapter after chapter, with seamless colour-matched seams and seeded
+/// variation on every loop. One instance serves exterior flight, Cabin View
+/// and premium previews (same seed + same clock ⇒ identical world state).
+struct SkyJourneyTape: View {
+    let sky: FocusSky
+    var seed: UInt64 = 1
+    /// Pause-aware elapsed journey seconds — the only source of progression.
+    let elapsed: () -> Double
+    var animated: Bool = true
+
+    /// The stable per-flight journey seed: session seed × Sky identity.
+    static func journeySeed(sky: FocusSky, seed: UInt64) -> UInt64 {
+        var h: UInt64 = seed == 0 ? 0xF0C0 : seed
+        for u in sky.id.unicodeScalars { h = (h &* 31) &+ UInt64(u.value) }
+        return h
+    }
+
+    /// The chapter kind at a sequence index — pure/deterministic, mirroring the
+    /// tape builder's loop (pool order first, then cycling without adjacent
+    /// repeats). Cheap enough to call per frame; no cached state required.
+    static func chapterKind(at index: Int, pool: [WorldKind]) -> WorldKind {
+        guard !pool.isEmpty else { return .goldenHorizon }
+        guard index >= 0 else { return pool[0] }
+        if index < pool.count { return pool[index] }
+        var lastKind = pool[pool.count - 1]
+        var count = pool.count
+        var k = 0
+        let bail = index * 2 + pool.count * 2 + 4
+        while k < bail {
+            let kind = pool[k % pool.count]
+            if kind != lastKind || pool.count == 1 {
+                if count == index { return kind }
+                lastKind = kind
+                count += 1
+            }
+            k += 1
+        }
+        return pool[index % pool.count]
+    }
+
+    /// Current chapter, the chapter entering from above, and the blend fraction
+    /// between them — drives the lighting veil and the DEBUG inspector.
+    static func chapterInfo(sky: FocusSky, elapsed: Double)
+        -> (index: Int, kind: WorldKind, nextKind: WorldKind, progress: Double) {
+        let pool = sky.flightPool
+        let scroll = max(0, elapsed) / FlightWorldSequence.chapterDuration
+        let i = Int(scroll)
+        let frac = min(1, max(0, scroll - Double(i)))
+        return (i, chapterKind(at: i, pool: pool), chapterKind(at: i + 1, pool: pool), frac)
+    }
+
+    /// The journey's current environment light (blends toward the entering
+    /// chapter as it takes over the frame).
+    static func lighting(sky: FocusSky, elapsed: Double) -> SkyEnvironmentLighting {
+        let info = chapterInfo(sky: sky, elapsed: elapsed)
+        let c = info.progress < 0.5 ? info.kind.lightColor : info.nextKind.lightColor
+        var h: UInt64 = 0x11
+        for u in sky.id.unicodeScalars { h = (h &* 31) &+ UInt64(u.value) }
+        let x = 0.3 + Double(h % 5) * 0.1
+        return SkyEnvironmentLighting(ambientColor: sky.paletteColors.first ?? .black,
+                                      highlightColor: c,
+                                      intensity: 0.4 + 0.2 * Foundation.sin(info.progress * .pi),
+                                      glowDirection: UnitPoint(x: x, y: 0.3))
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            let W = geo.size.width
+            let H = max(1, geo.size.height)
+            ZStack {
+                Color(hex: 0x0D1322)
+                TimelineView(.animation(minimumInterval: animated ? 1.0 / 30.0 : 5.0)) { _ in
+                    // Progression derives ONLY from the pause-aware journey clock:
+                    // pause freezes the tape mid-slide; resume continues exactly
+                    // where it stopped; background/foreground never jump.
+                    let t = animated ? max(0, elapsed()) : 0
+                    let jSeed = Self.journeySeed(sky: sky, seed: seed)
+                    let seq = FlightWorldSequence.sequence(seed: jSeed, pool: sky.flightPool)
+                    let scroll = t / FlightWorldSequence.chapterDuration
+                    let last = seq.count - 2
+                    let i = min(last, Int(scroll))
+                    let frac = CGFloat(min(1, max(0, scroll - Double(i))))
+                    VStack(spacing: 0) {
+                        cell(seq: seq, index: i + 1, t: t, W: W, H: H)
+                        cell(seq: seq, index: i, t: t, W: W, H: H)
+                    }
+                    .frame(width: W, height: H * 2)
+                    .offset(y: -H * (1 - frac))
+                    .frame(width: W, height: H, alignment: .top)
+                    .clipped()
+                }
+            }
+            .frame(width: W, height: H)
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+
+    /// One scrolling chapter cell: the authored scenery plus its living detail
+    /// (twinkles, streaks, weather), both riding inside the cell so everything
+    /// scrolls together. Adjacent cells share edge colours ⇒ seamless seams.
+    @ViewBuilder
+    private func cell(seq: [ChapterSpec], index: Int, t: Double, W: CGFloat, H: CGFloat) -> some View {
+        let spec = seq[index]
+        let below = index > 0 ? seq[index - 1].kind.topColor : spec.kind.midColor
+        ZStack {
+            ChapterSectionView(spec: spec, bottomEdge: below, width: W, height: H)
+                .id(index)
+            ChapterLifeCanvas(seed: spec.seed, kind: spec.kind,
+                              particles: sky.flightParticles, t: t, width: W, height: H)
+        }
+        .frame(width: W, height: H)
     }
 }
