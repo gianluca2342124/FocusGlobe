@@ -10,6 +10,7 @@ import StoreKit
 struct HomeView: View {
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var online: FocusOnlineModel
     @StateObject private var viewModel = HomeViewModel()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.requestReview) private var requestReview
@@ -137,6 +138,7 @@ struct HomeView: View {
         .fullScreenCover(isPresented: $showPreview) {
             SkyPreviewFlightView(sky: currentSky)
                 .environmentObject(appModel).environmentObject(router)
+                .environmentObject(online)
         }
         .adaptiveModal(isPresented: $showStreak,
                        width: Layout.streakPanelWidth, height: Layout.streakPanelHeight) {
@@ -520,10 +522,12 @@ private struct SkyPreviewFlightView: View {
     let sky: FocusSky
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var online: FocusOnlineModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var start = Date()
     @State private var headlineIndex = 0
+    @State private var showInvite = false
 
     private var isPremiumOnly: Bool {
         if case .premium = sky.unlockRequirement { return true }
@@ -632,13 +636,25 @@ private struct SkyPreviewFlightView: View {
     @ViewBuilder private var secondaryButton: some View {
         switch sky.unlockRequirement {
         case .invite(let n):
-            // Invites are the only requirement that opens the share sheet.
-            let cur = min(appModel.inviteProgress(for: sky), n)
-            ShareLink(item: appModel.inviteShareMessage(for: sky)) {
-                progressPill(title: "\(cur)/\(n) friends invited", icon: "person.2.fill",
+            // Real invite unlocks: only friends who actually ACCEPTED the
+            // CloudKit invitation count — never share-button taps.
+            let cur = min(appModel.verifiedInviteProgress(for: sky), n)
+            Button {
+                appModel.tapFeedback()
+                showInvite = true
+            } label: {
+                progressPill(title: "\(cur)/\(n) friends joined", icon: "person.2.fill",
                              fraction: n <= 0 ? 1 : Double(cur) / Double(n))
             }
-            .simultaneousGesture(TapGesture().onEnded { appModel.tapFeedback() })
+            .buttonStyle(SoftPressStyle())
+            .sheet(isPresented: $showInvite) {
+                InvitePeopleView(context: .skyUnlock(sky))
+                    .environmentObject(appModel)
+                    .environmentObject(online)
+            }
+            .task {
+                await online.refreshCampaignProgress(skyID: sky.id, required: n)
+            }
         case .focusMinutes(let n):
             // Focus-minute / streak goals are earned by flying — no share sheet;
             // closing the preview returns to Home to start focusing.

@@ -57,6 +57,24 @@ struct FocusSessionView: View {
     @State private var showControlsPanel = false
     /// Clean mode: hide chrome down to a tiny timer + a reveal button.
     @State private var cleanMode = false
+    /// FocusGlobe Online: the real pilot whose profile sheet is open.
+    @State private var selectedRealPilot: OnlinePilot? = nil
+    @EnvironmentObject private var online: FocusOnlineModel
+
+    /// Real pilots for this flight (hidden ones filtered locally). Decorative
+    /// ambient pilots fill the remaining visual capacity inside the layer.
+    private var visibleRealPilots: [OnlinePilot] {
+        let hidden = appModel.profile.hiddenPilotIDs ?? []
+        return online.realPilots.filter { !hidden.contains($0.id) }
+    }
+    /// Where an in-flight invite goes: into the current private room, or a
+    /// fresh invite-capable room for this Sky (never a mode switch).
+    private var inviteContext: InvitePeopleView.Context {
+        if online.flightMode == .privateRoom, let room = online.pendingRoom {
+            return .room(room)
+        }
+        return .preFlight(skyID: (matchedSky ?? appModel.selectedSky).id)
+    }
     /// True while the give-up button is being held. Used only to fade the centre
     /// watermark on compact iPhone so the expanding capsule never crowds it.
     @State private var holdingGiveUp = false
@@ -110,12 +128,12 @@ struct FocusSessionView: View {
                                              animated: !reduceMotion,
                                              focusSky: matchedSky)
                     .transition(.opacity)
-                if !(appModel.profile.soloFlights ?? false) {
-                    AmbientPilotsLayer(skyID: matchedSky?.id ?? "classic",
-                                       elapsed: { displayElapsed(at: Date()) },
-                                       animated: !reduceMotion)
-                        .transition(.opacity)
-                }
+                AmbientPilotsLayer(skyID: matchedSky?.id ?? "classic",
+                                   elapsed: { displayElapsed(at: Date()) },
+                                   animated: !reduceMotion,
+                                   realPilots: visibleRealPilots,
+                                   onSelectReal: { selectedRealPilot = $0 })
+                    .transition(.opacity)
                 balloon
                     .transition(.opacity)
             case .cabin:
@@ -123,7 +141,8 @@ struct FocusSessionView: View {
                           seed: worldSeed,
                           animated: !reduceMotion,
                           focusSky: matchedSky,
-                          showPilots: !(appModel.profile.soloFlights ?? false),
+                          showPilots: true,
+                          realPilots: visibleRealPilots,
                           equippedItemIDs: appModel.profile.equippedCabinItemIDs ?? [])
                     .transition(.opacity)
             }
@@ -200,9 +219,29 @@ struct FocusSessionView: View {
         } message: {
             Text("You'll lose this flight's progress: no Focus Coins earned, today's missions won't count it, and your streak only grows when you land. You can resume from Home.")
         }
+        .overlay(alignment: .top) {
+            if online.reconnecting && online.flightMode.isOnline {
+                Text("Reconnecting…")
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.8))
+                    .padding(.horizontal, 12).padding(.vertical, 6)
+                    .background(Capsule().fill(.ultraThinMaterial))
+                    .padding(.top, 60)
+                    .transition(.opacity)
+            }
+        }
+        .sheet(item: $selectedRealPilot) { pilot in
+            PilotProfileSheet(pilot: pilot)
+                .environmentObject(online).environmentObject(appModel)
+        }
         .sheet(isPresented: $showInvite) {
-            FlightRoomSheet(sky: matchedSky ?? appModel.selectedSky)
+            // The REAL invitation route (CKShare): inside a private room it
+            // invites into that room; otherwise it creates/reuses an
+            // invite-capable room for this Sky. Nobody is shown as "joined"
+            // until CloudKit confirms their acceptance.
+            InvitePeopleView(context: inviteContext)
                 .environmentObject(appModel)
+                .environmentObject(online)
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
@@ -610,91 +649,6 @@ private struct HoldToGiveUpButton: View {
     }
 }
 
-// MARK: - Flight room (invite someone to this journey)
-
-/// The in-flight **flight room** — a small lobby for the current journey: your
-/// balloon in the first seat, open seats waiting with a +, and one Share button
-/// to invite someone into this Sky right now. No unlock/counter language here —
-/// this is simply "come fly with me". Seats stay open until a real backend fills
-/// them, so nothing dishonest is shown.
-private struct FlightRoomSheet: View {
-    let sky: FocusSky
-    @EnvironmentObject private var appModel: AppModel
-
-    var body: some View {
-        ZStack {
-            AppBackground().ignoresSafeArea()
-            VStack(spacing: AppSpacing.lg) {
-                VStack(spacing: 6) {
-                    Text("Your flight room")
-                        .font(AppTypography.serifTitle2)
-                        .foregroundStyle(AppColors.textPrimary)
-                    Text("Invite a friend to share \(sky.name) with you.")
-                        .font(AppTypography.callout)
-                        .foregroundStyle(AppColors.textSecondary)
-                        .multilineTextAlignment(.center)
-                }
-                .padding(.top, AppSpacing.xl)
-
-                HStack(spacing: AppSpacing.md) {
-                    seat(index: 0)
-                    seat(index: 1)
-                    seat(index: 2)
-                    seat(index: 3)
-                }
-
-                ShareLink(item: appModel.inviteShareMessage(for: sky)) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 15, weight: .bold))
-                        Text("Share invite")
-                            .font(AppTypography.headline)
-                    }
-                    .foregroundStyle(AppColors.ctaText)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .background(RoundedRectangle(cornerRadius: AppSpacing.pillRadius, style: .continuous)
-                        .fill(AppColors.ctaFill))
-                }
-                .simultaneousGesture(TapGesture().onEnded { appModel.tapFeedback() })
-
-                Spacer()
-            }
-            .padding(.horizontal, AppSpacing.screen)
-            .frame(maxWidth: 520)
-            .frame(maxWidth: .infinity)
-        }
-        .presentationDetents([.medium])
-        .presentationDragIndicator(.visible)
-    }
-
-    /// Seat 0 is you; the rest are open until someone joins.
-    private func seat(index: Int) -> some View {
-        VStack(spacing: 7) {
-            ZStack {
-                Circle()
-                    .fill(index == 0 ? AppColors.gold.opacity(0.16) : AppColors.textPrimary.opacity(0.05))
-                    .frame(width: 56, height: 56)
-                Circle()
-                    .strokeBorder(index == 0 ? AppColors.gold.opacity(0.5) : AppColors.textPrimary.opacity(0.14),
-                                  style: StrokeStyle(lineWidth: 1.5, dash: index == 0 ? [] : [4, 4]))
-                    .frame(width: 56, height: 56)
-                if index == 0 {
-                    MiniBalloonView(size: 34, showGlow: false)
-                } else {
-                    Image(systemName: "plus")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(AppColors.textTertiary)
-                }
-            }
-            Text(index == 0 ? "You" : "Open")
-                .font(AppTypography.micro)
-                .foregroundStyle(index == 0 ? AppColors.gold : AppColors.textTertiary)
-        }
-        .frame(maxWidth: .infinity)
-    }
-}
-
 // MARK: - Flight controls panel (one button → every in-flight control)
 
 /// The compact glass panel opened by the single flight-controls button. It keeps
@@ -711,7 +665,6 @@ private struct FlightControlsPanel: View {
     let onCleanMode: () -> Void
     @EnvironmentObject private var appModel: AppModel
 
-    private var solo: Bool { appModel.profile.soloFlights ?? false }
     private var shielded: Bool { appModel.profile.focusShieldOptIn }
 
     var body: some View {
@@ -732,13 +685,6 @@ private struct FlightControlsPanel: View {
                 action: onToggleMute)
 
             soundChips
-
-            row(icon: solo ? "person.fill" : "person.3.fill",
-                title: solo ? "Solo flight" : "Fly with others",
-                subtitle: solo ? "No other balloons" : "Ambient pilots shown") {
-                withAnimation(.snappy(duration: 0.2)) { appModel.profile.soloFlights = !solo }
-                appModel.haptics.tap()
-            }
 
             row(icon: shielded ? "shield.fill" : "shield.slash",
                 title: shielded ? "Focus Shield on" : "Focus Shield off",

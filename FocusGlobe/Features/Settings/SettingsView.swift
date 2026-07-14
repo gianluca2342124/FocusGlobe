@@ -6,12 +6,18 @@ import RevenueCatUI
 struct SettingsView: View {
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var online: FocusOnlineModel
     @State private var restoreMessage: String?
+    @State private var showAliasEditor = false
+    @State private var aliasDraft = ""
+    @State private var aliasError: String?
+    @State private var showDeleteOnlineConfirm = false
     #if canImport(RevenueCatUI)
     @State private var showCustomerCenter = false
     #endif
     #if DEBUG
     @State private var showResetConfirm = false
+    @State private var showOnlineDiagnostics = false
     #endif
 
     var body: some View {
@@ -26,6 +32,7 @@ struct SettingsView: View {
 
                     appearanceSection
                     experienceSection
+                    onlineSection
                     FocusShieldSettingsSection(service: appModel.focusShield)
                     ultraSection
                     generalSection
@@ -161,6 +168,76 @@ struct SettingsView: View {
         }
     }
 
+    // FocusGlobe Online — anonymous CloudKit presence controls. Everything here
+    // is opt-in; disabling visibility removes live presence immediately.
+    private var onlineSection: some View {
+        SettingsCard(title: "FocusGlobe Online") {
+            VStack(spacing: 0) {
+                ToggleRow(systemImage: "globe.americas.fill", title: "Appear in Public Skies",
+                          subtitle: "Let other pilots see your balloon while you focus online.",
+                          isOn: Binding(get: { appModel.profile.onlineDiscoverable ?? false },
+                                        set: { appModel.tapFeedback(); online.setDiscoverable($0) }))
+                RowDivider()
+                ToggleRow(systemImage: "person.crop.circle.badge.plus", title: "Allow Friend Requests",
+                          subtitle: "Allow pilots you meet to send you a Crew request.",
+                          isOn: Binding(get: { appModel.profile.onlineAllowsFriendRequests ?? true },
+                                        set: { appModel.tapFeedback(); online.setAllowsFriendRequests($0) }))
+                RowDivider()
+                Button {
+                    appModel.tapFeedback()
+                    aliasDraft = online.profile?.displayName ?? online.identity?.anonymousHandle ?? ""
+                    showAliasEditor = true
+                } label: {
+                    SettingsRow(systemImage: "textformat", title: "Public alias",
+                                subtitle: online.profile?.displayName ?? "Set after first online flight",
+                                tint: AppColors.brand,
+                                trailing: AnyView(Image(systemName: "chevron.right")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(AppColors.textTertiary)))
+                }
+                .buttonStyle(SoftPressStyle())
+                .disabled(online.profile == nil)
+                RowDivider()
+                Button {
+                    appModel.tapFeedback()
+                    showDeleteOnlineConfirm = true
+                } label: {
+                    SettingsRow(systemImage: "icloud.slash.fill", title: "Delete Online Data",
+                                subtitle: "Remove your public profile, presence and rooms",
+                                tint: AppColors.danger,
+                                trailing: AnyView(EmptyView()))
+                }
+                .buttonStyle(SoftPressStyle())
+            }
+        }
+        .alert("Change alias", isPresented: $showAliasEditor) {
+            TextField("Alias", text: $aliasDraft)
+            Button("Save") {
+                Task { aliasError = await online.updateAlias(aliasDraft) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("3–20 characters. Shown to other pilots instead of your name.")
+        }
+        .alert("Couldn't change alias", isPresented: Binding(
+            get: { aliasError != nil }, set: { if !$0 { aliasError = nil } }
+        )) {
+            Button("OK", role: .cancel) { aliasError = nil }
+        } message: {
+            Text(aliasError ?? "")
+        }
+        .confirmationDialog("Delete Online Data?",
+                            isPresented: $showDeleteOnlineConfirm,
+                            titleVisibility: .visible) {
+            Button("Delete online data", role: .destructive) {
+                Task { await online.deleteOnlineData() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Removes your public profile, live presence, Crew connections and rooms from iCloud. Your local flights, coins and streak stay on this device.")
+        }
+    }
+
     // General — privacy statement + the legal links (real hosted pages, same
     // `LegalLinks` used by the paywall footer).
     private var generalSection: some View {
@@ -200,16 +277,36 @@ struct SettingsView: View {
     // reset so fresh-user onboarding can be re-tested without reinstalling.
     private var debugSection: some View {
         SettingsCard(title: "Developer") {
-            Button {
-                appModel.tapFeedback()
-                showResetConfirm = true
-            } label: {
-                SettingsRow(systemImage: "trash.fill", title: "Reset all data",
-                            subtitle: "Wipe everything and replay onboarding",
-                            tint: AppColors.danger,
-                            trailing: AnyView(EmptyView()))
+            VStack(spacing: 0) {
+                Button {
+                    appModel.tapFeedback()
+                    showOnlineDiagnostics = true
+                } label: {
+                    SettingsRow(systemImage: "waveform.badge.magnifyingglass", title: "Online diagnostics",
+                                subtitle: "CloudKit status, presence & subscriptions",
+                                tint: AppColors.brand,
+                                trailing: AnyView(Image(systemName: "chevron.right")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(AppColors.textTertiary)))
+                }
+                .buttonStyle(SoftPressStyle())
+                RowDivider()
+                Button {
+                    appModel.tapFeedback()
+                    showResetConfirm = true
+                } label: {
+                    SettingsRow(systemImage: "trash.fill", title: "Reset all data",
+                                subtitle: "Wipe everything and replay onboarding",
+                                tint: AppColors.danger,
+                                trailing: AnyView(EmptyView()))
+                }
+                .buttonStyle(SoftPressStyle())
             }
-            .buttonStyle(SoftPressStyle())
+        }
+        .sheet(isPresented: $showOnlineDiagnostics) {
+            OnlineDiagnosticsView()
+                .environmentObject(appModel)
+                .environmentObject(online)
         }
         .confirmationDialog("Reset all data?",
                             isPresented: $showResetConfirm,

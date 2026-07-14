@@ -3,14 +3,30 @@ import SwiftUI
 import UIKit
 #endif
 
-/// **Friends** — the connection hub. Honest by design: until the presence /
-/// referral backend ships, this screen shows a clean invite hero, a cute empty
-/// state, a simple 3-step "how it works", and the fly-together incentive —
-/// never invented friends, and no per-Sky invite counters (those live on each
-/// Sky's own unlock sheet now).
+/// **Friends** — the Crew hub, now backed by FocusGlobe Online (CloudKit).
+/// Honest by design: every pilot shown here is a real accepted connection,
+/// every "Focusing now" badge comes from a real recent presence heartbeat,
+/// and rooms are real CKShare invitations. Nothing is fabricated; when the
+/// crew is empty the warm empty state invites, it never pretends.
 struct FriendsView: View {
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var online: FocusOnlineModel
+
+    @State private var lobbyRoom: FocusRoom?
+    @State private var showInvite = false
+    @State private var removalTarget: FocusFriend?
+
+    /// Rooms worth listing (lobby or in flight — not ended/closed).
+    private var openRooms: [FocusRoom] {
+        (online.ownedRooms + online.joinedRooms)
+            .filter { $0.status == .lobby || $0.status == .active }
+    }
+
+    private var hasAnySocialContent: Bool {
+        !online.crew.isEmpty || !openRooms.isEmpty
+            || !online.incomingRequests.isEmpty || !online.outgoingRequests.isEmpty
+    }
 
     var body: some View {
         ZStack {
@@ -18,18 +34,235 @@ struct FriendsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
                     ScreenHeader(title: "Friends", subtitle: "Focus feels better together", showsBack: false)
-                    emptyState
+                    if online.availability != .available {
+                        OnlineUnavailableView(availability: online.availability)
+                            .glassBackground(cornerRadius: AppSpacing.cardRadius, tintOpacity: 0.2,
+                                             shadowRadius: 10, shadowY: 5)
+                    }
+                    if !hasAnySocialContent { emptyState }
+                    if !online.incomingRequests.isEmpty || !online.outgoingRequests.isEmpty {
+                        requestsSection
+                    }
+                    if !online.crew.isEmpty { crewSection }
+                    if !openRooms.isEmpty { roomsSection }
                     inviteHero
-                    howItWorks
+                    if !hasAnySocialContent { howItWorks }
                 }
                 .padding(AppSpacing.screen)
                 .padding(.top, AppSpacing.xs)
                 .padding(.bottom, AppSpacing.xxl)
                 .contentMaxWidth()
             }
+            .refreshable { await refresh() }
         }
         .focusScreenChrome()
+        .task { await refresh() }
+        .onChange(of: online.availability) { _, now in
+            guard now == .available else { return }
+            Task { await refresh() }
+        }
+        .fullScreenCover(item: $lobbyRoom) { room in
+            OnlineLobbyView(room: room) {
+                // Owner pressed Start Flight → home opens the pre-flight ritual
+                // with the room already pending (FlightSetup picks it up).
+                router.select(.home)
+                router.pendingNewFlight = true
+            }
+            .environmentObject(appModel)
+            .environmentObject(online)
+        }
+        .sheet(isPresented: $showInvite) {
+            InvitePeopleView(context: .app)
+                .environmentObject(appModel)
+                .environmentObject(online)
+        }
+        .confirmationDialog("Remove from Crew?", isPresented: Binding(
+            get: { removalTarget != nil }, set: { if !$0 { removalTarget = nil } }
+        ), titleVisibility: .visible) {
+            Button("Remove", role: .destructive) {
+                if let friend = removalTarget {
+                    Task { await online.removeFriend(friend) }
+                }
+                removalTarget = nil
+            }
+            Button("Cancel", role: .cancel) { removalTarget = nil }
+        } message: {
+            Text("You can always reconnect later with a new request.")
+        }
     }
+
+    private func refresh() async {
+        guard online.availability == .available else { return }
+        await online.refreshSocial()
+        await online.refreshRooms()
+    }
+
+    // MARK: - Pending requests
+
+    private var requestsSection: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            sectionTitle("Pending requests", icon: "envelope.fill")
+            VStack(spacing: AppSpacing.xs) {
+                ForEach(online.incomingRequests) { request in
+                    incomingRow(request)
+                }
+                ForEach(online.outgoingRequests) { request in
+                    outgoingRow(request)
+                }
+            }
+        }
+    }
+
+    private func incomingRow(_ request: FriendRequest) -> some View {
+        HStack(spacing: AppSpacing.sm) {
+            BalloonView(height: 40, showBurner: false, showGlow: false,
+                        skin: BalloonSkin.skin(id: request.senderBalloonSkinID))
+            VStack(alignment: .leading, spacing: 1) {
+                Text(request.senderDisplayName)
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppColors.textPrimary)
+                Text("wants to join your Crew")
+                    .font(AppTypography.caption)
+                    .foregroundStyle(AppColors.textTertiary)
+            }
+            Spacer()
+            Button {
+                appModel.tapFeedback()
+                Task { await online.respond(to: request, accept: false) }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(AppColors.textSecondary)
+                    .frame(width: 34, height: 34)
+                    .background(Circle().fill(.white.opacity(0.08)))
+            }
+            .buttonStyle(SoftPressStyle())
+            Button {
+                appModel.tapFeedback()
+                Task { await online.respond(to: request, accept: true) }
+            } label: {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 13, weight: .heavy))
+                    .foregroundStyle(Color(hex: 0x14120E))
+                    .frame(width: 34, height: 34)
+                    .background(Circle().fill(AppColors.gold))
+            }
+            .buttonStyle(SoftPressStyle())
+        }
+        .padding(.horizontal, AppSpacing.md)
+        .padding(.vertical, 10)
+        .glassBackground(cornerRadius: 16, tintOpacity: 0.2, shadowRadius: 5, shadowY: 3)
+    }
+
+    private func outgoingRow(_ request: FriendRequest) -> some View {
+        HStack(spacing: AppSpacing.sm) {
+            Image(systemName: "paperplane.fill")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(AppColors.textTertiary)
+                .frame(width: 40)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Request sent")
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppColors.textPrimary)
+                Text("Waiting for the pilot to accept")
+                    .font(AppTypography.caption)
+                    .foregroundStyle(AppColors.textTertiary)
+            }
+            Spacer()
+            Button("Cancel") {
+                appModel.tapFeedback()
+                Task { await online.cancelRequest(request) }
+            }
+            .font(.system(size: 13, weight: .bold, design: .rounded))
+            .foregroundStyle(AppColors.textSecondary)
+        }
+        .padding(.horizontal, AppSpacing.md)
+        .padding(.vertical, 10)
+        .glassBackground(cornerRadius: 16, tintOpacity: 0.14, shadowRadius: 5, shadowY: 3)
+    }
+
+    // MARK: - Crew
+
+    private var crewSection: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            sectionTitle("Your Crew", icon: "person.2.fill")
+            VStack(spacing: AppSpacing.xs) {
+                ForEach(online.crew) { friend in
+                    crewRow(friend)
+                }
+            }
+        }
+    }
+
+    private func crewRow(_ friend: FocusFriend) -> some View {
+        HStack(spacing: AppSpacing.sm) {
+            BalloonView(height: 44, showBurner: false, showGlow: friend.activePilot != nil,
+                        skin: BalloonSkin.skin(id: friend.activePilot?.balloonSkinID ?? friend.balloonSkinID))
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 5) {
+                    Text(friend.displayName)
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundStyle(AppColors.textPrimary)
+                    if let cc = friend.countryCode { Text(flagEmoji(cc)).font(.system(size: 13)) }
+                }
+                if let pilot = friend.activePilot {
+                    HStack(spacing: 5) {
+                        Circle().fill(Color(hex: 0x7FD98A)).frame(width: 6, height: 6)
+                        Text("Focusing now · \(pilot.remainingLabel)")
+                            .font(AppTypography.caption)
+                            .foregroundStyle(Color(hex: 0x9CCFA3))
+                    }
+                } else {
+                    Text("Crew member")
+                        .font(AppTypography.caption)
+                        .foregroundStyle(AppColors.textTertiary)
+                }
+            }
+            Spacer()
+            Menu {
+                Button(role: .destructive) {
+                    removalTarget = friend
+                } label: {
+                    Label("Remove from Crew", systemImage: "person.badge.minus")
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(AppColors.textTertiary)
+                    .frame(width: 34, height: 34)
+                    .contentShape(Rectangle())
+            }
+        }
+        .padding(.horizontal, AppSpacing.md)
+        .padding(.vertical, 10)
+        .glassBackground(cornerRadius: 16, tintOpacity: 0.2, shadowRadius: 5, shadowY: 3)
+    }
+
+    // MARK: - Rooms / invitations
+
+    private var roomsSection: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            sectionTitle("Focus Rooms", icon: "airplane")
+            VStack(spacing: AppSpacing.xs) {
+                ForEach(openRooms) { room in
+                    RoomDetailsView(room: room) { lobbyRoom = $0 }
+                }
+            }
+        }
+    }
+
+    private func sectionTitle(_ title: String, icon: String) -> some View {
+        HStack(spacing: 7) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(AppColors.gold)
+            Text(title)
+                .font(.system(size: 19, weight: .bold, design: .rounded))
+                .foregroundStyle(AppColors.textPrimary)
+        }
+    }
+
+    // MARK: - Empty state
 
     // A warm, prominent empty state until real crew exists.
     private var emptyState: some View {
@@ -72,6 +305,8 @@ struct FriendsView: View {
         }
     }
 
+    // MARK: - Invite
+
     private var inviteHero: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
             HStack(spacing: 7) {
@@ -82,11 +317,14 @@ struct FriendsView: View {
                     .font(AppTypography.callout)
                     .foregroundStyle(AppColors.textPrimary)
             }
-            ShareLink(item: appModel.inviteShareMessage(for: appModel.selectedSky)) {
+            Button {
+                appModel.tapFeedback()
+                showInvite = true
+            } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "square.and.arrow.up")
                         .font(.system(size: 15, weight: .bold))
-                    Text("Share your invite")
+                    Text("Invite someone")
                         .font(AppTypography.headline)
                 }
                 .foregroundStyle(AppColors.ctaText)
@@ -95,11 +333,12 @@ struct FriendsView: View {
                 .background(RoundedRectangle(cornerRadius: AppSpacing.pillRadius, style: .continuous)
                     .fill(AppColors.ctaFill))
             }
-            .simultaneousGesture(TapGesture().onEnded { appModel.tapFeedback() })
-            Text("Invite code \(appModel.referralCode())")
-                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+            .buttonStyle(SoftPressStyle())
+            Text("Real private flights use iCloud invitations — friends join with one tap.")
+                .font(AppTypography.caption)
                 .foregroundStyle(AppColors.textTertiary)
                 .frame(maxWidth: .infinity)
+                .multilineTextAlignment(.center)
         }
         .padding(AppSpacing.lg)
         .glassBackground(cornerRadius: AppSpacing.cardRadius, tintOpacity: 0.24,
@@ -115,11 +354,11 @@ struct FriendsView: View {
                 .foregroundStyle(AppColors.textPrimary)
             VStack(spacing: 0) {
                 stepNode(1, icon: "square.and.arrow.up", title: "Share your invite",
-                         subtitle: "Send your link to a friend.", connector: true)
+                         subtitle: "Send a private flight link to a friend.", connector: true)
                 stepNode(2, icon: "person.badge.plus", title: "Friend joins",
-                         subtitle: "They open the link and start flying.", connector: true)
+                         subtitle: "They accept and appear in your lobby.", connector: true)
                 stepNode(3, icon: "sparkles", title: "Fly together — earn 2×",
-                         subtitle: "Shared flights earn double Focus Coins.", connector: false)
+                         subtitle: "Shared flights of 5+ minutes earn double Focus Coins.", connector: false)
             }
             .padding(AppSpacing.md)
             .glassBackground(cornerRadius: AppSpacing.cardRadius, tintOpacity: 0.2, shadowRadius: 10, shadowY: 5)

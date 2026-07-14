@@ -27,6 +27,9 @@ struct CabinView: View {
     /// solo flight). When true, the same ambient balloons drift **through the
     /// window** so the cabin looks out on the very same shared journey.
     var showPilots: Bool = true
+    /// The SAME real online pilots as the exterior (no second network fetch) —
+    /// they drift past the window exactly like the decorative ones.
+    var realPilots: [OnlinePilot] = []
     /// Owned Store cabin decorations the pilot has placed (`StoreItem` ids) —
     /// purely additive dressing; the cabin stands alone without any of them.
     var equippedItemIDs: Set<String> = []
@@ -105,7 +108,8 @@ struct CabinView: View {
             // art so they read *through the window* (non-interactive in here).
             if showPilots {
                 AmbientPilotsLayer(skyID: focusSky?.id ?? "classic",
-                                   elapsed: elapsed, animated: animated)
+                                   elapsed: elapsed, animated: animated,
+                                   realPilots: realPilots)
                     .frame(width: W, height: H).clipped()
                     .allowsHitTesting(false)
             }
@@ -221,7 +225,8 @@ struct CabinView: View {
             // The same fellow pilots drifting past, clipped inside the glass.
             if showPilots {
                 AmbientPilotsLayer(skyID: focusSky?.id ?? "classic",
-                                   elapsed: elapsed, animated: animated)
+                                   elapsed: elapsed, animated: animated,
+                                   realPilots: realPilots)
                     .frame(width: winW, height: winH)
                     .clipShape(shape)
                     .allowsHitTesting(false)

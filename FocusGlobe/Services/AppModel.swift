@@ -284,6 +284,16 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// FocusGlobe Online: a Sky's invite campaign reached its verified target
+    /// (accepted unique CloudKit participants). Unlocks permanently —
+    /// idempotent, survives account changes, and never re-locks offline.
+    func unlockSkyFromVerifiedInvites(skyID: String) {
+        var unlocked = profile.unlockedSkyIDs ?? []
+        guard !unlocked.contains(skyID) else { return }
+        unlocked.insert(skyID)
+        profile.unlockedSkyIDs = unlocked
+    }
+
     /// Select a Sky for the next flights. Locked Skies can be previewed on Home
     /// but never stored as the active choice.
     func selectSky(_ sky: FocusSky) {
@@ -474,6 +484,44 @@ final class AppModel: ObservableObject {
 
     var isCleanFlightMode: Bool { profile.cleanFlightMode ?? false }
     func setCleanFlightMode(_ on: Bool) { profile.cleanFlightMode = on }
+
+    // MARK: - FocusGlobe Online bridge
+
+    /// The online coordinator (owned by the App as a @StateObject; attached at
+    /// launch). Weak so AppModel never keeps UI-scoped state alive.
+    weak var onlineRef: FocusOnlineModel?
+
+    func attachOnline(_ online: FocusOnlineModel) {
+        onlineRef = online
+        online.bootstrap(appModel: self)
+    }
+
+    /// The skin id shown to other pilots online.
+    var equippedSkinIDForOnline: String { selectedSkin.id }
+
+    /// Hide an online pilot locally (their presence is simply not rendered).
+    func hidePilot(_ publicID: String) {
+        var hidden = profile.hiddenPilotIDs ?? []
+        hidden.insert(publicID)
+        profile.hiddenPilotIDs = hidden
+    }
+
+    /// Verified invite-unlock progress: real accepted CloudKit participants
+    /// when available, never share-button taps. Falls back to any legacy local
+    /// count so previously-earned progress is never lost.
+    func verifiedInviteProgress(for sky: FocusSky) -> Int {
+        let online = onlineRef?.campaignProgress(skyID: sky.id) ?? 0
+        return max(online, inviteProgress(for: sky))
+    }
+
+    // Flight lifecycle → online presence (no-ops for Solo; never blocks local).
+    func onlineFlightDidStart(skyID: String, sessionID: String, expectedEndAt: Date?) {
+        onlineRef?.flightDidStart(skyID: skyID, sessionID: sessionID,
+                                  expectedEndAt: expectedEndAt,
+                                  category: profile.focusStyle ?? "Focus")
+    }
+    func onlineFlightPauseChanged(_ paused: Bool) { onlineRef?.flightPauseChanged(isPaused: paused) }
+    func onlineFlightDidEnd(sessionID: String) { onlineRef?.flightDidEnd(sessionID: sessionID) }
 
     /// Buy a cosmetic with Focus Coins (or claim a premium item when Pro).
     /// Returns `true` on success.
@@ -829,8 +877,14 @@ final class AppModel: ObservableObject {
     /// Banks a completed journey: miles, streak, landing count, best duration,
     /// completed routes and the unlocked postcard. Returns a summary for the
     /// Landing screen.
+    /// Cap applied to the coins banked at landing after all multipliers
+    /// (base → boost → friend ×2). The rewarded-ad double on the Landing
+    /// screen doubles this already-capped amount at most once.
+    static let maximumCoinsPerJourneyAfterMultipliers = 50
+
     func completeJourney(origin: JourneyOrigin, route: Route,
-                         focusedSeconds: Int, intention: String?) -> LandingSummary {
+                         focusedSeconds: Int, intention: String?,
+                         onlineSessionID: String? = nil) -> LandingSummary {
         // Distance (and miles) reflect the *real* journey: the user's live
         // location → the chosen destination.
         let distanceKm = GeoMath.distanceKm(from: origin.coordinate, to: route.destination)
@@ -842,7 +896,21 @@ final class AppModel: ObservableObject {
         // double — if the pilot also watches an ad — doubles the boosted total.
         let boostBonus = consumeCoinBoostIfArmed()
             ? FocusEconomy.coins(forFocusedSeconds: min(focusedSeconds, 3600)) : 0
-        let awardedMiles = baseMiles + boostBonus
+        // Friend-flight bonus: a VERIFIED private-room flight with ≥5 minutes of
+        // real overlap doubles the coins — once per session (idempotent), never
+        // for decorative pilots or public strangers, capped globally.
+        var friendMultiplier = 1
+        if let sessionID = onlineSessionID,
+           onlineRef?.friendBonusEligible(sessionID: sessionID) == true,
+           !(profile.rewardedFriendSessionIDs ?? []).contains(sessionID) {
+            friendMultiplier = 2
+            var rewarded = profile.rewardedFriendSessionIDs ?? []
+            rewarded.append(sessionID)
+            if rewarded.count > 60 { rewarded.removeFirst(rewarded.count - 60) }
+            profile.rewardedFriendSessionIDs = rewarded
+        }
+        let awardedMiles = min(Self.maximumCoinsPerJourneyAfterMultipliers,
+                               (baseMiles + boostBonus) * friendMultiplier)
         let isNewRoute = !progress.completedRouteIDs.contains(route.id)
         let isNewBest = focusedSeconds > progress.bestFocusSeconds
 

@@ -61,6 +61,10 @@ final class FocusSessionViewModel: ObservableObject {
                                                     to: journey.route.destination)
     }
 
+    /// Stable per-flight session id — drives online presence + the verified
+    /// friend-bonus idempotency. Never persisted personally.
+    let onlineSessionID = UUID().uuidString
+
     // MARK: - Lifecycle
 
     func attach(appModel: AppModel) {
@@ -135,6 +139,13 @@ final class FocusSessionViewModel: ObservableObject {
         // Focus Shield: block the user's chosen apps for the remaining journey
         // time (handles resume — shields last until this journey actually lands).
         appModel.focusShield.applyForJourney(durationSeconds: Int(timer.remaining.rounded()))
+        // FocusGlobe Online: publish presence for online modes (no-op for Solo;
+        // remaining time is interpolated by peers from expectedEndAt).
+        let expectedEnd: Date? = route.id.hasPrefix(FlightRouteFactory.infinityIDPrefix)
+            ? nil : Date().addingTimeInterval(timer.remaining)
+        appModel.onlineFlightDidStart(skyID: FocusSky.matching(routeID: route.id)?.id ?? appModel.selectedSky.id,
+                                      sessionID: onlineSessionID,
+                                      expectedEndAt: expectedEnd)
     }
 
     func tearDown() {
@@ -243,6 +254,7 @@ final class FocusSessionViewModel: ObservableObject {
         appModel?.sound.pause()
         appModel?.haptics.pause()
         appModel?.analytics.log(.journeyPaused, ["route": route.id])
+        appModel?.onlineFlightPauseChanged(true)
     }
 
     private func resume() {
@@ -252,6 +264,7 @@ final class FocusSessionViewModel: ObservableObject {
         appModel?.sound.resume()
         appModel?.haptics.resume()
         appModel?.analytics.log(.journeyResumed, ["route": route.id])
+        appModel?.onlineFlightPauseChanged(false)
     }
 
     /// Toggle map labels/POIs (re-applies the map style configuration).
@@ -296,6 +309,7 @@ final class FocusSessionViewModel: ObservableObject {
         saveResumeSnapshot()
         timer.stop()
         appModel?.sound.stop()
+        appModel?.onlineFlightDidEnd(sessionID: onlineSessionID)
         // Leaving before landing → drop the shields (a paused/resumable journey
         // is not "in flight").
         appModel?.focusShield.clear(reason: .cancel)
@@ -335,6 +349,7 @@ final class FocusSessionViewModel: ObservableObject {
         appModel.focusShield.clear(reason: .landing)   // journey complete → unblock apps
         appModel.clearResumableJourney()   // completed → no longer resumable
         // Bank the journey now (rewards/streak/history) regardless of any ad.
+        appModel.onlineFlightDidEnd(sessionID: onlineSessionID)
         landingSummary = appModel.completeJourney(
             origin: origin,
             route: route,
@@ -342,7 +357,8 @@ final class FocusSessionViewModel: ObservableObject {
             // a natural finish, so this only differs for "Land now" on an
             // endless flight — which must never bank the full 12-hour cap.
             focusedSeconds: Int(timer.elapsed.rounded()),
-            intention: intention
+            intention: intention,
+            onlineSessionID: onlineSessionID
         )
         // Reveal the Landing screen (with its postcard) immediately. The single
         // interstitial for free users is deferred to the moment they LEAVE the

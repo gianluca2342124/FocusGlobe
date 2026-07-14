@@ -43,7 +43,9 @@ struct UserProfile: Codable, Equatable {
     var equippedTrailID: String? = nil
     /// Equipped cabin decorations (`StoreItem` ids of kind `.cabinDecoration`).
     var equippedCabinItemIDs: Set<String>? = nil
-    /// Fly without ambient fellow pilots (solo/offline mode).
+    /// LEGACY (pre-FocusGlobe-Online "fly with others" toggle). Kept only so
+    /// older saved profiles keep decoding; the flight mode now lives in the
+    /// pre-flight ritual (`OnlineFlightMode`, persisted by `OnlineCache`).
     var soloFlights: Bool? = nil
     /// Per-Sky unlocks earned by invites: a Sky unlocks individually once its
     /// own 3 invites are accepted. (Premium bypasses this while active.)
@@ -62,6 +64,14 @@ struct UserProfile: Codable, Equatable {
     /// Unix time the Coins Boost gift popup was last offered (so it isn't shown
     /// every launch).
     var lastBoostGiftAt: Double? = nil
+    /// FocusGlobe Online: appear in Public Skies (presence visible to others).
+    var onlineDiscoverable: Bool? = nil
+    /// FocusGlobe Online: allow Crew (friend) requests from met pilots.
+    var onlineAllowsFriendRequests: Bool? = nil
+    /// Sessions already granted the friend-flight coin bonus (idempotency).
+    var rewardedFriendSessionIDs: [String]? = nil
+    /// Online pilots the user chose to hide locally.
+    var hiddenPilotIDs: Set<String>? = nil
 
     static let empty = UserProfile()
 }

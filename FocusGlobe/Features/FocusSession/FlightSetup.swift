@@ -141,8 +141,8 @@ struct FlightSetupView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private enum Step { case duration, pack, ticket }
-    @State private var step: Step = .duration
+    private enum Step { case mode, duration, pack, ticket }
+    @State private var step: Step = .mode
     @State private var minutes = 25
     @State private var infinite = false
     @State private var focus: FocusPreset?
@@ -168,6 +168,17 @@ struct FlightSetupView: View {
                 header
                 ZStack {
                     switch step {
+                    case .mode:
+                        ScrollView(showsIndicators: false) {
+                            FlightModeSelectorView { _ in
+                                appModel.uiSound.play(.transition)
+                                withAnimation(AppMotion.soft) { step = .duration }
+                            }
+                            .padding(.horizontal, AppSpacing.screen)
+                            .padding(.top, AppSpacing.md)
+                            .padding(.bottom, AppSpacing.xl)
+                        }
+                        .transition(stepTransition)
                     case .duration:
                         DurationDialView(minutes: $minutes, infinite: $infinite) {
                             appModel.tapFeedback()
@@ -207,11 +218,12 @@ struct FlightSetupView: View {
 
     private var header: some View {
         HStack {
-            AppIconButton(systemImage: step == .duration ? "xmark" : "chevron.left",
+            AppIconButton(systemImage: step == .mode ? "xmark" : "chevron.left",
                           size: 40, tint: .white, accessibilityLabel: "Back") {
                 appModel.tapFeedback()
                 switch step {
-                case .duration: dismiss()
+                case .mode:     dismiss()
+                case .duration: withAnimation(AppMotion.soft) { step = .mode }
                 case .pack:     withAnimation(AppMotion.soft) { step = .duration }
                 case .ticket:   withAnimation(AppMotion.soft) { step = .pack }
                 }
@@ -231,6 +243,7 @@ struct FlightSetupView: View {
 
     private var stepTitle: String {
         switch step {
+        case .mode:     return "Choose your flight"
         case .duration: return "Choose your time"
         case .pack:     return "Pack your focus"
         case .ticket:   return "Check in"
@@ -922,15 +935,14 @@ private struct PackDragHint: View {
 
 /// The compact **Flight Mode** editor — a half-sheet opened from the row under
 /// the boarding pass (Flight Mode is no longer a full ritual step). Ground
-/// distracting apps, choose solo/online, and pick the soundscape, then Done.
+/// distracting apps and pick the soundscape, then Done. (Solo vs Online is
+/// the ritual's FIRST step now — never switched from here.)
 /// Enforcement rides the (currently parked) Focus Shield infrastructure; this
 /// surfaces the intent, honestly.
 struct FlightModeSheet: View {
     @Binding var blockApps: Bool
     @EnvironmentObject private var appModel: AppModel
     @Environment(\.dismiss) private var dismiss
-
-    private var solo: Bool { appModel.profile.soloFlights ?? false }
 
     var body: some View {
         ZStack {
@@ -940,7 +952,6 @@ struct FlightModeSheet: View {
                     header
                     blockRow
                     if blockApps { scopeRow }
-                    crewRow
                     soundscapeRow
                     Text("Protected flights ground your chosen apps for the whole journey, so the sky stays yours.")
                         .font(.system(size: 12.5, weight: .regular, design: .rounded))
@@ -1004,28 +1015,6 @@ struct FlightModeSheet: View {
             rowText("What's grounded", "All distracting apps · per-app picker coming soon")
             Spacer()
         }
-    }
-
-    private var crewRow: some View {
-        Button {
-            withAnimation(.snappy(duration: 0.25)) {
-                appModel.profile.soloFlights = !solo
-            }
-            appModel.haptics.tap()
-        } label: {
-            rowShell {
-                Image(systemName: solo ? "person.fill" : "person.3.fill")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(solo ? .white.opacity(0.6) : AppColors.gold).frame(width: 26)
-                rowText(solo ? "Solo flight" : "Fly with others",
-                        solo ? "Only your balloon in the Sky" : "Other balloons share your Sky")
-                Spacer()
-                Image(systemName: solo ? "circle" : "checkmark.circle.fill")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(solo ? .white.opacity(0.4) : AppColors.gold)
-            }
-        }
-        .buttonStyle(SoftPressStyle(scale: 0.99))
     }
 
     private var soundscapeRow: some View {
@@ -1231,7 +1220,12 @@ struct CheckInTicketView: View {
 
     private var flightModeSummary: String {
         let protection = blockApps ? "Protected" : "Open"
-        let crew = (appModel.profile.soloFlights ?? false) ? "Solo" : "Online"
+        let crew: String
+        switch OnlineCache.lastFlightMode {
+        case .solo:        crew = "Solo"
+        case .publicSky:   crew = "Online"
+        case .privateRoom: crew = "Crew flight"
+        }
         return "\(protection) · \(crew) · \(appModel.selectedJourneyAudio.displayName)"
     }
 

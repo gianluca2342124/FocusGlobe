@@ -15,5 +15,9 @@
 	<array>
 		<string>remote-notification</string>
 	</array>
+	<key>CKSharingSupported</key>
+	<true/>
+	<key>NSContactsUsageDescription</key>
+	<string>FocusGlobe uses your contacts only when you choose someone to invite. Your contacts are never uploaded or stored.</string>
 </dict>
 </plist>

@@ -15,6 +15,12 @@ struct AmbientPilotsLayer: View {
     /// Pause-aware elapsed seconds — pilots hold still while paused.
     let elapsed: () -> Double
     var animated: Bool = true
+    /// REAL online pilots (public Sky or private room). They render first, at
+    /// the exact same size/behaviour as decorative ones; decorative ambient
+    /// pilots then fill the remaining visual capacity so the Sky stays alive.
+    var realPilots: [OnlinePilot] = []
+    /// Tapping a REAL pilot opens their profile; decorative taps do nothing.
+    var onSelectReal: ((OnlinePilot) -> Void)? = nil
 
     @State private var selectedPilot: Int? = nil
 
@@ -86,11 +92,18 @@ struct AmbientPilotsLayer: View {
         GeometryReader { geo in
             let W = geo.size.width
             let H = geo.size.height
+            // Visual capacity: real pilots first, then decorative fill.
+            let capacity = min(H, W) > 700 ? 14 : Self.count
+            let real = Array(realPilots.prefix(capacity))
+            let fill = Array(pilots.prefix(max(0, capacity - real.count)))
             TimelineView(.animation(minimumInterval: animated ? 1.0 / 20.0 : 5.0)) { _ in
                 let t = animated ? elapsed() : 0
                 ZStack {
-                    ForEach(Array(pilots.enumerated()), id: \.offset) { index, pilot in
-                        pilotView(pilot, index: index, W: W, H: H, t: t)
+                    ForEach(Array(real.enumerated()), id: \.element.id) { index, pilot in
+                        realPilotView(pilot, index: index, W: W, H: H, t: t)
+                    }
+                    ForEach(Array(fill.enumerated()), id: \.offset) { index, pilot in
+                        pilotView(pilot, index: index + real.count, W: W, H: H, t: t)
                     }
                 }
             }
@@ -130,6 +143,59 @@ struct AmbientPilotsLayer: View {
         .onTapGesture {
             appTapSelect(index)
         }
+    }
+
+    /// A REAL online pilot: same size token and float behaviour as everyone
+    /// else; position seeded from hash(publicID + sessionID + skyID) so it is
+    /// stable for the whole session and identical in Cabin View.
+    @ViewBuilder
+    private func realPilotView(_ pilot: OnlinePilot, index: Int, W: CGFloat, H: CGFloat, t: Double) -> some View {
+        var h: UInt64 = 0x9E37
+        for u in (pilot.id + pilot.sessionID + skyID).unicodeScalars { h = (h &* 31) &+ UInt64(u.value) }
+        var rng = SeededRNG(seed: h)
+        let fx = 0.08 + rng.unit() * 0.84
+        let fy = 0.10 + rng.unit() * 0.5
+        let phase = rng.unit() * 6.28
+        let bob = CGFloat(Foundation.sin(t * 0.22 + phase)) * 9
+        let sway = CGFloat(Foundation.sin(t * 0.14 + phase * 1.3)) * 7
+        let size = max(38, min(52, H * 0.07))
+        let selected = selectedRealID == pilot.id
+        ZStack(alignment: .bottom) {
+            if selected {
+                realBubble(pilot)
+                    .offset(y: -size - 14)
+                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+            }
+            BalloonView(height: size, showBurner: false, showGlow: false,
+                        skin: BalloonSkin.skin(id: pilot.balloonSkinID))
+                .opacity(pilot.isPaused ? 0.28 : 0.42)
+        }
+        .position(x: CGFloat(fx) * W + sway, y: CGFloat(fy) * H + bob)
+        .onTapGesture {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
+                selectedRealID = selectedRealID == pilot.id ? nil : pilot.id
+            }
+            onSelectReal?(pilot)
+        }
+    }
+
+    @State private var selectedRealID: String? = nil
+
+    private func realBubble(_ pilot: OnlinePilot) -> some View {
+        VStack(spacing: 2) {
+            Text("\(pilot.displayName)\(pilot.countryCode.map { " " + flagEmoji($0) } ?? "")")
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+            Text(pilot.remainingLabel)
+                .font(.system(size: 10.5, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.7))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(Capsule().fill(.ultraThinMaterial))
+        .overlay(Capsule().fill(Color.black.opacity(0.25)))
+        .overlay(Capsule().strokeBorder(.white.opacity(0.2), lineWidth: 1))
+        .fixedSize()
     }
 
     private func appTapSelect(_ index: Int) {
