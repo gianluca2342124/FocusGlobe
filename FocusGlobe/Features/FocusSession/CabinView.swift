@@ -138,6 +138,61 @@ struct CabinView: View {
                 .frame(width: W * 0.15, height: W * 0.11)
                 .position(x: W * 0.70, y: H * 0.50)
         }
+        newArtProps(W: W, H: H)
+    }
+
+    /// Renders any equipped Cabin objects that ship as their own PNG (the new
+    /// catalog art), anchored to a real surface by their `cabinPlacement` and
+    /// spread along the sill so they don't stack. Never covers the window or timer.
+    @ViewBuilder private func newArtProps(W: CGFloat, H: CGFloat) -> some View {
+        let items = StoreItem.all.filter {
+            equippedItemIDs.contains($0.id) && $0.imageName != nil && $0.cabinPlacement != .none
+        }
+        ForEach(items, id: \.id) { item in
+            cabinItemImage(item)
+                .frame(width: W * itemScale(item), height: W * itemScale(item))
+                .position(x: W * anchorX(item, in: items), y: H * anchorY(item))
+        }
+    }
+
+    @ViewBuilder private func cabinItemImage(_ item: StoreItem) -> some View {
+        #if canImport(UIKit)
+        if let ui = UIImage(named: item.bestAssetName) {
+            Image(uiImage: ui).resizable().scaledToFit()
+                .shadow(color: .black.opacity(0.32), radius: 6, y: 4)
+        }
+        #endif
+    }
+
+    private func itemScale(_ item: StoreItem) -> CGFloat {
+        switch item.cabinPlacement {
+        case .wall:     return 0.26
+        case .bench:    return 0.24
+        case .hook:     return 0.12
+        case .tabletop: return 0.15
+        case .none:     return 0
+        }
+    }
+    private func anchorY(_ item: StoreItem) -> CGFloat {
+        switch item.cabinPlacement {
+        case .wall:     return 0.17
+        case .bench:    return 0.70
+        case .hook:     return 0.10
+        case .tabletop: return 0.52
+        case .none:     return 0.5
+        }
+    }
+    private static let tabletopSlots: [CGFloat] = [0.26, 0.44, 0.62, 0.78, 0.36, 0.7]
+    private func anchorX(_ item: StoreItem, in items: [StoreItem]) -> CGFloat {
+        switch item.cabinPlacement {
+        case .wall, .bench: return 0.5
+        case .hook:         return 0.8
+        case .tabletop:
+            let tabletop = items.filter { $0.cabinPlacement == .tabletop }
+            let idx = tabletop.firstIndex(of: item) ?? 0
+            return Self.tabletopSlots[idx % Self.tabletopSlots.count]
+        case .none:         return 0.5
+        }
     }
 
     // MARK: 1 — Interior background (warm amber walls + soft lantern glow)

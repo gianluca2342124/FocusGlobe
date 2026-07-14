@@ -66,7 +66,7 @@ struct CoinSpinSheet: View {
 
     var body: some View {
         ZStack {
-            AppBackground().ignoresSafeArea()
+            AnimatedTileBackground(assetName: "Background_FreeCoinSpin_Tile", overlayOpacity: 0.55)
             VStack(spacing: AppSpacing.sm) {
                 header
                 switch phase {

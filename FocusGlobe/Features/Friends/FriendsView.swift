@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// **Friends** — the connection hub. Honest by design: until the presence /
 /// referral backend ships, this screen shows a clean invite hero, a cute empty
@@ -11,7 +14,7 @@ struct FriendsView: View {
 
     var body: some View {
         ZStack {
-            AppBackground()
+            AnimatedTileBackground(assetName: "Background_Friends_Tile", overlayOpacity: 0.5)
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
                     ScreenHeader(title: "Friends", subtitle: "Focus feels better together", showsBack: false)
@@ -28,16 +31,12 @@ struct FriendsView: View {
         .focusScreenChrome()
     }
 
-    // A cute, lonely-but-warm empty state until real crew exists.
+    // A warm, prominent empty state until real crew exists.
     private var emptyState: some View {
         VStack(spacing: AppSpacing.sm) {
-            ZStack {
-                Circle().fill(AppColors.gold.opacity(0.12)).frame(width: 96, height: 96)
-                LonelyBalloonFace()
-                    .frame(width: 70, height: 84)
-            }
+            crewHero
             Text("No crew yet")
-                .font(AppTypography.serifTitle2)
+                .font(.system(size: 25, weight: .bold, design: .rounded))
                 .foregroundStyle(AppColors.textPrimary)
             Text("Invite a friend and your next flight can feel less lonely.")
                 .font(AppTypography.callout)
@@ -46,6 +45,31 @@ struct FriendsView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, AppSpacing.md)
+    }
+
+    /// The large `nocrew` hero if present, else the procedural lonely balloon over
+    /// a soft diffused glow (never a hard circle).
+    @ViewBuilder private var crewHero: some View {
+        #if canImport(UIKit)
+        if let ui = UIImage(named: "nocrew") {
+            Image(uiImage: ui).resizable().scaledToFit()
+                .frame(maxHeight: Layout.pad(190, 250))
+        } else {
+            crewFallback
+        }
+        #else
+        crewFallback
+        #endif
+    }
+
+    private var crewFallback: some View {
+        ZStack {
+            Circle()
+                .fill(RadialGradient(colors: [AppColors.gold.opacity(0.24), .clear],
+                                     center: .center, startRadius: 2, endRadius: 100))
+                .frame(width: 170, height: 170).blur(radius: 10)
+            LonelyBalloonFace().frame(width: 96, height: 116)
+        }
     }
 
     private var inviteHero: some View {
@@ -82,45 +106,56 @@ struct FriendsView: View {
                          shadowRadius: 14, shadowY: 8)
     }
 
+    // A single connected "journey" — numbered gold nodes linked by a flight line,
+    // not three separate settings-style rows.
     private var howItWorks: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            SectionLabel(text: "How it works")
-            VStack(spacing: AppSpacing.xs) {
-                stepRow(1, icon: "square.and.arrow.up", title: "Share your invite",
-                        subtitle: "Send your link to a friend.")
-                stepRow(2, icon: "person.badge.plus", title: "Friend joins FocusGlobe",
-                        subtitle: "They open the link and start flying.")
-                stepRow(3, icon: "sparkles", title: "Fly together and earn more",
-                        subtitle: "Shared flights earn 2× Focus Coins.")
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
+            Text("How it works")
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundStyle(AppColors.textPrimary)
+            VStack(spacing: 0) {
+                stepNode(1, icon: "square.and.arrow.up", title: "Share your invite",
+                         subtitle: "Send your link to a friend.", connector: true)
+                stepNode(2, icon: "person.badge.plus", title: "Friend joins",
+                         subtitle: "They open the link and start flying.", connector: true)
+                stepNode(3, icon: "sparkles", title: "Fly together — earn 2×",
+                         subtitle: "Shared flights earn double Focus Coins.", connector: false)
             }
+            .padding(AppSpacing.md)
+            .glassBackground(cornerRadius: AppSpacing.cardRadius, tintOpacity: 0.2, shadowRadius: 10, shadowY: 5)
         }
     }
 
-    private func stepRow(_ n: Int, icon: String, title: String, subtitle: String) -> some View {
-        HStack(spacing: AppSpacing.sm) {
-            ZStack {
-                Circle().fill(AppColors.gold.opacity(0.16)).frame(width: 34, height: 34)
-                Text("\(n)")
-                    .font(.system(size: 15, weight: .heavy, design: .rounded))
-                    .foregroundStyle(AppColors.gold)
+    private func stepNode(_ n: Int, icon: String, title: String, subtitle: String, connector: Bool) -> some View {
+        HStack(alignment: .top, spacing: AppSpacing.md) {
+            VStack(spacing: 0) {
+                ZStack {
+                    Circle().fill(AppColors.gold).frame(width: 40, height: 40)
+                    Text("\(n)")
+                        .font(.system(size: 18, weight: .heavy, design: .rounded))
+                        .foregroundStyle(Color(hex: 0x2B2510))
+                }
+                if connector {
+                    Rectangle().fill(AppColors.gold.opacity(0.4)).frame(width: 2, height: 32)
+                }
             }
-            Image(systemName: icon)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(AppColors.textSecondary)
-                .frame(width: 22)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title)
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .foregroundStyle(AppColors.textPrimary)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(AppColors.gold)
+                    Text(title)
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(AppColors.textPrimary)
+                }
                 Text(subtitle)
                     .font(AppTypography.caption)
                     .foregroundStyle(AppColors.textSecondary)
             }
+            .padding(.top, 3)
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, AppSpacing.md)
-        .padding(.vertical, AppSpacing.sm)
-        .glassBackground(cornerRadius: 18, tintOpacity: 0.22, shadowRadius: 6, shadowY: 3)
+        .padding(.bottom, connector ? 0 : 3)
     }
 }
 

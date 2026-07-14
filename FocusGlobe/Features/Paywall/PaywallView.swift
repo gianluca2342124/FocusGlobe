@@ -32,9 +32,10 @@ struct PaywallView: View {
         ("square.grid.2x2.fill", "All widgets unlocked"),
     ]
 
-    /// The paywall hero balloon asset — swap freely in Xcode (Assets.xcassets).
-    /// Falls back to `BalloonSkin_Default`, then the vector balloon, if missing.
-    static let heroAssetName = "PaywallBalloonHero"
+    /// The paywall hero uses the premium **King** balloon via the BalloonSkin
+    /// model mapping (so a future asset rename stays safe). Falls back to the
+    /// default skin / vector balloon if the image is missing.
+    static let heroAssetName = BalloonSkin.skin(id: "king").assetName
 
     private var subs: SubscriptionManager { appModel.subscriptions }
 
@@ -83,8 +84,13 @@ struct PaywallView: View {
 
     private var goldBackground: some View {
         ZStack {
-            LinearGradient(colors: [Color(hex: 0x241B0E), Color(hex: 0x100E08)],
+            // The premium pattern appears when Background_Premium_Tile ships; the
+            // translucent gold gradient above keeps text readable and preserves the
+            // warm premium identity even before the art lands.
+            AnimatedTileBackground(assetName: "Background_Premium_Tile", overlayOpacity: 0.0)
+            LinearGradient(colors: [Color(hex: 0x241B0E).opacity(0.82), Color(hex: 0x100E08).opacity(0.9)],
                            startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea()
             blob(AppColors.gold.opacity(0.45), 320, x: animateBlobs ? -120 : -70, y: animateBlobs ? -230 : -180)
             blob(Color(hex: 0xF2C879).opacity(0.40), 280, x: animateBlobs ? 150 : 110, y: animateBlobs ? -40 : -120)
             blob(Color(hex: 0xE0A23E).opacity(0.32), 260, x: animateBlobs ? -110 : -150, y: animateBlobs ? 220 : 280)
@@ -137,7 +143,7 @@ struct PaywallView: View {
                 .frame(width: h * 1.6, height: h * 1.5)
                 .blur(radius: 30)
                 .allowsHitTesting(false)
-            // Paywall hero balloon — uses `PaywallBalloonHero` (swap in Xcode),
+            // Paywall hero balloon — the premium King skin via the model mapping,
             // falling back to the default skin / vector if the asset is missing.
             BalloonView(height: h, showBurner: true, showGlow: false,
                         assetName: Self.heroAssetName)

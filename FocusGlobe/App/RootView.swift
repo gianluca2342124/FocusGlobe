@@ -5,6 +5,7 @@ import SwiftUI
 struct RootView: View {
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var appModel: AppModel
+    @State private var ready = false
 
     var body: some View {
         Group {
@@ -47,5 +48,13 @@ struct RootView: View {
                 .environmentObject(router)
         }
         .preferredColorScheme(appModel.settings.appearance.colorScheme)
+        // The branded in-app loading state covers the very first launch frame,
+        // then crossfades away. No artificial delay — it is only ever briefly up.
+        .overlay {
+            if !ready {
+                LoadingView().transition(.opacity)
+            }
+        }
+        .task { withAnimation(.easeInOut(duration: 0.5)) { ready = true } }
     }
 }

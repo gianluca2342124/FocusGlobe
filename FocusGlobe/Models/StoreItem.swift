@@ -29,6 +29,24 @@ struct StoreItem: Identifiable, Hashable {
     /// The card renders this if present, else a tinted procedural icon.
     var imageAssetName: String { "StoreItem_\(id)" }
 
+    /// The asset to render for this item: an explicit `imageName` (the new Cabin
+    /// art whose Image Set name IS the raw item id), else the legacy
+    /// `StoreItem_<id>` name. Store and Cabin both use this so it's one PNG.
+    var bestAssetName: String { imageName ?? imageAssetName }
+
+    /// Where a cabin decoration rests inside the basket (drives placement anchors).
+    enum CabinPlacement { case tabletop, bench, wall, hook, none }
+    var cabinPlacement: CabinPlacement {
+        switch id {
+        case "iced-latte", "potted-plant", "scented-candle", "alarm-clock", "notebook",
+             "headphones", "cabin-plant", "cabin-teapot": return .tabletop
+        case "sleeping-cat", "closed-laptop":              return .bench
+        case "framed-poster":                              return .wall
+        case "christmas-ornament":                         return .hook
+        default:                                           return .none
+        }
+    }
+
     // MARK: Rarity (derived from price / premium — labels the card)
 
     enum Rarity: String {
@@ -56,16 +74,39 @@ struct StoreItem: Identifiable, Hashable {
     // `equippedTrailID` still decodes harmlessly. Prices are tuned for the small
     // per-session coin economy (see `FocusEconomy`).
     static let all: [StoreItem] = [
+        // Basket charms.
         StoreItem(id: "charm-compass", name: "Brass Compass", subtitle: "A charm for the basket",
-                  kind: .charm, price: 60, isPremium: false, systemImage: "location.north.circle.fill", tintHex: 0xD9A94F),
+                  kind: .charm, price: 350, isPremium: false, systemImage: "location.north.circle.fill", tintHex: 0xD9A94F),
         StoreItem(id: "charm-pennant", name: "Cream Pennant", subtitle: "A little flag in the wind",
-                  kind: .charm, price: 40, isPremium: false, systemImage: "flag.fill", tintHex: 0xF4EFE4),
+                  kind: .charm, price: 250, isPremium: false, systemImage: "flag.fill", tintHex: 0xF4EFE4),
         StoreItem(id: "charm-lantern", name: "Paper Lantern", subtitle: "Warm light for night skies",
-                  kind: .charm, price: 75, isPremium: false, systemImage: "lightbulb.fill", tintHex: 0xFFC873),
+                  kind: .charm, price: 400, isPremium: false, systemImage: "lightbulb.fill", tintHex: 0xFFC873),
+        // Cabin objects — new art (Image Set name IS the item id).
+        StoreItem(id: "iced-latte", name: "Iced Latte", subtitle: "A cool companion for long flights",
+                  kind: .cabinDecoration, price: 280, isPremium: false, systemImage: "cup.and.saucer.fill", tintHex: 0xC9A27A, imageName: "iced-latte"),
+        StoreItem(id: "potted-plant", name: "Potted Plant", subtitle: "A little green on the sill",
+                  kind: .cabinDecoration, price: 320, isPremium: false, systemImage: "leaf.fill", tintHex: 0x6FD8B8, imageName: "potted-plant"),
+        StoreItem(id: "scented-candle", name: "Scented Candle", subtitle: "Warm light and calm",
+                  kind: .cabinDecoration, price: 300, isPremium: false, systemImage: "flame.fill", tintHex: 0xF2A65A, imageName: "scented-candle"),
+        StoreItem(id: "alarm-clock", name: "Alarm Clock", subtitle: "Keep gentle time",
+                  kind: .cabinDecoration, price: 260, isPremium: false, systemImage: "alarm.fill", tintHex: 0xE86A6A, imageName: "alarm-clock"),
+        StoreItem(id: "notebook", name: "Notebook", subtitle: "For your best ideas",
+                  kind: .cabinDecoration, price: 250, isPremium: false, systemImage: "book.closed.fill", tintHex: 0xB0783E, imageName: "notebook"),
+        StoreItem(id: "headphones", name: "Headphones", subtitle: "Sink into deep focus",
+                  kind: .cabinDecoration, price: 420, isPremium: false, systemImage: "headphones", tintHex: 0x8FA6D8, imageName: "headphones"),
+        StoreItem(id: "framed-poster", name: "Framed Poster", subtitle: "A view for the wall",
+                  kind: .cabinDecoration, price: 520, isPremium: false, systemImage: "photo.fill", tintHex: 0xE0A46A, imageName: "framed-poster"),
+        StoreItem(id: "christmas-ornament", name: "Festive Ornament", subtitle: "A little seasonal cheer",
+                  kind: .cabinDecoration, price: 480, isPremium: false, systemImage: "sparkles", tintHex: 0xE8654B, imageName: "christmas-ornament"),
+        StoreItem(id: "closed-laptop", name: "Closed Laptop", subtitle: "Work set aside for the climb",
+                  kind: .cabinDecoration, price: 600, isPremium: false, systemImage: "laptopcomputer", tintHex: 0x9AA7B4, imageName: "closed-laptop"),
+        StoreItem(id: "sleeping-cat", name: "Sleeping Cat", subtitle: "A calm co-pilot",
+                  kind: .cabinDecoration, price: 650, isPremium: false, systemImage: "cat.fill", tintHex: 0xD8C0A0, imageName: "sleeping-cat"),
+        // Existing cabin items (kept; prices lifted into the new economy).
         StoreItem(id: "cabin-plant", name: "Tiny Fern", subtitle: "A cabin companion",
-                  kind: .cabinDecoration, price: 50, isPremium: false, systemImage: "leaf.fill", tintHex: 0x6FD8B8),
+                  kind: .cabinDecoration, price: 300, isPremium: false, systemImage: "leaf.fill", tintHex: 0x6FD8B8),
         StoreItem(id: "cabin-teapot", name: "Ceramic Teapot", subtitle: "For longer flights",
-                  kind: .cabinDecoration, price: 70, isPremium: false, systemImage: "mug.fill", tintHex: 0xE9C07A),
+                  kind: .cabinDecoration, price: 380, isPremium: false, systemImage: "mug.fill", tintHex: 0xE9C07A),
         StoreItem(id: "cabin-quilt", name: "Aurora Quilt", subtitle: "Woven from cold skies",
                   kind: .cabinDecoration, price: 0, isPremium: true, systemImage: "square.grid.3x3.topleft.filled", tintHex: 0x54E0A8),
     ]

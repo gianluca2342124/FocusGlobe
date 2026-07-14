@@ -194,7 +194,13 @@ struct FocusSessionView: View {
                             titleVisibility: .visible) {
             Button("Leave", role: .destructive) {
                 vm.confirmCancel()
-                router.finishToHome()
+                // A terminated real flight (given up / Hold-to-leave) shows one
+                // closable interstitial for non-Pro users, then returns Home —
+                // the same path completed flights use from the Landing screen.
+                // AdService no-ops for Pro or when no ad is loaded.
+                appModel.ads.presentJourneyCompleteInterstitial(isPro: appModel.isPro) {
+                    router.finishToHome()
+                }
             }
             Button("Keep flying", role: .cancel) { vm.dismissCancel() }
         } message: {

@@ -29,6 +29,9 @@ struct OnboardingView: View {
     @State private var introFloat: CGFloat = 0
     /// The soundscape carousel's current index.
     @State private var soundIndex = 0
+    /// Guards the review request so a double-tap can't fire it twice or race the
+    /// transition to the premium page.
+    @State private var reviewRequested = false
     @FocusState private var textFocused: Bool
 
     var body: some View {
@@ -109,6 +112,13 @@ struct OnboardingView: View {
     /// Finish onboarding (persist the profile). `needsOnboarding` flips and
     /// RootView cross-fades onto Home.
     private func complete(thenPaywall: Bool) {
+        // Onboarding must always hand off to Home, whatever the user did on the
+        // premium page (continue free / open + close the paywall / purchase /
+        // restore). Set the root tab explicitly and clear any transient route
+        // BEFORE flipping `needsOnboarding`, so AppShell can never restore a
+        // stale tab (e.g. Settings) behind the cross-fade.
+        router.path.removeAll()
+        router.selectedTab = .home
         appModel.completeOnboarding(name: name, yearGoal: yearGoal, ageRange: ageRange,
                                     struggle: struggle, focusStyle: focusStyle,
                                     shieldOptIn: shieldOptIn)
@@ -174,8 +184,7 @@ struct OnboardingView: View {
         questionScaffold(
             title: "What do you want to achieve this year?",
             subtitle: "FocusGlobe keeps your journey pointed somewhere that matters.") {
-            TextField("Pass my exams, build my app, read more, stay consistent…",
-                      text: $yearGoal, axis: .vertical)
+            TextField("e.g. Study for my exams", text: $yearGoal, axis: .vertical)
                 .lineLimit(3...5)
                 .focused($textFocused)
                 .font(AppTypography.body)
@@ -195,7 +204,7 @@ struct OnboardingView: View {
         questionScaffold(
             title: "What's your name?",
             subtitle: "This is how FocusGlobe will personalize your journey.") {
-            TextField("Your name", text: $name)
+            TextField("e.g. Alex", text: $name)
                 .focused($textFocused)
                 .textInputAutocapitalization(.words)
                 .font(.system(size: 22, weight: .semibold, design: .rounded))
@@ -531,9 +540,16 @@ struct OnboardingView: View {
         } footer: {
             VStack(spacing: AppSpacing.sm) {
                 AppPrimaryButton(title: "Leave a review", systemImage: "heart.fill") {
+                    guard !reviewRequested else { return }
+                    reviewRequested = true
+                    appModel.tapFeedback()
+                    // Request the review while THIS page is still visible, so the
+                    // system sheet appears here — not over the next screen — then
+                    // move on after a short beat. Apple decides if it shows.
                     requestReview()
-                    advance()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { advance() }
                 }
+                .disabled(reviewRequested)
                 Button("Maybe later") { advance() }
                     .font(AppTypography.callout)
                     .foregroundStyle(.white.opacity(0.65))
@@ -542,12 +558,21 @@ struct OnboardingView: View {
         }
     }
 
-    /// The bundled `alittlefavour` art if present — a warm emotional hero.
+    /// The bundled `alittlefavour` art if present — a warm emotional hero. Falls
+    /// back to a soft heart so the page never looks empty before the art lands.
     @ViewBuilder private var favourHero: some View {
         #if canImport(UIKit)
         if let ui = UIImage(named: "alittlefavour") {
-            Image(uiImage: ui).resizable().scaledToFit().frame(maxHeight: 150)
+            Image(uiImage: ui).resizable().scaledToFit().frame(maxHeight: 180)
+        } else {
+            Image(systemName: "heart.fill")
+                .font(.system(size: 64, weight: .bold))
+                .foregroundStyle(LinearGradient(colors: [Color(hex: 0xF2643C), Color(hex: 0xFFB65C)],
+                                                startPoint: .top, endPoint: .bottom))
+                .frame(maxHeight: 120)
         }
+        #else
+        EmptyView()
         #endif
     }
 
@@ -609,7 +634,8 @@ struct OnboardingView: View {
                                          center: .center, startRadius: 4, endRadius: 150))
                 .frame(width: 270, height: 200)
             #if canImport(UIKit)
-            if let ui = UIImage(named: "PaywallBalloonHero") ?? UIImage(named: "PremiumHero_FocusGlobeUltra") {
+            // The premium King balloon via the model mapping (no PaywallBalloonHero).
+            if let ui = UIImage(named: "PremiumHero_SkiesBundle") ?? UIImage(named: BalloonSkin.skin(id: "king").assetName) {
                 Image(uiImage: ui).resizable().scaledToFit().frame(maxHeight: 200)
             } else {
                 proceduralHero

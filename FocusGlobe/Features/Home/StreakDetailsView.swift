@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// A warm, precious "streak details" sheet opened from the Home streak badge.
 /// FocusGlobe's cozy-premium take on a streak screen: a glowing, breathing ember,
@@ -17,7 +20,7 @@ struct StreakDetailsView: View {
 
     var body: some View {
         ZStack {
-            GlassBlurBackground()
+            AnimatedTileBackground(assetName: "Background_Streak_Tile", overlayOpacity: 0.55)
             ScrollView {
                 VStack(spacing: AppSpacing.lg) {
                     hero
@@ -72,28 +75,46 @@ struct StreakDetailsView: View {
     }
 
     private var ember: some View {
-        let size = Layout.pad(CGFloat(150), CGFloat(182))
-        let flameSize = Layout.pad(CGFloat(72), CGFloat(88))
+        let size = Layout.pad(CGFloat(184), CGFloat(224))
+        let flameSize = Layout.pad(CGFloat(86), CGFloat(106))
         return ZStack {
+            // A big, soft, diffused warm glow — no hard circular edge.
             Circle()
                 .fill(RadialGradient(
                     colors: [Color(hex: 0xFFC24B).opacity(0.55),
                              Color(hex: 0xF2643C).opacity(0.22),
                              .clear],
-                    center: .center, startRadius: 2, endRadius: size * 0.5))
-                .frame(width: size, height: size)
-                .blur(radius: 6)
+                    center: .center, startRadius: 2, endRadius: size * 0.62))
+                .frame(width: size * 1.35, height: size * 1.35)
+                .blur(radius: 24)
                 .scaleEffect(reduceMotion ? 1 : (breathe ? 1.08 : 0.94))
                 .opacity(reduceMotion ? 0.9 : (breathe ? 1 : 0.7))
-            Image(systemName: "flame.fill")
-                .font(.system(size: flameSize, weight: .bold))
-                .foregroundStyle(LinearGradient(
-                    colors: [Color(hex: 0xFFC24B), Color(hex: 0xF2643C)],
-                    startPoint: .top, endPoint: .bottom))
-                .shadow(color: Color(hex: 0xF2643C).opacity(0.5), radius: 14, y: 4)
+            streakHero(flameSize: flameSize)
                 .scaleEffect(reduceMotion ? 1 : (breathe ? 1.04 : 0.99))
         }
         .frame(height: size)
+    }
+
+    /// The large `streakfire` hero if present, else the SF flame glyph.
+    @ViewBuilder private func streakHero(flameSize: CGFloat) -> some View {
+        #if canImport(UIKit)
+        if let ui = UIImage(named: "streakfire") {
+            Image(uiImage: ui).resizable().scaledToFit().frame(height: flameSize * 1.9)
+        } else {
+            flameGlyph(flameSize: flameSize)
+        }
+        #else
+        flameGlyph(flameSize: flameSize)
+        #endif
+    }
+
+    private func flameGlyph(flameSize: CGFloat) -> some View {
+        Image(systemName: "flame.fill")
+            .font(.system(size: flameSize, weight: .bold))
+            .foregroundStyle(LinearGradient(
+                colors: [Color(hex: 0xFFC24B), Color(hex: 0xF2643C)],
+                startPoint: .top, endPoint: .bottom))
+            .shadow(color: Color(hex: 0xF2643C).opacity(0.5), radius: 14, y: 4)
     }
 
     private var bestPill: some View {

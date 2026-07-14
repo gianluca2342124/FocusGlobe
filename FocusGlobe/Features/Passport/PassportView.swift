@@ -43,14 +43,13 @@ struct PassportView: View {
 
     var body: some View {
         ZStack {
-            AppBackground()
+            AnimatedTileBackground(assetName: "Background_Passport_Tile", overlayOpacity: 0.55)
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
                     header
                     statsGrid
-                    achievementsSection
-                    missionsSection
-                    flightSoundSection
+                    missionsSection      // Today's Objectives — directly under stats
+                    achievementsSection  // Badges
                     WidgetsGallerySection()
                 }
                 .padding(AppSpacing.screen)

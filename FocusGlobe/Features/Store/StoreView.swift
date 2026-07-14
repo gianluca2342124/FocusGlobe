@@ -22,7 +22,7 @@ struct StoreView: View {
 
     var body: some View {
         ZStack {
-            AppBackground()
+            AnimatedTileBackground(assetName: "Background_Store_Tile", overlayOpacity: 0.5)
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
                     header
@@ -31,7 +31,6 @@ struct StoreView: View {
                     skinsSection
                     cabinSection
                     ownedSection
-                    badgesTeaser
                 }
                 .padding(AppSpacing.screen)
                 .padding(.top, AppSpacing.xs)
@@ -220,7 +219,7 @@ private struct StoreItemCard: View {
         }
     }
 
-    private var artHeight: CGFloat { featured ? CGFloat(120) : CGFloat(66) }
+    private var artHeight: CGFloat { featured ? Layout.pad(145, 200) : Layout.pad(112, 165) }
 
     var body: some View {
         Button(action: act) {
@@ -254,7 +253,7 @@ private struct StoreItemCard: View {
             }
         }
         .buttonStyle(SoftPressStyle(scale: 0.98))
-        .accessibilityLabel("\(item.name). \(item.rarity.rawValue). \(priceAccessibility)")
+        .accessibilityLabel("\(item.name). \(priceAccessibility)")
     }
 
     private func act() {
@@ -274,44 +273,46 @@ private struct StoreItemCard: View {
         }
     }
 
-    // Bundled art wins; otherwise a tinted procedural icon. A rarity chip rides
-    // the top-left corner.
+    // Transparent product art floats over a soft palette glow — never a hard
+    // coloured box behind the PNG. A tinted procedural icon stands in until the
+    // art ships. No rarity labels.
     private var art: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(item.tint.opacity(0.16))
+            if !hasArt {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(item.tint.opacity(0.14))
+            }
             artContent
+                .padding(hasArt ? 8 : 0)
         }
         .frame(height: artHeight)
         .frame(maxWidth: .infinity)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(alignment: .topLeading) { rarityChip.padding(6) }
+        .shadow(color: item.tint.opacity(0.3), radius: 12, y: 5)
+    }
+
+    private var hasArt: Bool {
+        #if canImport(UIKit)
+        return UIImage(named: item.bestAssetName) != nil
+        #else
+        return false
+        #endif
     }
 
     @ViewBuilder private var artContent: some View {
         #if canImport(UIKit)
-        if let ui = UIImage(named: item.imageAssetName) {
-            Image(uiImage: ui).resizable().scaledToFill()
+        if let ui = UIImage(named: item.bestAssetName) {
+            // scaledToFit keeps the whole transparent PNG visible and unobstructed.
+            Image(uiImage: ui).resizable().scaledToFit()
         } else {
             Image(systemName: item.systemImage)
-                .font(.system(size: featured ? 40 : 26, weight: .semibold))
+                .font(.system(size: featured ? 46 : 32, weight: .semibold))
                 .foregroundStyle(item.tint)
         }
         #else
         Image(systemName: item.systemImage)
-            .font(.system(size: featured ? 40 : 26, weight: .semibold))
+            .font(.system(size: featured ? 46 : 32, weight: .semibold))
             .foregroundStyle(item.tint)
         #endif
-    }
-
-    private var rarityChip: some View {
-        Text(item.rarity.rawValue.uppercased())
-            .font(.system(size: 8.5, weight: .heavy, design: .rounded))
-            .tracking(0.4)
-            .foregroundStyle(.white)
-            .padding(.horizontal, 6).padding(.vertical, 3)
-            .background(Capsule().fill(item.rarity.tint.opacity(0.9)))
-            .shadow(color: .black.opacity(0.25), radius: 2, y: 1)
     }
 
     private var ownedStatusText: String {
@@ -418,7 +419,7 @@ private struct DailyGiftSheet: View {
 
     var body: some View {
         ZStack {
-            AppBackground().ignoresSafeArea()
+            AnimatedTileBackground(assetName: "Background_Store_Tile", overlayOpacity: 0.55)
             VStack(spacing: AppSpacing.md) {
                 HStack {
                     Spacer()
