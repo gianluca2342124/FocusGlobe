@@ -145,14 +145,21 @@ struct AmbientPilotsLayer: View {
         }
     }
 
-    /// A REAL online pilot: same size token and float behaviour as everyone
-    /// else; position seeded from hash(publicID + sessionID + skyID) so it is
-    /// stable for the whole session and identical in Cabin View.
-    @ViewBuilder
-    private func realPilotView(_ pilot: OnlinePilot, index: Int, W: CGFloat, H: CGFloat, t: Double) -> some View {
+    /// Deterministic per-pilot seed: hash(publicID + sessionID + skyID). Kept
+    /// out of the view builder so the loop isn't imperative control flow inside
+    /// `@ViewBuilder` (the position it yields is stable for the whole session
+    /// and identical in Cabin View).
+    private func stablePilotSeed(for pilot: OnlinePilot) -> UInt64 {
         var h: UInt64 = 0x9E37
         for u in (pilot.id + pilot.sessionID + skyID).unicodeScalars { h = (h &* 31) &+ UInt64(u.value) }
-        var rng = SeededRNG(seed: h)
+        return h
+    }
+
+    /// A REAL online pilot: same size token and float behaviour as everyone
+    /// else; position seeded from `stablePilotSeed` so it is stable for the
+    /// whole session and identical in Cabin View.
+    private func realPilotView(_ pilot: OnlinePilot, index: Int, W: CGFloat, H: CGFloat, t: Double) -> some View {
+        var rng = SeededRNG(seed: stablePilotSeed(for: pilot))
         let fx = 0.08 + rng.unit() * 0.84
         let fy = 0.10 + rng.unit() * 0.5
         let phase = rng.unit() * 6.28
@@ -160,7 +167,7 @@ struct AmbientPilotsLayer: View {
         let sway = CGFloat(Foundation.sin(t * 0.14 + phase * 1.3)) * 7
         let size = max(38, min(52, H * 0.07))
         let selected = selectedRealID == pilot.id
-        ZStack(alignment: .bottom) {
+        return ZStack(alignment: .bottom) {
             if selected {
                 realBubble(pilot)
                     .offset(y: -size - 14)

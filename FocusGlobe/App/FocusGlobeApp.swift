@@ -18,9 +18,15 @@ final class FocusGlobeAppDelegate: NSObject, UIApplicationDelegate {
     }
 
     func application(_ application: UIApplication,
-                     didReceiveRemoteNotification userInfo: [AnyHashable: Any]) async -> UIBackgroundFetchResult {
+                     didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+                     fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+        // Synchronous variant: the non-Sendable userInfo is processed inline on
+        // the main thread and never crosses a concurrency boundary.
+        // handleRemoteNotification pulls out only a Sendable RefreshKind before
+        // spawning its own @MainActor Task — the raw dictionary is never sent
+        // into or captured by a Task. Completion handler is called exactly once.
         Self.online?.handleRemoteNotification(userInfo)
-        return .newData
+        completionHandler(.newData)
     }
 
     func application(_ application: UIApplication,
