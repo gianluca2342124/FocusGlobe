@@ -389,7 +389,58 @@ Silent pushes are best-effort; the app also refreshes on foreground and on a
 7. **Deploy Schema Changes… → Production** manually before the App Store
    build; re-verify indexes and roles in Production afterwards.
 
-## 11. Privacy summary (for the Privacy Policy update)
+## 11. Diagnosing "Couldn't create your private room" by EXACT CKError
+
+Room creation no longer hides the real failure. When
+`FocusRoomService.createRoom` fails it logs (and never shows the user a raw
+error):
+
+```
+createRoom FAILED: CKError.<name> (<rawValue>): <localizedDescription> | underlying <domain>#<code>: … | server: … | partial[<recordName>]=<name>: …
+  [op=modifyRecords type=FocusRoom db=private zone=FocusGlobeRoomsZone container=iCloud.com.mobitegames.FocusGlobe purpose=flight]
+```
+
+**Read the exact error two ways:**
+
+1. **Console.app (wired Mac):** device → filter *subsystem*
+   `com.focusglobe.app`, *category* `online`, search `createRoom FAILED`.
+2. **On-device (DEBUG builds):** Online Diagnostics screen → **Create test
+   private room** → the exact breakdown appears in **Last room error (exact)**
+   and in the log list. (This is DEBUG-only; Release users only ever see the
+   friendly retry card.)
+
+Then map the logged **CKError code** to its cause and fix:
+
+| Logged `CKError.<name>` | Root cause | Fix |
+|---|---|---|
+| `unknownItem`, `invalidArguments`, `serverRejectedRequest`, or a `partialFailure` whose server message mentions *"record type… not found" / "unknown field"* | **The #1 cause on TestFlight/App Store builds: the `FocusRoom` schema exists only in the CloudKit *Development* environment, never deployed to *Production*.** Release and TestFlight builds hit **Production**; just-in-time schema does NOT run there. | In the Dashboard, **Deploy Schema Changes… → Production** (§10 step 7), then re-verify §8 indexes and §7 roles in Production. |
+| `notAuthenticated` | No usable iCloud account despite a cached `.available` status. | User signs into iCloud; app already gates on `availability` and flips it via `applyOperationError`. |
+| `networkUnavailable`, `networkFailure`, `serviceUnavailable` | Genuine connectivity / CloudKit outage. | Retry (the app flips availability to offline and shows the retry card). |
+| `permissionFailure` | Security role/zone permission wrong, or the account can't write the private zone. | Verify §7 roles; confirm the custom zone `FocusGlobeRoomsZone` deployed to the active environment. |
+| `quotaExceeded` | The owner's iCloud storage is full. | User frees iCloud space; nothing to change in the app. |
+| `badContainer`, `missingEntitlement` | The CloudKit entitlement / container identifier isn't wired into the signed build. | Confirm the `iCloud.com.mobitegames.FocusGlobe` container is checked in the target's iCloud capability and in the provisioning profile. |
+| `zoneNotFound`, `userDeletedZone` | The rooms zone was removed server-side between launches. | `ensureZone()` recreates it on next attempt; retry. |
+| `serverRecordChanged` | A concurrent write raced the atomic save (rare for a fresh UUID root). | Retry (a new record ID is generated per attempt). |
+| **Saved but `share.url == nil`** (logged as `CKShare saved but url==nil`) | The share record saved but CloudKit didn't mint an invitation URL — almost always the same Production-schema gap for the `cloudkit.share` system type, or CKSharing not enabled on the container. | Deploy the schema to Production; confirm the container supports sharing (it does by default once schema is deployed). The app deliberately treats this as a failure so the room is NEVER shown as "ready" without a real URL. |
+
+**Development vs Production — the crux.** Creating a *custom zone* in the
+private database succeeds in both environments without any schema. Saving a
+record of a *custom type* (`FocusRoom`) requires that type to exist in the
+environment being used. A build run from Xcode onto a device uses the CloudKit
+**Development** environment (JIT creates the type on first save, so it "works
+on my debug device"). A **TestFlight or App Store** build uses **Production**,
+where JIT does not run — so if the schema was never promoted, the very first
+`modifyRecords` fails. This is why a real iPhone with working WiFi and iCloud
+still can't create a room: the account and network are fine; the **Production
+schema is missing**.
+
+**State-machine guarantee (requirement: no false "ready").** A room is only
+returned — and only ever promoted to the pending/"Private room ready" state —
+when the `FocusRoom` record saved, the `CKShare` saved, AND the saved share's
+`url` is non-nil. Any failure throws with the exact error above; the invite
+sheet then shows a retry, and the flight selector never claims a room exists.
+
+## 12. Privacy summary (for the Privacy Policy update)
 
 - Stored online: a random `publicID`, an editable anonymous alias, a
   balloon-skin ID, an optional device-region country code, focus-session

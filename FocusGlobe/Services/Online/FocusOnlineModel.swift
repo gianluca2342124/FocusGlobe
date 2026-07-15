@@ -38,6 +38,10 @@ final class FocusOnlineModel: ObservableObject {
     // Diagnostics (DEBUG screen)
     @Published private(set) var lastPilotFetchAt: Date?
     @Published private(set) var lastErrorCategory: String?
+    /// The full one-line breakdown of the most recent room-creation failure
+    /// (exact CKError code + description + underlying/partial errors). DEBUG
+    /// diagnostics only — never shown as Release UI copy.
+    @Published private(set) var lastRoomErrorDetail: String?
 
     // MARK: Services
 
@@ -338,14 +342,26 @@ final class FocusOnlineModel: ObservableObject {
         do {
             let room = try await roomService.createRoom(title: title, skyID: skyID,
                                                         owner: profile, purpose: purpose)
+            // The service guarantees a non-nil shareURL on success, but guard here
+            // too: a room without an invitation link must NEVER become the pending
+            // ("Private room ready") room. If it somehow lacks one, treat it as a
+            // failure the caller can retry.
+            guard room.shareURL != nil else {
+                lastRoomErrorDetail = "room saved without a share URL (share.url==nil)"
+                lastErrorCategory = "share-url-missing"
+                return nil
+            }
+            lastRoomErrorDetail = nil
             if purpose == .flight { pendingRoom = room }
             await refreshRooms()
             return RoomInvitation(id: room.id, room: room, url: room.shareURL)
         } catch {
             // A network failure here flips the authoritative availability to
             // offline (so the selector's "Live" also clears); other errors keep
-            // `.available` and the caller shows a room-creation retry.
+            // `.available` and the caller shows a room-creation retry. The EXACT
+            // CKError breakdown is captured for the DEBUG diagnostics screen.
             applyOperationError(error)
+            lastRoomErrorDetail = OnlineError.detail(for: error)
             return nil
         }
     }
@@ -535,9 +551,16 @@ final class FocusOnlineModel: ObservableObject {
             let room = try await roomService.createRoom(title: "Fly \(sky.name) with me",
                                                         skyID: sky.id, owner: profile,
                                                         purpose: .skyUnlock)
+            guard room.shareURL != nil else {
+                lastRoomErrorDetail = "campaign room saved without a share URL (share.url==nil)"
+                lastErrorCategory = "share-url-missing"
+                return nil
+            }
+            lastRoomErrorDetail = nil
             return RoomInvitation(id: room.id, room: room, url: room.shareURL)
         } catch {
             applyOperationError(error)
+            lastRoomErrorDetail = OnlineError.detail(for: error)
             return nil
         }
     }

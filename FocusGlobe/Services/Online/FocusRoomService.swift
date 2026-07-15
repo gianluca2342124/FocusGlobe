@@ -1,11 +1,19 @@
 import Foundation
 import CloudKit
+import OSLog
 
 /// Private focus rooms via CKShare: the room root lives in the owner's private
 /// custom zone; invitees accept the share URL and read/write through the
 /// shared database. Rooms carry a purpose — a shared flight, or a Sky-unlock
 /// invitation campaign.
 actor FocusRoomService {
+    /// The EXACT CloudKit failure for room creation goes here (Console.app,
+    /// subsystem `com.focusglobe.app`, category `online`) — never a generic
+    /// message. Includes CKError code name + raw value, localizedDescription,
+    /// underlying NSError, server message, and every partial error, plus the
+    /// operation, record type, database, zone and container.
+    static let log = Logger(subsystem: "com.focusglobe.app", category: "online")
+
     private var container: CKContainer { CloudKitConfig.container }
     private var privateDB: CKDatabase { container.privateCloudDatabase }
     private var sharedDB: CKDatabase { container.sharedCloudDatabase }
@@ -25,44 +33,69 @@ actor FocusRoomService {
 
     /// Create a room and its CKShare atomically; returns the room with its
     /// invitation URL. The share link carries access (no insecure room codes).
+    ///
+    /// Contract for requirement #2 (no false "Ready"): this NEVER returns a room
+    /// unless the CKRecord saved, the CKShare saved, AND the saved share carries
+    /// a non-nil `url`. Any failure throws — with the EXACT CloudKit error logged
+    /// (requirement #1) — so the caller can never promote a half-created room to
+    /// the invite-ready state.
     func createRoom(title: String, skyID: String, owner: OnlineProfile,
                     purpose: FocusRoom.Purpose) async throws -> FocusRoom {
-        try await ensureZone()
         let roomID = UUID().uuidString
         let recordID = CKRecord.ID(recordName: "room-\(roomID)", zoneID: zoneID)
-        let root = CKRecord(recordType: CloudKitConfig.RecordType.room, recordID: recordID)
-        root["roomPublicID"] = roomID as CKRecordValue
-        root["ownerPublicID"] = owner.publicID as CKRecordValue
-        root["title"] = title as CKRecordValue
-        root["skyID"] = skyID as CKRecordValue
-        root["createdAt"] = Date() as CKRecordValue
-        root["expiresAt"] = Date().addingTimeInterval(7 * 24 * 3600) as CKRecordValue
-        root["maximumParticipants"] = Int64(FocusRoom.participantLimit) as CKRecordValue
-        root["status"] = FocusRoom.Status.lobby.rawValue as CKRecordValue
-        root["allowsLateJoin"] = 1 as CKRecordValue
-        root["requiresReadyState"] = 0 as CKRecordValue
-        root["purpose"] = purpose.rawValue as CKRecordValue
-        root["schemaVersion"] = 1 as CKRecordValue
+        do {
+            try await ensureZone()
+            let root = CKRecord(recordType: CloudKitConfig.RecordType.room, recordID: recordID)
+            root["roomPublicID"] = roomID as CKRecordValue
+            root["ownerPublicID"] = owner.publicID as CKRecordValue
+            root["title"] = title as CKRecordValue
+            root["skyID"] = skyID as CKRecordValue
+            root["createdAt"] = Date() as CKRecordValue
+            root["expiresAt"] = Date().addingTimeInterval(7 * 24 * 3600) as CKRecordValue
+            root["maximumParticipants"] = Int64(FocusRoom.participantLimit) as CKRecordValue
+            root["status"] = FocusRoom.Status.lobby.rawValue as CKRecordValue
+            root["allowsLateJoin"] = 1 as CKRecordValue
+            root["requiresReadyState"] = 0 as CKRecordValue
+            root["purpose"] = purpose.rawValue as CKRecordValue
+            root["schemaVersion"] = 1 as CKRecordValue
 
-        let share = CKShare(rootRecord: root)
-        share[CKShare.SystemFieldKey.title] = "FocusGlobe Flight" as CKRecordValue
-        // PRIVATE rooms are private: no public permission on the share. Only
-        // explicitly invited CKShare participants (added via the system
-        // sharing UI or a resolved contact lookup) can accept — a forwarded
-        // URL grants an uninvited account nothing.
-        share.publicPermission = .none
+            let share = CKShare(rootRecord: root)
+            share[CKShare.SystemFieldKey.title] = "FocusGlobe Flight" as CKRecordValue
+            // PRIVATE rooms are private: no public permission on the share. Only
+            // explicitly invited CKShare participants (added via the system
+            // sharing UI or a resolved contact lookup) can accept — a forwarded
+            // URL grants an uninvited account nothing.
+            share.publicPermission = .none
 
-        _ = try await privateDB.modifyRecords(saving: [root, share], deleting: [],
-                                              savePolicy: .ifServerRecordUnchanged, atomically: true)
-        var room = Self.room(from: root, isOwned: true)
-        room?.shareURL = share.url
-        // Owner joins their own room as the first participant.
-        if let room {
+            let result = try await privateDB.modifyRecords(saving: [root, share], deleting: [],
+                                                           savePolicy: .ifServerRecordUnchanged,
+                                                           atomically: true)
+            // Surface a per-record failure that an atomic batch may report inside
+            // saveResults rather than as the top-level throw.
+            _ = try result.saveResults[root.recordID]?.get()
+            // The share URL is populated only AFTER the save round-trips through
+            // the server — read it from the SAVED share instance, never from the
+            // local `share` (whose `url` is still nil here). This was the bug that
+            // returned a "ready" room with no invitation link.
+            let savedShare = (try result.saveResults[share.recordID]?.get()) as? CKShare
+            guard let shareURL = savedShare?.url else {
+                Self.log.error("createRoom: CKShare saved but url==nil [op=modifyRecords type=\(CloudKitConfig.RecordType.room, privacy: .public) db=private zone=\(CloudKitConfig.roomsZoneName, privacy: .public) container=\(CloudKitConfig.containerIdentifier, privacy: .public)]")
+                throw OnlineError.roomUnavailable
+            }
+            guard var room = Self.room(from: root, isOwned: true) else { throw OnlineError.requestFailed }
+            room.shareURL = shareURL
+            // Owner joins their own room as the first participant.
             try? await upsertParticipant(room: room, in: privateDB, zone: recordID.zoneID,
                                          profile: owner, status: .joined)
+            Self.log.log("createRoom: OK room=\(room.id, privacy: .public) purpose=\(purpose.rawValue, privacy: .public) url=present")
             return room
+        } catch {
+            // The EXACT CloudKit failure — code name + raw value, description,
+            // underlying NSError, server message and partial errors — with the
+            // failing operation and full CloudKit context. Requirement #1.
+            Self.log.error("createRoom FAILED: \(OnlineError.detail(for: error), privacy: .public) [op=modifyRecords type=\(CloudKitConfig.RecordType.room, privacy: .public) db=private zone=\(CloudKitConfig.roomsZoneName, privacy: .public) container=\(CloudKitConfig.containerIdentifier, privacy: .public) purpose=\(purpose.rawValue, privacy: .public)]")
+            throw error
         }
-        throw OnlineError.requestFailed
     }
 
     /// Accept an invitation from a CKShare URL's metadata (app delegate hook).
@@ -214,12 +247,28 @@ actor FocusRoomService {
 
     /// The live CKShare for an OWNED room (used by the system sharing UI and
     /// participant management). Participants don't fetch the owner's share.
+    /// Retries once for the brief window where a just-saved root record's
+    /// `share` reference hasn't propagated yet — otherwise the invite sheet
+    /// would show "couldn't create your room" for a room that WAS created.
     func share(for room: FocusRoom) async -> CKShare? {
         guard room.isOwned else { return nil }
         let id = CKRecord.ID(recordName: "room-\(room.id)", zoneID: zoneID)
-        guard let root = try? await privateDB.record(for: id),
-              let shareRef = root.share else { return nil }
-        return (try? await privateDB.record(for: shareRef.recordID)) as? CKShare
+        for attempt in 0..<2 {
+            do {
+                let root = try await privateDB.record(for: id)
+                guard let shareRef = root.share else {
+                    if attempt == 0 { try? await Task.sleep(nanoseconds: 400_000_000); continue }
+                    Self.log.error("share(for:): root has no share reference room=\(room.id, privacy: .public)")
+                    return nil
+                }
+                return (try await privateDB.record(for: shareRef.recordID)) as? CKShare
+            } catch {
+                Self.log.error("share(for:) FAILED (attempt \(attempt)): \(OnlineError.detail(for: error), privacy: .public) room=\(room.id, privacy: .public)")
+                if attempt == 0 { try? await Task.sleep(nanoseconds: 400_000_000); continue }
+                return nil
+            }
+        }
+        return nil
     }
 
     /// Refresh the share URL for an owned room (after relaunch). With

@@ -26,6 +26,23 @@ struct OnlineDiagnosticsView: View {
                     group("Joined rooms", "\(online.joinedRooms.count)")
                     group("Incoming requests", "\(online.incomingRequests.count)")
                     group("Last error", online.lastErrorCategory ?? "—")
+                    if let detail = online.lastRoomErrorDetail {
+                        // The EXACT CKError breakdown from the last room-creation
+                        // attempt — code name + raw value + description + underlying
+                        // / partial errors. This is the "real error, not generic".
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Last room error (exact)")
+                                .font(AppTypography.caption).foregroundStyle(AppColors.textTertiary)
+                            Text(detail)
+                                .font(.system(size: 10.5, design: .monospaced))
+                                .foregroundStyle(AppColors.gold)
+                                .textSelection(.enabled)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(10)
+                        .glassBackground(cornerRadius: 10, tintOpacity: 0.14, shadowRadius: 2, shadowY: 1)
+                    }
                     actions
                     ForEach(log, id: \.self) { line in
                         Text(line).font(.system(size: 11, design: .monospaced))
@@ -40,6 +57,17 @@ struct OnlineDiagnosticsView: View {
 
     private var actions: some View {
         VStack(spacing: 8) {
+            // Reproduce room creation on-device and print the EXACT outcome —
+            // the real CKError (via lastRoomErrorDetail), not a generic message.
+            row("Create test private room") {
+                let invitation = await online.createRoom(skyID: appModel.selectedSky.id,
+                                                         title: "Diagnostic Room")
+                if let invitation, invitation.url != nil {
+                    log.append("room OK: \(invitation.id.prefix(8)) url=yes")
+                } else {
+                    log.append("room FAILED: \(online.lastRoomErrorDetail ?? online.lastErrorCategory ?? "unknown")")
+                }
+            }
             row("Refresh Cloud status") { await online.refreshAvailability(); log.append("status: \(online.availability)") }
             row("Fetch current Sky pilots") {
                 await online.refreshCampaignProgress(skyID: appModel.selectedSky.id, required: 3)

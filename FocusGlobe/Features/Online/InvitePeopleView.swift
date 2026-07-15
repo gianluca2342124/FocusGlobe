@@ -204,15 +204,31 @@ struct InvitePeopleView: View {
         showCloudSharing = true
     }
 
-    // MARK: App sharing (marketing text only — no CloudKit involved)
+    // MARK: App sharing (marketing ONLY — no CloudKit, no room, no CKShare)
 
+    /// Recommends the app: shares the App Store URL with a rich link preview
+    /// (title + hero image + promo message). This deliberately shares a real
+    /// tappable link — never a bare sentence — and never pretends to invite
+    /// anyone into a room.
     private var appMethods: some View {
         VStack(spacing: AppSpacing.sm) {
-            ShareLink(item: CloudShareService.appLink) {
-                methodRow(icon: "square.and.arrow.up", title: "Share FocusGlobe",
-                          subtitle: "Messages, WhatsApp, AirDrop and more")
+            if let url = MarketingConfig.appStoreURL {
+                ShareLink(item: url,
+                          subject: Text(verbatim: MarketingConfig.appName),
+                          message: Text(verbatim: CloudShareService.appLink),
+                          preview: SharePreview(Text(verbatim: "\(MarketingConfig.appName) — focus in the sky"),
+                                                image: Image(MarketingConfig.previewImageName))) {
+                    methodRow(icon: "square.and.arrow.up", title: "Share FocusGlobe",
+                              subtitle: "Send an App Store link with a preview")
+                }
+                .simultaneousGesture(TapGesture().onEnded { appModel.tapFeedback() })
+            } else {
+                ShareLink(item: CloudShareService.appLink) {
+                    methodRow(icon: "square.and.arrow.up", title: "Share FocusGlobe",
+                              subtitle: "Messages, WhatsApp, AirDrop and more")
+                }
+                .simultaneousGesture(TapGesture().onEnded { appModel.tapFeedback() })
             }
-            .simultaneousGesture(TapGesture().onEnded { appModel.tapFeedback() })
 
             Button {
                 appModel.tapFeedback()
@@ -220,8 +236,8 @@ struct InvitePeopleView: View {
                 withAnimation { copied = true }
             } label: {
                 methodRow(icon: copied ? "checkmark" : "doc.on.doc",
-                          title: copied ? "Copied" : "Copy message",
-                          subtitle: "Paste it anywhere")
+                          title: copied ? "Copied" : "Copy link",
+                          subtitle: "Paste the App Store link anywhere")
             }
             .buttonStyle(SoftPressStyle())
         }
