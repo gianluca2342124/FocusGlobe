@@ -30,5 +30,6 @@ enum CloudKitConfig {
         static let roomParticipant = "RoomParticipant"
         static let roomFlightSession = "RoomFlightSession"
         static let unlockCampaign = "SkyUnlockCampaign"
+        static let pilotReport = "PilotReport"
     }
 }

@@ -70,11 +70,17 @@ final class FocusShieldService: ObservableObject {
     func refreshAuthorization() {
         #if canImport(FamilyControls)
         guard isSupported else { authState = .unavailable; return }
-        switch AuthorizationCenter.shared.authorizationStatus {
-        case .approved:      authState = .approved
-        case .denied:        authState = .denied
-        case .notDetermined: authState = .notDetermined
-        @unknown default:    authState = .notDetermined
+        // Equality checks (not a switch) so this stays warning-free regardless
+        // of any future FamilyControls `AuthorizationStatus` cases: the three
+        // known states are handled explicitly and anything else (including
+        // `.notDetermined` and any unknown future case) reads as not-determined.
+        let status = AuthorizationCenter.shared.authorizationStatus
+        if status == .approved {
+            authState = .approved
+        } else if status == .denied {
+            authState = .denied
+        } else {
+            authState = .notDetermined
         }
         #else
         authState = .unavailable

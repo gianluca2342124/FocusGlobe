@@ -124,25 +124,19 @@ struct AmbientPilotsLayer: View {
         let sway = CGFloat(Foundation.sin(t * (0.13 + p.depth * 0.1) + p.phase * 1.3)) * (6 + CGFloat(p.depth) * 8)
         let x = CGFloat(p.fx) * W + sway
         let y = CGFloat(p.fy) * H + bob
-        // SAME display size as the central user balloon (its exact cruising
-        // formula) — never scaled down by depth. Depth reads through opacity
-        // alone, so the user balloon stays dominant via full opacity + glow.
-        let size = max(38, min(52, H * 0.07))
-        let alpha = 0.18 + p.depth * 0.2
+        // Slightly smaller than the central user balloon (~82% of its cruising
+        // size) so the hero always reads as the largest, never scaled down by
+        // depth beyond that. Depth reads through opacity, keeping the user
+        // balloon dominant via full size + full opacity + glow.
+        let size = max(38, min(52, H * 0.07)) * 0.82
+        let alpha = 0.18 + p.depth * 0.16   // 0.18…0.34
 
-        ZStack(alignment: .bottom) {
-            if selectedPilot == index {
-                pilotBubble(p)
-                    .offset(y: -size - 14)
-                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
-            }
-            BalloonView(height: size, showBurner: false, showGlow: false, skin: p.skin)
-                .opacity(alpha)
-        }
-        .position(x: x, y: y)
-        .onTapGesture {
-            appTapSelect(index)
-        }
+        // Decorative pilots are purely ambient: no name, flag, timer or tap —
+        // only a REAL online pilot (realPilotView) is interactive/identifiable.
+        BalloonView(height: size, showBurner: false, showGlow: false, skin: p.skin)
+            .opacity(alpha)
+            .position(x: x, y: y)
+            .allowsHitTesting(false)
     }
 
     /// Deterministic per-pilot seed: hash(publicID + sessionID + skyID). Kept
@@ -165,7 +159,9 @@ struct AmbientPilotsLayer: View {
         let phase = rng.unit() * 6.28
         let bob = CGFloat(Foundation.sin(t * 0.22 + phase)) * 9
         let sway = CGFloat(Foundation.sin(t * 0.14 + phase * 1.3)) * 7
-        let size = max(38, min(52, H * 0.07))
+        // Same ~82% of the hero's cruising size as decorative pilots — never
+        // larger than the user balloon.
+        let size = max(38, min(52, H * 0.07)) * 0.82
         let selected = selectedRealID == pilot.id
         return ZStack(alignment: .bottom) {
             if selected {
@@ -175,7 +171,9 @@ struct AmbientPilotsLayer: View {
             }
             BalloonView(height: size, showBurner: false, showGlow: false,
                         skin: BalloonSkin.skin(id: pilot.balloonSkinID))
-                .opacity(pilot.isPaused ? 0.28 : 0.42)
+                // A tapped real pilot brightens to ~0.48; otherwise it sits in
+                // the same subdued 0.20–0.32 band as everyone else.
+                .opacity(selected ? 0.48 : (pilot.isPaused ? 0.20 : 0.32))
         }
         .position(x: CGFloat(fx) * W + sway, y: CGFloat(fy) * H + bob)
         .onTapGesture {

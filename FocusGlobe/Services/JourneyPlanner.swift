@@ -236,7 +236,7 @@ enum JourneyPlanner {
             name: previous.city,
             country: previous.country,
             region: previous.country.isEmpty ? nil : previous.country,
-            code: previous.code ?? Route.code(previous.city),
+            code: previous.code.isEmpty ? Route.code(previous.city) : previous.code,
             latitude: previous.coordinate.latitude,
             longitude: previous.coordinate.longitude,
             population: nil, airportCode: nil, tourismScore: 72,

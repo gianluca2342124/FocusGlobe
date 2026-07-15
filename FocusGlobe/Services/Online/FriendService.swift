@@ -246,6 +246,30 @@ actor FriendService {
         }
     }
 
+    // MARK: Moderation (reporter-owned reports)
+
+    /// File a report against a pilot. Reporter-owned public record with a
+    /// deterministic ID (`report_<reporter>_<reported>`) so one reporter can't
+    /// flood the same pilot with new records. Stores only anonymous publicIDs,
+    /// the flagged session, a closed reason category and a timestamp — never
+    /// email, phone or any focus text. Not readable by other users in the app.
+    func reportPilot(reporter: OnlineProfile, reportedPublicID: String,
+                     reportedSessionID: String, reason: String) async throws {
+        guard reporter.publicID != reportedPublicID else { throw OnlineError.requestFailed }
+        let reportID = "report_\(reporter.publicID)_\(reportedPublicID)"
+        let record = (try? await database.record(for: CKRecord.ID(recordName: reportID)))
+            ?? CKRecord(recordType: CloudKitConfig.RecordType.pilotReport,
+                        recordID: CKRecord.ID(recordName: reportID))
+        record["reportID"] = reportID as CKRecordValue
+        record["reporterPublicID"] = reporter.publicID as CKRecordValue
+        record["reportedPublicID"] = reportedPublicID as CKRecordValue
+        record["reportedSessionID"] = reportedSessionID as CKRecordValue
+        record["reason"] = reason as CKRecordValue
+        record["createdAt"] = Date() as CKRecordValue
+        _ = try await database.modifyRecords(saving: [record], deleting: [],
+                                             savePolicy: .changedKeys, atomically: true)
+    }
+
     // MARK: Invite-unlock campaigns (real accepted invitations only)
 
     /// Persist campaign progress in the PRIVATE database — one record per Sky.

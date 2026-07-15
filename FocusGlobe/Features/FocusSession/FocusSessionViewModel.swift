@@ -132,7 +132,9 @@ final class FocusSessionViewModel: ObservableObject {
         appModel.analytics.log(.journeyStarted, ["route": route.id, "minutes": route.durationMinutes])
         appModel.haptics.takeoff()
         appModel.uiSound.play(.journeyStart)
-        // Preload the journey-complete interstitial now so it's ready by landing.
+        // Preload the journey-complete interstitial now so it's ready by landing,
+        // and open a fresh per-journey ad scope (one post-flight ad opportunity).
+        appModel.postFlightAdSatisfied = false
         appModel.ads.preloadInterstitial(isPro: appModel.isPro)
         appModel.sound.startJourney(option: appModel.selectedJourneyAudio)
         timer.start()

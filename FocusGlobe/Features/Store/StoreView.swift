@@ -361,49 +361,76 @@ private struct SkinCard: View {
     let unlocked: Bool
     let selected: Bool
     let action: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var float: CGFloat = 0
 
     var body: some View {
         Button(action: action) {
             VStack(spacing: AppSpacing.sm) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(skin.theme.accent.opacity(0.14))
-                    BalloonView(height: 62, showBurner: false, showGlow: false,
-                                skin: skin)
-                        .opacity(unlocked ? 1 : 0.45)
+                    // Image-first: the transparent balloon is the protagonist
+                    // over a soft diffused glow drawn from the skin's own accent
+                    // — no opaque colored box, no hard circular halo.
+                    RadialGradient(colors: [skin.theme.accent.opacity(unlocked ? 0.30 : 0.14), .clear],
+                                   center: .center, startRadius: 2, endRadius: 130)
+                        .blur(radius: 8)
+                    BalloonView(height: Layout.pad(134, 190), showBurner: false, showGlow: false, skin: skin)
+                        .opacity(unlocked ? 1 : 0.5)
+                        .offset(y: float)
                     if !unlocked {
                         Image(systemName: skin.isPremium ? "crown.fill" : "lock.fill")
-                            .font(.system(size: 13, weight: .bold))
+                            .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(skin.isPremium ? AppColors.gold : AppColors.textSecondary)
-                            .padding(7)
+                            .padding(8)
                             .background(Circle().fill(.ultraThinMaterial))
-                            .offset(x: 26, y: -22)
+                            .offset(x: Layout.pad(42, 62), y: -Layout.pad(50, 74))
                     }
                 }
-                .frame(height: 86)
-                VStack(spacing: 1) {
+                .frame(height: Layout.pad(152, 210))
+                VStack(spacing: 2) {
                     Text(skin.name)
-                        .font(.system(size: 14.5, weight: .bold, design: .rounded))
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
                         .foregroundStyle(AppColors.textPrimary)
-                        .lineLimit(1)
-                    Text(unlocked ? (selected ? "Flying now" : "Tap to select") : skin.requirementText)
-                        .font(AppTypography.micro)
-                        .foregroundStyle(selected ? AppColors.success : AppColors.textTertiary)
-                        .lineLimit(1)
+                        .lineLimit(1).minimumScaleFactor(0.8)
+                    Text(statusText)
+                        .font(.system(size: 12.5, weight: .semibold, design: .rounded))
+                        .foregroundStyle(statusColor)
+                        .lineLimit(1).minimumScaleFactor(0.85)
                 }
             }
             .padding(AppSpacing.md)
             .frame(maxWidth: .infinity)
-            .glassBackground(cornerRadius: 20, tintOpacity: 0.24, shadowRadius: 8, shadowY: 4)
+            .glassBackground(cornerRadius: 22, tintOpacity: 0.2, shadowRadius: 8, shadowY: 4)
             .overlay {
                 if selected {
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .strokeBorder(AppColors.gold.opacity(0.65), lineWidth: 1.5)
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .strokeBorder(AppColors.gold.opacity(0.7), lineWidth: 1.6)
+                } else if unlocked {
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .strokeBorder(AppColors.success.opacity(0.3), lineWidth: 1)
                 }
             }
         }
         .buttonStyle(SoftPressStyle(scale: 0.98))
-        .accessibilityLabel("\(skin.name) balloon skin. \(unlocked ? (selected ? "Selected." : "Tap to select.") : skin.requirementText)")
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 3.4).repeatForever(autoreverses: true)) { float = -6 }
+        }
+        .accessibilityLabel("\(skin.name) balloon skin. \(statusText)")
+    }
+
+    // Skins unlock via milestones / invites / Premium (never Focus Coins), so
+    // the state line shows Equipped / Owned / Premium / the unlock requirement.
+    private var statusText: String {
+        if selected { return "Equipped" }
+        if unlocked { return "Owned · Tap to fly" }
+        if skin.isPremium { return "Premium" }
+        return skin.requirementText
+    }
+    private var statusColor: Color {
+        if selected { return AppColors.success }
+        if unlocked { return AppColors.textSecondary }
+        return AppColors.textTertiary
     }
 }
 

@@ -67,10 +67,13 @@ final class NotificationService {
     func requestAuthorizationIfNeeded(state: NotificationState) {
         guard isEnabled else { return }
         center.getNotificationSettings { [weak self] settings in
-            guard let self, settings.authorizationStatus == .notDetermined else { return }
-            self.center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
-                guard granted else { return }
-                Task { @MainActor in self.reschedule(state: state) }
+            let undecided = settings.authorizationStatus == .notDetermined
+            Task { @MainActor in
+                guard let self, undecided else { return }
+                self.center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+                    guard granted else { return }
+                    Task { @MainActor in self.reschedule(state: state) }
+                }
             }
         }
     }
@@ -82,10 +85,13 @@ final class NotificationService {
     func requestProvisionalAuthorizationIfNeeded(state: NotificationState) {
         guard isEnabled else { return }
         center.getNotificationSettings { [weak self] settings in
-            guard let self, settings.authorizationStatus == .notDetermined else { return }
-            self.center.requestAuthorization(options: [.alert, .sound, .badge, .provisional]) { granted, _ in
-                guard granted else { return }
-                Task { @MainActor in self.reschedule(state: state) }
+            let undecided = settings.authorizationStatus == .notDetermined
+            Task { @MainActor in
+                guard let self, undecided else { return }
+                self.center.requestAuthorization(options: [.alert, .sound, .badge, .provisional]) { granted, _ in
+                    guard granted else { return }
+                    Task { @MainActor in self.reschedule(state: state) }
+                }
             }
         }
     }

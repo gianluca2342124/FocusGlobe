@@ -79,21 +79,30 @@ final class AdService: NSObject, ObservableObject {
         #if canImport(UserMessagingPlatform)
         let params = RequestParameters()
         ConsentInformation.shared.requestConsentInfoUpdate(with: params) { [weak self] error in
-            guard let self else { return }
-            if let error {
-                self.analytics?.log(.admobConsentFailed, ["error": error.localizedDescription])
-                self.finishConsent()       // fail-safe: proceed with whatever is allowed
-                return
-            }
-            if let vc = Self.topViewController() {
-                ConsentForm.loadAndPresentIfRequired(from: vc) { [weak self] formError in
-                    if let formError {
-                        self?.analytics?.log(.admobConsentFailed, ["error": formError.localizedDescription])
-                    }
-                    self?.finishConsent()
+            // Hop back to the main actor before touching MainActor-isolated
+            // state; extract the Sendable error string first.
+            let errorDesc = error?.localizedDescription
+            Task { @MainActor in
+                guard let self else { return }
+                if let errorDesc {
+                    self.analytics?.log(.admobConsentFailed, ["error": errorDesc])
+                    self.finishConsent()       // fail-safe: proceed with whatever is allowed
+                    return
                 }
-            } else {
-                self.finishConsent()
+                if let vc = Self.topViewController() {
+                    ConsentForm.loadAndPresentIfRequired(from: vc) { [weak self] formError in
+                        let formDesc = formError?.localizedDescription
+                        Task { @MainActor in
+                            guard let self else { return }
+                            if let formDesc {
+                                self.analytics?.log(.admobConsentFailed, ["error": formDesc])
+                            }
+                            self.finishConsent()
+                        }
+                    }
+                } else {
+                    self.finishConsent()
+                }
             }
         }
         #else
@@ -114,10 +123,12 @@ final class AdService: NSObject, ObservableObject {
         // `start` finishes can silently fail (which is why the interstitial was
         // never ready while the on-demand rewarded ad worked).
         MobileAds.shared.start { [weak self] _ in
-            guard let self else { return }
-            self.loadInterstitial()
-            self.preloadRewarded(AdMobConfig.rewardedDoubleMilesID)
-            self.preloadRewarded(AdMobConfig.rewardedDailyBoostID)
+            Task { @MainActor in
+                guard let self else { return }
+                self.loadInterstitial()
+                self.preloadRewarded(AdMobConfig.rewardedDoubleMilesID)
+                self.preloadRewarded(AdMobConfig.rewardedDailyBoostID)
+            }
         }
         #endif
     }
