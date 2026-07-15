@@ -103,7 +103,7 @@ enum OnlineError: Error, Sendable {
         for (id, itemError) in ck.partialErrorsByItemID ?? [:] {
             let pe = itemError as NSError
             let name = (pe as? CKError).map { codeName($0.code) } ?? "\(pe.code)"
-            parts.append("partial[\(id.recordName)]=\(name): \(pe.localizedDescription)")
+            parts.append("partial[\(String(describing: id))]=\(name): \(pe.localizedDescription)")
         }
         return parts.joined(separator: " | ")
     }
