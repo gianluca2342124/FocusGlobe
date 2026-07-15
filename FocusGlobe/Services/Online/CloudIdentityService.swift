@@ -14,7 +14,12 @@ actor CloudIdentityService {
         let id = CKRecord.ID(recordName: recordName)
         do {
             let record = try await database.record(for: id)
-            return Self.identity(from: record) ?? (try await create(overwriting: record))
+            // Reuse the existing identity when it decodes; otherwise repair the
+            // same fixed record in place (never create a second identity).
+            if let identity = Self.identity(from: record) {
+                return identity
+            }
+            return try await create(overwriting: record)
         } catch let error as CKError where error.code == .unknownItem {
             return try await create(overwriting: nil)
         }
