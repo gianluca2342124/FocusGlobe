@@ -86,6 +86,22 @@ final class FocusOnlineModel: ObservableObject {
         }
     }
 
+    /// The ONE authoritative reaction to a failed CloudKit operation. Account
+    /// status alone can read `.available` from cache even with no network, so a
+    /// genuine network failure only surfaces when an actual op fails — this
+    /// flips the single `availability` state so EVERY online surface agrees
+    /// (no more "Live" here + "You're offline" there). Non-network CloudKit
+    /// errors keep `.available`; the caller shows a retry, never "offline".
+    private func applyOperationError(_ error: Error) {
+        let category = OnlineError.category(for: error)
+        lastErrorCategory = category
+        switch category {
+        case "network":    availability = .networkUnavailable
+        case "no-account": availability = .noAccount
+        default:           break
+        }
+    }
+
     private func handleAccountChange() async {
         // Never mix two iCloud identities: clear cached social data, keep local
         // app progress, and rebuild identity from the new account.
@@ -313,6 +329,9 @@ final class FocusOnlineModel: ObservableObject {
     // MARK: Rooms
 
     func createRoom(skyID: String, title: String, purpose: FocusRoom.Purpose = .flight) async -> RoomInvitation? {
+        // §1: refresh account status immediately before creating a room so the
+        // gate reflects the current account (foreground also refreshes).
+        await refreshAvailability()
         guard availability.isAvailable else { return nil }
         await ensureIdentityAndProfile()
         guard let profile else { return nil }
@@ -323,7 +342,10 @@ final class FocusOnlineModel: ObservableObject {
             await refreshRooms()
             return RoomInvitation(id: room.id, room: room, url: room.shareURL)
         } catch {
-            lastErrorCategory = OnlineError.category(for: error)
+            // A network failure here flips the authoritative availability to
+            // offline (so the selector's "Live" also clears); other errors keep
+            // `.available` and the caller shows a room-creation retry.
+            applyOperationError(error)
             return nil
         }
     }
@@ -500,6 +522,7 @@ final class FocusOnlineModel: ObservableObject {
     /// The campaign room for a locked Sky (created on demand). Its CKShare URL
     /// is the invitation; only ACCEPTED unique participants count.
     func campaignInvitation(for sky: FocusSky) async -> RoomInvitation? {
+        await refreshAvailability()
         guard availability.isAvailable else { return nil }
         await ensureIdentityAndProfile()
         guard let profile else { return nil }
@@ -514,7 +537,7 @@ final class FocusOnlineModel: ObservableObject {
                                                         purpose: .skyUnlock)
             return RoomInvitation(id: room.id, room: room, url: room.shareURL)
         } catch {
-            lastErrorCategory = OnlineError.category(for: error)
+            applyOperationError(error)
             return nil
         }
     }

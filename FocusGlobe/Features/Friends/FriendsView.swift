@@ -14,8 +14,16 @@ struct FriendsView: View {
     @EnvironmentObject private var online: FocusOnlineModel
 
     @State private var lobbyRoom: FocusRoom?
-    @State private var showInvite = false
+    @State private var inviteFlow: InviteFlow?
     @State private var removalTarget: FocusFriend?
+
+    /// One item-driven sheet for the whole invite flow — the chooser first, then
+    /// whichever concrete invite the user picked (avoids nested-sheet races).
+    private struct InviteFlow: Identifiable {
+        enum Kind { case choice, privateFlight, shareApp }
+        let id = UUID()
+        let kind: Kind
+    }
 
     /// Rooms worth listing (lobby or in flight — not ended/closed).
     private var openRooms: [FocusRoom] {
@@ -71,10 +79,22 @@ struct FriendsView: View {
             .environmentObject(appModel)
             .environmentObject(online)
         }
-        .sheet(isPresented: $showInvite) {
-            InvitePeopleView(context: .app)
-                .environmentObject(appModel)
-                .environmentObject(online)
+        .sheet(item: $inviteFlow) { flow in
+            switch flow.kind {
+            case .choice:
+                InviteChoiceView(
+                    onCreateRoom: { inviteFlow = InviteFlow(kind: .privateFlight) },
+                    onShareApp: { inviteFlow = InviteFlow(kind: .shareApp) })
+                    .environmentObject(appModel)
+            case .privateFlight:
+                InvitePeopleView(context: .preFlight(skyID: appModel.selectedSky.id))
+                    .environmentObject(appModel)
+                    .environmentObject(online)
+            case .shareApp:
+                InvitePeopleView(context: .app)
+                    .environmentObject(appModel)
+                    .environmentObject(online)
+            }
         }
         .confirmationDialog("Remove from Crew?", isPresented: Binding(
             get: { removalTarget != nil }, set: { if !$0 { removalTarget = nil } }
@@ -319,7 +339,7 @@ struct FriendsView: View {
             }
             Button {
                 appModel.tapFeedback()
-                showInvite = true
+                inviteFlow = InviteFlow(kind: .choice)
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "square.and.arrow.up")

@@ -43,11 +43,21 @@ struct InvitePeopleView: View {
             VStack(spacing: AppSpacing.md) {
                 header
                 if loading {
-                    ProgressView().tint(AppColors.gold).padding(.vertical, AppSpacing.xl)
+                    ProgressView().tint(AppColors.gold)
+                        .padding(.vertical, AppSpacing.xl)
+                    Text("Creating your private room…")
+                        .font(AppTypography.caption)
+                        .foregroundStyle(AppColors.textTertiary)
                 } else if isAppContext {
                     appMethods
-                } else if share == nil {
+                } else if !online.availability.isAvailable {
+                    // Genuinely offline / no iCloud account — the ONE authoritative
+                    // state (createRoom flips it on a real network failure).
                     OnlineUnavailableView(availability: online.availability)
+                } else if share == nil {
+                    // Account is available but the room/CKShare didn't get created
+                    // (a transient CloudKit error) — this is NOT "offline".
+                    roomErrorCard
                 } else {
                     roomMethods
                 }
@@ -116,6 +126,35 @@ struct InvitePeopleView: View {
                 .foregroundStyle(AppColors.textSecondary)
                 .multilineTextAlignment(.center)
         }
+    }
+
+    // A transient room-creation failure while the account IS available — offer
+    // a retry, never a misleading "You're offline".
+    private var roomErrorCard: some View {
+        VStack(spacing: AppSpacing.sm) {
+            Image(systemName: "exclamationmark.icloud")
+                .font(.system(size: 38, weight: .semibold))
+                .foregroundStyle(AppColors.textTertiary)
+                .padding(.bottom, 2)
+            Text("Couldn't create your private room")
+                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .foregroundStyle(AppColors.textPrimary)
+                .multilineTextAlignment(.center)
+            Text("Check your connection and try again.")
+                .font(AppTypography.caption)
+                .foregroundStyle(AppColors.textSecondary)
+                .multilineTextAlignment(.center)
+            Button("Try again") {
+                appModel.tapFeedback()
+                loading = true
+                Task { await prepare() }
+            }
+            .font(.system(size: 15, weight: .bold, design: .rounded))
+            .foregroundStyle(AppColors.gold)
+            .padding(.top, 4)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(AppSpacing.lg)
     }
 
     // MARK: Private-room delivery (explicit CKShare participants only)
@@ -189,6 +228,16 @@ struct InvitePeopleView: View {
     }
 
     private func methodRow(icon: String, title: String, subtitle: String) -> some View {
+        InviteMethodRow(icon: icon, title: title, subtitle: subtitle)
+    }
+}
+
+/// A reusable invite/method row (image chip + title + subtitle + chevron).
+struct InviteMethodRow: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    var body: some View {
         HStack(spacing: AppSpacing.sm) {
             Image(systemName: icon)
                 .font(.system(size: 17, weight: .bold))
@@ -211,5 +260,53 @@ struct InvitePeopleView: View {
         .padding(.horizontal, AppSpacing.md)
         .padding(.vertical, 12)
         .glassBackground(cornerRadius: 16, tintOpacity: 0.2, shadowRadius: 6, shadowY: 3)
+    }
+}
+
+/// The two-way invite chooser: a REAL private flight (creates a room + CKShare)
+/// vs. simply recommending the app (marketing link, no room). Keeps the two
+/// intents unambiguous so a marketing share is never mistaken for a Crew invite.
+struct InviteChoiceView: View {
+    var onCreateRoom: () -> Void
+    var onShareApp: () -> Void
+    @EnvironmentObject private var appModel: AppModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack {
+            AppBackground().ignoresSafeArea()
+            VStack(spacing: AppSpacing.md) {
+                VStack(spacing: 6) {
+                    Capsule().fill(.white.opacity(0.2)).frame(width: 40, height: 4).padding(.top, 10)
+                    Text("Invite someone")
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundStyle(AppColors.textPrimary)
+                }
+                Button {
+                    appModel.tapFeedback()
+                    onCreateRoom()
+                } label: {
+                    InviteMethodRow(icon: "airplane.departure", title: "Create Private Flight",
+                                    subtitle: "Invite someone to focus together now.")
+                }
+                .buttonStyle(SoftPressStyle())
+
+                Button {
+                    appModel.tapFeedback()
+                    onShareApp()
+                } label: {
+                    InviteMethodRow(icon: "square.and.arrow.up", title: "Share FocusGlobe",
+                                    subtitle: "Recommend the app to someone.")
+                }
+                .buttonStyle(SoftPressStyle())
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, AppSpacing.screen)
+            .frame(maxWidth: 460)
+            .frame(maxWidth: .infinity)
+        }
+        .presentationDetents([.fraction(0.4)])
+        .presentationDragIndicator(.visible)
     }
 }

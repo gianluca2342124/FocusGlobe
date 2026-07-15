@@ -70,7 +70,18 @@ struct FlightModeSelectorView: View {
         }
         .onAppear {
             if !onlineAvailable && selection.isOnline { selection = .solo }
-            Task { await online.refreshAvailability() }
+            Task {
+                await online.refreshAvailability()
+                // If a private room is already pending, learn who has really
+                // accepted so the invite row can say "N friends joined".
+                if let pending = online.pendingRoom { await online.loadParticipants(of: pending) }
+            }
+        }
+        // If availability drops (e.g. a failed op flipped the authoritative
+        // state to offline), fall the selection back to Solo so the card and
+        // the invite sheet can never disagree.
+        .onChange(of: online.availability) { _, now in
+            if !now.isAvailable && selection.isOnline { selection = .solo }
         }
         .sheet(isPresented: $showInvite) {
             InvitePeopleView(context: .preFlight(skyID: appModel.selectedSky.id))
@@ -102,17 +113,27 @@ struct FlightModeSelectorView: View {
         onContinue(mode)
     }
 
+    /// Honest state — never claims invitations were sent just because a sheet
+    /// opened: no room yet → "Create a Private Flight"; a CKShare exists →
+    /// "Private room ready — invite friends"; real acceptances → "N friends
+    /// joined".
+    private var inviteRowTitle: String {
+        guard online.pendingRoom != nil else { return "Create a Private Flight" }
+        let joined = online.activeRoomParticipants.filter { $0.publicID != online.profile?.publicID }.count
+        if joined > 0 { return "\(joined) friend\(joined == 1 ? "" : "s") joined" }
+        return "Private room ready — invite friends"
+    }
+
     private var inviteRow: some View {
         Button {
             appModel.tapFeedback()
             showInvite = true
         } label: {
             HStack(spacing: 8) {
-                Image(systemName: online.pendingRoom == nil ? "envelope.badge.person.crop" : "checkmark.circle.fill")
+                Image(systemName: online.pendingRoom == nil ? "person.badge.plus" : "checkmark.circle.fill")
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(AppColors.gold)
-                Text(online.pendingRoom == nil ? "Invite Friends to this flight"
-                                               : "Private room ready — invites sent from here")
+                Text(inviteRowTitle)
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .foregroundStyle(AppColors.textPrimary)
                 Spacer()
