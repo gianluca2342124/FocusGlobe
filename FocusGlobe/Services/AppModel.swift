@@ -1058,8 +1058,18 @@ final class AppModel: ObservableObject {
 
     /// Double-miles rewarded ad (Landing). Pro users never reach this (the button
     /// is hidden for Pro); the service also guards against showing them an ad.
+    /// Journey-scoped: true once this journey's single post-flight ad
+    /// opportunity has been used — either a watched Double-Coins rewarded ad or
+    /// one journey-complete interstitial attempt. Prevents a rewarded ad and an
+    /// interstitial from stacking in one landing. Reset when the next journey
+    /// begins (see `FocusSessionViewModel.startIfNeeded`). Never set for Pro or
+    /// previews.
+    var postFlightAdSatisfied = false
+
     func watchRewardedAd() async -> Bool {
-        await ads.showRewarded(.doubleMiles, isPro: isPro)
+        let earned = await ads.showRewarded(.doubleMiles, isPro: isPro)
+        if earned { postFlightAdSatisfied = true }
+        return earned
     }
 
     /// Daily Mission Boost rewarded ad. Returns whether the boost was granted.

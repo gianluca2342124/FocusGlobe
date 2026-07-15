@@ -35,9 +35,9 @@ struct FriendsView: View {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
                     ScreenHeader(title: "Friends", subtitle: "Focus feels better together", showsBack: false)
                     if online.availability != .available {
-                        OnlineUnavailableView(availability: online.availability)
-                            .glassBackground(cornerRadius: AppSpacing.cardRadius, tintOpacity: 0.2,
-                                             shadowRadius: 10, shadowY: 5)
+                        // One compact banner near the top — the unavailable
+                        // state never dominates the whole page.
+                        OnlineUnavailableView(availability: online.availability, compact: true)
                     }
                     if !hasAnySocialContent { emptyState }
                     if !online.incomingRequests.isEmpty || !online.outgoingRequests.isEmpty {

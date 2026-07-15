@@ -2,8 +2,9 @@ import SwiftUI
 
 /// The FIRST pre-flight ritual step: Online vs Solo, as two large premium
 /// cards. One tap selects; Continue proceeds into the existing ritual. If
-/// CloudKit is unavailable the Online card visibly disables itself and Solo
-/// stays instantly available — this choice never lives in Settings.
+/// CloudKit is unavailable the Online card stays legible but shows an
+/// "Unavailable" badge and Solo stays instantly available — this choice never
+/// lives in Settings, and there is never a "Sign in with Apple" prompt.
 struct FlightModeSelectorView: View {
     @EnvironmentObject private var online: FocusOnlineModel
     @EnvironmentObject private var appModel: AppModel
@@ -17,26 +18,38 @@ struct FlightModeSelectorView: View {
     private var onlineAvailable: Bool { online.availability.isAvailable }
 
     var body: some View {
-        VStack(spacing: AppSpacing.md) {
-            card(mode: .publicSky,
-                 title: "Online Flight",
-                 subtitle: "Focus alongside real pilots and invite your Crew.",
-                 icon: "person.3.fill",
-                 benefits: ["See active pilots", "Invite friends", "Private rooms", "Friend coin bonus"],
-                 disabled: !onlineAvailable)
-            card(mode: .solo,
-                 title: "Solo Flight",
-                 subtitle: "A private flight that works anywhere.",
-                 icon: "person.fill",
-                 benefits: ["No internet required", "No public presence", "Completely private"],
-                 disabled: false)
+        VStack(spacing: AppSpacing.lg) {
+            VStack(spacing: 6) {
+                Text("Choose your flight")
+                    .font(.system(size: 27, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                Text("You can change this any time you fly.")
+                    .font(AppTypography.callout)
+                    .foregroundStyle(.white.opacity(0.72))
+            }
+            .multilineTextAlignment(.center)
+
+            VStack(spacing: AppSpacing.md) {
+                card(mode: .publicSky,
+                     title: "Online Flight",
+                     subtitle: "Focus alongside real pilots and invite your Crew.",
+                     icon: "person.3.fill",
+                     benefits: ["See active pilots", "Invite friends", "Private rooms", "Friend coin bonus"],
+                     disabled: !onlineAvailable)
+                card(mode: .solo,
+                     title: "Solo Flight",
+                     subtitle: "A private flight that works anywhere.",
+                     icon: "person.fill",
+                     benefits: ["No internet required", "No public presence", "Completely private"],
+                     disabled: false)
+            }
 
             if !onlineAvailable {
                 Text(online.availability == .noAccount
-                     ? "Online flights require an active iCloud account. You can continue flying Solo without an internet connection."
-                     : online.availability.userMessage)
+                     ? "Online Flights need an active iCloud account. Sign in to iCloud in your device settings to fly with other pilots — Solo Flights always work offline."
+                     : "You're offline right now. Solo Flights always work offline.")
                     .font(AppTypography.caption)
-                    .foregroundStyle(AppColors.textTertiary)
+                    .foregroundStyle(.white.opacity(0.6))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, AppSpacing.md)
             }
@@ -64,17 +77,17 @@ struct FlightModeSelectorView: View {
                 .environmentObject(online).environmentObject(appModel)
         }
         .alert("Fly in Public Skies?", isPresented: $showDisclosure) {
-            Button("Appear online") {
+            // Consent IS the enable: continuing online turns on Appear in Public
+            // Skies (the user can switch it off later in Settings). Cancelling
+            // leaves them private and does not record consent.
+            Button("Continue Online") {
                 OnlineCache.disclosureSeen = true
                 online.setDiscoverable(true)
                 finish(effectiveMode)
             }
-            Button("Not now", role: .cancel) {
-                OnlineCache.disclosureSeen = true
-                finish(effectiveMode)
-            }
+            Button("Not now", role: .cancel) {}
         } message: {
-            Text("Let other pilots see your balloon while you focus online. Only your anonymous alias and balloon are visible — never your name, contacts or location.")
+            Text("Other pilots will see your anonymous alias, your balloon skin, your Sky and roughly how long you're focusing — plus an optional country flag. Your name, email and personal goals are never shared.")
         }
     }
 
@@ -108,7 +121,7 @@ struct FlightModeSelectorView: View {
                     .foregroundStyle(AppColors.textTertiary)
             }
             .padding(.horizontal, AppSpacing.md)
-            .padding(.vertical, 12)
+            .padding(.vertical, 14)
             .glassBackground(cornerRadius: 16, tintOpacity: 0.2, shadowRadius: 6, shadowY: 3)
         }
         .buttonStyle(SoftPressStyle())
@@ -117,26 +130,35 @@ struct FlightModeSelectorView: View {
     private func card(mode: OnlineFlightMode, title: String, subtitle: String,
                       icon: String, benefits: [String], disabled: Bool) -> some View {
         let selected = effectiveMode == mode || (mode == .publicSky && selection.isOnline)
+        // Disabled online stays fully legible: only the icon/benefit text mute,
+        // never the whole card, and an "Unavailable" badge explains it.
+        let titleColor: Color = disabled ? .white.opacity(0.82) : .white
+        let subtitleColor = disabled ? AppColors.textTertiary : AppColors.textSecondary
         return Button {
             guard !disabled else { return }
             appModel.tapFeedback()
             withAnimation(.snappy(duration: 0.2)) { selection = mode }
         } label: {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 12) {
                     Image(systemName: icon)
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundStyle(selected ? AppColors.gold : AppColors.textSecondary)
+                        .font(.system(size: 26, weight: .bold))
+                        .foregroundStyle(selected ? AppColors.gold : (disabled ? AppColors.textTertiary : AppColors.textSecondary))
+                        .frame(width: 34)
                     Text(title)
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundStyle(AppColors.textPrimary)
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundStyle(titleColor)
                     Spacer()
-                    if mode == .publicSky && !disabled {
-                        HStack(spacing: 5) {
-                            Circle().fill(Color(hex: 0x4ADE80)).frame(width: 7, height: 7)
-                            Text("Live")
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
-                                .foregroundStyle(AppColors.textSecondary)
+                    if mode == .publicSky {
+                        if disabled {
+                            statusBadge("Unavailable", tint: AppColors.textTertiary, filled: false)
+                        } else {
+                            HStack(spacing: 5) {
+                                Circle().fill(Color(hex: 0x4ADE80)).frame(width: 7, height: 7)
+                                Text("Live")
+                                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                                    .foregroundStyle(AppColors.textSecondary)
+                            }
                         }
                     }
                     Image(systemName: selected ? "checkmark.circle.fill" : "circle")
@@ -145,22 +167,31 @@ struct FlightModeSelectorView: View {
                 }
                 Text(subtitle)
                     .font(AppTypography.callout)
-                    .foregroundStyle(AppColors.textSecondary)
+                    .foregroundStyle(subtitleColor)
                 Text(benefits.joined(separator: "  ·  "))
                     .font(AppTypography.caption)
-                    .foregroundStyle(AppColors.textTertiary)
+                    .foregroundStyle(disabled ? AppColors.textTertiary.opacity(0.8) : AppColors.textTertiary)
                     .lineLimit(2)
             }
-            .padding(AppSpacing.md)
+            .padding(AppSpacing.lg)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .glassBackground(cornerRadius: AppSpacing.cardRadius, tintOpacity: 0.22,
+            .frame(minHeight: 118)
+            .glassBackground(cornerRadius: AppSpacing.cardRadius,
+                             tintOpacity: disabled ? 0.16 : 0.22,
                              shadowRadius: 10, shadowY: 5)
             .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
                 .strokeBorder(selected ? AppColors.gold.opacity(0.75) : Color.white.opacity(0.1),
                               lineWidth: selected ? 1.6 : 1))
-            .opacity(disabled ? 0.45 : 1)
         }
         .buttonStyle(SoftPressStyle(scale: 0.99))
         .disabled(disabled)
+    }
+
+    private func statusBadge(_ text: String, tint: Color, filled: Bool) -> some View {
+        Text(text)
+            .font(.system(size: 10.5, weight: .bold, design: .rounded))
+            .foregroundStyle(tint)
+            .padding(.horizontal, 8).padding(.vertical, 4)
+            .background(Capsule().fill(tint.opacity(0.14)))
     }
 }

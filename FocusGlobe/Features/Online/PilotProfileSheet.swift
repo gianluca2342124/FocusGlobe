@@ -10,6 +10,11 @@ struct PilotProfileSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var note: String?
     @State private var busy = false
+    @State private var showReport = false
+
+    /// Closed set of report reasons — no free text, no personal data.
+    private let reportReasons = ["Inappropriate alias", "Harassment or bullying",
+                                 "Spam", "Something else"]
 
     var body: some View {
         ZStack {
@@ -52,13 +57,20 @@ struct PilotProfileSheet: View {
                             }
                         }
                     }
-                    Button("Hide this pilot") {
-                        appModel.tapFeedback()
-                        appModel.hidePilot(pilot.id)
-                        dismiss()
+                    HStack(spacing: AppSpacing.lg) {
+                        Button("Hide this pilot") {
+                            appModel.tapFeedback()
+                            appModel.hidePilot(pilot.id)
+                            dismiss()
+                        }
+                        .foregroundStyle(AppColors.textTertiary)
+                        Button("Report") {
+                            appModel.tapFeedback()
+                            showReport = true
+                        }
+                        .foregroundStyle(AppColors.danger.opacity(0.85))
                     }
                     .font(AppTypography.callout)
-                    .foregroundStyle(AppColors.textTertiary)
                 }
                 .padding(.horizontal, AppSpacing.screen)
                 Spacer(minLength: 0)
@@ -68,6 +80,20 @@ struct PilotProfileSheet: View {
         }
         .presentationDetents([.fraction(0.55)])
         .presentationDragIndicator(.hidden)
+        .confirmationDialog("Report this pilot?", isPresented: $showReport, titleVisibility: .visible) {
+            ForEach(reportReasons, id: \.self) { reason in
+                Button(reason, role: .destructive) {
+                    appModel.tapFeedback()
+                    Task { @MainActor in
+                        let err = await online.reportPilot(pilot, reason: reason)
+                        note = err ?? "Thanks — our team will review this pilot."
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Reports are anonymous and reviewed by our team. Only this pilot's anonymous ID and your chosen reason are sent — never any personal details.")
+        }
     }
 
     private func label(_ text: String, icon: String) -> some View {

@@ -401,12 +401,16 @@ struct OnboardingView: View {
         )
     }
 
-    /// The shield hero — bundled `protectyourflight` (or `OnboardingHero_FocusShield`)
-    /// if present, else the procedural shield glyph.
+    /// The shield hero — the real `focusshield` art (transparent PNG, soft
+    /// natural glow), falling back to older bundled names, else the glyph.
     @ViewBuilder private var shieldHero: some View {
         #if canImport(UIKit)
-        if let ui = UIImage(named: "protectyourflight") ?? UIImage(named: "OnboardingHero_FocusShield") {
-            Image(uiImage: ui).resizable().scaledToFit().frame(maxHeight: 150)
+        if let ui = UIImage(named: "focusshield")
+            ?? UIImage(named: "protectyourflight")
+            ?? UIImage(named: "OnboardingHero_FocusShield") {
+            Image(uiImage: ui).resizable().scaledToFit()
+                .frame(maxHeight: 190)
+                .shadow(color: AppColors.gold.opacity(0.35), radius: 24)
         } else {
             shieldGlyph
         }
@@ -529,13 +533,15 @@ struct OnboardingView: View {
             title: "A little favour… ❤️",
             subtitle: "FocusGlobe was built on a simple belief: focus should feel calm, beautiful, and worth returning to. Phones usually pull us away — FocusGlobe tries to turn yours into a tiny journey instead. If it helps you, a review genuinely helps a tiny team keep building.") {
             VStack(spacing: AppSpacing.md) {
+                // Reviews first (social proof), then the large emotional hero
+                // below them, then the review/continue actions in the footer.
+                reviewCarousel
                 favourHero
                 Text("— the FocusGlobe team")
                     .font(AppTypography.serifCaption)
                     .italic()
                     .foregroundStyle(.white.opacity(0.55))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                reviewCarousel
+                    .frame(maxWidth: .infinity, alignment: .center)
             }
         } footer: {
             VStack(spacing: AppSpacing.sm) {
@@ -563,7 +569,9 @@ struct OnboardingView: View {
     @ViewBuilder private var favourHero: some View {
         #if canImport(UIKit)
         if let ui = UIImage(named: "alittlefavour") {
-            Image(uiImage: ui).resizable().scaledToFit().frame(maxHeight: 180)
+            // A large, warm emotional hero sitting below the reviews.
+            Image(uiImage: ui).resizable().scaledToFit()
+                .frame(maxHeight: Layout.pad(260, 320))
         } else {
             Image(systemName: "heart.fill")
                 .font(.system(size: 64, weight: .bold))
@@ -634,8 +642,9 @@ struct OnboardingView: View {
                                          center: .center, startRadius: 4, endRadius: 150))
                 .frame(width: 270, height: 200)
             #if canImport(UIKit)
-            // The premium King balloon via the model mapping (no PaywallBalloonHero).
-            if let ui = UIImage(named: "PremiumHero_SkiesBundle") ?? UIImage(named: BalloonSkin.skin(id: "king").assetName) {
+            // The golden King balloon (BalloonSkin_King1) via the model mapping
+            // — the premium hero. No PremiumHero_SkiesBundle, no square behind.
+            if let ui = UIImage(named: BalloonSkin.skin(id: "king").assetName) {
                 Image(uiImage: ui).resizable().scaledToFit().frame(maxHeight: 200)
             } else {
                 proceduralHero

@@ -61,6 +61,10 @@ struct FocusSessionView: View {
     @State private var selectedRealPilot: OnlinePilot? = nil
     @EnvironmentObject private var online: FocusOnlineModel
 
+    /// True while this is an Online (public or private) flight. A Solo flight
+    /// renders no pilots, publishes nothing, and hides every social control.
+    private var isOnlineFlight: Bool { online.flightMode.isOnline }
+
     /// Real pilots for this flight (hidden ones filtered locally). Decorative
     /// ambient pilots fill the remaining visual capacity inside the layer.
     private var visibleRealPilots: [OnlinePilot] {
@@ -128,12 +132,16 @@ struct FocusSessionView: View {
                                              animated: !reduceMotion,
                                              focusSky: matchedSky)
                     .transition(.opacity)
-                AmbientPilotsLayer(skyID: matchedSky?.id ?? "classic",
-                                   elapsed: { displayElapsed(at: Date()) },
-                                   animated: !reduceMotion,
-                                   realPilots: visibleRealPilots,
-                                   onSelectReal: { selectedRealPilot = $0 })
-                    .transition(.opacity)
+                // A Solo flight is truly solo: NO other balloons (real or
+                // decorative). Online (public/private) keeps the living Sky.
+                if isOnlineFlight {
+                    AmbientPilotsLayer(skyID: matchedSky?.id ?? "classic",
+                                       elapsed: { displayElapsed(at: Date()) },
+                                       animated: !reduceMotion,
+                                       realPilots: visibleRealPilots,
+                                       onSelectReal: { selectedRealPilot = $0 })
+                        .transition(.opacity)
+                }
                 balloon
                     .transition(.opacity)
             case .cabin:
@@ -141,7 +149,7 @@ struct FocusSessionView: View {
                           seed: worldSeed,
                           animated: !reduceMotion,
                           focusSky: matchedSky,
-                          showPilots: true,
+                          showPilots: isOnlineFlight,
                           realPilots: visibleRealPilots,
                           equippedItemIDs: appModel.profile.equippedCabinItemIDs ?? [])
                     .transition(.opacity)
@@ -207,12 +215,17 @@ struct FocusSessionView: View {
                             titleVisibility: .visible) {
             Button("Leave", role: .destructive) {
                 vm.confirmCancel()
-                // A terminated real flight (given up / Hold-to-leave) shows one
-                // closable interstitial for non-Pro users, then returns Home —
-                // the same path completed flights use from the Landing screen.
-                // AdService no-ops for Pro or when no ad is loaded.
-                appModel.ads.presentJourneyCompleteInterstitial(isPro: appModel.isPro) {
+                // A terminated real flight (given up / Hold-to-leave) uses the
+                // journey's single post-flight ad opportunity: one closable
+                // interstitial for non-Pro users, then Home. AdService no-ops
+                // for Pro or when no ad is loaded.
+                if appModel.postFlightAdSatisfied {
                     router.finishToHome()
+                } else {
+                    appModel.postFlightAdSatisfied = true
+                    appModel.ads.presentJourneyCompleteInterstitial(isPro: appModel.isPro) {
+                        router.finishToHome()
+                    }
                 }
             }
             Button("Keep flying", role: .cancel) { vm.dismissCancel() }
@@ -275,8 +288,10 @@ struct FocusSessionView: View {
             // to ease the balloon from close-and-low up to its cruising size and
             // centre. Then an endless gentle breathe (sway + bob) and slow drift.
             withAnimation(.easeInOut(duration: 3.2)) { takeoffLift = 1 }
-            withAnimation(.easeInOut(duration: 4.2).repeatForever(autoreverses: true)) { balloonSway = 5 }
-            withAnimation(.easeInOut(duration: 3.1).repeatForever(autoreverses: true)) { balloonBob = -7 }
+            // Calm 4–7s idle rhythm: a noticeable ~10pt vertical bob with a very
+            // subtle sway/rotation and slow lateral drift — a breath, not a shake.
+            withAnimation(.easeInOut(duration: 5.0).repeatForever(autoreverses: true)) { balloonSway = 5 }
+            withAnimation(.easeInOut(duration: 4.4).repeatForever(autoreverses: true)) { balloonBob = -10 }
             withAnimation(.easeInOut(duration: 7.5).repeatForever(autoreverses: true)) { balloonDrift = 6 }
         }
     }
@@ -553,6 +568,7 @@ struct FocusSessionView: View {
             FlightControlsPanel(
                 muted: vm.isAudioMuted,
                 isCabin: viewMode == .cabin,
+                isOnline: isOnlineFlight,
                 onToggleMute: {
                     vm.toggleMute()
                     // Every panel action closes the panel immediately (Phase 9).
@@ -659,6 +675,9 @@ private struct HoldToGiveUpButton: View {
 private struct FlightControlsPanel: View {
     let muted: Bool
     let isCabin: Bool
+    /// Online (public/private) flights show the invite control; a Solo flight
+    /// omits it entirely.
+    let isOnline: Bool
     let onToggleMute: () -> Void
     let onToggleCabin: () -> Void
     let onInvite: () -> Void
@@ -696,7 +715,9 @@ private struct FlightControlsPanel: View {
             row(icon: "eye.slash", title: "Clean mode",
                 subtitle: "Hide controls, keep a tiny timer", action: onCleanMode)
 
-            inviteButton
+            // Invite lives only on Online flights — a Solo flight has no one to
+            // invite and no social surface, so the control is omitted entirely.
+            if isOnline { inviteButton }
         }
         .padding(AppSpacing.md)
         .frame(width: Layout.pad(270, 300))

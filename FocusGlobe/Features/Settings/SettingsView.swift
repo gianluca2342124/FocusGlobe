@@ -11,7 +11,7 @@ struct SettingsView: View {
     @State private var showAliasEditor = false
     @State private var aliasDraft = ""
     @State private var aliasError: String?
-    @State private var showDeleteOnlineConfirm = false
+    @State private var showManageOnlineData = false
     #if canImport(RevenueCatUI)
     @State private var showCustomerCenter = false
     #endif
@@ -35,7 +35,7 @@ struct SettingsView: View {
                     onlineSection
                     FocusShieldSettingsSection(service: appModel.focusShield)
                     ultraSection
-                    generalSection
+                    privacyDataSection
                     #if DEBUG
                     debugSection
                     #endif
@@ -197,17 +197,6 @@ struct SettingsView: View {
                 }
                 .buttonStyle(SoftPressStyle())
                 .disabled(online.profile == nil)
-                RowDivider()
-                Button {
-                    appModel.tapFeedback()
-                    showDeleteOnlineConfirm = true
-                } label: {
-                    SettingsRow(systemImage: "icloud.slash.fill", title: "Delete Online Data",
-                                subtitle: "Remove your public profile, presence and rooms",
-                                tint: AppColors.danger,
-                                trailing: AnyView(EmptyView()))
-                }
-                .buttonStyle(SoftPressStyle())
             }
         }
         .alert("Change alias", isPresented: $showAliasEditor) {
@@ -226,22 +215,13 @@ struct SettingsView: View {
         } message: {
             Text(aliasError ?? "")
         }
-        .confirmationDialog("Delete Online Data?",
-                            isPresented: $showDeleteOnlineConfirm,
-                            titleVisibility: .visible) {
-            Button("Delete online data", role: .destructive) {
-                Task { await online.deleteOnlineData() }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Removes your public profile, live presence, Crew connections and rooms from iCloud. Your local flights, coins and streak stay on this device.")
-        }
     }
 
-    // General — privacy statement + the legal links (real hosted pages, same
-    // `LegalLinks` used by the paywall footer).
-    private var generalSection: some View {
-        SettingsCard(title: "General") {
+    // Privacy & Data — the privacy statement, the legal links (real hosted
+    // pages, same `LegalLinks` used by the paywall footer), and the route to
+    // manage/delete FocusGlobe Online data.
+    private var privacyDataSection: some View {
+        SettingsCard(title: "Privacy & Data") {
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
                 HStack(spacing: AppSpacing.sm) {
                     Image(systemName: "lock.shield")
@@ -253,6 +233,19 @@ struct SettingsView: View {
                     Spacer(minLength: 0)
                 }
                 RowDivider()
+                Button {
+                    appModel.tapFeedback()
+                    showManageOnlineData = true
+                } label: {
+                    SettingsRow(systemImage: "icloud.and.arrow.down", title: "Manage Online Data",
+                                subtitle: "Review or delete your FocusGlobe Online data",
+                                tint: AppColors.brand,
+                                trailing: AnyView(Image(systemName: "chevron.right")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(AppColors.textTertiary)))
+                }
+                .buttonStyle(SoftPressStyle())
+                RowDivider()
                 Link(destination: LegalLinks.privacy) {
                     SettingsRow(systemImage: "hand.raised.fill", title: "Privacy Policy",
                                 tint: AppColors.brand, trailing: AnyView(legalChevron))
@@ -263,6 +256,11 @@ struct SettingsView: View {
                                 tint: AppColors.brand, trailing: AnyView(legalChevron))
                 }
             }
+        }
+        .sheet(isPresented: $showManageOnlineData) {
+            ManageOnlineDataView()
+                .environmentObject(appModel)
+                .environmentObject(online)
         }
     }
 
@@ -340,6 +338,101 @@ struct SettingsView: View {
             get: { appModel.settings[keyPath: keyPath] },
             set: { appModel.tapFeedback(); appModel.settings[keyPath: keyPath] = $0 }
         )
+    }
+}
+
+// MARK: - Manage Online Data
+
+/// The pushed detail behind Settings → Privacy & Data → Manage Online Data.
+/// Lists exactly what leaves iCloud, then offers a destructive confirmation.
+/// Local streak, Store ownership, purchases and offline history are untouched.
+private struct ManageOnlineDataView: View {
+    @EnvironmentObject private var appModel: AppModel
+    @EnvironmentObject private var online: FocusOnlineModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var confirming = false
+    @State private var working = false
+
+    private let deletes = [
+        ("person.crop.circle", "Your public profile & anonymous alias"),
+        ("dot.radiowaves.left.and.right", "Your current live presence"),
+        ("person.2", "Crew requests, responses & connections"),
+        ("airplane", "Rooms you own or have joined"),
+        ("internaldrive", "Cached online data on this device"),
+    ]
+
+    var body: some View {
+        ZStack {
+            AppBackground().ignoresSafeArea()
+            ScrollView {
+                VStack(alignment: .leading, spacing: AppSpacing.lg) {
+                    ScreenHeader(title: "Manage Online Data",
+                                 subtitle: "Delete your FocusGlobe Online data", showsBack: false)
+
+                    AppGlassCard(padding: AppSpacing.md) {
+                        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                            Text("Deleting removes the following from iCloud:")
+                                .font(AppTypography.callout)
+                                .foregroundStyle(AppColors.textSecondary)
+                            ForEach(deletes, id: \.1) { item in
+                                HStack(spacing: AppSpacing.sm) {
+                                    Image(systemName: item.0)
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(AppColors.danger)
+                                        .frame(width: 26)
+                                    Text(item.1)
+                                        .font(AppTypography.callout)
+                                        .foregroundStyle(AppColors.textPrimary)
+                                    Spacer(minLength: 0)
+                                }
+                            }
+                        }
+                    }
+
+                    Text("Your local flights, coins, streak, Store items and purchases stay on this device.")
+                        .font(AppTypography.caption)
+                        .foregroundStyle(AppColors.textTertiary)
+
+                    Button(role: .destructive) {
+                        appModel.tapFeedback()
+                        confirming = true
+                    } label: {
+                        HStack(spacing: 8) {
+                            if working { ProgressView().tint(.white) }
+                            Text(working ? "Deleting…" : "Delete Online Data")
+                                .font(AppTypography.headline)
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity).frame(height: 52)
+                        .background(RoundedRectangle(cornerRadius: AppSpacing.pillRadius, style: .continuous)
+                            .fill(AppColors.danger))
+                    }
+                    .buttonStyle(SoftPressStyle())
+                    .disabled(working)
+
+                    Button("Cancel") { dismiss() }
+                        .font(AppTypography.callout)
+                        .foregroundStyle(AppColors.textSecondary)
+                        .frame(maxWidth: .infinity)
+                }
+                .padding(AppSpacing.screen)
+                .padding(.bottom, AppSpacing.xxl)
+                .settingsMaxWidth()
+            }
+        }
+        .confirmationDialog("Delete Online Data?", isPresented: $confirming, titleVisibility: .visible) {
+            Button("Delete online data", role: .destructive) {
+                working = true
+                Task {
+                    await online.deleteOnlineData()
+                    working = false
+                    dismiss()
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This can't be undone. Your local flights, coins and streak are kept.")
+        }
     }
 }
 

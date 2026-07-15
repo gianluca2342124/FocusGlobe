@@ -169,14 +169,20 @@ struct FlightSetupView: View {
                 ZStack {
                     switch step {
                     case .mode:
-                        ScrollView(showsIndicators: false) {
-                            FlightModeSelectorView { _ in
-                                appModel.uiSound.play(.transition)
-                                withAnimation(AppMotion.soft) { step = .duration }
+                        // The whole composition is vertically centred in the
+                        // usable area (clamped width on iPad/Mac); it scrolls
+                        // only if it can't fit on a very short screen.
+                        GeometryReader { proxy in
+                            ScrollView(showsIndicators: false) {
+                                FlightModeSelectorView { _ in
+                                    appModel.uiSound.play(.transition)
+                                    withAnimation(AppMotion.soft) { step = .duration }
+                                }
+                                .padding(.horizontal, AppSpacing.screen)
+                                .frame(maxWidth: 520)
+                                .frame(maxWidth: .infinity)
+                                .frame(minHeight: proxy.size.height, alignment: .center)
                             }
-                            .padding(.horizontal, AppSpacing.screen)
-                            .padding(.top, AppSpacing.md)
-                            .padding(.bottom, AppSpacing.xl)
                         }
                         .transition(stepTransition)
                     case .duration:
@@ -243,7 +249,7 @@ struct FlightSetupView: View {
 
     private var stepTitle: String {
         switch step {
-        case .mode:     return "Choose your flight"
+        case .mode:     return ""   // the selector owns its own centred title
         case .duration: return "Choose your time"
         case .pack:     return "Pack your focus"
         case .ticket:   return "Check in"
@@ -943,6 +949,7 @@ struct FlightModeSheet: View {
     @Binding var blockApps: Bool
     @EnvironmentObject private var appModel: AppModel
     @Environment(\.dismiss) private var dismiss
+    @State private var showShieldPicker = false
 
     var body: some View {
         ZStack {
@@ -1005,16 +1012,38 @@ struct FlightModeSheet: View {
         .buttonStyle(SoftPressStyle(scale: 0.99))
     }
 
-    // The apps in scope. Focus Shield's app picker is parked, so this states the
-    // honest default scope rather than presenting a non-functional picker.
+    // The apps in scope — opens Apple's real FamilyActivityPicker (via the
+    // shared FocusShield configurator). No "coming soon".
     private var scopeRow: some View {
-        rowShell {
-            Image(systemName: "square.grid.2x2.fill")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.6)).frame(width: 26)
-            rowText("What's grounded", "All distracting apps · per-app picker coming soon")
-            Spacer()
+        Button {
+            appModel.tapFeedback()
+            showShieldPicker = true
+        } label: {
+            rowShell {
+                Image(systemName: "square.grid.2x2.fill")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.6)).frame(width: 26)
+                rowText("What's grounded", groundedSummary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.4))
+            }
         }
+        .buttonStyle(SoftPressStyle(scale: 0.99))
+        #if FOCUS_SHIELD_ENABLED
+        .sheet(isPresented: $showShieldPicker) {
+            FocusShieldPickerView(service: appModel.focusShield, context: .settings)
+                .environmentObject(appModel)
+        }
+        #endif
+    }
+
+    /// A real summary of the current blocked selection (never "coming soon").
+    private var groundedSummary: String {
+        guard appModel.focusShield.isSupported else { return "Available on iPhone and iPad" }
+        let n = appModel.focusShield.selectionCount
+        return n == 0 ? "Tap to choose apps" : "\(n) selected · tap to change"
     }
 
     private var soundscapeRow: some View {

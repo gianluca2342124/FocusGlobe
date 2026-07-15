@@ -471,6 +471,24 @@ final class FocusOnlineModel: ObservableObject {
         await refreshSocial()
     }
 
+    /// Report a pilot for moderation. Reporter-owned; anonymous data only.
+    /// Returns a friendly error message, or nil on success.
+    func reportPilot(_ pilot: OnlinePilot, reason: String) async -> String? {
+        guard availability.isAvailable else { return availability.userMessage }
+        await ensureIdentityAndProfile()
+        guard let me = profile else { return OnlineError.notSignedIn.userMessage }
+        do {
+            try await friendService.reportPilot(reporter: me, reportedPublicID: pilot.id,
+                                                reportedSessionID: pilot.sessionID, reason: reason)
+            return nil
+        } catch let error as OnlineError {
+            return error.userMessage
+        } catch {
+            lastErrorCategory = OnlineError.category(for: error)
+            return OnlineError.requestFailed.userMessage
+        }
+    }
+
     func requestStatus(for pilotID: String) -> String? {
         if crew.contains(where: { $0.publicID == pilotID }) { return "Crew member" }
         if outgoingRequests.contains(where: { $0.recipientPublicID == pilotID }) { return "Request sent" }

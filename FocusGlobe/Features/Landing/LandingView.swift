@@ -214,9 +214,13 @@ struct LandingView: View {
     private func finish() {
         appModel.haptics.rewardClaim()
         let go = { router.finishToHome() }
-        if didWatchRewarded {
+        // One post-flight ad opportunity per journey: if the Double-Coins
+        // rewarded ad was already watched (or any attempt was used), skip the
+        // interstitial so two ads never stack. Otherwise this is the attempt.
+        if appModel.postFlightAdSatisfied {
             go()
         } else {
+            appModel.postFlightAdSatisfied = true
             appModel.ads.presentJourneyCompleteInterstitial(isPro: appModel.isPro) { go() }
         }
     }

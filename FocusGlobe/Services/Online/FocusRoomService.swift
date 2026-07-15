@@ -244,22 +244,33 @@ actor FocusRoomService {
 
     private func lookupParticipant(email: String?, phone: String?) async throws -> CKShare.Participant {
         let container = self.container
-        return try await withCheckedThrowingContinuation { continuation in
-            let handler: (CKShare.Participant?, Error?) -> Void = { participant, error in
-                if let participant {
-                    continuation.resume(returning: participant)
-                } else {
-                    continuation.resume(throwing: error ?? OnlineError.requestFailed)
+        // Each completion handler is a fresh closure literal passed directly to
+        // the SDK's `@Sendable` parameter (no stored non-Sendable variable), so
+        // no "converting non-Sendable function value" data-race warning. Each
+        // continuation is resumed exactly once.
+        if let email, !email.isEmpty {
+            return try await withCheckedThrowingContinuation { continuation in
+                container.fetchShareParticipant(withEmailAddress: email) { participant, error in
+                    if let participant {
+                        continuation.resume(returning: participant)
+                    } else {
+                        continuation.resume(throwing: error ?? OnlineError.requestFailed)
+                    }
                 }
             }
-            if let email, !email.isEmpty {
-                container.fetchShareParticipant(withEmailAddress: email, completionHandler: handler)
-            } else if let phone, !phone.isEmpty {
-                container.fetchShareParticipant(withPhoneNumber: phone, completionHandler: handler)
-            } else {
-                continuation.resume(throwing: OnlineError.requestFailed)
+        }
+        if let phone, !phone.isEmpty {
+            return try await withCheckedThrowingContinuation { continuation in
+                container.fetchShareParticipant(withPhoneNumber: phone) { participant, error in
+                    if let participant {
+                        continuation.resume(returning: participant)
+                    } else {
+                        continuation.resume(throwing: error ?? OnlineError.requestFailed)
+                    }
+                }
             }
         }
+        throw OnlineError.requestFailed
     }
 
     /// The users who ACTUALLY accepted this room's invitation, identified by

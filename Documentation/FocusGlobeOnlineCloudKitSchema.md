@@ -26,7 +26,7 @@ below, or every query in the app will fail with "field not marked queryable".
 | Database | Record types | Who reads / writes |
 |---|---|---|
 | **Private** | `FocusIdentity`, `CrewMember`, `SkyUnlockCampaign`, pre-share `FocusRoom` + children (custom zone `FocusGlobeRoomsZone`) | Only the record owner |
-| **Public** | `PublicProfile`, `SkyPresence`, `FriendRequest`, `FriendResponse` | See ownership matrix (§3) |
+| **Public** | `PublicProfile`, `SkyPresence`, `FriendRequest`, `FriendResponse`, `PilotReport` | See ownership matrix (§3) |
 | **Shared** | Accepted `FocusRoom`, `RoomParticipant`, `RoomFlightSession`, plus the `cloudkit.share` (CKShare) records | Explicitly invited share participants only |
 
 Custom zone (private database): **`FocusGlobeRoomsZone`** — required because
@@ -82,6 +82,7 @@ Consequences:
 | `SkyPresence` | Public | The present user | Any authenticated user | Creator only | Creator only |
 | `FriendRequest` | Public | **Sender** (immutable) | Sender + recipient (world-readable, see §5) | **Nobody** (immutable by design) | **Sender only** (cancel / resolved cleanup) |
 | `FriendResponse` | Public | **Recipient** | Sender + recipient (world-readable, see §5) | Creator (recipient) only | Creator (recipient) only |
+| `PilotReport` | Public | **Reporter** | Creator only (NOT world-readable) | Creator (reporter) only | Creator (reporter) only |
 | CKShare + shared room records | Shared | Owner (share), participants (own child records) | Invited participants | Per CKShare participant permission | Owner (stop sharing); participant removes own records |
 
 **No user ever has to modify a record another user created.** The recipient
@@ -236,6 +237,21 @@ published here.
 | `response` | String — `accepted` / `declined` |
 | `createdAt` / `updatedAt` | Date/Time |
 
+#### `PilotReport` — record name = `report_<reporterPublicID>_<reportedPublicID>` (REPORTER-owned, moderation)
+
+| Field | Type |
+|---|---|
+| `reportID`, `reporterPublicID`, `reportedPublicID`, `reportedSessionID` | String |
+| `reason` | String — closed category (`Inappropriate alias` / `Harassment or bullying` / `Spam` / `Something else`) |
+| `createdAt` | Date/Time |
+
+Anonymous IDs + a closed reason category only — never email, phone, real name
+or any focus text. Deterministic record name means one reporter can't flood
+the same pilot with new records. In the CloudKit Dashboard set the security
+role so it is **Creator create/read/write only** (NOT World-readable) — reports
+are reviewed out-of-band by the team, never surfaced to other users in-app.
+Decorative pilots are not users and can never be reported.
+
 ### Shared database
 
 Nothing is created here directly. When an **invited** participant accepts,
@@ -278,6 +294,7 @@ Public database record types:
 | `SkyPresence` | Read* | Create + Read | Create/Read/Write |
 | `FriendRequest` | Read* | Create + Read | Create/Read/Write |
 | `FriendResponse` | Read* | Create + Read | Create/Read/Write |
+| `PilotReport` | — (no World read) | Create only | Create/Read/Write |
 
 \* **Justification for read access** (CloudKit public-DB roles cannot express
 "only the addressed recipient may read"): profiles and presence are the
@@ -320,6 +337,9 @@ FriendRequest.createdAt             QUERYABLE + SORTABLE
 FriendResponse.requestID            QUERYABLE
 FriendResponse.senderPublicID       QUERYABLE
 FriendResponse.recipientPublicID    QUERYABLE
+
+PilotReport.reportedPublicID        QUERYABLE   (team review only)
+PilotReport.reporterPublicID        QUERYABLE
 
 CrewMember.otherPublicID            QUERYABLE   (private DB queries)
 CrewMember.status                   QUERYABLE
