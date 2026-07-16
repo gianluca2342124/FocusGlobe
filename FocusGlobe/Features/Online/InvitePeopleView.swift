@@ -37,6 +37,11 @@ struct InvitePeopleView: View {
 
     private var isAppContext: Bool { if case .app = context { return true }; return false }
 
+    /// Contexts that actually create a room (and so can be throttled/failed).
+    private var isRoomCreatingContext: Bool {
+        switch context { case .preFlight, .skyUnlock: return true; default: return false }
+    }
+
     var body: some View {
         ZStack {
             AppBackground().ignoresSafeArea()
@@ -54,6 +59,12 @@ struct InvitePeopleView: View {
                     // Genuinely offline / no iCloud account — the ONE authoritative
                     // state (createRoom flips it on a real network failure).
                     OnlineUnavailableView(availability: online.availability)
+                } else if isRoomCreatingContext, let until = online.roomThrottledUntil {
+                    // CloudKit quota / rate limit — wait out the retry window with
+                    // a live countdown; never reinterpreted as "no connection".
+                    throttleCard(until: until)
+                } else if isRoomCreatingContext, case .failed(let failure) = online.roomCreationState, share == nil {
+                    failedCard(message: failure.message)
                 } else if share == nil {
                     // Account is available but the room/CKShare didn't get created
                     // (a transient CloudKit error) — this is NOT "offline".
@@ -95,10 +106,13 @@ struct InvitePeopleView: View {
         case .app:
             loading = false
         case .preFlight(let skyID):
-            if let pending = online.pendingRoom {
+            // Throttled by CloudKit → reflect the countdown; do NOT write.
+            if online.roomThrottledUntil != nil { loading = false; return }
+            if let pending = online.pendingRoom, pending.shareURL != nil {
                 invitation = RoomInvitation(id: pending.id, room: pending, url: pending.shareURL)
-            } else {
-                invitation = await online.createRoom(skyID: skyID, title: "FocusGlobe Flight")
+            } else if let room = await online.requestPrivateFlightRoom(skyID: skyID,
+                                                                       title: "FocusGlobe Flight") {
+                invitation = RoomInvitation(id: room.id, room: room, url: room.shareURL)
             }
             if let room = invitation?.room { share = await online.share(for: room) }
             loading = false
@@ -141,6 +155,62 @@ struct InvitePeopleView: View {
                 .foregroundStyle(AppColors.textPrimary)
                 .multilineTextAlignment(.center)
             Text("Check your connection and try again.")
+                .font(AppTypography.caption)
+                .foregroundStyle(AppColors.textSecondary)
+                .multilineTextAlignment(.center)
+            Button("Try again") {
+                appModel.tapFeedback()
+                loading = true
+                Task { await prepare() }
+            }
+            .font(.system(size: 15, weight: .bold, design: .rounded))
+            .foregroundStyle(AppColors.gold)
+            .padding(.top, 4)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(AppSpacing.lg)
+    }
+
+    // CloudKit throttle / quota — wait out the retry window with a LIVE
+    // countdown. Never auto-retries; the button re-enables when the timer ends.
+    private func throttleCard(until: Date) -> some View {
+        VStack(spacing: AppSpacing.sm) {
+            Image(systemName: "clock.badge.exclamationmark")
+                .font(.system(size: 38, weight: .semibold))
+                .foregroundStyle(AppColors.textTertiary)
+                .padding(.bottom, 2)
+            Text("CloudKit is temporarily busy")
+                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .foregroundStyle(AppColors.textPrimary)
+                .multilineTextAlignment(.center)
+            Text("Please wait before creating another private flight.")
+                .font(AppTypography.caption)
+                .foregroundStyle(AppColors.textSecondary)
+                .multilineTextAlignment(.center)
+            TimelineView(.periodic(from: .now, by: 1)) { ctx in
+                Text("Try again in \(FlightModeSelectorView.countdown(to: until, now: ctx.date))")
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppColors.gold)
+                    .monospacedDigit()
+                    .padding(.top, 4)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(AppSpacing.lg)
+    }
+
+    // A terminal (non-throttle) creation failure — friendly copy + retry.
+    private func failedCard(message: String) -> some View {
+        VStack(spacing: AppSpacing.sm) {
+            Image(systemName: "exclamationmark.icloud")
+                .font(.system(size: 38, weight: .semibold))
+                .foregroundStyle(AppColors.textTertiary)
+                .padding(.bottom, 2)
+            Text("Private room unavailable")
+                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .foregroundStyle(AppColors.textPrimary)
+                .multilineTextAlignment(.center)
+            Text(message)
                 .font(AppTypography.caption)
                 .foregroundStyle(AppColors.textSecondary)
                 .multilineTextAlignment(.center)

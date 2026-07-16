@@ -46,6 +46,34 @@ enum OnlineError: Error, Sendable {
         (error as? CKError)?.retryAfterSeconds
     }
 
+    /// CloudKit throttle / quota codes — a create MUST back off (not retry
+    /// immediately, and never be reinterpreted as "no Internet") when one of
+    /// these fires. `quotaExceeded` and `requestRateLimited` normally carry a
+    /// `retryAfterSeconds`; the others may not.
+    static func isThrottled(_ error: Error) -> Bool {
+        guard let ck = error as? CKError else { return false }
+        switch ck.code {
+        case .quotaExceeded, .requestRateLimited, .serviceUnavailable, .zoneBusy:
+            return true
+        default:
+            return false
+        }
+    }
+
+    /// The `Date` until which room-creating writes must wait after a throttle.
+    /// Uses CloudKit's `retryAfterSeconds` when present; otherwise a conservative
+    /// exponential backoff (capped at 5 min) with jitter, scaled by how many
+    /// throttles we've hit in a row. Returns nil for non-throttle errors.
+    static func throttleRetryDate(for error: Error, consecutive: Int, now: Date = Date()) -> Date? {
+        guard isThrottled(error) else { return nil }
+        if let s = (error as? CKError)?.retryAfterSeconds, s > 0 {
+            return now.addingTimeInterval(s)
+        }
+        let backoff = min(300.0, 20.0 * pow(2.0, Double(max(0, consecutive - 1))))
+        let jitter = Double.random(in: 0...15)
+        return now.addingTimeInterval(backoff + jitter)
+    }
+
     /// A readable name for a `CKError.Code` (for diagnostics, never shown as UI
     /// copy in Release).
     static func codeName(_ code: CKError.Code) -> String {

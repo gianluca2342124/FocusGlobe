@@ -117,7 +117,7 @@ struct OnlineLobbyView: View {
                 AppPrimaryButton(title: "Start Flight", systemImage: "arrow.up") {
                     appModel.tapFeedback()
                     Task { await online.ownerStart(room, durationSeconds: nil) }
-                    online.pendingRoom = room
+                    online.usePendingRoom(room)
                     dismiss()
                     onStart?()
                 }

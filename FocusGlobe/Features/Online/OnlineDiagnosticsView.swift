@@ -22,6 +22,7 @@ struct OnlineDiagnosticsView: View {
                     group("Last pilot fetch", online.lastPilotFetchAt?.formatted() ?? "—")
                     group("Real pilots", "\(online.realPilotCount)")
                     group("Pending room", online.pendingRoom?.id.prefix(8).description ?? "—")
+                    group("Room state", online.roomStateSummary)
                     group("Owned rooms", "\(online.ownedRooms.count)")
                     group("Joined rooms", "\(online.joinedRooms.count)")
                     group("Incoming requests", "\(online.incomingRequests.count)")
@@ -60,12 +61,18 @@ struct OnlineDiagnosticsView: View {
             // Reproduce room creation on-device and print the EXACT outcome —
             // the real CKError (via lastRoomErrorDetail), not a generic message.
             row("Create test private room") {
-                let invitation = await online.createRoom(skyID: appModel.selectedSky.id,
-                                                         title: "Diagnostic Room")
-                if let invitation, invitation.url != nil {
-                    log.append("room OK: \(invitation.id.prefix(8)) url=yes")
+                // Single-flight + throttle-aware: repeated taps during the retry
+                // window print the countdown instead of hammering CloudKit.
+                if let until = online.roomThrottledUntil {
+                    log.append("throttled: try again in \(max(0, Int(until.timeIntervalSinceNow)))s (\(online.roomStateSummary))")
+                    return
+                }
+                let room = await online.requestPrivateFlightRoom(skyID: appModel.selectedSky.id,
+                                                                 title: "Diagnostic Room")
+                if let room, room.shareURL != nil {
+                    log.append("room OK: \(room.id.prefix(8)) url=yes")
                 } else {
-                    log.append("room FAILED: \(online.lastRoomErrorDetail ?? online.lastErrorCategory ?? "unknown")")
+                    log.append("room FAILED: \(online.roomStateSummary) | \(online.lastRoomErrorDetail ?? online.lastErrorCategory ?? "unknown")")
                 }
             }
             row("Refresh Cloud status") { await online.refreshAvailability(); log.append("status: \(online.availability)") }
@@ -76,6 +83,10 @@ struct OnlineDiagnosticsView: View {
             row("Refresh social") { await online.refreshSocial(); log.append("crew: \(online.crew.count)") }
             row("Refresh rooms") { await online.refreshRooms(); log.append("rooms: \(online.ownedRooms.count)/\(online.joinedRooms.count)") }
             row("Recreate public profile") { await online.ensureIdentityAndProfile(); log.append("profile ok") }
+            row("Delete my rooms (cleanup)") {
+                let n = await online.debugPurgeOwnedRooms()
+                log.append("deleted \(n) owned room(s); state \(online.roomStateSummary)")
+            }
             row("Clear online cache") { OnlineCache.resetForAccountChange(); log.append("cache cleared") }
         }
     }

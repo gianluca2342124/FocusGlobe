@@ -15,6 +15,7 @@ struct OnlineCache {
         static let requestSentAt = "online.requestSentAt"
         static let campaignProgress = "online.campaignProgress"   // [skyID: Int]
         static let lastStatus = "online.lastStatus"
+        static let roomRetryAfter = "online.roomRetryAfter"       // CloudKit throttle window
     }
 
     static func loadIdentity() -> FocusIdentity? { decode(K.identity) }
@@ -47,11 +48,21 @@ struct OnlineCache {
         get { d.string(forKey: K.lastStatus) }
         set { d.set(newValue, forKey: K.lastStatus) }
     }
+    /// The `Date` until which CloudKit throttled room creation (quota / rate
+    /// limit). Persisted so the countdown survives relaunch and the app doesn't
+    /// hammer the server on next launch.
+    static var roomCreationRetryAfterDate: Date? {
+        get { d.object(forKey: K.roomRetryAfter) as? Date }
+        set {
+            if let newValue { d.set(newValue, forKey: K.roomRetryAfter) }
+            else { d.removeObject(forKey: K.roomRetryAfter) }
+        }
+    }
 
     /// Clear cached social data (iCloud account changed / online data deleted).
     static func resetForAccountChange() {
         for key in [K.identity, K.profile, K.aliasChangedAt, K.requestSentAt,
-                    K.campaignProgress, K.lastStatus] {
+                    K.campaignProgress, K.lastStatus, K.roomRetryAfter] {
             d.removeObject(forKey: key)
         }
     }

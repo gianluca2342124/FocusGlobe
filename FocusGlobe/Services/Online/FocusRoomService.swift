@@ -39,9 +39,13 @@ actor FocusRoomService {
     /// a non-nil `url`. Any failure throws — with the EXACT CloudKit error logged
     /// (requirement #1) — so the caller can never promote a half-created room to
     /// the invite-ready state.
-    func createRoom(title: String, skyID: String, owner: OnlineProfile,
-                    purpose: FocusRoom.Purpose) async throws -> FocusRoom {
-        let roomID = UUID().uuidString
+    /// `reusingRoomID` lets a retry after a *failed* atomic save reuse the same
+    /// room ID instead of minting a new one each attempt (an atomic save that
+    /// failed leaves nothing on the server, so there's no orphan to collide
+    /// with) — this is what stops one user action from spawning many room IDs.
+    func createRoom(reusingRoomID: String? = nil, title: String, skyID: String,
+                    owner: OnlineProfile, purpose: FocusRoom.Purpose) async throws -> FocusRoom {
+        let roomID = reusingRoomID ?? UUID().uuidString
         let recordID = CKRecord.ID(recordName: "room-\(roomID)", zoneID: zoneID)
         do {
             try await ensureZone()
@@ -185,6 +189,19 @@ actor FocusRoomService {
         guard let zone = try? await zoneForRoom(room, in: db) else { return }
         let id = CKRecord.ID(recordName: "participant-\(room.id)-\(publicID)", zoneID: zone)
         _ = try? await db.deleteRecord(withID: id)
+    }
+
+    /// DEBUG cleanup: delete every OWNED room root (which also removes its
+    /// CKShare). Targets only rooms this account owns in the private zone —
+    /// never joined rooms or another user's records. Returns the count deleted.
+    func deleteOwnedRooms() async -> Int {
+        try? await ensureZone()
+        var deleted = 0
+        for room in await ownedRooms() {
+            let id = CKRecord.ID(recordName: "room-\(room.id)", zoneID: zoneID)
+            if (try? await privateDB.deleteRecord(withID: id)) != nil { deleted += 1 }
+        }
+        return deleted
     }
 
     // MARK: Fetching

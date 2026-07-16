@@ -3,6 +3,24 @@ import SwiftUI
 import CloudKit
 import OSLog
 
+/// A friendly, Release-safe reason a private room couldn't be created (never a
+/// raw `CKError` — that stays in DEBUG diagnostics / OSLog).
+struct RoomCreationFailure: Equatable, Sendable {
+    let message: String
+}
+
+/// The ONE authoritative state for private-room creation. Every online surface
+/// (flight selector, invite sheet, Friends) reads this — never a cached boolean
+/// and never the selected flight mode — so "Private room ready" can only ever
+/// appear when a room truly exists with a live CKShare URL.
+enum RoomCreationState: Equatable {
+    case idle                       // nothing created yet
+    case creating                   // a single create operation is in flight
+    case waitingUntil(Date)         // CloudKit throttle/quota — retry-after window
+    case ready(FocusRoom)           // saved record + saved CKShare + non-nil url
+    case failed(RoomCreationFailure)
+}
+
 /// **FocusGlobe Online** — the single @MainActor coordinator between the UI and
 /// the CloudKit service actors. Views never touch CloudKit directly; Solo
 /// flights never touch this class's network paths. Every failure degrades to a
@@ -22,6 +40,11 @@ final class FocusOnlineModel: ObservableObject {
     }
     /// The private room chosen/created for the NEXT flight (privateRoom mode).
     @Published var pendingRoom: FocusRoom?
+
+    /// The ONE authoritative private-room creation state. Flight selector, invite
+    /// sheet and Friends all read this — never a cached bool or the flight mode —
+    /// so "Private room ready" appears only for a real room with a live CKShare.
+    @Published private(set) var roomCreationState: RoomCreationState = .idle
 
     /// Real pilots currently visible in the active Sky (public or room).
     @Published private(set) var realPilots: [OnlinePilot] = []
@@ -57,6 +80,19 @@ final class FocusOnlineModel: ObservableObject {
     private var pilotPollTask: Task<Void, Never>?
     private var accountObserver: NSObjectProtocol?
 
+    // Room-creation pipeline (single-flight + throttle-aware).
+    /// The in-flight create operation, if any — guarantees ONE create at a time
+    /// and lets concurrent callers await the same result (no duplicate writes,
+    /// no duplicate room IDs).
+    private var roomCreateTask: Task<FocusRoom?, Never>?
+    /// Reused across retries of a failed attempt so one user action can't spawn
+    /// many room IDs; cleared on success or a terminal (non-throttle) failure.
+    private var pendingAttemptRoomID: String?
+    /// Auto-clears `.waitingUntil` back to `.idle` when the retry window elapses.
+    private var throttleResetTask: Task<Void, Never>?
+    /// How many throttles in a row (drives backoff when no retryAfter is given).
+    private var consecutiveThrottles = 0
+
     // Friend-bonus overlap tracking for the CURRENT flight.
     private var flightSessionID: String?
     private var flightRoom: FocusRoom?
@@ -73,6 +109,14 @@ final class FocusOnlineModel: ObservableObject {
         self.appModel = appModel
         identity = OnlineCache.loadIdentity()
         profile = OnlineCache.loadProfile()
+        // Restore any live CloudKit throttle window so we don't hammer the
+        // server on launch and the countdown survives a relaunch.
+        if let retry = OnlineCache.roomCreationRetryAfterDate, retry > Date() {
+            roomCreationState = .waitingUntil(retry)
+            scheduleThrottleReset(until: retry)
+        } else {
+            OnlineCache.roomCreationRetryAfterDate = nil
+        }
         if accountObserver == nil {
             accountObserver = NotificationCenter.default.addObserver(
                 forName: .CKAccountChanged, object: nil, queue: .main) { [weak self] _ in
@@ -118,6 +162,8 @@ final class FocusOnlineModel: ObservableObject {
         ownedRooms = []
         joinedRooms = []
         realPilots = []
+        pendingRoom = nil
+        resetRoomCreation()
         await refreshAvailability()
     }
 
@@ -332,38 +378,162 @@ final class FocusOnlineModel: ObservableObject {
 
     // MARK: Rooms
 
+    /// Back-compat entry (CreateRoomView etc.): create a private flight room and
+    /// return an invitation. Routes through the single-flight state machine so
+    /// every surface stays consistent and two creates never race.
+    @discardableResult
     func createRoom(skyID: String, title: String, purpose: FocusRoom.Purpose = .flight) async -> RoomInvitation? {
-        // §1: refresh account status immediately before creating a room so the
-        // gate reflects the current account (foreground also refreshes).
+        guard let room = await requestPrivateFlightRoom(skyID: skyID, title: title) else { return nil }
+        return RoomInvitation(id: room.id, room: room, url: room.shareURL)
+    }
+
+    /// The `Date` until which any room-creating write must wait (nil if clear).
+    /// Reads the authoritative state first, then the persisted window.
+    var roomThrottledUntil: Date? {
+        if case .waitingUntil(let d) = roomCreationState, d > Date() { return d }
+        if let d = OnlineCache.roomCreationRetryAfterDate, d > Date() { return d }
+        return nil
+    }
+
+    /// Short label of the current creation state (DEBUG diagnostics).
+    var roomStateSummary: String {
+        switch roomCreationState {
+        case .idle:                return "idle"
+        case .creating:            return "creating"
+        case .waitingUntil(let d): return "waitingUntil(\(max(0, Int(d.timeIntervalSinceNow)))s)"
+        case .ready(let r):        return "ready(\(r.id.prefix(8)))"
+        case .failed(let f):       return "failed(\(f.message))"
+        }
+    }
+
+    /// Explicit, DEBOUNCED, SINGLE-FLIGHT private-room creation — the only path
+    /// that promotes a room to `.ready`/`pendingRoom`, and only with a real saved
+    /// CKShare URL. Repeated calls while `.creating` join the in-flight attempt;
+    /// calls during a throttle window do nothing (the UI shows the countdown).
+    @discardableResult
+    func requestPrivateFlightRoom(skyID: String, title: String = "FocusGlobe Flight") async -> FocusRoom? {
+        if case .ready(let room) = roomCreationState { return room }   // reuse existing
+        if roomThrottledUntil != nil { return nil }                    // throttled → no write
+        if let task = roomCreateTask { return await task.value }       // join in-flight attempt
+        let task = Task { [weak self] () -> FocusRoom? in
+            guard let self else { return nil }
+            return await self.performRoomCreation(skyID: skyID, title: title)
+        }
+        roomCreateTask = task
+        let result = await task.value
+        roomCreateTask = nil
+        return result
+    }
+
+    private func performRoomCreation(skyID: String, title: String) async -> FocusRoom? {
         await refreshAvailability()
-        guard availability.isAvailable else { return nil }
+        guard availability.isAvailable else {
+            roomCreationState = .failed(RoomCreationFailure(message: availability.userMessage))
+            return nil
+        }
         await ensureIdentityAndProfile()
-        guard let profile else { return nil }
+        guard let profile else {
+            roomCreationState = .failed(RoomCreationFailure(message: OnlineError.notSignedIn.userMessage))
+            return nil
+        }
+        // Re-check the throttle after the awaits above (state may have changed).
+        if let until = roomThrottledUntil {
+            roomCreationState = .waitingUntil(until)
+            return nil
+        }
+        roomCreationState = .creating
+        // Reuse the same room ID across retries of a failed attempt (an atomic
+        // save that failed left nothing on the server) — one user action, one ID.
+        let attemptID = pendingAttemptRoomID ?? UUID().uuidString
+        pendingAttemptRoomID = attemptID
         do {
-            let room = try await roomService.createRoom(title: title, skyID: skyID,
-                                                        owner: profile, purpose: purpose)
-            // The service guarantees a non-nil shareURL on success, but guard here
-            // too: a room without an invitation link must NEVER become the pending
-            // ("Private room ready") room. If it somehow lacks one, treat it as a
-            // failure the caller can retry.
+            let room = try await roomService.createRoom(reusingRoomID: attemptID, title: title,
+                                                        skyID: skyID, owner: profile, purpose: .flight)
             guard room.shareURL != nil else {
                 lastRoomErrorDetail = "room saved without a share URL (share.url==nil)"
                 lastErrorCategory = "share-url-missing"
+                pendingAttemptRoomID = nil
+                roomCreationState = .failed(RoomCreationFailure(message: "Private room unavailable"))
                 return nil
             }
+            // Success — clear all throttle/attempt bookkeeping and go ready.
+            consecutiveThrottles = 0
+            pendingAttemptRoomID = nil
             lastRoomErrorDetail = nil
-            if purpose == .flight { pendingRoom = room }
+            OnlineCache.roomCreationRetryAfterDate = nil
+            throttleResetTask?.cancel()
+            pendingRoom = room
+            roomCreationState = .ready(room)
             await refreshRooms()
-            return RoomInvitation(id: room.id, room: room, url: room.shareURL)
+            return room
         } catch {
-            // A network failure here flips the authoritative availability to
-            // offline (so the selector's "Live" also clears); other errors keep
-            // `.available` and the caller shows a room-creation retry. The EXACT
-            // CKError breakdown is captured for the DEBUG diagnostics screen.
             applyOperationError(error)
             lastRoomErrorDetail = OnlineError.detail(for: error)
+            if OnlineError.isThrottled(error) {
+                // CloudKit quota / rate limit: honour retry-after, block further
+                // writes until it elapses, and KEEP the attempt ID so a later
+                // retry reuses it instead of minting a new room ID. This is the
+                // exact fix for the observed quotaExceeded (retryAfter≈318s).
+                consecutiveThrottles += 1
+                let until = OnlineError.throttleRetryDate(for: error, consecutive: consecutiveThrottles)
+                    ?? Date().addingTimeInterval(300)
+                OnlineCache.roomCreationRetryAfterDate = until
+                roomCreationState = .waitingUntil(until)
+                scheduleThrottleReset(until: until)
+            } else {
+                pendingAttemptRoomID = nil
+                roomCreationState = .failed(RoomCreationFailure(message: friendlyMessage(for: error)))
+            }
             return nil
         }
+    }
+
+    /// Human-friendly, Release-safe copy for a room-creation failure.
+    private func friendlyMessage(for error: Error) -> String {
+        switch OnlineError.category(for: error) {
+        case "no-account": return OnlineError.notSignedIn.userMessage
+        case "network":    return "You're offline right now."
+        case "quota":      return "CloudKit is temporarily busy."
+        default:           return OnlineError.requestFailed.userMessage
+        }
+    }
+
+    /// Auto-return `.waitingUntil` to `.idle` when the retry window elapses, so
+    /// the create button re-enables itself without a manual refresh.
+    private func scheduleThrottleReset(until date: Date) {
+        throttleResetTask?.cancel()
+        throttleResetTask = Task { [weak self] in
+            let delay = date.timeIntervalSinceNow
+            if delay > 0 {
+                try? await Task.sleep(nanoseconds: UInt64(min(delay, 3600) * 1_000_000_000))
+            }
+            guard let self, !Task.isCancelled else { return }
+            if let d = OnlineCache.roomCreationRetryAfterDate, d <= Date() {
+                OnlineCache.roomCreationRetryAfterDate = nil
+            }
+            if case .waitingUntil(let d) = self.roomCreationState, d <= Date() {
+                // Fresh idle episode — drop the reused attempt ID and backoff count.
+                self.pendingAttemptRoomID = nil
+                self.consecutiveThrottles = 0
+                self.roomCreationState = .idle
+            }
+        }
+    }
+
+    /// Reset the creation pipeline (account change / data delete / room closed).
+    private func resetRoomCreation() {
+        throttleResetTask?.cancel(); throttleResetTask = nil
+        pendingAttemptRoomID = nil
+        consecutiveThrottles = 0
+        roomCreationState = .idle
+        OnlineCache.roomCreationRetryAfterDate = nil
+    }
+
+    /// The lobby promotes an already-created OWNED room to the pending flight —
+    /// keep the authoritative state in sync (never a bare `pendingRoom =`).
+    func usePendingRoom(_ room: FocusRoom) {
+        pendingRoom = room
+        roomCreationState = .ready(room)
     }
 
     func refreshRooms() async {
@@ -400,7 +570,13 @@ final class FocusOnlineModel: ObservableObject {
         } else {
             await roomService.leaveRoom(room, publicID: profile.publicID)
         }
-        if pendingRoom?.id == room.id { pendingRoom = nil }
+        if pendingRoom?.id == room.id {
+            pendingRoom = nil
+            // The pending/ready room is gone — return the pipeline to idle so the
+            // selector offers "Create a Private Flight" again (leave any active
+            // throttle window untouched).
+            if case .ready = roomCreationState { roomCreationState = .idle }
+        }
         await refreshRooms()
     }
 
@@ -547,6 +723,9 @@ final class FocusOnlineModel: ObservableObject {
             let url = await roomService.shareURL(for: existing)
             return RoomInvitation(id: existing.id, room: existing, url: url)
         }
+        // Respect the account-wide CloudKit throttle window — never create a new
+        // campaign room while quota-limited (same quota that room flights hit).
+        if roomThrottledUntil != nil { return nil }
         do {
             let room = try await roomService.createRoom(title: "Fly \(sky.name) with me",
                                                         skyID: sky.id, owner: profile,
@@ -561,6 +740,13 @@ final class FocusOnlineModel: ObservableObject {
         } catch {
             applyOperationError(error)
             lastRoomErrorDetail = OnlineError.detail(for: error)
+            if OnlineError.isThrottled(error) {
+                consecutiveThrottles += 1
+                let until = OnlineError.throttleRetryDate(for: error, consecutive: consecutiveThrottles)
+                    ?? Date().addingTimeInterval(300)
+                OnlineCache.roomCreationRetryAfterDate = until
+                scheduleThrottleReset(until: until)
+            }
             return nil
         }
     }
@@ -635,6 +821,7 @@ final class FocusOnlineModel: ObservableObject {
         joinedRooms = []
         realPilots = []
         pendingRoom = nil
+        resetRoomCreation()
         appModel?.profile.onlineDiscoverable = false
     }
 
@@ -642,4 +829,17 @@ final class FocusOnlineModel: ObservableObject {
 
     var shortPublicID: String { String((profile?.publicID ?? "—").prefix(8)) }
     var realPilotCount: Int { realPilots.count }
+
+    #if DEBUG
+    /// DEBUG-only: delete this account's owned rooms (clears orphaned test rooms
+    /// left by earlier attempts) and reset the creation pipeline. Never touches
+    /// joined rooms or other users' records. Returns the count deleted.
+    func debugPurgeOwnedRooms() async -> Int {
+        let deleted = await roomService.deleteOwnedRooms()
+        pendingRoom = nil
+        resetRoomCreation()
+        await refreshRooms()
+        return deleted
+    }
+    #endif
 }

@@ -55,7 +55,12 @@ struct FlightModeSelectorView: View {
             }
 
             if selection == .publicSky && onlineAvailable {
-                inviteRow
+                // Ticks once a second so a throttle countdown stays live; the row
+                // reads the ONE authoritative roomCreationState (never a cached
+                // bool), so it can't disagree with the invite sheet.
+                TimelineView(.periodic(from: .now, by: 1)) { ctx in
+                    inviteRow(now: ctx.date)
+                }
             }
 
             AppPrimaryButton(title: "Continue", systemImage: "arrow.right") {
@@ -113,39 +118,61 @@ struct FlightModeSelectorView: View {
         onContinue(mode)
     }
 
-    /// Honest state — never claims invitations were sent just because a sheet
-    /// opened: no room yet → "Create a Private Flight"; a CKShare exists →
-    /// "Private room ready — invite friends"; real acceptances → "N friends
-    /// joined".
-    private var inviteRowTitle: String {
-        guard online.pendingRoom != nil else { return "Create a Private Flight" }
-        let joined = online.activeRoomParticipants.filter { $0.publicID != online.profile?.publicID }.count
-        if joined > 0 { return "\(joined) friend\(joined == 1 ? "" : "s") joined" }
-        return "Private room ready — invite friends"
+    /// Honest state derived from `roomCreationState` — never claims a room is
+    /// ready just because a sheet opened or a bool was cached. `.creating` and
+    /// throttled states are not tappable (repeated taps can't spawn a new room).
+    private func inviteRowContent(now: Date) -> (title: String, icon: String, tappable: Bool) {
+        switch online.roomCreationState {
+        case .idle:
+            return ("Create a Private Flight", "person.badge.plus", true)
+        case .creating:
+            return ("Creating private room…", "arrow.triangle.2.circlepath", false)
+        case .waitingUntil(let date):
+            return ("Try again in \(Self.countdown(to: date, now: now))", "clock", false)
+        case .failed:
+            return ("Private room unavailable — tap to retry", "exclamationmark.triangle", true)
+        case .ready:
+            let joined = online.activeRoomParticipants.filter { $0.publicID != online.profile?.publicID }.count
+            if joined > 0 { return ("\(joined) friend\(joined == 1 ? "" : "s") joined", "checkmark.circle.fill", true) }
+            return ("Private room ready — invite friends", "checkmark.circle.fill", true)
+        }
     }
 
-    private var inviteRow: some View {
-        Button {
+    /// Formats a mm:ss countdown to `date` (from `now`).
+    static func countdown(to date: Date, now: Date) -> String {
+        let secs = max(0, Int(date.timeIntervalSince(now).rounded(.up)))
+        return String(format: "%d:%02d", secs / 60, secs % 60)
+    }
+
+    private func inviteRow(now: Date) -> some View {
+        let content = inviteRowContent(now: now)
+        return Button {
+            guard content.tappable else { return }
             appModel.tapFeedback()
             showInvite = true
         } label: {
             HStack(spacing: 8) {
-                Image(systemName: online.pendingRoom == nil ? "person.badge.plus" : "checkmark.circle.fill")
+                Image(systemName: content.icon)
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(AppColors.gold)
-                Text(inviteRowTitle)
+                Text(content.title)
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .foregroundStyle(AppColors.textPrimary)
+                    .monospacedDigit()
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(AppColors.textTertiary)
+                if content.tappable {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(AppColors.textTertiary)
+                }
             }
             .padding(.horizontal, AppSpacing.md)
             .padding(.vertical, 14)
             .glassBackground(cornerRadius: 16, tintOpacity: 0.2, shadowRadius: 6, shadowY: 3)
         }
         .buttonStyle(SoftPressStyle())
+        .disabled(!content.tappable)
+        .opacity(content.tappable ? 1 : 0.72)
     }
 
     private func card(mode: OnlineFlightMode, title: String, subtitle: String,
