@@ -16,7 +16,7 @@ struct OnlinePilot: Identifiable, Equatable, Sendable {
     let allowsFriendRequest: Bool
 
     var isStale: Bool {
-        Date().timeIntervalSince(lastHeartbeatAt) > CloudKitConfig.presenceStaleInterval
+        Date().timeIntervalSince(lastHeartbeatAt) > SupabaseConfig.presenceStaleInterval
     }
 
     /// Remaining time interpolated locally from `expectedEndAt` — presence is

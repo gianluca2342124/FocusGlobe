@@ -636,8 +636,8 @@ private struct SkyPreviewFlightView: View {
     @ViewBuilder private var secondaryButton: some View {
         switch sky.unlockRequirement {
         case .invite(let n):
-            // Real invite unlocks: only friends who actually ACCEPTED the
-            // CloudKit invitation count — never share-button taps.
+            // Real invite unlocks: only friends who actually JOINED the
+            // invitation room count — never share-button taps.
             let cur = min(appModel.verifiedInviteProgress(for: sky), n)
             Button {
                 appModel.tapFeedback()

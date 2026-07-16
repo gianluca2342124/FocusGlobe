@@ -1,45 +1,10 @@
 import SwiftUI
-import CloudKit
 #if canImport(GoogleMaps)
 import GoogleMaps
 #endif
 
-/// UIKit delegate bridge for FocusGlobe Online: silent CloudKit pushes and
-/// CKShare invitation acceptance. Best-effort only — nothing here can block
-/// launch, Solo flights, or local progress.
-final class FocusGlobeAppDelegate: NSObject, UIApplicationDelegate {
-    /// Set by the App once the online coordinator exists.
-    static weak var online: FocusOnlineModel?
-
-    func application(_ application: UIApplication,
-                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
-        application.registerForRemoteNotifications()
-        return true
-    }
-
-    func application(_ application: UIApplication,
-                     didReceiveRemoteNotification userInfo: [AnyHashable: Any],
-                     fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
-        // Synchronous variant: the non-Sendable userInfo is processed inline on
-        // the main thread and never crosses a concurrency boundary.
-        // handleRemoteNotification pulls out only a Sendable RefreshKind before
-        // spawning its own @MainActor Task — the raw dictionary is never sent
-        // into or captured by a Task. Completion handler is called exactly once.
-        Self.online?.handleRemoteNotification(userInfo)
-        completionHandler(.newData)
-    }
-
-    func application(_ application: UIApplication,
-                     userDidAcceptCloudKitShareWith cloudKitShareMetadata: CKShare.Metadata) {
-        Task { @MainActor in
-            await Self.online?.handleAcceptedShare(cloudKitShareMetadata)
-        }
-    }
-}
-
 @main
 struct FocusGlobeApp: App {
-    @UIApplicationDelegateAdaptor(FocusGlobeAppDelegate.self) private var delegate
     @StateObject private var appModel = AppModel()
     @StateObject private var router = AppRouter()
     @StateObject private var online = FocusOnlineModel()
@@ -66,14 +31,24 @@ struct FocusGlobeApp: App {
                 .preferredColorScheme(appModel.settings.appearance.colorScheme)
                 .onAppear {
                     LaunchLog.mark("RootView onAppear")
-                    FocusGlobeAppDelegate.online = online
                     appModel.attachOnline(online)
                     appModel.analytics.log(.appOpened)
                     // Clear any shields left behind by a previous run (e.g. the app
                     // was killed mid-journey). No journey is in flight at cold launch.
                     appModel.focusShield.reconcile(activeJourneyInFlight: router.activeJourney != nil)
                 }
-                .onOpenURL { router.handleDeepLink($0) }   // widget deep links
+                .onOpenURL { url in
+                    // Private-flight invitations (focusglobe://join/<token>, and
+                    // https://focusglobe.app/join/<token> once the domain is
+                    // configured) — covers cold and warm launch; if the user
+                    // isn't signed in yet the token is kept and consumed right
+                    // after sign-in. Everything else stays a widget deep link.
+                    if DeepLinkService.inviteToken(from: url) != nil {
+                        Task { await online.handleIncomingURL(url) }
+                    } else {
+                        router.handleDeepLink(url)
+                    }
+                }
                 .onChange(of: scenePhase) { _, phase in
                     guard phase == .active else { return }
                     // Rebuild the notification plan (pushes the comeback sequence out

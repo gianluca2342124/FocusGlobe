@@ -14,31 +14,10 @@
 	<true/>
 	<key>com.apple.developer.family-controls.app-and-website-usage</key>
 	<true/>
-	<key>com.apple.developer.icloud-container-identifiers</key>
-	<array>
-		<string>iCloud.com.mobitegames.FocusGlobe</string>
-	</array>
-	<key>com.apple.developer.icloud-extended-share-access</key>
-	<array>
-		<string>InProcessShareOwnerParticipantInfo</string>
-		<string>InProcessOneTimeLinks</string>
-		<string>InProcessShareAccessRequests</string>
-	</array>
-	<key>com.apple.developer.icloud-services</key>
-	<array>
-		<string>CloudDocuments</string>
-		<string>CloudKit</string>
-	</array>
 	<key>com.apple.developer.in-app-payments</key>
 	<array/>
 	<key>com.apple.developer.shared-with-you</key>
 	<true/>
-	<key>com.apple.developer.ubiquity-container-identifiers</key>
-	<array>
-		<string>iCloud.com.mobitegames.FocusGlobe</string>
-	</array>
-	<key>com.apple.developer.ubiquity-kvstore-identifier</key>
-	<string>$(TeamIdentifierPrefix)$(CFBundleIdentifier)</string>
 	<key>com.apple.developer.usernotifications.communication</key>
 	<true/>
 	<key>com.apple.developer.wifi-aware</key>

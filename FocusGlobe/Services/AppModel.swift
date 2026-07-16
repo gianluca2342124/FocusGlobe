@@ -285,7 +285,7 @@ final class AppModel: ObservableObject {
     }
 
     /// FocusGlobe Online: a Sky's invite campaign reached its verified target
-    /// (accepted unique CloudKit participants). Unlocks permanently —
+    /// (verified unique participants, server-counted). Unlocks permanently —
     /// idempotent, survives account changes, and never re-locks offline.
     func unlockSkyFromVerifiedInvites(skyID: String) {
         var unlocked = profile.unlockedSkyIDs ?? []
@@ -506,7 +506,7 @@ final class AppModel: ObservableObject {
         profile.hiddenPilotIDs = hidden
     }
 
-    /// Verified invite-unlock progress: real accepted CloudKit participants
+    /// Verified invite-unlock progress: real server-verified participants
     /// when available, never share-button taps. Falls back to any legacy local
     /// count so previously-earned progress is never lost.
     func verifiedInviteProgress(for sky: FocusSky) -> Int {

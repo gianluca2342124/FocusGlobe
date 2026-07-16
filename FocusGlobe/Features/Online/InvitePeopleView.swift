@@ -1,18 +1,14 @@
 import SwiftUI
-import CloudKit
 #if canImport(UIKit)
 import UIKit
 #endif
 
 /// The invitation sheet. Room-backed contexts (private flight, existing room,
-/// Sky-unlock campaign) deliver invitations EXCLUSIVELY as private CKShare
-/// participants: the share's `publicPermission` is `.none`, so a forwarded
-/// URL grants an uninvited account nothing. Delivery goes through the system
-/// CloudKit sharing sheet (Messages / WhatsApp / AirDrop, private
-/// participants), or through a deliberately picked contact resolved into an
-/// explicit participant. There is no Copy Link for private rooms — a copied
-/// raw URL cannot carry private participant authorization.
-/// The `.app` context shares only marketing text (no CloudKit access at all).
+/// Sky-unlock campaign) share a REAL one-time invite link minted by the
+/// server: the token is stored only as a hash, expires automatically, is
+/// capacity-limited, and blocked users can never join with it. The `.app`
+/// context shares only marketing content (no room access at all) — the two
+/// flows are deliberately unmistakable.
 struct InvitePeopleView: View {
     enum Context {
         case preFlight(skyID: String)          // creates the pending flight room
@@ -27,12 +23,7 @@ struct InvitePeopleView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var invitation: RoomInvitation?
-    @State private var share: CKShare?
     @State private var loading = true
-    @State private var showContactExplainer = false
-    @State private var showContactPicker = false
-    @State private var showCloudSharing = false
-    @State private var contactStatus: String?
     @State private var copied = false
 
     private var isAppContext: Bool { if case .app = context { return true }; return false }
@@ -56,18 +47,17 @@ struct InvitePeopleView: View {
                 } else if isAppContext {
                     appMethods
                 } else if !online.availability.isAvailable {
-                    // Genuinely offline / no iCloud account — the ONE authoritative
-                    // state (createRoom flips it on a real network failure).
+                    // Genuinely signed out / offline — the ONE authoritative
+                    // state (a real failure flips it; nothing else does).
                     OnlineUnavailableView(availability: online.availability)
                 } else if isRoomCreatingContext, let until = online.roomThrottledUntil {
-                    // CloudKit quota / rate limit — wait out the retry window with
-                    // a live countdown; never reinterpreted as "no connection".
+                    // Server throttle — wait out the retry window with a live
+                    // countdown; never reinterpreted as "no connection".
                     throttleCard(until: until)
-                } else if isRoomCreatingContext, case .failed(let failure) = online.roomCreationState, share == nil {
+                } else if isRoomCreatingContext, case .failed(let failure) = online.roomCreationState,
+                          invitation?.url == nil {
                     failedCard(message: failure.message)
-                } else if share == nil {
-                    // Account is available but the room/CKShare didn't get created
-                    // (a transient CloudKit error) — this is NOT "offline".
+                } else if invitation?.url == nil {
                     roomErrorCard
                 } else {
                     roomMethods
@@ -81,24 +71,6 @@ struct InvitePeopleView: View {
         .presentationDetents([.fraction(0.62), .large])
         .presentationDragIndicator(.visible)
         .task { await prepare() }
-        .alert("Invite someone you know", isPresented: $showContactExplainer) {
-            Button("Choose a Contact") { showContactPicker = true }
-            Button("Not now", role: .cancel) {}
-        } message: {
-            Text("Choose a contact to send your private FocusGlobe invitation. Your contacts stay on your device and are never uploaded.")
-        }
-        .sheet(isPresented: $showContactPicker) {
-            ContactPicker(onPick: { _, email, phone in
-                showContactPicker = false
-                Task { await inviteContact(email: email, phone: phone) }
-            })
-        }
-        .sheet(isPresented: $showCloudSharing) {
-            if let share {
-                CloudSharingView(share: share)
-                    .ignoresSafeArea()
-            }
-        }
     }
 
     private func prepare() async {
@@ -106,7 +78,6 @@ struct InvitePeopleView: View {
         case .app:
             loading = false
         case .preFlight(let skyID):
-            // Throttled by CloudKit → reflect the countdown; do NOT write.
             if online.roomThrottledUntil != nil { loading = false; return }
             if let pending = online.pendingRoom, pending.shareURL != nil {
                 invitation = RoomInvitation(id: pending.id, room: pending, url: pending.shareURL)
@@ -114,15 +85,19 @@ struct InvitePeopleView: View {
                                                                        title: "FocusGlobe Flight") {
                 invitation = RoomInvitation(id: room.id, room: room, url: room.shareURL)
             }
-            if let room = invitation?.room { share = await online.share(for: room) }
             loading = false
         case .room(let room):
-            invitation = RoomInvitation(id: room.id, room: room, url: room.shareURL)
-            share = await online.share(for: room)
+            // Tokens are hashed server-side, so a reopened sheet mints a fresh
+            // one-time link for the same room.
+            if let url = room.shareURL {
+                invitation = RoomInvitation(id: room.id, room: room, url: url)
+            } else if let url = await online.freshInvite(for: room) {
+                invitation = RoomInvitation(id: room.id, room: room, url: url)
+            }
             loading = false
         case .skyUnlock(let sky):
+            if online.roomThrottledUntil != nil { loading = false; return }
             invitation = await online.campaignInvitation(for: sky)
-            if let room = invitation?.room { share = await online.share(for: room) }
             loading = false
         }
     }
@@ -135,7 +110,7 @@ struct InvitePeopleView: View {
                 .foregroundStyle(AppColors.textPrimary)
             Text(isAppContext
                  ? "Share FocusGlobe with someone who needs calmer focus."
-                 : "Private iCloud invitations — only pilots you invite can join.")
+                 : "Private invitation link — only pilots with this link can join, and it expires on its own.")
                 .font(AppTypography.caption)
                 .foregroundStyle(AppColors.textSecondary)
                 .multilineTextAlignment(.center)
@@ -154,7 +129,7 @@ struct InvitePeopleView: View {
                 .font(.system(size: 16, weight: .bold, design: .rounded))
                 .foregroundStyle(AppColors.textPrimary)
                 .multilineTextAlignment(.center)
-            Text("Check your connection and try again.")
+            Text("Please try again in a moment.")
                 .font(AppTypography.caption)
                 .foregroundStyle(AppColors.textSecondary)
                 .multilineTextAlignment(.center)
@@ -171,15 +146,14 @@ struct InvitePeopleView: View {
         .padding(AppSpacing.lg)
     }
 
-    // CloudKit throttle / quota — wait out the retry window with a LIVE
-    // countdown. Never auto-retries; the button re-enables when the timer ends.
+    // Server throttle — live countdown; never auto-retries.
     private func throttleCard(until: Date) -> some View {
         VStack(spacing: AppSpacing.sm) {
             Image(systemName: "clock.badge.exclamationmark")
                 .font(.system(size: 38, weight: .semibold))
                 .foregroundStyle(AppColors.textTertiary)
                 .padding(.bottom, 2)
-            Text("CloudKit is temporarily busy")
+            Text("The sky is busy")
                 .font(.system(size: 16, weight: .bold, design: .rounded))
                 .foregroundStyle(AppColors.textPrimary)
                 .multilineTextAlignment(.center)
@@ -227,65 +201,54 @@ struct InvitePeopleView: View {
         .padding(AppSpacing.lg)
     }
 
-    // MARK: Private-room delivery (explicit CKShare participants only)
+    // MARK: Private-room delivery (one-time server invite link)
 
     private var roomMethods: some View {
         VStack(spacing: AppSpacing.sm) {
-            Button {
-                appModel.tapFeedback()
-                showCloudSharing = true
-            } label: {
-                methodRow(icon: "square.and.arrow.up", title: "Send private invitation",
-                          subtitle: "Messages, WhatsApp, AirDrop — invited pilots only")
-            }
-            .buttonStyle(SoftPressStyle())
+            if let url = invitation?.url {
+                ShareLink(item: url,
+                          subject: Text(verbatim: "FocusGlobe private flight"),
+                          message: Text(verbatim: ShareCopyService.roomInvitation(url: url)),
+                          preview: SharePreview(Text(verbatim: "Join my FocusGlobe flight"),
+                                                image: Image(MarketingConfig.previewImageName))) {
+                    methodRow(icon: "square.and.arrow.up", title: "Send private invitation",
+                              subtitle: "Messages, WhatsApp, AirDrop and more")
+                }
+                .simultaneousGesture(TapGesture().onEnded { appModel.tapFeedback() })
 
-            Button {
-                appModel.tapFeedback()
-                showContactExplainer = true
-            } label: {
-                methodRow(icon: "person.crop.circle.badge.plus", title: "Invite from Contacts",
-                          subtitle: "Pick one person — contacts never leave your device")
-            }
-            .buttonStyle(SoftPressStyle())
+                Button {
+                    appModel.tapFeedback()
+                    #if canImport(UIKit)
+                    UIPasteboard.general.string = url.absoluteString
+                    #endif
+                    withAnimation { copied = true }
+                } label: {
+                    methodRow(icon: copied ? "checkmark" : "doc.on.doc",
+                              title: copied ? "Copied" : "Copy invite link",
+                              subtitle: "One-time link · expires automatically")
+                }
+                .buttonStyle(SoftPressStyle())
 
-            if let contactStatus {
-                Text(contactStatus)
+                Text("Anyone with this link can join until it expires or the room is full — share it only with people you want on board.")
                     .font(AppTypography.caption)
-                    .foregroundStyle(AppColors.textSecondary)
+                    .foregroundStyle(AppColors.textTertiary)
                     .multilineTextAlignment(.center)
                     .padding(.top, 2)
             }
         }
     }
 
-    /// Resolve the picked contact into an explicit private participant, then
-    /// hand delivery to the system sharing sheet. If the address can't be
-    /// resolved to an iCloud user, fall back to the sharing sheet — never to
-    /// a public link.
-    private func inviteContact(email: String?, phone: String?) async {
-        guard let room = invitation?.room else { return }
-        if let error = await online.addRoomParticipant(room, email: email, phone: phone) {
-            contactStatus = error
-        } else {
-            contactStatus = "Invited — now send the invitation so they can accept."
-            share = await online.share(for: room)
-        }
-        showCloudSharing = true
-    }
-
-    // MARK: App sharing (marketing ONLY — no CloudKit, no room, no CKShare)
+    // MARK: App sharing (marketing ONLY — no room, no invitation)
 
     /// Recommends the app: shares the App Store URL with a rich link preview
-    /// (title + hero image + promo message). This deliberately shares a real
-    /// tappable link — never a bare sentence — and never pretends to invite
-    /// anyone into a room.
+    /// (title + hero image + promo message). Never pretends to invite anyone
+    /// into a room.
     private var appMethods: some View {
         VStack(spacing: AppSpacing.sm) {
             if let url = MarketingConfig.appStoreURL {
                 ShareLink(item: url,
                           subject: Text(verbatim: MarketingConfig.appName),
-                          message: Text(verbatim: CloudShareService.appLink),
+                          message: Text(verbatim: ShareCopyService.appLink),
                           preview: SharePreview(Text(verbatim: "\(MarketingConfig.appName) — focus in the sky"),
                                                 image: Image(MarketingConfig.previewImageName))) {
                     methodRow(icon: "square.and.arrow.up", title: "Share FocusGlobe",
@@ -293,7 +256,7 @@ struct InvitePeopleView: View {
                 }
                 .simultaneousGesture(TapGesture().onEnded { appModel.tapFeedback() })
             } else {
-                ShareLink(item: CloudShareService.appLink) {
+                ShareLink(item: ShareCopyService.appLink) {
                     methodRow(icon: "square.and.arrow.up", title: "Share FocusGlobe",
                               subtitle: "Messages, WhatsApp, AirDrop and more")
                 }
@@ -302,7 +265,9 @@ struct InvitePeopleView: View {
 
             Button {
                 appModel.tapFeedback()
-                UIPasteboard.general.string = CloudShareService.appLink
+                #if canImport(UIKit)
+                UIPasteboard.general.string = ShareCopyService.appLink
+                #endif
                 withAnimation { copied = true }
             } label: {
                 methodRow(icon: copied ? "checkmark" : "doc.on.doc",
@@ -349,9 +314,10 @@ struct InviteMethodRow: View {
     }
 }
 
-/// The two-way invite chooser: a REAL private flight (creates a room + CKShare)
-/// vs. simply recommending the app (marketing link, no room). Keeps the two
-/// intents unambiguous so a marketing share is never mistaken for a Crew invite.
+/// The two-way invite chooser: a REAL private flight (creates a room + invite
+/// link) vs. simply recommending the app (marketing link, no room). Keeps the
+/// two intents unambiguous so a marketing share is never mistaken for a Crew
+/// invite.
 struct InviteChoiceView: View {
     var onCreateRoom: () -> Void
     var onShareApp: () -> Void

@@ -3,10 +3,10 @@ import SwiftUI
 import UIKit
 #endif
 
-/// **Friends** — the Crew hub, now backed by FocusGlobe Online (CloudKit).
+/// **Friends** — the Crew hub, backed by FocusGlobe Online (Supabase).
 /// Honest by design: every pilot shown here is a real accepted connection,
 /// every "Focusing now" badge comes from a real recent presence heartbeat,
-/// and rooms are real CKShare invitations. Nothing is fabricated; when the
+/// and rooms are real private invitations. Nothing is fabricated; when the
 /// crew is empty the warm empty state invites, it never pretends.
 struct FriendsView: View {
     @EnvironmentObject private var appModel: AppModel
@@ -16,6 +16,7 @@ struct FriendsView: View {
     @State private var lobbyRoom: FocusRoom?
     @State private var inviteFlow: InviteFlow?
     @State private var removalTarget: FocusFriend?
+    @State private var showSignIn = false
 
     /// One item-driven sheet for the whole invite flow — the chooser first, then
     /// whichever concrete invite the user picked (avoids nested-sheet races).
@@ -42,10 +43,35 @@ struct FriendsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
                     ScreenHeader(title: "Friends", subtitle: "Focus feels better together", showsBack: false)
-                    if online.availability != .available {
+                    if !online.availability.isAvailable {
                         // One compact banner near the top — the unavailable
-                        // state never dominates the whole page.
-                        OnlineUnavailableView(availability: online.availability, compact: true)
+                        // state never dominates the whole page. Signed-out
+                        // offers Sign in with Apple right here.
+                        OnlineUnavailableView(availability: online.availability, compact: true,
+                                              onSignIn: { showSignIn = true })
+                    }
+                    if let message = online.inviteJoinMessage {
+                        // Outcome of an invitation link that couldn't be joined
+                        // (expired / full / invalid) — friendly, dismissible.
+                        HStack(spacing: AppSpacing.sm) {
+                            Image(systemName: "envelope.badge")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(AppColors.gold)
+                            Text(message)
+                                .font(AppTypography.caption)
+                                .foregroundStyle(AppColors.textSecondary)
+                            Spacer(minLength: 0)
+                            Button {
+                                online.clearInviteJoinMessage()
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundStyle(AppColors.textTertiary)
+                            }
+                        }
+                        .padding(.horizontal, AppSpacing.md)
+                        .padding(.vertical, 10)
+                        .glassBackground(cornerRadius: 14, tintOpacity: 0.16, shadowRadius: 4, shadowY: 2)
                     }
                     if !hasAnySocialContent { emptyState }
                     if !online.incomingRequests.isEmpty || !online.outgoingRequests.isEmpty {
@@ -66,8 +92,17 @@ struct FriendsView: View {
         .focusScreenChrome()
         .task { await refresh() }
         .onChange(of: online.availability) { _, now in
-            guard now == .available else { return }
+            guard now.isAvailable else { return }
             Task { await refresh() }
+        }
+        // A room joined from an invitation link opens its lobby directly.
+        .onChange(of: online.joinedInviteRoom) { _, room in
+            if let room { lobbyRoom = room }
+        }
+        .sheet(isPresented: $showSignIn) {
+            OnlineSignInView { Task { await refresh() } }
+                .environmentObject(online)
+                .environmentObject(appModel)
         }
         .fullScreenCover(item: $lobbyRoom) { room in
             OnlineLobbyView(room: room) {
@@ -112,7 +147,7 @@ struct FriendsView: View {
     }
 
     private func refresh() async {
-        guard online.availability == .available else { return }
+        guard online.availability.isAvailable else { return }
         await online.refreshSocial()
         await online.refreshRooms()
     }
@@ -354,7 +389,7 @@ struct FriendsView: View {
                     .fill(AppColors.ctaFill))
             }
             .buttonStyle(SoftPressStyle())
-            Text("Real private flights use iCloud invitations — friends join with one tap.")
+            Text("Real private flights use one-time invitation links — friends join with one tap.")
                 .font(AppTypography.caption)
                 .foregroundStyle(AppColors.textTertiary)
                 .frame(maxWidth: .infinity)

@@ -1,11 +1,11 @@
 import Foundation
 
 /// Marketing / App Store configuration for the "Share FocusGlobe" flow. This is
-/// PURELY promotional and shares NO CloudKit access — it never creates a room,
-/// never a CKShare, and must never be mistaken for a Crew/room invitation (that
-/// path lives in `FocusRoomService` + `CloudSharingView` and carries a real
-/// private CKShare URL). Update `appStoreURLString` to the live listing URL at
-/// release; until then it points at the marketing site as a safe placeholder.
+/// PURELY promotional and shares NO room access — it never creates a room,
+/// never an invitation, and must never be mistaken for a Crew/room invite
+/// (that path shares a one-time server invite URL from `RoomService`).
+/// Update `appStoreURLString` to the live listing URL at release; until then it
+/// points at the marketing site as a safe placeholder.
 enum MarketingConfig {
     static let appName = "FocusGlobe"
 
@@ -23,19 +23,18 @@ enum MarketingConfig {
 }
 
 /// One reusable sharing payload builder. Everything is explicit-user-action
-/// sharing through the system share sheet — nothing shares automatically, and
-/// intention text is never included unless the caller passes it deliberately.
-enum CloudShareService {
+/// sharing through the system share sheet — nothing shares automatically.
+enum ShareCopyService {
     /// Marketing text that ALWAYS carries the App Store link, so a shared
-    /// recommendation actually lets the recipient install the app (no more
-    /// bare text with nowhere to go). Room invitations do NOT use this — they
-    /// carry a private CKShare URL instead.
+    /// recommendation actually lets the recipient install the app. Room
+    /// invitations do NOT use this — they carry a private invite URL instead.
     static var appLink: String {
         "\(MarketingConfig.tagline) \(MarketingConfig.appStoreURLString)"
     }
 
+    /// Private-flight invitation copy (clearly different from marketing copy).
     static func roomInvitation(url: URL?) -> String {
-        "Join my FocusGlobe flight — we focus together, side by side. \(url?.absoluteString ?? appLink)"
+        "Join my private FocusGlobe flight — we focus together, side by side. \(url?.absoluteString ?? "")"
     }
 
     static func journeySummary(minutes: Int, skyName: String, streak: Int) -> String {

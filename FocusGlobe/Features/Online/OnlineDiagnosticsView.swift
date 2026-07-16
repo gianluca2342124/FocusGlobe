@@ -1,7 +1,9 @@
 #if DEBUG
 import SwiftUI
 
-/// DEBUG-only online diagnostics (never compiled into Release).
+/// DEBUG-only online diagnostics (never compiled into Release). Supabase-era:
+/// shows the authoritative OnlineState, account, room pipeline state and the
+/// EXACT last backend error, plus on-device reproduction actions.
 struct OnlineDiagnosticsView: View {
     @EnvironmentObject private var online: FocusOnlineModel
     @EnvironmentObject private var appModel: AppModel
@@ -13,10 +15,11 @@ struct OnlineDiagnosticsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Online Diagnostics").font(AppTypography.hero).foregroundStyle(AppColors.textPrimary)
-                    group("Container", CloudKitConfig.containerIdentifier)
-                    group("Account", String(describing: online.availability))
-                    group("publicID", online.shortPublicID)
-                    group("Profile", online.profile?.displayName ?? "—")
+                    group("Backend", SupabaseConfig.projectURL?.host ?? "NOT CONFIGURED")
+                    group("Configured", "\(SupabaseConfig.isConfigured)")
+                    group("State", String(describing: online.availability))
+                    group("userID", online.shortPublicID)
+                    group("Alias", online.profile?.displayName ?? "—")
                     group("Discoverable", "\(online.profile?.isDiscoverable ?? false)")
                     group("Flight mode", online.flightMode.rawValue)
                     group("Last pilot fetch", online.lastPilotFetchAt?.formatted() ?? "—")
@@ -28,11 +31,10 @@ struct OnlineDiagnosticsView: View {
                     group("Incoming requests", "\(online.incomingRequests.count)")
                     group("Last error", online.lastErrorCategory ?? "—")
                     if let detail = online.lastRoomErrorDetail {
-                        // The EXACT CKError breakdown from the last room-creation
-                        // attempt — code name + raw value + description + underlying
-                        // / partial errors. This is the "real error, not generic".
+                        // The EXACT backend breakdown from the last failure —
+                        // the real error, never a generic message.
                         VStack(alignment: .leading, spacing: 3) {
-                            Text("Last room error (exact)")
+                            Text("Last error (exact)")
                                 .font(AppTypography.caption).foregroundStyle(AppColors.textTertiary)
                             Text(detail)
                                 .font(.system(size: 10.5, design: .monospaced))
@@ -58,11 +60,8 @@ struct OnlineDiagnosticsView: View {
 
     private var actions: some View {
         VStack(spacing: 8) {
-            // Reproduce room creation on-device and print the EXACT outcome —
-            // the real CKError (via lastRoomErrorDetail), not a generic message.
+            // Reproduce room creation on-device and print the EXACT outcome.
             row("Create test private room") {
-                // Single-flight + throttle-aware: repeated taps during the retry
-                // window print the countdown instead of hammering CloudKit.
                 if let until = online.roomThrottledUntil {
                     log.append("throttled: try again in \(max(0, Int(until.timeIntervalSinceNow)))s (\(online.roomStateSummary))")
                     return
@@ -75,18 +74,19 @@ struct OnlineDiagnosticsView: View {
                     log.append("room FAILED: \(online.roomStateSummary) | \(online.lastRoomErrorDetail ?? online.lastErrorCategory ?? "unknown")")
                 }
             }
-            row("Refresh Cloud status") { await online.refreshAvailability(); log.append("status: \(online.availability)") }
-            row("Fetch current Sky pilots") {
+            row("Refresh Online status") { await online.refreshAvailability(); log.append("state: \(online.availability)") }
+            row("Fetch campaign progress") {
                 await online.refreshCampaignProgress(skyID: appModel.selectedSky.id, required: 3)
                 log.append("campaign \(appModel.selectedSky.id): \(online.campaignProgress(skyID: appModel.selectedSky.id))")
             }
             row("Refresh social") { await online.refreshSocial(); log.append("crew: \(online.crew.count)") }
             row("Refresh rooms") { await online.refreshRooms(); log.append("rooms: \(online.ownedRooms.count)/\(online.joinedRooms.count)") }
-            row("Recreate public profile") { await online.ensureIdentityAndProfile(); log.append("profile ok") }
-            row("Delete my rooms (cleanup)") {
+            row("Recreate profile") { await online.ensureIdentityAndProfile(); log.append("profile: \(online.profile?.displayName ?? "nil")") }
+            row("Close my rooms (cleanup)") {
                 let n = await online.debugPurgeOwnedRooms()
-                log.append("deleted \(n) owned room(s); state \(online.roomStateSummary)")
+                log.append("closed \(n) owned room(s); state \(online.roomStateSummary)")
             }
+            row("Sign out") { await online.signOut(); log.append("signed out; state: \(online.availability)") }
             row("Clear online cache") { OnlineCache.resetForAccountChange(); log.append("cache cleared") }
         }
     }

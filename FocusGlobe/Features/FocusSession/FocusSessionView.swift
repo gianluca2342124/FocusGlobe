@@ -248,10 +248,10 @@ struct FocusSessionView: View {
                 .environmentObject(online).environmentObject(appModel)
         }
         .sheet(isPresented: $showInvite) {
-            // The REAL invitation route (CKShare): inside a private room it
-            // invites into that room; otherwise it creates/reuses an
-            // invite-capable room for this Sky. Nobody is shown as "joined"
-            // until CloudKit confirms their acceptance.
+            // The REAL invitation route: inside a private room it invites into
+            // that room; otherwise it creates/reuses an invite-capable room for
+            // this Sky. Nobody is shown as "joined" until the server confirms
+            // their membership.
             InvitePeopleView(context: inviteContext)
                 .environmentObject(appModel)
                 .environmentObject(online)

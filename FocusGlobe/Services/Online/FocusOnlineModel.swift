@@ -1,10 +1,10 @@
 import Foundation
 import SwiftUI
-import CloudKit
+import AuthenticationServices
 import OSLog
 
 /// A friendly, Release-safe reason a private room couldn't be created (never a
-/// raw `CKError` — that stays in DEBUG diagnostics / OSLog).
+/// raw backend error — that stays in DEBUG diagnostics / OSLog).
 struct RoomCreationFailure: Equatable, Sendable {
     let message: String
 }
@@ -12,26 +12,25 @@ struct RoomCreationFailure: Equatable, Sendable {
 /// The ONE authoritative state for private-room creation. Every online surface
 /// (flight selector, invite sheet, Friends) reads this — never a cached boolean
 /// and never the selected flight mode — so "Private room ready" can only ever
-/// appear when a room truly exists with a live CKShare URL.
+/// appear when a room truly exists with a live server invite link.
 enum RoomCreationState: Equatable {
     case idle                       // nothing created yet
     case creating                   // a single create operation is in flight
-    case waitingUntil(Date)         // CloudKit throttle/quota — retry-after window
-    case ready(FocusRoom)           // saved record + saved CKShare + non-nil url
+    case waitingUntil(Date)         // server throttle — retry-after window
+    case ready(FocusRoom)           // server room + owner membership + invite URL
     case failed(RoomCreationFailure)
 }
 
-/// **FocusGlobe Online** — the single @MainActor coordinator between the UI and
-/// the CloudKit service actors. Views never touch CloudKit directly; Solo
-/// flights never touch this class's network paths. Every failure degrades to a
-/// friendly state and never blocks the local timer or coins.
+/// **FocusGlobe Online** — the single @MainActor coordinator between the UI
+/// and the Supabase service actors. Views never touch the backend directly;
+/// Solo flights never touch this class's network paths. Every failure degrades
+/// to a friendly state and never blocks the local timer or coins.
 @MainActor
 final class FocusOnlineModel: ObservableObject {
 
     // MARK: Published state
 
-    @Published private(set) var availability: CloudAvailability = .checking
-    @Published private(set) var identity: FocusIdentity?
+    @Published private(set) var availability: OnlineState = .unknown
     @Published private(set) var profile: OnlineProfile?
 
     /// The mode selected in the pre-flight ritual (persisted last choice).
@@ -40,11 +39,14 @@ final class FocusOnlineModel: ObservableObject {
     }
     /// The private room chosen/created for the NEXT flight (privateRoom mode).
     @Published var pendingRoom: FocusRoom?
-
-    /// The ONE authoritative private-room creation state. Flight selector, invite
-    /// sheet and Friends all read this — never a cached bool or the flight mode —
-    /// so "Private room ready" appears only for a real room with a live CKShare.
+    /// Single authoritative room-creation pipeline state.
     @Published private(set) var roomCreationState: RoomCreationState = .idle
+    /// Set when the active room flips to `active` (drives member auto-start).
+    @Published private(set) var activeRoomStartedID: String?
+    /// A room joined from an invitation link (Friends surfaces it).
+    @Published private(set) var joinedInviteRoom: FocusRoom?
+    /// Friendly one-line outcome of the last invite-link join attempt.
+    @Published private(set) var inviteJoinMessage: String?
 
     /// Real pilots currently visible in the active Sky (public or room).
     @Published private(set) var realPilots: [OnlinePilot] = []
@@ -61,41 +63,40 @@ final class FocusOnlineModel: ObservableObject {
     // Diagnostics (DEBUG screen)
     @Published private(set) var lastPilotFetchAt: Date?
     @Published private(set) var lastErrorCategory: String?
-    /// The full one-line breakdown of the most recent room-creation failure
-    /// (exact CKError code + description + underlying/partial errors). DEBUG
-    /// diagnostics only — never shown as Release UI copy.
+    /// Full breakdown of the most recent room failure. DEBUG diagnostics only.
     @Published private(set) var lastRoomErrorDetail: String?
+
+    var isSignedIn: Bool { availability == .ready || myUserID != nil }
 
     // MARK: Services
 
-    private let environment = CloudKitEnvironment()
-    private let identityService = CloudIdentityService()
-    private let profileService = PublicProfileService()
-    private let presenceService = PresenceService()
+    private let authService = SupabaseAuthService()
+    private let profileService = ProfileService()
+    private let flightService = PublicFlightService()
+    private let roomService = RoomService()
     private let friendService = FriendService()
-    private let roomService = FocusRoomService()
-    private let notificationService = OnlineNotificationService()
+    private let realtimeService = RealtimeService()
+    private let moderationService = ModerationService()
+    private let rewardService = OnlineRewardService()
 
     private weak var appModel: AppModel?
+    private var myUserID: String?
     private var pilotPollTask: Task<Void, Never>?
-    private var accountObserver: NSObjectProtocol?
+    private var lobbyRoomID: String?
 
     // Room-creation pipeline (single-flight + throttle-aware).
-    /// The in-flight create operation, if any — guarantees ONE create at a time
-    /// and lets concurrent callers await the same result (no duplicate writes,
-    /// no duplicate room IDs).
     private var roomCreateTask: Task<FocusRoom?, Never>?
-    /// Reused across retries of a failed attempt so one user action can't spawn
-    /// many room IDs; cleared on success or a terminal (non-throttle) failure.
-    private var pendingAttemptRoomID: String?
-    /// Auto-clears `.waitingUntil` back to `.idle` when the retry window elapses.
     private var throttleResetTask: Task<Void, Never>?
-    /// How many throttles in a row (drives backoff when no retryAfter is given).
     private var consecutiveThrottles = 0
+
+    // Sign in with Apple nonce for the in-flight authorization.
+    private var currentRawNonce: String?
 
     // Friend-bonus overlap tracking for the CURRENT flight.
     private var flightSessionID: String?
     private var flightRoom: FocusRoom?
+    private var serverSessionID: String?
+    private var verifiedBonusSessionIDs = Set<String>()
     private var overlapSeconds: Double = 0
     private var lastOverlapSample: Date?
     /// Verified overlap needed for the friend bonus (≥ 5 focused minutes).
@@ -107,54 +108,108 @@ final class FocusOnlineModel: ObservableObject {
 
     func bootstrap(appModel: AppModel) {
         self.appModel = appModel
-        identity = OnlineCache.loadIdentity()
         profile = OnlineCache.loadProfile()
-        // Restore any live CloudKit throttle window so we don't hammer the
-        // server on launch and the countdown survives a relaunch.
         if let retry = OnlineCache.roomCreationRetryAfterDate, retry > Date() {
             roomCreationState = .waitingUntil(retry)
             scheduleThrottleReset(until: retry)
         } else {
             OnlineCache.roomCreationRetryAfterDate = nil
         }
-        if accountObserver == nil {
-            accountObserver = NotificationCenter.default.addObserver(
-                forName: .CKAccountChanged, object: nil, queue: .main) { [weak self] _ in
-                Task { await self?.handleAccountChange() }
-            }
-        }
         Task { await refreshAvailability() }
     }
 
     func refreshAvailability() async {
-        availability = await environment.currentAvailability()
-        OnlineCache.lastOnlineStatus = availability.userMessage
-        if availability.isAvailable, identity == nil || profile == nil {
-            await ensureIdentityAndProfile()
+        guard SupabaseConfig.isConfigured else {
+            availability = .projectUnavailable
+            OnlineCache.lastOnlineStatus = availability.userMessage
+            return
         }
+        if availability == .authenticating { return }
+        do {
+            if let userID = try await authService.restoreSession() {
+                myUserID = userID
+                if availability != .ready { availability = .ready }
+                if profile == nil || profile?.publicID != userID {
+                    await ensureIdentityAndProfile()
+                }
+            } else {
+                myUserID = nil
+                availability = .signedOut
+            }
+        } catch {
+            lastErrorCategory = OnlineError.category(for: error)
+            availability = (lastErrorCategory == "network") ? .networkUnavailable : .projectUnavailable
+        }
+        OnlineCache.lastOnlineStatus = availability.userMessage
     }
 
-    /// The ONE authoritative reaction to a failed CloudKit operation. Account
-    /// status alone can read `.available` from cache even with no network, so a
-    /// genuine network failure only surfaces when an actual op fails — this
-    /// flips the single `availability` state so EVERY online surface agrees
-    /// (no more "Live" here + "You're offline" there). Non-network CloudKit
-    /// errors keep `.available`; the caller shows a retry, never "offline".
+    /// The ONE authoritative reaction to a failed backend operation: a genuine
+    /// network failure flips the shared availability so EVERY online surface
+    /// agrees; an authentication rejection flips to sessionExpired. Other
+    /// errors keep `.ready` and the caller shows a retry — never "offline".
     private func applyOperationError(_ error: Error) {
         let category = OnlineError.category(for: error)
         lastErrorCategory = category
         switch category {
-        case "network":    availability = .networkUnavailable
-        case "no-account": availability = .noAccount
-        default:           break
+        case "network":     availability = .networkUnavailable
+        case "no-account":  availability = .sessionExpired
+        default:            break
         }
     }
 
-    private func handleAccountChange() async {
-        // Never mix two iCloud identities: clear cached social data, keep local
-        // app progress, and rebuild identity from the new account.
+    // MARK: Sign in with Apple (native → Supabase ID-token)
+
+    /// SHA-256 nonce for the Apple request; the raw value is kept for Supabase.
+    func makeAppleNonce() -> String {
+        let raw = SupabaseAuthService.makeRawNonce()
+        currentRawNonce = raw
+        return SupabaseAuthService.sha256(raw)
+    }
+
+    /// Completes the SwiftUI SignInWithAppleButton flow. Returns a friendly
+    /// error message, or nil on success.
+    func completeAppleSignIn(_ result: Result<ASAuthorization, Error>) async -> String? {
+        guard let rawNonce = currentRawNonce else { return OnlineError.requestFailed.userMessage }
+        currentRawNonce = nil
+        switch result {
+        case .failure(let error):
+            if (error as? ASAuthorizationError)?.code == .canceled { return nil }
+            lastErrorCategory = OnlineError.category(for: error)
+            lastRoomErrorDetail = OnlineError.detail(for: error)
+            return "Sign in didn't complete. Please try again."
+        case .success(let authorization):
+            availability = .authenticating
+            do {
+                let userID = try await authService.signInWithApple(authorization: authorization,
+                                                                   rawNonce: rawNonce)
+                myUserID = userID
+                availability = .ready
+                await ensureIdentityAndProfile()
+                await consumePendingInviteIfAny()
+                return nil
+            } catch {
+                availability = .signedOut
+                lastErrorCategory = OnlineError.category(for: error)
+                lastRoomErrorDetail = OnlineError.detail(for: error)
+                SupabaseService.log.error("apple sign-in FAILED: \(OnlineError.detail(for: error), privacy: .public)")
+                return lastErrorCategory == "network"
+                    ? OnlineState.networkUnavailable.userMessage
+                    : "Sign in didn't complete. Please try again."
+            }
+        }
+    }
+
+    func signOut() async {
+        await flightService.stopPublishing()
+        await realtimeService.teardown()
+        await authService.signOut()
+        myUserID = nil
+        resetSocialState()
+        availability = .signedOut
+    }
+
+    private func resetSocialState() {
         OnlineCache.resetForAccountChange()
-        identity = nil
         profile = nil
         crew = []
         incomingRequests = []
@@ -163,36 +218,33 @@ final class FocusOnlineModel: ObservableObject {
         joinedRooms = []
         realPilots = []
         pendingRoom = nil
+        joinedInviteRoom = nil
+        inviteJoinMessage = nil
         resetRoomCreation()
-        await refreshAvailability()
     }
 
-    /// Fetch-or-create identity + public profile. Safe to call repeatedly.
+    /// Fetch-or-create my profile row + push current skin/settings.
     func ensureIdentityAndProfile() async {
-        guard availability.isAvailable else { return }
+        guard let myUserID else { return }
         do {
-            let id = try await identityService.ensureIdentity()
-            identity = id
-            OnlineCache.save(identity: id)
-            var current = profile ?? OnlineProfile(
-                publicID: id.publicID,
-                displayName: id.anonymousHandle,
-                balloonSkinID: appModel?.equippedSkinIDForOnline ?? "default",
-                countryCode: Locale.current.region?.identifier,
-                isDiscoverable: appModel?.profile.onlineDiscoverable ?? false,
-                allowsFriendRequests: appModel?.profile.onlineAllowsFriendRequests ?? true,
-                createdAt: Date(), updatedAt: Date())
+            var current = try await profileService.ensureProfile(
+                userID: myUserID,
+                defaults: OnlineProfile(
+                    publicID: myUserID,
+                    displayName: "SkyPilot\(Int.random(in: 1000...9999))",
+                    balloonSkinID: appModel?.equippedSkinIDForOnline ?? "default",
+                    countryCode: Locale.current.region?.identifier,
+                    isDiscoverable: appModel?.profile.onlineDiscoverable ?? false,
+                    allowsFriendRequests: appModel?.profile.onlineAllowsFriendRequests ?? true,
+                    createdAt: Date(), updatedAt: Date()))
             current.balloonSkinID = appModel?.equippedSkinIDForOnline ?? current.balloonSkinID
-            try await profileService.upsertProfile(current)
+            current.isDiscoverable = appModel?.profile.onlineDiscoverable ?? current.isDiscoverable
+            try await profileService.updateProfile(current)
             profile = current
             OnlineCache.save(profile: current)
-            await presenceService.configure(publicID: current.publicID,
-                                            displayName: current.displayName,
-                                            countryCode: current.countryCode,
-                                            acceptsInvites: current.allowsFriendRequests)
-            await notificationService.installSubscriptions(publicID: current.publicID)
+            await flightService.configure(userID: myUserID)
         } catch {
-            lastErrorCategory = OnlineError.category(for: error)
+            applyOperationError(error)
         }
     }
 
@@ -205,8 +257,8 @@ final class FocusOnlineModel: ObservableObject {
         profile = p
         OnlineCache.save(profile: p)
         Task {
-            try? await profileService.upsertProfile(p)
-            if !on { await presenceService.stopPublishing() }
+            try? await profileService.updateProfile(p)
+            if !on { await flightService.stopPublishing() }
         }
     }
 
@@ -216,7 +268,7 @@ final class FocusOnlineModel: ObservableObject {
         p.allowsFriendRequests = on
         profile = p
         OnlineCache.save(profile: p)
-        Task { try? await profileService.upsertProfile(p) }
+        Task { try? await profileService.updateProfile(p) }
     }
 
     /// Alias validation + rate limit (one change per day).
@@ -234,20 +286,16 @@ final class FocusOnlineModel: ObservableObject {
         if let last = OnlineCache.aliasLastChangedAt, Date().timeIntervalSince(last) < 24 * 3600 {
             return "You can change your alias once a day."
         }
+        guard var p = profile else { return OnlineError.notSignedIn.userMessage }
+        p.displayName = alias
         do {
-            try await identityService.updateAlias(alias)
-            identity?.anonymousHandle = alias
-            if var p = profile {
-                p.displayName = alias
-                try await profileService.upsertProfile(p)
-                profile = p
-                OnlineCache.save(profile: p)
-            }
-            if let id = identity { OnlineCache.save(identity: id) }
+            try await profileService.updateProfile(p)
+            profile = p
+            OnlineCache.save(profile: p)
             OnlineCache.aliasLastChangedAt = Date()
             return nil
         } catch {
-            lastErrorCategory = OnlineError.category(for: error)
+            applyOperationError(error)
             return OnlineError.requestFailed.userMessage
         }
     }
@@ -258,6 +306,7 @@ final class FocusOnlineModel: ObservableObject {
         guard flightMode.isOnline, availability.isAvailable, let profile else { return }
         flightSessionID = sessionID
         flightRoom = flightMode == .privateRoom ? pendingRoom : nil
+        serverSessionID = nil
         overlapSeconds = 0
         lastOverlapSample = Date()
         let presence = OnlinePresence(sessionID: sessionID, skyID: skyID,
@@ -266,14 +315,19 @@ final class FocusOnlineModel: ObservableObject {
                                       startedAt: Date(), expectedEndAt: expectedEndAt,
                                       isPaused: false, focusCategory: category,
                                       balloonSkinID: profile.balloonSkinID)
+        let myID = profile.publicID
         Task {
             // Public presence only for publicSky (room membership stays in
-            // private/shared records; a room flight isn't broadcast publicly).
+            // member records; a room flight isn't broadcast publicly).
             if flightMode == .publicSky, appModel?.profile.onlineDiscoverable ?? false {
-                await presenceService.startPublishing(presence)
+                await flightService.startPublishing(presence)
+                await realtimeService.joinSky(skyID: skyID, myID: myID) { [weak self] in
+                    Task { @MainActor [weak self] in await self?.pollSoon() }
+                }
             }
             if let room = flightRoom {
-                await roomService.markFlying(room, profile: profile, sessionID: sessionID)
+                await roomService.heartbeat(roomID: room.id, myID: myID)
+                serverSessionID = await roomService.mySession(roomID: room.id, myID: myID)
             }
         }
         startPilotPolling(skyID: skyID)
@@ -281,7 +335,7 @@ final class FocusOnlineModel: ObservableObject {
 
     func flightPauseChanged(isPaused: Bool) {
         guard flightMode.isOnline else { return }
-        Task { await presenceService.setPaused(isPaused) }
+        Task { await flightService.setPaused(isPaused) }
         if isPaused { sampleOverlap(activeOthers: 0) } else { lastOverlapSample = Date() }
     }
 
@@ -290,20 +344,34 @@ final class FocusOnlineModel: ObservableObject {
         pilotPollTask?.cancel()
         pilotPollTask = nil
         let room = flightRoom
+        let serverSession = serverSessionID
         flightRoom = nil
         flightSessionID = nil
+        serverSessionID = nil
         realPilots = []
         reconnecting = false
         Task {
-            await presenceService.stopPublishing()
-            if let room, let profile { await roomService.setReady(room, profile: profile, ready: false) }
+            await flightService.stopPublishing()
+            await realtimeService.leaveSky()
+            if room != nil, let serverSession {
+                // Server-verified completion: the friend bonus is decided from
+                // server rows, once, idempotently.
+                if let outcome = await rewardService.completeSession(sessionID: serverSession),
+                   outcome.friendBonus {
+                    verifiedBonusSessionIDs.insert(sessionID)
+                }
+            }
+            if let room { try? await roomService.setReady(roomID: room.id, ready: false) }
         }
     }
 
     func appDidEnterForeground() {
         Task {
             await refreshAvailability()
-            await presenceService.heartbeatNow()
+            await flightService.heartbeatNow()
+            if let lobbyRoomID, let myID = myUserID {
+                await roomService.heartbeat(roomID: lobbyRoomID, myID: myID)
+            }
         }
     }
 
@@ -314,8 +382,21 @@ final class FocusOnlineModel: ObservableObject {
         pilotPollTask = Task { [weak self] in
             while let self, !Task.isCancelled {
                 await self.pollOnce(skyID: skyID)
-                try? await Task.sleep(nanoseconds: UInt64(CloudKitConfig.publicRefreshInterval * 1_000_000_000))
+                try? await Task.sleep(nanoseconds: UInt64(SupabaseConfig.publicRefreshInterval * 1_000_000_000))
             }
+        }
+    }
+
+    /// A realtime presence nudge — refresh pilots soon (debounced by the poll
+    /// loop's own cadence; this is just one extra read, never a write).
+    private var lastNudgeAt: Date = .distantPast
+    private func pollSoon() async {
+        guard flightMode == .publicSky, let profile else { return }
+        guard Date().timeIntervalSince(lastNudgeAt) > 5 else { return }
+        lastNudgeAt = Date()
+        if let skyID = realPilots.first?.skyID ?? appModel?.selectedSky.id {
+            realPilots = await flightService.fetchPilots(skyID: skyID, excluding: profile.publicID)
+            lastPilotFetchAt = Date()
         }
     }
 
@@ -323,11 +404,11 @@ final class FocusOnlineModel: ObservableObject {
         guard flightMode.isOnline else { return }
         let me = profile?.publicID
         if flightMode == .publicSky {
-            let pilots = await presenceService.fetchPilots(skyID: skyID, excluding: me)
+            let pilots = await flightService.fetchPilots(skyID: skyID, excluding: me)
             realPilots = pilots
             reconnecting = pilots.isEmpty && !availability.isAvailable
         } else if let room = flightRoom {
-            let participants = await roomService.participants(of: room)
+            let participants = await roomService.participants(roomID: room.id, roomActive: true)
             let others = participants.filter { $0.publicID != me }
             realPilots = others.map { p in
                 OnlinePilot(id: p.publicID, sessionID: p.activeSessionID ?? p.id,
@@ -342,21 +423,12 @@ final class FocusOnlineModel: ObservableObject {
             // flying with a fresh heartbeat.
             let activeOthers = others.filter {
                 $0.status == .flying &&
-                ($0.lastHeartbeatAt.map { Date().timeIntervalSince($0) < CloudKitConfig.presenceStaleInterval } ?? false)
+                ($0.lastHeartbeatAt.map { Date().timeIntervalSince($0) < SupabaseConfig.presenceStaleInterval } ?? false)
             }.count
             sampleOverlap(activeOthers: activeOthers)
-            if let profile, let sessionID = flightSessionID {
-                await roomService.markFlying(room, profile: profile, sessionID: sessionID)
-            }
+            if let me { await roomService.heartbeat(roomID: room.id, myID: me) }
         }
         lastPilotFetchAt = Date()
-        await refreshAvailabilityQuietly()
-    }
-
-    private func refreshAvailabilityQuietly() async {
-        let status = await environment.currentAvailability()
-        if status != availability { availability = status }
-        reconnecting = flightMode.isOnline && !status.isAvailable
     }
 
     private func sampleOverlap(activeOthers: Int) {
@@ -368,27 +440,28 @@ final class FocusOnlineModel: ObservableObject {
     }
 
     /// True once for a verified friend flight (≥5 min real overlap in a private
-    /// room). Decorative pilots and public strangers never qualify.
+    /// room, or the server's own verification). Decorative pilots and public
+    /// strangers never qualify.
     func friendBonusEligible(sessionID: String) -> Bool {
-        flightMode == .privateRoom
+        if verifiedBonusSessionIDs.contains(sessionID) { return true }
+        return flightMode == .privateRoom
             && flightRoom != nil
             && flightSessionID == sessionID
             && overlapSeconds >= Self.friendBonusOverlap
     }
 
-    // MARK: Rooms
+    // MARK: Rooms — creation pipeline (single-flight, throttle-aware)
 
-    /// Back-compat entry (CreateRoomView etc.): create a private flight room and
-    /// return an invitation. Routes through the single-flight state machine so
-    /// every surface stays consistent and two creates never race.
+    /// Back-compat entry (CreateRoomView etc.): create a private flight room
+    /// and return an invitation.
     @discardableResult
     func createRoom(skyID: String, title: String, purpose: FocusRoom.Purpose = .flight) async -> RoomInvitation? {
+        if purpose == .skyUnlock { return await campaignInvitationRoom(skyID: skyID) }
         guard let room = await requestPrivateFlightRoom(skyID: skyID, title: title) else { return nil }
         return RoomInvitation(id: room.id, room: room, url: room.shareURL)
     }
 
     /// The `Date` until which any room-creating write must wait (nil if clear).
-    /// Reads the authoritative state first, then the persisted window.
     var roomThrottledUntil: Date? {
         if case .waitingUntil(let d) = roomCreationState, d > Date() { return d }
         if let d = OnlineCache.roomCreationRetryAfterDate, d > Date() { return d }
@@ -407,17 +480,17 @@ final class FocusOnlineModel: ObservableObject {
     }
 
     /// Explicit, DEBOUNCED, SINGLE-FLIGHT private-room creation — the only path
-    /// that promotes a room to `.ready`/`pendingRoom`, and only with a real saved
-    /// CKShare URL. Repeated calls while `.creating` join the in-flight attempt;
-    /// calls during a throttle window do nothing (the UI shows the countdown).
+    /// that promotes a room to `.ready`/`pendingRoom`, and only with a real
+    /// server invite URL. Repeated calls while `.creating` join the in-flight
+    /// attempt; calls during a throttle window do nothing.
     @discardableResult
     func requestPrivateFlightRoom(skyID: String, title: String = "FocusGlobe Flight") async -> FocusRoom? {
-        if case .ready(let room) = roomCreationState { return room }   // reuse existing
-        if roomThrottledUntil != nil { return nil }                    // throttled → no write
-        if let task = roomCreateTask { return await task.value }       // join in-flight attempt
+        if case .ready(let room) = roomCreationState { return room }
+        if roomThrottledUntil != nil { return nil }
+        if let task = roomCreateTask { return await task.value }
         let task = Task { [weak self] () -> FocusRoom? in
             guard let self else { return nil }
-            return await self.performRoomCreation(skyID: skyID, title: title)
+            return await self.performRoomCreation(skyID: skyID)
         }
         roomCreateTask = task
         let result = await task.value
@@ -425,81 +498,46 @@ final class FocusOnlineModel: ObservableObject {
         return result
     }
 
-    private func performRoomCreation(skyID: String, title: String) async -> FocusRoom? {
+    private func performRoomCreation(skyID: String) async -> FocusRoom? {
         await refreshAvailability()
-        guard availability.isAvailable else {
+        guard availability.isAvailable, let myID = myUserID else {
             roomCreationState = .failed(RoomCreationFailure(message: availability.userMessage))
             return nil
         }
-        await ensureIdentityAndProfile()
-        guard let profile else {
-            roomCreationState = .failed(RoomCreationFailure(message: OnlineError.notSignedIn.userMessage))
-            return nil
-        }
-        // Re-check the throttle after the awaits above (state may have changed).
         if let until = roomThrottledUntil {
             roomCreationState = .waitingUntil(until)
             return nil
         }
         roomCreationState = .creating
-        // Reuse the same room ID across retries of a failed attempt (an atomic
-        // save that failed left nothing on the server) — one user action, one ID.
-        let attemptID = pendingAttemptRoomID ?? UUID().uuidString
-        pendingAttemptRoomID = attemptID
         do {
-            let room = try await roomService.createRoom(reusingRoomID: attemptID, title: title,
-                                                        skyID: skyID, owner: profile, purpose: .flight)
-            guard room.shareURL != nil else {
-                lastRoomErrorDetail = "room saved without a share URL (share.url==nil)"
-                lastErrorCategory = "share-url-missing"
-                pendingAttemptRoomID = nil
-                roomCreationState = .failed(RoomCreationFailure(message: "Private room unavailable"))
-                return nil
-            }
-            // Success — clear all throttle/attempt bookkeeping and go ready.
+            let created = try await roomService.createRoom(skyID: skyID, durationSeconds: nil,
+                                                           purpose: .flight, myID: myID)
             consecutiveThrottles = 0
-            pendingAttemptRoomID = nil
             lastRoomErrorDetail = nil
             OnlineCache.roomCreationRetryAfterDate = nil
             throttleResetTask?.cancel()
-            pendingRoom = room
-            roomCreationState = .ready(room)
+            pendingRoom = created.room
+            activeRoomParticipants = created.members
+            roomCreationState = .ready(created.room)
             await refreshRooms()
-            return room
+            return created.room
         } catch {
             applyOperationError(error)
             lastRoomErrorDetail = OnlineError.detail(for: error)
             if OnlineError.isThrottled(error) {
-                // CloudKit quota / rate limit: honour retry-after, block further
-                // writes until it elapses, and KEEP the attempt ID so a later
-                // retry reuses it instead of minting a new room ID. This is the
-                // exact fix for the observed quotaExceeded (retryAfter≈318s).
                 consecutiveThrottles += 1
                 let until = OnlineError.throttleRetryDate(for: error, consecutive: consecutiveThrottles)
-                    ?? Date().addingTimeInterval(300)
+                    ?? Date().addingTimeInterval(60)
                 OnlineCache.roomCreationRetryAfterDate = until
                 roomCreationState = .waitingUntil(until)
                 scheduleThrottleReset(until: until)
             } else {
-                pendingAttemptRoomID = nil
-                roomCreationState = .failed(RoomCreationFailure(message: friendlyMessage(for: error)))
+                roomCreationState = .failed(RoomCreationFailure(message: OnlineError.map(error).userMessage))
             }
             return nil
         }
     }
 
-    /// Human-friendly, Release-safe copy for a room-creation failure.
-    private func friendlyMessage(for error: Error) -> String {
-        switch OnlineError.category(for: error) {
-        case "no-account": return OnlineError.notSignedIn.userMessage
-        case "network":    return "You're offline right now."
-        case "quota":      return "CloudKit is temporarily busy."
-        default:           return OnlineError.requestFailed.userMessage
-        }
-    }
-
-    /// Auto-return `.waitingUntil` to `.idle` when the retry window elapses, so
-    /// the create button re-enables itself without a manual refresh.
     private func scheduleThrottleReset(until date: Date) {
         throttleResetTask?.cancel()
         throttleResetTask = Task { [weak self] in
@@ -512,18 +550,14 @@ final class FocusOnlineModel: ObservableObject {
                 OnlineCache.roomCreationRetryAfterDate = nil
             }
             if case .waitingUntil(let d) = self.roomCreationState, d <= Date() {
-                // Fresh idle episode — drop the reused attempt ID and backoff count.
-                self.pendingAttemptRoomID = nil
                 self.consecutiveThrottles = 0
                 self.roomCreationState = .idle
             }
         }
     }
 
-    /// Reset the creation pipeline (account change / data delete / room closed).
     private func resetRoomCreation() {
         throttleResetTask?.cancel(); throttleResetTask = nil
-        pendingAttemptRoomID = nil
         consecutiveThrottles = 0
         roomCreationState = .idle
         OnlineCache.roomCreationRetryAfterDate = nil
@@ -536,167 +570,252 @@ final class FocusOnlineModel: ObservableObject {
         roomCreationState = .ready(room)
     }
 
+    // MARK: Rooms — lifecycle
+
     func refreshRooms() async {
-        guard availability.isAvailable else { return }
-        ownedRooms = await roomService.ownedRooms().filter { $0.purpose == .flight }
-        joinedRooms = await roomService.joinedRooms()
+        guard availability.isAvailable, let myID = myUserID else { return }
+        let (owned, joined) = await roomService.myRooms(myID: myID)
+        ownedRooms = owned.filter { $0.purpose == .flight }
+        joinedRooms = joined
     }
 
     func loadParticipants(of room: FocusRoom) async {
-        activeRoomParticipants = await roomService.participants(of: room)
+        activeRoomParticipants = await roomService.participants(roomID: room.id,
+                                                                roomActive: room.status == .active)
     }
 
+    /// Lobby entry: membership already exists (create/join RPC); heartbeat +
+    /// realtime change feed keep the member list and start state live.
     func joinRoom(_ room: FocusRoom) async {
-        guard let profile else { return }
-        try? await roomService.joinRoom(room, profile: profile)
+        guard let myID = myUserID else { return }
+        lobbyRoomID = room.id
+        await roomService.heartbeat(roomID: room.id, myID: myID)
         await loadParticipants(of: room)
+        await realtimeService.subscribeRoom(roomID: room.id) { [weak self] in
+            Task { @MainActor [weak self] in await self?.reconcileLobby(roomID: room.id) }
+        }
+    }
+
+    /// Realtime/lobby reconciliation: refresh members and detect the owner's
+    /// shared start so every member's device flies together.
+    private func reconcileLobby(roomID: String) async {
+        guard lobbyRoomID == roomID, let myID = myUserID else { return }
+        if let fresh = await roomService.room(id: roomID, myID: myID) {
+            if pendingRoom?.id == roomID { pendingRoom = fresh }
+            await loadParticipants(of: fresh)
+            if fresh.status == .active, activeRoomStartedID != roomID {
+                activeRoomStartedID = roomID
+            }
+        } else {
+            await loadParticipants(of: FocusRoom(id: roomID, ownerPublicID: "", title: "",
+                                                 skyID: "", createdAt: Date(), expiresAt: nil,
+                                                 maximumParticipants: 8, status: .lobby,
+                                                 allowsLateJoin: true, purpose: .flight,
+                                                 startedAt: nil, isOwned: false, shareURL: nil))
+        }
+    }
+
+    func exitLobby() {
+        lobbyRoomID = nil
+        Task { await realtimeService.unsubscribeRoom() }
     }
 
     func setReady(_ room: FocusRoom, ready: Bool) async {
-        guard let profile else { return }
-        await roomService.setReady(room, profile: profile, ready: ready)
+        do {
+            try await roomService.setReady(roomID: room.id, ready: ready)
+        } catch {
+            applyOperationError(error)
+        }
         await loadParticipants(of: room)
     }
 
+    /// Owner starts the shared flight — server stamps the canonical start.
     func ownerStart(_ room: FocusRoom, durationSeconds: Int?) async {
-        try? await roomService.startRoom(room, durationSeconds: durationSeconds)
-        pendingRoom?.status = .active
+        guard let myID = myUserID else { return }
+        do {
+            let started = try await roomService.startRoom(roomID: room.id, myID: myID)
+            pendingRoom = started.room
+            activeRoomParticipants = started.members
+            activeRoomStartedID = started.room.id
+            roomCreationState = .ready(started.room)
+        } catch {
+            applyOperationError(error)
+            lastRoomErrorDetail = OnlineError.detail(for: error)
+        }
     }
 
     func leaveRoom(_ room: FocusRoom) async {
-        guard let profile else { return }
         if room.isOwned {
-            await roomService.closeRoom(room)
+            await roomService.closeRoom(roomID: room.id)
         } else {
-            await roomService.leaveRoom(room, publicID: profile.publicID)
+            await roomService.leaveRoom(roomID: room.id)
         }
         if pendingRoom?.id == room.id {
             pendingRoom = nil
-            // The pending/ready room is gone — return the pipeline to idle so the
-            // selector offers "Create a Private Flight" again (leave any active
-            // throttle window untouched).
             if case .ready = roomCreationState { roomCreationState = .idle }
         }
+        if lobbyRoomID == room.id { exitLobby() }
         await refreshRooms()
     }
 
-    func shareURL(for room: FocusRoom) async -> URL? {
-        await roomService.shareURL(for: room) ?? room.shareURL
-    }
-
-    /// The room's live CKShare (owner only) — feeds the system sharing UI,
-    /// which also handles participant management (remove / stop sharing).
-    func share(for room: FocusRoom) async -> CKShare? {
-        await roomService.share(for: room)
-    }
-
-    /// Explicitly invite a picked contact as a private CKShare participant.
-    /// Returns a friendly error message, or nil on success. The email/phone is
-    /// used once for the CloudKit lookup and never stored.
-    func addRoomParticipant(_ room: FocusRoom, email: String?, phone: String?) async -> String? {
+    /// A fresh one-time invite URL for an owned room (tokens are hashed
+    /// server-side, so links can't be re-derived after relaunch).
+    func freshInvite(for room: FocusRoom) async -> URL? {
         do {
-            try await roomService.addParticipant(to: room, email: email, phone: phone)
+            return try await roomService.freshInviteURL(roomID: room.id)
+        } catch {
+            applyOperationError(error)
+            lastRoomErrorDetail = OnlineError.detail(for: error)
             return nil
-        } catch {
-            lastErrorCategory = OnlineError.category(for: error)
-            return "That contact couldn't be added directly — use the invite sheet instead."
         }
     }
 
-    /// A CKShare invitation was accepted (app-delegate hook).
-    func handleAcceptedShare(_ metadata: CKShare.Metadata) async {
+    // MARK: Invitations (deep links)
+
+    /// Entry point for `focusglobe://join/<token>` and the future
+    /// `https://focusglobe.app/join/<token>` universal link.
+    func handleIncomingURL(_ url: URL) async {
+        guard let token = DeepLinkService.inviteToken(from: url) else { return }
+        await refreshAvailability()
+        guard availability.isAvailable else {
+            // Keep the invitation; consume it right after sign-in.
+            OnlineCache.pendingInviteToken = token
+            inviteJoinMessage = "Sign in to join this private flight."
+            return
+        }
+        await joinInvite(token: token)
+    }
+
+    private func consumePendingInviteIfAny() async {
+        guard let token = OnlineCache.pendingInviteToken else { return }
+        OnlineCache.pendingInviteToken = nil
+        await joinInvite(token: token)
+    }
+
+    private func joinInvite(token: String) async {
+        guard let myID = myUserID else { return }
         do {
-            try await roomService.acceptShare(metadata: metadata)
-            await ensureIdentityAndProfile()
+            let joined = try await roomService.joinRoom(token: token, myID: myID)
+            joinedInviteRoom = joined.room
+            activeRoomParticipants = joined.members
+            inviteJoinMessage = nil
             await refreshRooms()
-            // Join every newly visible room we haven't joined (writes our own
-            // participant record so the owner sees a REAL acceptance).
-            guard let profile else { return }
-            for room in joinedRooms {
-                let participants = await roomService.participants(of: room)
-                if !participants.contains(where: { $0.publicID == profile.publicID }) {
-                    try? await roomService.joinRoom(room, profile: profile)
-                }
-            }
         } catch {
-            lastErrorCategory = OnlineError.category(for: error)
+            applyOperationError(error)
+            lastRoomErrorDetail = OnlineError.detail(for: error)
+            inviteJoinMessage = OnlineError.map(error).userMessage
         }
     }
+
+    func clearInviteJoinMessage() { inviteJoinMessage = nil }
 
     // MARK: Crew
 
     func refreshSocial() async {
-        guard availability.isAvailable, let me = profile else { return }
-        // Incoming requests are creator-verified; answering never touches the
-        // sender's record. Outgoing resolution mirrors accepted responses into
-        // MY private CrewMember records (each side owns its own membership).
-        incomingRequests = await friendService.incomingRequests(for: me.publicID)
-        outgoingRequests = await friendService.outgoingPendingRequests(for: me.publicID)
-        var list = await friendService.crewMembers()
-        let profiles = await profileService.fetchProfiles(publicIDs: list.map(\.publicID))
-        for index in list.indices {
-            if let p = profiles.first(where: { $0.publicID == list[index].publicID }) {
-                list[index].displayName = p.displayName
-                list[index].balloonSkinID = p.balloonSkinID
-                list[index].countryCode = p.countryCode
-            }
-            // "Focusing now" only from a real fresh presence record.
-            if let record = try? await CloudKitConfig.container.publicCloudDatabase
-                .record(for: CKRecord.ID(recordName: list[index].publicID)),
-               let pilot = PresenceService.pilot(from: record), !pilot.isStale {
-                list[index].activePilot = pilot
-            }
+        guard availability.isAvailable, let myID = myUserID else { return }
+        let (incomingRows, outgoingRows) = await friendService.pendingRequests(myID: myID)
+        let counterpartIDs = Set(incomingRows.map(\.senderID) + outgoingRows.map(\.receiverID))
+        let requestProfiles = await profileService.fetchProfiles(publicIDs: Array(counterpartIDs))
+        func alias(_ id: String) -> (String, String) {
+            let p = requestProfiles.first { $0.publicID == id }
+            return (p?.displayName ?? "Sky Pilot", p?.balloonSkinID ?? "default")
+        }
+        incomingRequests = incomingRows.map { row in
+            let (name, skin) = alias(row.senderID)
+            return FriendRequest(id: row.id, senderPublicID: row.senderID,
+                                 recipientPublicID: row.receiverID,
+                                 senderDisplayName: name, senderBalloonSkinID: skin,
+                                 createdAt: PostgresDate.parse(row.createdAt) ?? Date())
+        }
+        outgoingRequests = outgoingRows.map { row in
+            FriendRequest(id: row.id, senderPublicID: row.senderID,
+                          recipientPublicID: row.receiverID,
+                          senderDisplayName: profile?.displayName ?? "Me",
+                          senderBalloonSkinID: profile?.balloonSkinID ?? "default",
+                          createdAt: PostgresDate.parse(row.createdAt) ?? Date())
+        }
+
+        let ids = await friendService.friendIDs(myID: myID)
+        let profiles = await profileService.fetchProfiles(publicIDs: ids)
+        var list: [FocusFriend] = ids.map { id in
+            let p = profiles.first { $0.publicID == id }
+            return FocusFriend(id: id, publicID: id,
+                               displayName: p?.displayName ?? "Sky Pilot",
+                               balloonSkinID: p?.balloonSkinID ?? "default",
+                               countryCode: p?.countryCode,
+                               since: Date(), activePilot: nil)
+        }
+        // "Focusing now" only from a real fresh flight row (cap the lookups).
+        for index in list.indices.prefix(12) {
+            list[index].activePilot = await flightService.activeFlight(of: list[index].publicID)
         }
         crew = list.sorted { $0.displayName < $1.displayName }
     }
 
     func sendFriendRequest(to pilot: OnlinePilot) async -> String? {
         guard availability.isAvailable else { return availability.userMessage }
-        await ensureIdentityAndProfile()
-        guard let me = profile else { return OnlineError.notSignedIn.userMessage }
+        guard let myID = myUserID else { return OnlineError.notSignedIn.userMessage }
+        guard pilot.allowsFriendRequest else { return "This pilot isn't accepting requests." }
         do {
-            try await friendService.sendRequest(from: me, to: pilot)
+            try await friendService.sendRequest(from: myID, to: pilot.id)
             await refreshSocial()
             return nil
         } catch let error as OnlineError {
             return error.userMessage
         } catch {
             lastErrorCategory = OnlineError.category(for: error)
+            if let pgCode = (error as? Any).flatMap({ _ in OnlineError.detail(for: error) }),
+               pgCode.contains("23505") {
+                return "Request already sent."
+            }
             return OnlineError.requestFailed.userMessage
         }
     }
 
     func respond(to request: FriendRequest, accept: Bool) async {
-        guard let me = profile else { return }
-        try? await friendService.respond(to: request, accept: accept, me: me)
+        do {
+            if accept { try await friendService.accept(requestID: request.id) }
+            else { try await friendService.decline(requestID: request.id) }
+        } catch {
+            applyOperationError(error)
+        }
         await refreshSocial()
     }
 
     func cancelRequest(_ request: FriendRequest) async {
-        guard let me = profile else { return }
-        try? await friendService.cancelRequest(request, me: me)
+        try? await friendService.cancel(requestID: request.id)
         await refreshSocial()
     }
 
     func removeFriend(_ friend: FocusFriend) async {
-        // Deletes MY OWN private CrewMember record only — never the other
-        // pilot's records.
-        await friendService.removeCrew(otherPublicID: friend.publicID)
+        guard let myID = myUserID else { return }
+        await friendService.removeFriend(myID: myID, otherID: friend.publicID)
         await refreshSocial()
     }
 
-    /// Report a pilot for moderation. Reporter-owned; anonymous data only.
-    /// Returns a friendly error message, or nil on success.
+    /// Block a pilot: hides them both ways, removes the friendship, cancels
+    /// pending requests. Returns a friendly error message, or nil on success.
+    func blockPilot(_ pilot: OnlinePilot) async -> String? {
+        guard availability.isAvailable else { return availability.userMessage }
+        do {
+            try await moderationService.block(userID: pilot.id)
+            realPilots.removeAll { $0.id == pilot.id }
+            await refreshSocial()
+            return nil
+        } catch {
+            lastErrorCategory = OnlineError.category(for: error)
+            return OnlineError.requestFailed.userMessage
+        }
+    }
+
+    /// Report a pilot for moderation. Returns a friendly error, or nil.
     func reportPilot(_ pilot: OnlinePilot, reason: String) async -> String? {
         guard availability.isAvailable else { return availability.userMessage }
-        await ensureIdentityAndProfile()
-        guard let me = profile else { return OnlineError.notSignedIn.userMessage }
         do {
-            try await friendService.reportPilot(reporter: me, reportedPublicID: pilot.id,
-                                                reportedSessionID: pilot.sessionID, reason: reason)
+            try await moderationService.report(userID: pilot.id, reason: reason)
             return nil
-        } catch let error as OnlineError {
-            return error.userMessage
+        } catch let error where OnlineError.category(for: error) == "rate-limited" {
+            return OnlineError.rateLimited.userMessage
         } catch {
             lastErrorCategory = OnlineError.category(for: error)
             return OnlineError.requestFailed.userMessage
@@ -709,41 +828,30 @@ final class FocusOnlineModel: ObservableObject {
         return nil
     }
 
-    // MARK: Invite-based Sky unlocks (verified acceptances only)
+    // MARK: Invite-based Sky unlocks (verified joins only)
 
-    /// The campaign room for a locked Sky (created on demand). Its CKShare URL
-    /// is the invitation; only ACCEPTED unique participants count.
+    /// The campaign room for a locked Sky (created/reused on demand). Its
+    /// invite URL is the invitation; only REAL joins count (server-verified).
     func campaignInvitation(for sky: FocusSky) async -> RoomInvitation? {
+        await campaignInvitationRoom(skyID: sky.id)
+    }
+
+    private func campaignInvitationRoom(skyID: String) async -> RoomInvitation? {
         await refreshAvailability()
-        guard availability.isAvailable else { return nil }
-        await ensureIdentityAndProfile()
-        guard let profile else { return nil }
-        let all = await roomService.ownedRooms()
-        if let existing = all.first(where: { $0.purpose == .skyUnlock && $0.skyID == sky.id }) {
-            let url = await roomService.shareURL(for: existing)
-            return RoomInvitation(id: existing.id, room: existing, url: url)
-        }
-        // Respect the account-wide CloudKit throttle window — never create a new
-        // campaign room while quota-limited (same quota that room flights hit).
+        guard availability.isAvailable, let myID = myUserID else { return nil }
         if roomThrottledUntil != nil { return nil }
         do {
-            let room = try await roomService.createRoom(title: "Fly \(sky.name) with me",
-                                                        skyID: sky.id, owner: profile,
-                                                        purpose: .skyUnlock)
-            guard room.shareURL != nil else {
-                lastRoomErrorDetail = "campaign room saved without a share URL (share.url==nil)"
-                lastErrorCategory = "share-url-missing"
-                return nil
-            }
+            let created = try await roomService.createRoom(skyID: skyID, durationSeconds: nil,
+                                                           purpose: .skyUnlock, myID: myID)
             lastRoomErrorDetail = nil
-            return RoomInvitation(id: room.id, room: room, url: room.shareURL)
+            return RoomInvitation(id: created.room.id, room: created.room, url: created.room.shareURL)
         } catch {
             applyOperationError(error)
             lastRoomErrorDetail = OnlineError.detail(for: error)
             if OnlineError.isThrottled(error) {
                 consecutiveThrottles += 1
                 let until = OnlineError.throttleRetryDate(for: error, consecutive: consecutiveThrottles)
-                    ?? Date().addingTimeInterval(300)
+                    ?? Date().addingTimeInterval(60)
                 OnlineCache.roomCreationRetryAfterDate = until
                 scheduleThrottleReset(until: until)
             }
@@ -751,95 +859,53 @@ final class FocusOnlineModel: ObservableObject {
         }
     }
 
-    /// Recount verified acceptances for a Sky's campaign and cache the result.
-    /// Counts ONLY explicitly invited CKShare participants who actually
-    /// accepted, deduplicated by their stable CloudKit user record ID (owner
-    /// excluded by role) — never link opens, share-sheet taps, display names
-    /// or self-written participant records.
+    /// Recount verified joins for a Sky's campaign and cache the result.
+    /// Server-computed: distinct accounts that genuinely joined (owner
+    /// excluded) — never link opens or share-sheet taps.
     func refreshCampaignProgress(skyID: String, required: Int) async {
-        guard availability.isAvailable, let me = profile else { return }
-        let rooms = await roomService.ownedRooms().filter { $0.purpose == .skyUnlock && $0.skyID == skyID }
-        var unique = Set<String>()
-        for room in rooms {
-            for stableID in await roomService.acceptedShareParticipantIDs(for: room) {
-                unique.insert(stableID)
-            }
-        }
+        guard availability.isAvailable else { return }
+        guard let count = await roomService.campaignProgress(skyID: skyID) else { return }
         var progress = OnlineCache.campaignProgress
-        progress[skyID] = unique.count
+        progress[skyID] = count
         OnlineCache.campaignProgress = progress
-        await friendService.recordCampaignProgress(skyID: skyID, ownerPublicID: me.publicID,
-                                                   acceptedUniquePublicIDs: Array(unique),
-                                                   required: required)
-        if required > 0, unique.count >= required {
+        if required > 0, count >= required {
             appModel?.unlockSkyFromVerifiedInvites(skyID: skyID)
         }
         objectWillChange.send()
     }
 
-    /// Cached verified acceptance count (synchronised across devices).
+    /// Cached verified acceptance count.
     func campaignProgress(skyID: String) -> Int {
         OnlineCache.campaignProgress[skyID] ?? 0
-    }
-
-    // MARK: Remote notifications
-
-    nonisolated func handleRemoteNotification(_ userInfo: [AnyHashable: Any]) {
-        guard let kind = OnlineNotificationService.kind(of: userInfo) else { return }
-        Task { @MainActor in
-            switch kind {
-            case .friends: await refreshSocial()
-            case .rooms:   await refreshRooms()
-            }
-        }
     }
 
     // MARK: Delete online data
 
     func deleteOnlineData() async {
-        let publicID = profile?.publicID ?? identity?.publicID
-        await presenceService.stopPublishing()
-        if let publicID {
-            await profileService.deleteProfile(publicID: publicID)
-            await notificationService.removeSubscriptions(publicID: publicID)
-            // Each deletion below removes ONLY records this account owns.
-            for request in outgoingRequests { try? await friendService.cancelRequest(request, me: profile ?? OnlineProfile(publicID: publicID, displayName: "", balloonSkinID: "", countryCode: nil, isDiscoverable: false, allowsFriendRequests: false, createdAt: Date(), updatedAt: Date())) }
-            await friendService.deleteMyResponses(me: publicID)
-            await friendService.deleteAllCrew()
-        }
-        for room in await roomService.ownedRooms() { await roomService.closeRoom(room) }
-        for room in joinedRooms { if let publicID { await roomService.leaveRoom(room, publicID: publicID) } }
-        _ = try? await CloudKitConfig.container.privateCloudDatabase
-            .deleteRecord(withID: CKRecord.ID(recordName: "current-user-identity"))
-        OnlineCache.resetForAccountChange()
-        identity = nil
-        profile = nil
-        crew = []
-        incomingRequests = []
-        outgoingRequests = []
-        ownedRooms = []
-        joinedRooms = []
-        realPilots = []
-        pendingRoom = nil
-        resetRoomCreation()
+        await flightService.stopPublishing()
+        await realtimeService.teardown()
+        try? await profileService.deleteAllOnlineData()
+        resetSocialState()
         appModel?.profile.onlineDiscoverable = false
+        // Account session survives — the profile is recreated on next use.
+        await refreshAvailability()
     }
 
     // MARK: Diagnostics helpers (DEBUG screen reads these)
 
-    var shortPublicID: String { String((profile?.publicID ?? "—").prefix(8)) }
+    var shortPublicID: String { String((myUserID ?? "—").prefix(8)) }
     var realPilotCount: Int { realPilots.count }
 
     #if DEBUG
-    /// DEBUG-only: delete this account's owned rooms (clears orphaned test rooms
-    /// left by earlier attempts) and reset the creation pipeline. Never touches
-    /// joined rooms or other users' records. Returns the count deleted.
+    /// DEBUG-only: close all my open rooms and reset the creation pipeline.
     func debugPurgeOwnedRooms() async -> Int {
-        let deleted = await roomService.deleteOwnedRooms()
+        guard let myID = myUserID else { return 0 }
+        let (owned, _) = await roomService.myRooms(myID: myID)
+        for room in owned { await roomService.closeRoom(roomID: room.id) }
         pendingRoom = nil
         resetRoomCreation()
         await refreshRooms()
-        return deleted
+        return owned.count
     }
     #endif
 }

@@ -11,6 +11,7 @@ struct PilotProfileSheet: View {
     @State private var note: String?
     @State private var busy = false
     @State private var showReport = false
+    @State private var showBlock = false
 
     /// Closed set of report reasons — no free text, no personal data.
     private let reportReasons = ["Inappropriate alias", "Harassment or bullying",
@@ -64,6 +65,11 @@ struct PilotProfileSheet: View {
                             dismiss()
                         }
                         .foregroundStyle(AppColors.textTertiary)
+                        Button("Block") {
+                            appModel.tapFeedback()
+                            showBlock = true
+                        }
+                        .foregroundStyle(AppColors.danger.opacity(0.85))
                         Button("Report") {
                             appModel.tapFeedback()
                             showReport = true
@@ -80,6 +86,23 @@ struct PilotProfileSheet: View {
         }
         .presentationDetents([.fraction(0.55)])
         .presentationDragIndicator(.hidden)
+        .confirmationDialog("Block this pilot?", isPresented: $showBlock, titleVisibility: .visible) {
+            Button("Block", role: .destructive) {
+                appModel.tapFeedback()
+                Task { @MainActor in
+                    let err = await online.blockPilot(pilot)
+                    if err == nil {
+                        appModel.hidePilot(pilot.id)
+                        dismiss()
+                    } else {
+                        note = err
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("You won't see each other in public Skies, and they can't send you requests or join your rooms.")
+        }
         .confirmationDialog("Report this pilot?", isPresented: $showReport, titleVisibility: .visible) {
             ForEach(reportReasons, id: \.self) { reason in
                 Button(reason, role: .destructive) {

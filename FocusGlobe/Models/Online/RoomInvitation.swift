@@ -1,7 +1,7 @@
 import Foundation
 
-/// A room invitation the user can send (wraps the CKShare URL) or has received
-/// (an accepted share whose room is now visible in the shared database).
+/// A room invitation the user can send (wraps the one-time server invite URL)
+/// or has received (a joined room now visible in their room list).
 struct RoomInvitation: Identifiable, Equatable, Sendable {
     let id: String                 // roomPublicID
     let room: FocusRoom

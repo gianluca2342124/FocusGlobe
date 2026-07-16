@@ -5,11 +5,11 @@ import SwiftUI
 /// calmly (never falling), each holding roughly its own patch of sky with a
 /// gentle bob + sway. Hidden entirely when the pilot chooses a solo flight.
 ///
-/// HONESTY: these are local **mock** travellers until the presence backend
-/// (`SkyPresenceService`) ships — deterministically seeded per Sky so a session
-/// feels stable but varied. `SkyActivity.isLive` stays `false`; nothing here is
-/// presented as verified real-time online users. When real presence arrives,
-/// this layer swaps its data source 1:1.
+/// HONESTY: these are local **decorative** travellers that fill the sky's
+/// visual capacity — deterministically seeded per Sky so a session feels
+/// stable but varied. They never exist in the backend and are never presented
+/// as verified real-time users; REAL pilots come exclusively from
+/// `FocusOnlineModel.realPilots` (Supabase) and render above this layer.
 struct AmbientPilotsLayer: View {
     let skyID: String
     /// Pause-aware elapsed seconds — pilots hold still while paused.

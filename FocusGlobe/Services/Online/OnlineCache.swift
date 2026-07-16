@@ -2,12 +2,11 @@ import Foundation
 
 /// Lightweight local cache for online state (fast UI, never authoritative for
 /// live presence, request status, share acceptance, or unlock completion).
-/// One iCloud identity at a time: `resetForAccountChange` wipes social data
+/// One account at a time: `resetForAccountChange` wipes social data
 /// while leaving unrelated local app progress untouched.
 struct OnlineCache {
     private static let d = UserDefaults.standard
     private enum K {
-        static let identity = "online.identity"
         static let profile = "online.profile"
         static let mode = "online.lastFlightMode"
         static let disclosure = "online.disclosureSeen"
@@ -15,11 +14,9 @@ struct OnlineCache {
         static let requestSentAt = "online.requestSentAt"
         static let campaignProgress = "online.campaignProgress"   // [skyID: Int]
         static let lastStatus = "online.lastStatus"
-        static let roomRetryAfter = "online.roomRetryAfter"       // CloudKit throttle window
+        static let roomRetryAfter = "online.roomRetryAfter"       // server throttle window
+        static let pendingInviteToken = "online.pendingInviteToken"
     }
-
-    static func loadIdentity() -> FocusIdentity? { decode(K.identity) }
-    static func save(identity: FocusIdentity) { encode(identity, K.identity) }
 
     static func loadProfile() -> OnlineProfile? { decode(K.profile) }
     static func save(profile: OnlineProfile) { encode(profile, K.profile) }
@@ -48,8 +45,8 @@ struct OnlineCache {
         get { d.string(forKey: K.lastStatus) }
         set { d.set(newValue, forKey: K.lastStatus) }
     }
-    /// The `Date` until which CloudKit throttled room creation (quota / rate
-    /// limit). Persisted so the countdown survives relaunch and the app doesn't
+    /// The `Date` until which the server throttled room creation (rate limit).
+    /// Persisted so the countdown survives relaunch and the app doesn't
     /// hammer the server on next launch.
     static var roomCreationRetryAfterDate: Date? {
         get { d.object(forKey: K.roomRetryAfter) as? Date }
@@ -58,11 +55,20 @@ struct OnlineCache {
             else { d.removeObject(forKey: K.roomRetryAfter) }
         }
     }
+    /// An invite token opened before sign-in — consumed right after auth.
+    static var pendingInviteToken: String? {
+        get { d.string(forKey: K.pendingInviteToken) }
+        set {
+            if let newValue { d.set(newValue, forKey: K.pendingInviteToken) }
+            else { d.removeObject(forKey: K.pendingInviteToken) }
+        }
+    }
 
-    /// Clear cached social data (iCloud account changed / online data deleted).
+    /// Clear cached social data (account changed / online data deleted).
     static func resetForAccountChange() {
-        for key in [K.identity, K.profile, K.aliasChangedAt, K.requestSentAt,
-                    K.campaignProgress, K.lastStatus, K.roomRetryAfter] {
+        for key in [K.profile, K.aliasChangedAt, K.requestSentAt,
+                    K.campaignProgress, K.lastStatus, K.roomRetryAfter,
+                    K.pendingInviteToken] {
             d.removeObject(forKey: key)
         }
     }

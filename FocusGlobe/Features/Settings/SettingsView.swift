@@ -12,6 +12,8 @@ struct SettingsView: View {
     @State private var aliasDraft = ""
     @State private var aliasError: String?
     @State private var showManageOnlineData = false
+    @State private var showOnlineSignIn = false
+    @State private var showSignOutConfirm = false
     #if canImport(RevenueCatUI)
     @State private var showCustomerCenter = false
     #endif
@@ -168,11 +170,41 @@ struct SettingsView: View {
         }
     }
 
-    // FocusGlobe Online — anonymous CloudKit presence controls. Everything here
-    // is opt-in; disabling visibility removes live presence immediately.
+    // FocusGlobe Online — anonymous presence controls backed by a private
+    // FocusGlobe account (Sign in with Apple). Everything here is opt-in;
+    // disabling visibility removes live presence immediately.
     private var onlineSection: some View {
         SettingsCard(title: "FocusGlobe Online") {
             VStack(spacing: 0) {
+                if online.availability == .signedOut || online.availability == .sessionExpired {
+                    Button {
+                        appModel.tapFeedback()
+                        showOnlineSignIn = true
+                    } label: {
+                        SettingsRow(systemImage: "person.crop.circle.badge.plus", title: "Sign in to FocusGlobe Online",
+                                    subtitle: "Fly with other pilots — you appear only as an anonymous alias",
+                                    tint: AppColors.brand,
+                                    trailing: AnyView(Image(systemName: "chevron.right")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(AppColors.textTertiary)))
+                    }
+                    .buttonStyle(SoftPressStyle())
+                    RowDivider()
+                } else if online.isSignedIn {
+                    Button {
+                        appModel.tapFeedback()
+                        showSignOutConfirm = true
+                    } label: {
+                        SettingsRow(systemImage: "person.crop.circle.badge.checkmark", title: "Account",
+                                    subtitle: "Signed in as \(online.profile?.displayName ?? "Sky Pilot") — tap to sign out",
+                                    tint: AppColors.brand,
+                                    trailing: AnyView(Image(systemName: "chevron.right")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(AppColors.textTertiary)))
+                    }
+                    .buttonStyle(SoftPressStyle())
+                    RowDivider()
+                }
                 ToggleRow(systemImage: "globe.americas.fill", title: "Appear in Public Skies",
                           subtitle: "Let other pilots see your balloon while you focus online.",
                           isOn: Binding(get: { appModel.profile.onlineDiscoverable ?? false },
@@ -185,11 +217,11 @@ struct SettingsView: View {
                 RowDivider()
                 Button {
                     appModel.tapFeedback()
-                    aliasDraft = online.profile?.displayName ?? online.identity?.anonymousHandle ?? ""
+                    aliasDraft = online.profile?.displayName ?? ""
                     showAliasEditor = true
                 } label: {
                     SettingsRow(systemImage: "textformat", title: "Public alias",
-                                subtitle: online.profile?.displayName ?? "Set after first online flight",
+                                subtitle: online.profile?.displayName ?? "Set after signing in",
                                 tint: AppColors.brand,
                                 trailing: AnyView(Image(systemName: "chevron.right")
                                     .font(.system(size: 13, weight: .semibold))
@@ -198,6 +230,20 @@ struct SettingsView: View {
                 .buttonStyle(SoftPressStyle())
                 .disabled(online.profile == nil)
             }
+        }
+        .sheet(isPresented: $showOnlineSignIn) {
+            OnlineSignInView()
+                .environmentObject(online)
+                .environmentObject(appModel)
+        }
+        .confirmationDialog("Sign out of FocusGlobe Online?", isPresented: $showSignOutConfirm,
+                            titleVisibility: .visible) {
+            Button("Sign out", role: .destructive) {
+                Task { await online.signOut() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Your local flights, coins and streaks stay on this device. Your online profile remains until you delete it in Manage Online Data.")
         }
         .alert("Change alias", isPresented: $showAliasEditor) {
             TextField("Alias", text: $aliasDraft)
@@ -281,7 +327,7 @@ struct SettingsView: View {
                     showOnlineDiagnostics = true
                 } label: {
                     SettingsRow(systemImage: "waveform.badge.magnifyingglass", title: "Online diagnostics",
-                                subtitle: "CloudKit status, presence & subscriptions",
+                                subtitle: "Supabase status, presence & rooms",
                                 tint: AppColors.brand,
                                 trailing: AnyView(Image(systemName: "chevron.right")
                                     .font(.system(size: 13, weight: .semibold))
@@ -344,8 +390,9 @@ struct SettingsView: View {
 // MARK: - Manage Online Data
 
 /// The pushed detail behind Settings → Privacy & Data → Manage Online Data.
-/// Lists exactly what leaves iCloud, then offers a destructive confirmation.
-/// Local streak, Store ownership, purchases and offline history are untouched.
+/// Lists exactly what is deleted from FocusGlobe Online, then offers a
+/// destructive confirmation. Local streak, Store ownership, purchases and
+/// offline history are untouched.
 private struct ManageOnlineDataView: View {
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var online: FocusOnlineModel
@@ -371,7 +418,7 @@ private struct ManageOnlineDataView: View {
 
                     AppGlassCard(padding: AppSpacing.md) {
                         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                            Text("Deleting removes the following from iCloud:")
+                            Text("Deleting removes the following from FocusGlobe Online:")
                                 .font(AppTypography.callout)
                                 .foregroundStyle(AppColors.textSecondary)
                             ForEach(deletes, id: \.1) { item in

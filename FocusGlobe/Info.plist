@@ -11,13 +11,18 @@
 			<string>cstr6suwn9.skadnetwork</string>
 		</dict>
 	</array>
-	<key>UIBackgroundModes</key>
+	<key>CFBundleURLTypes</key>
 	<array>
-		<string>remote-notification</string>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.focusglobe.app.join</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>focusglobe</string>
+			</array>
+		</dict>
 	</array>
-	<key>CKSharingSupported</key>
-	<true/>
-	<key>NSContactsUsageDescription</key>
-	<string>FocusGlobe uses your contacts only when you choose someone to invite. Your contacts are never uploaded or stored.</string>
 </dict>
 </plist>

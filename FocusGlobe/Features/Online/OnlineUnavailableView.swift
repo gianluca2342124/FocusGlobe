@@ -1,26 +1,42 @@
 import SwiftUI
 
-/// The friendly offline/unavailable state for online surfaces. Solo is always
-/// one tap away; no raw errors, no blocking spinners, and never a "Sign in with
-/// Apple" prompt — FocusGlobe Online uses the device's own iCloud account.
+/// The friendly unavailable state for online surfaces. Solo is always one tap
+/// away; no raw errors and no blocking spinners. When the reason is "no
+/// account", the card offers Sign in with Apple (via `onSignIn`) — auth is
+/// requested only from an explicit user tap, never automatically.
 struct OnlineUnavailableView: View {
-    let availability: CloudAvailability
+    let availability: OnlineState
     /// Full card (mode selector / invite sheet) vs. one compact banner (Friends).
     var compact: Bool = false
     var onSolo: (() -> Void)? = nil
     var onLearnHow: (() -> Void)? = nil
+    var onSignIn: (() -> Void)? = nil
 
-    private var isNoAccount: Bool { availability == .noAccount }
+    private var needsSignIn: Bool {
+        availability == .signedOut || availability == .sessionExpired
+    }
 
     private var title: String {
-        isNoAccount ? "iCloud is required for Online Flights" : "You're offline"
+        switch availability {
+        case .signedOut:           return "Sign in to fly Online"
+        case .sessionExpired:      return "Please sign in again"
+        case .networkUnavailable:  return "You're offline"
+        case .rateLimited:         return "One moment…"
+        default:                   return "Online is temporarily unavailable"
+        }
     }
     private var body_: String {
-        isNoAccount
-            ? "Sign in to iCloud in your device settings to fly with other pilots. Solo Flights always work offline."
+        needsSignIn
+            ? "Online Flights use a private FocusGlobe account with Sign in with Apple — you appear only as an anonymous alias. Solo Flights never need an account."
             : "Reconnect to fly with other pilots. Solo Flights always work offline."
     }
-    private var icon: String { isNoAccount ? "icloud.slash" : "wifi.slash" }
+    private var icon: String {
+        switch availability {
+        case .signedOut, .sessionExpired: return "person.crop.circle.badge.questionmark"
+        case .networkUnavailable:         return "wifi.slash"
+        default:                          return "cloud.slash"
+        }
+    }
 
     var body: some View {
         if compact { banner } else { card }
@@ -43,6 +59,11 @@ struct OnlineUnavailableView: View {
                     .lineLimit(1).minimumScaleFactor(0.85)
             }
             Spacer(minLength: 0)
+            if needsSignIn, let onSignIn {
+                Button("Sign in") { onSignIn() }
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppColors.gold)
+            }
         }
         .padding(.horizontal, AppSpacing.md)
         .padding(.vertical, 10)
@@ -63,11 +84,16 @@ struct OnlineUnavailableView: View {
                 .font(AppTypography.caption)
                 .foregroundStyle(AppColors.textSecondary)
                 .multilineTextAlignment(.center)
-            HStack(spacing: AppSpacing.sm) {
+            HStack(spacing: AppSpacing.md) {
+                if needsSignIn, let onSignIn {
+                    Button("Sign in with Apple") { onSignIn() }
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundStyle(AppColors.gold)
+                }
                 if let onSolo {
                     Button("Continue Solo") { onSolo() }
                         .font(.system(size: 15, weight: .bold, design: .rounded))
-                        .foregroundStyle(AppColors.gold)
+                        .foregroundStyle(needsSignIn && onSignIn != nil ? AppColors.textSecondary : AppColors.gold)
                 }
                 if let onLearnHow {
                     Button("Learn how") { onLearnHow() }

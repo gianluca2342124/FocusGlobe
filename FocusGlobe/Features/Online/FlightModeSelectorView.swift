@@ -1,10 +1,10 @@
 import SwiftUI
 
 /// The FIRST pre-flight ritual step: Online vs Solo, as two large premium
-/// cards. One tap selects; Continue proceeds into the existing ritual. If
-/// CloudKit is unavailable the Online card stays legible but shows an
-/// "Unavailable" badge and Solo stays instantly available — this choice never
-/// lives in Settings, and there is never a "Sign in with Apple" prompt.
+/// cards. One tap selects; Continue proceeds into the existing ritual. When
+/// signed out the Online card offers Sign in with Apple (explicit tap only);
+/// when the backend is unreachable it shows an "Unavailable" badge — and Solo
+/// stays instantly available either way. This choice never lives in Settings.
 struct FlightModeSelectorView: View {
     @EnvironmentObject private var online: FocusOnlineModel
     @EnvironmentObject private var appModel: AppModel
@@ -14,8 +14,13 @@ struct FlightModeSelectorView: View {
     @State private var selection: OnlineFlightMode = OnlineCache.lastFlightMode
     @State private var showDisclosure = false
     @State private var showInvite = false
+    @State private var showSignIn = false
 
     private var onlineAvailable: Bool { online.availability.isAvailable }
+    /// Signed out isn't "broken" — tapping the Online card offers Sign in.
+    private var canSignIn: Bool {
+        online.availability == .signedOut || online.availability == .sessionExpired
+    }
 
     var body: some View {
         VStack(spacing: AppSpacing.lg) {
@@ -45,8 +50,8 @@ struct FlightModeSelectorView: View {
             }
 
             if !onlineAvailable {
-                Text(online.availability == .noAccount
-                     ? "Online Flights need an active iCloud account. Sign in to iCloud in your device settings to fly with other pilots — Solo Flights always work offline."
+                Text(canSignIn
+                     ? "Tap Online Flight to sign in with Apple and fly with other pilots — Solo Flights never need an account."
                      : "You're offline right now. Solo Flights always work offline.")
                     .font(AppTypography.caption)
                     .foregroundStyle(.white.opacity(0.6))
@@ -91,6 +96,13 @@ struct FlightModeSelectorView: View {
         .sheet(isPresented: $showInvite) {
             InvitePeopleView(context: .preFlight(skyID: appModel.selectedSky.id))
                 .environmentObject(online).environmentObject(appModel)
+        }
+        .sheet(isPresented: $showSignIn) {
+            OnlineSignInView {
+                // Signed in from the Online card → select Online right away.
+                withAnimation(.snappy(duration: 0.2)) { selection = .publicSky }
+            }
+            .environmentObject(online).environmentObject(appModel)
         }
         .alert("Fly in Public Skies?", isPresented: $showDisclosure) {
             // Consent IS the enable: continuing online turns on Appear in Public
@@ -183,7 +195,15 @@ struct FlightModeSelectorView: View {
         let titleColor: Color = disabled ? .white.opacity(0.82) : .white
         let subtitleColor = disabled ? AppColors.textTertiary : AppColors.textSecondary
         return Button {
-            guard !disabled else { return }
+            if disabled {
+                // Signed out is an invitation, not a dead end: the Online card
+                // opens Sign in with Apple (explicit user choice — never auto).
+                if mode == .publicSky && canSignIn {
+                    appModel.tapFeedback()
+                    showSignIn = true
+                }
+                return
+            }
             appModel.tapFeedback()
             withAnimation(.snappy(duration: 0.2)) { selection = mode }
         } label: {
@@ -199,7 +219,9 @@ struct FlightModeSelectorView: View {
                     Spacer()
                     if mode == .publicSky {
                         if disabled {
-                            statusBadge("Unavailable", tint: AppColors.textTertiary, filled: false)
+                            statusBadge(canSignIn ? "Sign in" : "Unavailable",
+                                        tint: canSignIn ? AppColors.gold : AppColors.textTertiary,
+                                        filled: false)
                         } else {
                             HStack(spacing: 5) {
                                 Circle().fill(Color(hex: 0x4ADE80)).frame(width: 7, height: 7)
@@ -232,7 +254,7 @@ struct FlightModeSelectorView: View {
                               lineWidth: selected ? 1.6 : 1))
         }
         .buttonStyle(SoftPressStyle(scale: 0.99))
-        .disabled(disabled)
+        .disabled(disabled && !(mode == .publicSky && canSignIn))
     }
 
     private func statusBadge(_ text: String, tint: Color, filled: Bool) -> some View {

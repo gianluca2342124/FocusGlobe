@@ -32,8 +32,19 @@ struct OnlineLobbyView: View {
             .padding(AppSpacing.screen)
         }
         .task {
+            // Membership already exists (create/join RPC). This heartbeats,
+            // loads members and subscribes the realtime change feed.
             await online.joinRoom(room)
-            await online.loadParticipants(of: room)
+        }
+        .onDisappear { online.exitLobby() }
+        // Shared flight start: when the OWNER starts, the server flips the room
+        // to active; realtime (or the pull-to-refresh reconciliation) delivers
+        // it here and every member's device takes off together.
+        .onChange(of: online.activeRoomStartedID) { _, startedID in
+            guard startedID == room.id, !isOwner else { return }
+            online.usePendingRoom(room)
+            dismiss()
+            onStart?()
         }
         .refreshableIfAvailable { await online.loadParticipants(of: room) }
         .sheet(isPresented: $showInvite) {
