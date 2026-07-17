@@ -105,6 +105,21 @@ final class FocusOnlineModel: ObservableObject {
     /// The host has an outstanding invite but is STILL flying Global.
     var isInviteReady: Bool { socialState == .globalInviteReady || socialState == .preparingInvite }
 
+    /// serverNow − localNow, measured on RPCs that return the server clock. Every
+    /// shared-flight countdown derives from `deadline − serverAdjustedNow`, so two
+    /// devices with different clocks still finish together.
+    private(set) var serverClockOffset: TimeInterval = 0
+    var serverAdjustedNow: Date { Date().addingTimeInterval(serverClockOffset) }
+    /// A server timestamp shifted into LOCAL clock space, so the existing
+    /// `Date()`-based timer/label math yields the server-correct remaining time.
+    func adjustedDeadline(_ serverEnd: Date?) -> Date? {
+        serverEnd.map { $0.addingTimeInterval(-serverClockOffset) }
+    }
+    private func noteServerNow(_ serverNow: Date?) {
+        guard let serverNow else { return }
+        serverClockOffset = serverNow.timeIntervalSince(Date())
+    }
+
     /// Deduplicate any participant list by user UUID (stable, first-wins).
     static func dedupe(_ list: [RoomParticipant]) -> [RoomParticipant] {
         var seen = Set<String>(); var out: [RoomParticipant] = []
@@ -540,6 +555,12 @@ final class FocusOnlineModel: ObservableObject {
                 let members = Self.dedupe(await roomService.participants(roomID: room.id, roomActive: true))
                 if members.contains(where: { $0.publicID != myUserID }) {
                     activatePrivateFlight(room: room, members: members)
+                } else if let me {
+                    // No guest yet: keep the pending private record fresh — this
+                    // refreshes the owner membership heartbeat and (for an Infinite
+                    // flight) rolls the room's stale-cleanup window forward, so the
+                    // invite survives as long as the host keeps flying.
+                    await roomService.heartbeat(roomID: room.id, myID: me)
                 }
             }
         } else if var room = flightRoom {
@@ -555,13 +576,17 @@ final class FocusOnlineModel: ObservableObject {
             activeRoomParticipants = participants
             // Deduplicate by UUID and NEVER render myself as a remote pilot.
             let others = participants.filter { $0.publicID != myUserID }
+            // The room's shared end is a SERVER timestamp; shift it into local
+            // clock space so each pilot bubble's remaining time is server-correct
+            // regardless of this device's wall-clock skew.
+            let bubbleEnd = adjustedDeadline(room.endsAt)
             realPilots = others.map { p in
                 // Remaining time is the room's shared, server-canonical end —
                 // synchronized across devices, not a free-running local timer.
                 OnlinePilot(id: p.publicID, sessionID: p.activeSessionID ?? p.id,
                             displayName: p.displayName, countryCode: p.countryCode,
                             balloonSkinID: p.balloonSkinID, skyID: room.skyID,
-                            startedAt: p.joinedAt, expectedEndAt: room.endsAt,
+                            startedAt: p.joinedAt, expectedEndAt: bubbleEnd,
                             lastHeartbeatAt: p.lastHeartbeatAt ?? .distantPast,
                             isPaused: false, focusCategory: "",
                             allowsFriendRequest: true, hasLiveSession: true)
@@ -701,9 +726,11 @@ final class FocusOnlineModel: ObservableObject {
         }
         socialState = .preparingInvite
         do {
-            let created = try await roomService.promoteToPrivate(
-                clientSessionID: sessionID, skyID: skyID,
-                endsAt: flightExpectedEnd, startedAt: flightStartedAt, myID: myID)
+            // The ONLY input is the stable client session id; the server derives
+            // sky / start / end / active-status from the caller's canonical live
+            // Global row in active_flights. No client timestamps are trusted.
+            let created = try await promoteWithSessionRetry(sessionID: sessionID, myID: myID)
+            noteServerNow(created.serverNow)
             flightRoom = created.room
             pendingRoom = created.room
             // Still Global on screen — do NOT flip flightMode yet.
@@ -719,6 +746,24 @@ final class FocusOnlineModel: ObservableObject {
             // Sharing failed — remain a normal Global Flight.
             socialState = flightMode == .privateRoom ? .privateActive : .global
             return nil
+        }
+    }
+
+    /// Promote this journey to a private flight from its canonical live Global
+    /// session. If the server can't yet prove that session
+    /// (`no_active_global_session` — e.g. the first presence heartbeat hasn't
+    /// landed), refresh presence, await it, and retry EXACTLY once before
+    /// surfacing a friendly retryable error. Never falls back to client
+    /// timestamps.
+    private func promoteWithSessionRetry(sessionID: String, myID: String) async throws -> RoomService.CreatedRoom {
+        do {
+            return try await roomService.promoteToPrivate(clientSessionID: sessionID, myID: myID)
+        } catch {
+            guard OnlineError.isNoActiveGlobalSession(error) else { throw error }
+            // Publish/refresh the active Global presence row (bound to this exact
+            // client_session_id), await it, then retry the promotion once.
+            await flightService.heartbeatNow()
+            return try await roomService.promoteToPrivate(clientSessionID: sessionID, myID: myID)
         }
     }
 
@@ -744,11 +789,12 @@ final class FocusOnlineModel: ObservableObject {
         activeRoomParticipants = members
         detectJoins(in: members)           // "<alias> joined"
         // Only invited pilots remain visible (map below on next tick anyway).
+        let bubbleEnd = adjustedDeadline(room.endsAt)
         realPilots = members.filter { $0.publicID != myUserID }.map { p in
             OnlinePilot(id: p.publicID, sessionID: p.activeSessionID ?? p.id,
                         displayName: p.displayName, countryCode: p.countryCode,
                         balloonSkinID: p.balloonSkinID, skyID: room.skyID,
-                        startedAt: p.joinedAt, expectedEndAt: room.endsAt,
+                        startedAt: p.joinedAt, expectedEndAt: bubbleEnd,
                         lastHeartbeatAt: p.lastHeartbeatAt ?? .distantPast,
                         isPaused: false, focusCategory: "",
                         allowsFriendRequest: true, hasLiveSession: true)
@@ -943,20 +989,45 @@ final class FocusOnlineModel: ObservableObject {
         guard let myID = myUserID else { return }
         do {
             let p = try await roomService.previewInvite(token: token, myID: myID)
+            noteServerNow(p.serverNow)
             inviteJoinMessage = nil
-            if p.isOwner { invitePreview = nil; return }
-            guard p.valid else {
+            switch p.status {
+            case "owner", "already_member":
+                // I'm already flying this (as host or an existing member) — opening
+                // my own link is a silent no-op; the flight is already on screen.
                 invitePreview = nil
-                inviteJoinMessage = "This invitation isn't available anymore."
-                return
+            case "valid":
+                guard let room = p.room else {
+                    invitePreview = nil
+                    inviteJoinMessage = "This invitation isn't available anymore."
+                    return
+                }
+                invitePreview = InvitePreviewState(token: token, room: room, hostAlias: p.hostAlias,
+                                                   hostSkin: p.hostSkin, participantCount: p.participantCount)
+            default:
+                // expired / revoked / ended / full / blocked / invalid — never leak
+                // which; a single friendly, non-identifying message.
+                invitePreview = nil
+                inviteJoinMessage = Self.previewUnavailableMessage(for: p.status)
             }
-            invitePreview = InvitePreviewState(token: token, room: p.room, hostAlias: p.hostAlias,
-                                               hostSkin: p.hostSkin, participantCount: p.participantCount)
         } catch {
             applyOperationError(error)
             lastRoomErrorDetail = OnlineError.detail(for: error)
             inviteJoinMessage = OnlineError.map(error).userMessage
             invitePreview = nil
+        }
+    }
+
+    /// Friendly, non-identifying copy for an unavailable preview status. Blocked
+    /// and invalid deliberately share the neutral wording so nothing about the
+    /// flight (or the block) is leaked.
+    private static func previewUnavailableMessage(for status: String) -> String {
+        switch status {
+        case "full":    return "This flight is already full."
+        case "expired", "revoked":
+                        return "This invitation has expired — ask for a new one."
+        case "ended":   return "This flight has already landed."
+        default:        return "This invitation isn't available anymore."
         }
     }
 
@@ -967,6 +1038,7 @@ final class FocusOnlineModel: ObservableObject {
         guard let myID = myUserID, let preview = invitePreview else { return nil }
         do {
             let joined = try await roomService.acceptInvite(token: preview.token, myID: myID)
+            noteServerNow(joined.serverNow)
             activeRoomParticipants = Self.dedupe(joined.members)
             invitePreview = nil
             inviteJoinMessage = nil

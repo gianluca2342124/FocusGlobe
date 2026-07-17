@@ -15,6 +15,7 @@ enum OnlineError: Error, Sendable {
     case inviteExpired
     case blocked
     case profileNotReady
+    case flightNotReady
     case requestFailed
     case cancelled
 
@@ -30,6 +31,7 @@ enum OnlineError: Error, Sendable {
         case .inviteExpired:        return "This invitation has expired — ask for a new one."
         case .blocked:              return "You can't join this Focus Room."
         case .profileNotReady:      return "Finishing your online profile — please try again in a moment."
+        case .flightNotReady:       return "Getting your flight ready to share — please try again in a moment."
         case .requestFailed:        return "Something didn't reach the sky. Please try again."
         case .cancelled:            return ""
         }
@@ -45,7 +47,11 @@ enum OnlineError: Error, Sendable {
                          "blocked", "not_owner", "not_member", "request_not_found",
                          "already_friends", "invalid_reason", "session_not_found",
                          "self", "requests_disabled", "duplicate",
-                         "profile_unavailable"]
+                         "profile_unavailable",
+                         // Global→Private promotion: the caller's canonical live
+                         // session couldn't be proven yet (retryable), was empty,
+                         // or its finite deadline already elapsed.
+                         "no_active_global_session", "invalid_session", "session_ended"]
             for token in known where message.contains(token) { return token }
         }
         return nil
@@ -75,6 +81,14 @@ enum OnlineError: Error, Sendable {
         return false
     }
 
+    /// The promotion RPC couldn't yet prove the caller's canonical live Global
+    /// session (`no_active_global_session`) — a transient, retryable gap the
+    /// client resolves by refreshing its presence and retrying once, NOT a hard
+    /// failure.
+    static func isNoActiveGlobalSession(_ error: Error) -> Bool {
+        serverToken(from: error) == "no_active_global_session"
+    }
+
     /// Map any thrown error to a FocusGlobe OnlineError with friendly copy.
     static func map(_ error: Error) -> OnlineError {
         if isProfileNotReady(error) { return .profileNotReady }
@@ -85,7 +99,9 @@ enum OnlineError: Error, Sendable {
             case "room_full":                            return .roomFull
             case "room_not_found", "room_closed",
                  "not_owner", "not_member",
-                 "session_not_found":                    return .roomUnavailable
+                 "session_not_found", "session_ended":   return .roomUnavailable
+            case "no_active_global_session",
+                 "invalid_session":                      return .flightNotReady
             case "invite_invalid":                       return .inviteInvalid
             case "invite_expired", "invite_revoked":     return .inviteExpired
             case "blocked":                              return .blocked

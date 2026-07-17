@@ -76,6 +76,14 @@ final class FocusSessionViewModel: ObservableObject {
     /// friend-bonus idempotency. Never persisted personally.
     let onlineSessionID = UUID().uuidString
 
+    /// The wall-clock instant the user actually entered THIS flight — the zero
+    /// point of their personal focus reward. Captured at take-off so the reward
+    /// elapsed starts at exactly 0 and is measured LOCALLY, never derived from
+    /// `route.duration − shared_remaining`. A guest joining a flight with 10:43
+    /// left is therefore rewarded from 0, up to at most those 10:43 — the rounded
+    /// symbolic route (used only for distance visuals) can never pre-fill it.
+    private(set) var rewardStartedAt: Date?
+
     // MARK: - Lifecycle
 
     func attach(appModel: AppModel) {
@@ -149,6 +157,13 @@ final class FocusSessionViewModel: ObservableObject {
         appModel.ads.preloadInterstitial(isPro: appModel.isPro)
         appModel.sound.startJourney(option: appModel.selectedJourneyAudio)
         timer.start()
+        // The personal focus reward clock starts NOW (local take-off) — at exactly
+        // 0 for every flight, guest included. It is deliberately separate from the
+        // shared countdown (which counts down to the host's deadline).
+        rewardStartedAt = Date()
+        #if DEBUG
+        validateRewardSeparation()
+        #endif
         // Focus Shield: block the user's chosen apps for the remaining journey
         // time (handles resume — shields last until this journey actually lands).
         appModel.focusShield.applyForJourney(durationSeconds: Int(timer.remaining.rounded()))
@@ -196,6 +211,36 @@ final class FocusSessionViewModel: ObservableObject {
 
     var remainingSeconds: Int { max(0, Int(timer.remaining.rounded(.up))) }
     var remainingTimeText: String { Formatters.countdown(remainingSeconds) }
+
+    /// Personal focus seconds to BANK as the reward — always the local time flown
+    /// since take-off (`rewardStartedAt`), NEVER `route.duration − shared_remaining`.
+    ///  • Synchronized guest: measured from the local join and capped at the shared
+    ///    remaining they inherited, so a guest who joined with 10:43 left earns from
+    ///    0 up to at most 10:43 — the rounded symbolic route can't inflate it.
+    ///  • Every other flight: the pause-aware engine elapsed (clamped to total on a
+    ///    natural finish; the true flown time on "Land now" for an endless flight).
+    var bankedFocusSeconds: Int {
+        guard sharedEndsAt != nil, let rewardStartedAt else {
+            return Int(timer.elapsed.rounded())
+        }
+        let personal = max(0, Date().timeIntervalSince(rewardStartedAt))
+        return Int(min(timer.total, personal).rounded())
+    }
+
+    #if DEBUG
+    /// Runtime proof (DEBUG only) of the reward/countdown separation the flight
+    /// hardening spec requires: a GUEST joining an in-progress shared flight earns
+    /// a personal reward measured from THIS take-off, starting at exactly 0 —
+    /// never pre-filled from `route.duration − shared_remaining` (which the
+    /// whole-minute-rounded symbolic route would inflate). Scoped to the shared
+    /// case: a resumed Solo/Global flight legitimately starts with elapsed > 0.
+    private func validateRewardSeparation() {
+        guard sharedEndsAt != nil else { return }
+        assert(rewardStartedAt != nil, "rewardStartedAt must be set at take-off")
+        assert(bankedFocusSeconds == 0,
+               "Guest reward must start at 0 at take-off (never from route duration), was \(bankedFocusSeconds)s")
+    }
+    #endif
 
     // MARK: - Live display model (read inside the flight's TimelineView)
     //
@@ -369,10 +414,10 @@ final class FocusSessionViewModel: ObservableObject {
         landingSummary = appModel.completeJourney(
             origin: origin,
             route: route,
-            // Bank what was actually flown. The timer clamps elapsed == total on
-            // a natural finish, so this only differs for "Land now" on an
-            // endless flight — which must never bank the full 12-hour cap.
-            focusedSeconds: Int(timer.elapsed.rounded()),
+            // Bank the personal focus time actually flown since take-off — for a
+            // synchronized guest this is their local elapsed (starting at 0),
+            // capped at the shared remaining; never the full route/12h cap.
+            focusedSeconds: bankedFocusSeconds,
             intention: intention,
             onlineSessionID: onlineSessionID
         )

@@ -163,10 +163,13 @@ struct RoomBundlePayload: Codable, Sendable {
     let inviteToken: String?
     /// Idempotent join outcome: `already_owner` / `already_member` / `joined`.
     let membership: String?
+    /// Server wall clock at response time — for client clock-offset sync.
+    let serverNow: String?
 
     enum CodingKeys: String, CodingKey {
         case room, members, membership
         case inviteToken = "invite_token"
+        case serverNow = "server_now"
     }
 }
 

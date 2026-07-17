@@ -12,15 +12,20 @@ struct JoinFlightView: View {
     var onJoin: () -> Void
     var onDecline: () -> Void
     @EnvironmentObject private var appModel: AppModel
+    @EnvironmentObject private var online: FocusOnlineModel
 
     private var room: FocusRoom { preview.room }
     private var sky: FocusSky { FocusSky.byID(room.skyID) ?? .goldenHour }
 
     /// Live remaining, derived from the canonical `ends_at` — updates while the
     /// screen is visible so the guest sees the true shared time before joining.
+    /// The TimelineView tick is shifted into SERVER-clock space (via the offset
+    /// captured on preview) so the preview matches the deadline the guest will
+    /// actually inherit, regardless of this device's wall-clock skew.
     private func remainingLabel(_ now: Date) -> String {
         guard let end = room.endsAt else { return "Infinite Flight" }
-        let r = max(0, Int(end.timeIntervalSince(now)))
+        let adjustedNow = now.addingTimeInterval(online.serverClockOffset)
+        let r = max(0, Int(end.timeIntervalSince(adjustedNow)))
         return r >= 60 ? "\(r / 60) min remaining" : "Landing soon"
     }
 

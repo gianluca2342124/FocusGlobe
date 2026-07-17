@@ -14,18 +14,20 @@ actor RoomService {
         var room: FocusRoom
         var members: [RoomParticipant]
         var membership: String? = nil    // already_owner / already_member / joined
+        var serverNow: Date? = nil       // server clock at response — for offset sync
     }
 
     /// A READ-ONLY preview of an invitation — the flight to join, WITHOUT
-    /// consuming the token or creating any membership.
+    /// consuming the token or creating any membership. `status` is one of
+    /// valid / owner / already_member / expired / revoked / ended / full /
+    /// blocked / invalid; `room`/host fields are absent for blocked/invalid.
     struct InvitePreview: Sendable {
-        var room: FocusRoom
+        var status: String
+        var room: FocusRoom?
         var hostAlias: String
         var hostSkin: String
         var participantCount: Int
-        var isOwner: Bool
-        var alreadyMember: Bool
-        var valid: Bool
+        var serverNow: Date?
     }
 
     /// Map + dedupe a members payload by authenticated user UUID (never by
@@ -81,22 +83,16 @@ actor RoomService {
     /// taps in one journey reuse the SAME flight. The room carries the host's
     /// canonical start + shared end; the returned `shareURL` is a fresh one-time
     /// invitation.
-    func promoteToPrivate(clientSessionID: String, skyID: String,
-                          endsAt: Date?, startedAt: Date?, myID: String) async throws -> CreatedRoom {
+    /// The ONLY input is the client session id — every canonical property (sky,
+    /// start, end, active status) is derived server-side from the caller's live
+    /// active_flights row. No client timestamps are trusted.
+    func promoteToPrivate(clientSessionID: String, myID: String) async throws -> CreatedRoom {
         guard let client else { throw OnlineError.unavailable(.projectUnavailable) }
-        struct Params: Encodable {
-            let p_client_session_id: String
-            let p_sky_id: String
-            let p_ends_at: String?
-            let p_started_at: String?
-        }
+        struct Params: Encodable { let p_client_session_id: String }
         do {
             let payload: RoomBundlePayload = try await client
                 .rpc("promote_global_flight_to_private",
-                     params: Params(p_client_session_id: clientSessionID,
-                                    p_sky_id: skyID,
-                                    p_ends_at: endsAt.map(PostgresDate.string),
-                                    p_started_at: startedAt.map(PostgresDate.string)))
+                     params: Params(p_client_session_id: clientSessionID))
                 .execute().value
             var room = payload.room.room(myID: myID)
             guard let token = payload.inviteToken,
@@ -106,7 +102,8 @@ actor RoomService {
             room.shareURL = url
             let members = Self.dedupedParticipants(payload.members, roomID: room.id,
                                                    roomActive: room.status == .active)
-            return CreatedRoom(room: room, members: members, membership: payload.membership)
+            return CreatedRoom(room: room, members: members, membership: payload.membership,
+                               serverNow: PostgresDate.parse(payload.serverNow))
         } catch {
             SupabaseService.log.error("promoteToPrivate FAILED: \(OnlineError.detail(for: error), privacy: .public)")
             throw error
@@ -148,20 +145,22 @@ actor RoomService {
         guard let client else { throw OnlineError.unavailable(.projectUnavailable) }
         struct Params: Encodable { let p_raw_token: String }
         struct Payload: Decodable {
-            let room: RoomPayload
-            let host_alias: String
-            let host_skin: String
-            let participant_count: Int
-            let is_owner: Bool
-            let already_member: Bool
-            let valid: Bool
+            let room: RoomPayload?
+            let host_alias: String?
+            let host_skin: String?
+            let participant_count: Int?
+            let status: String
+            let server_now: String?
         }
         let p: Payload = try await client
             .rpc("preview_active_flight_invite", params: Params(p_raw_token: token))
             .execute().value
-        return InvitePreview(room: p.room.room(myID: myID), hostAlias: p.host_alias,
-                             hostSkin: p.host_skin, participantCount: p.participant_count,
-                             isOwner: p.is_owner, alreadyMember: p.already_member, valid: p.valid)
+        return InvitePreview(status: p.status,
+                             room: p.room.map { $0.room(myID: myID) },
+                             hostAlias: p.host_alias ?? "a pilot",
+                             hostSkin: p.host_skin ?? "default",
+                             participantCount: p.participant_count ?? 0,
+                             serverNow: PostgresDate.parse(p.server_now))
     }
 
     /// Accept an invitation — the ONLY join path. Atomic validate + consume +
@@ -175,7 +174,8 @@ actor RoomService {
         let room = payload.room.room(myID: myID)
         let members = Self.dedupedParticipants(payload.members, roomID: room.id,
                                                roomActive: room.status == .active)
-        return CreatedRoom(room: room, members: members, membership: payload.membership)
+        return CreatedRoom(room: room, members: members, membership: payload.membership,
+                           serverNow: PostgresDate.parse(payload.serverNow))
     }
 
     func setReady(roomID: String, ready: Bool) async throws {
@@ -229,11 +229,11 @@ actor RoomService {
     /// Member heartbeat while in a lobby/flight (direct column-granted update).
     func heartbeat(roomID: String, myID: String) async {
         guard let client else { return }
-        _ = try? await client.from("room_members")
-            .update(["last_heartbeat_at": PostgresDate.string(Date())])
-            .eq("room_id", value: roomID)
-            .eq("user_id", value: myID)
-            .execute()
+        // Via RPC: refreshes my membership heartbeat AND (if I'm the owner of an
+        // Infinite flight) rolls the room's stale-cleanup window forward, so it
+        // never expires while I keep flying.
+        struct Params: Encodable { let p_room_id: String }
+        _ = try? await client.rpc("heartbeat_room", params: Params(p_room_id: roomID)).execute()
     }
 
     // MARK: Reads

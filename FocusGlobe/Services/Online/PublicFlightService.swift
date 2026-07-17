@@ -48,6 +48,7 @@ actor PublicFlightService {
         guard let client, let presence = current, let userID else { return }
         struct Upsert: Encodable {
             let user_id: String
+            let client_session_id: String
             let sky_id: String
             let balloon_skin_id: String
             let session_kind: String
@@ -60,6 +61,9 @@ actor PublicFlightService {
             let expires_at: String
         }
         let row = Upsert(user_id: userID,
+                         // Binds this Global session row to its stable client id so
+                         // the promotion RPC can prove the session is the caller's.
+                         client_session_id: presence.sessionID,
                          sky_id: presence.skyID,
                          balloon_skin_id: presence.balloonSkinID,
                          session_kind: presence.mode == .privateRoom ? "room" : "public",
