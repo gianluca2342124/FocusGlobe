@@ -51,8 +51,13 @@ struct FocusSessionView: View {
     /// centre. Eased up once on appear, then the balloon steady-follows.
     @State private var takeoffLift: CGFloat = 0
     @State private var uiIn = false
-    /// The in-flight "flight room" invite sheet.
-    @State private var showInvite = false
+    /// Invite Friends → one fresh link handed straight to the iOS share sheet
+    /// (no intermediate custom UI). Promotes a Global Flight to Private in place.
+    @State private var shareInviteURL: URL?
+    /// The one lobby (participants roster) for the active Private Flight.
+    @State private var showLobby = false
+    /// In-flight guard so a double tap can't mint two links / two rooms.
+    @State private var invitePreparing = false
     /// The single compact flight-controls panel (replaces the old button cluster).
     @State private var showControlsPanel = false
     /// Clean mode: hide chrome down to a tiny timer + a reveal button.
@@ -92,13 +97,19 @@ struct FocusSessionView: View {
         let hidden = appModel.profile.hiddenPilotIDs ?? []
         return online.realPilots.filter { !hidden.contains($0.id) }
     }
-    /// Where an in-flight invite goes: into the current private room, or a
-    /// fresh invite-capable room for this Sky (never a mode switch).
-    private var inviteContext: InvitePeopleView.Context {
-        if online.flightMode == .privateRoom, let room = online.pendingRoom {
-            return .room(room)
+    /// Invite Friends: promote a Global Flight into a Private Flight in place —
+    /// no restart, same timer/sky/sound/shield — then hand ONE fresh single-use
+    /// link to the native iOS share sheet. If already private, just shares a new
+    /// link. In-flight guarded so a double tap can't create two rooms/links.
+    private func inviteFriends() async {
+        guard isOnlineFlight, !invitePreparing else { return }
+        invitePreparing = true
+        let skyID = (matchedSky ?? appModel.selectedSky).id
+        if let room = await online.beginPrivateFlight(skyID: skyID),
+           let url = await online.freshInvite(for: room) {
+            shareInviteURL = url
         }
-        return .preFlight(skyID: (matchedSky ?? appModel.selectedSky).id)
+        invitePreparing = false
     }
     /// True while the give-up button is being held. Used only to fade the centre
     /// watermark on compact iPhone so the expanding capsule never crowds it.
@@ -161,6 +172,7 @@ struct FocusSessionView: View {
                                        animated: !reduceMotion,
                                        realPilots: visibleRealPilots,
                                        roomMode: roomBubbleMode,
+                                       isPrivate: online.isPrivateFlight,
                                        onSelectReal: { selectedRealPilot = $0 },
                                        onAddFriend: quickAddFriend,
                                        onHide: { appModel.hidePilot($0.id) },
@@ -178,6 +190,7 @@ struct FocusSessionView: View {
                           showPilots: isOnlineFlight,
                           realPilots: visibleRealPilots,
                           roomMode: roomBubbleMode,
+                          isPrivate: online.isPrivateFlight,
                           equippedItemIDs: appModel.profile.equippedCabinItemIDs ?? [])
                     .transition(.opacity)
             }
@@ -310,14 +323,19 @@ struct FocusSessionView: View {
             PilotProfileSheet(pilot: pilot)
                 .environmentObject(online).environmentObject(appModel)
         }
-        .sheet(isPresented: $showInvite) {
-            // The REAL invitation route: inside a private room it invites into
-            // that room; otherwise it creates/reuses an invite-capable room for
-            // this Sky. Nobody is shown as "joined" until the server confirms
-            // their membership.
-            InvitePeopleView(context: inviteContext)
-                .environmentObject(appModel)
-                .environmentObject(online)
+        // Invite Friends hands ONE link to the native share sheet — no custom UI.
+        #if canImport(UIKit)
+        .sheet(item: Binding(get: { shareInviteURL.map { FlightShareURL(url: $0) } },
+                             set: { shareInviteURL = $0?.url })) { item in
+            InviteShareSheet(url: item.url)
+        }
+        #endif
+        // Participants → the ONE lobby, as a live roster of the Private Flight.
+        .sheet(isPresented: $showLobby) {
+            if let room = online.pendingRoom {
+                OnlineLobbyView(room: room, asParticipants: true)
+                    .environmentObject(online).environmentObject(appModel)
+            }
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
@@ -374,13 +392,20 @@ struct FocusSessionView: View {
             let restY = h * (0.82 - 0.32 * takeoffLift)
             let takeoffScale = 1 + (1 - takeoffLift) * 1.4
             ZStack {
-                FlightBalloonView(size: balloonSize, showGlow: true)
+                // The hero renders through the EXACT same BalloonView component,
+                // size and glow as every other pilot — showing the user's own
+                // equipped skin — so no balloon is larger, brighter or sharper
+                // than another. Only its position (screen centre) differs. The
+                // extra shadow is a take-off ground shadow that fades to zero at
+                // cruise, leaving the same baked shadow every balloon shares.
+                BalloonView(height: balloonSize, showBurner: false, showGlow: true,
+                            skin: BalloonSkin.skin(id: appModel.equippedSkinIDForOnline))
                     .scaleEffect(takeoffScale)
                     .rotationEffect(.degrees(Double(balloonSway) * 0.6))
                     .offset(x: balloonSway + balloonDrift, y: balloonBob)
                     .position(x: geo.size.width / 2, y: restY)
-                    .shadow(color: .black.opacity(0.28),
-                            radius: 10 + 8 * (1 - takeoffLift), y: 6 + 8 * (1 - takeoffLift))
+                    .shadow(color: .black.opacity(0.3),
+                            radius: 18 * (1 - takeoffLift), y: 12 * (1 - takeoffLift))
                 // The user's own balloon is always labelled exactly "YOU" —
                 // never their alias. Hidden in Clean Mode and until take-off.
                 if roomBubbleMode && takeoffLift > 0.9 {
@@ -647,6 +672,8 @@ struct FocusSessionView: View {
                 muted: vm.isAudioMuted,
                 isCabin: viewMode == .cabin,
                 isOnline: isOnlineFlight,
+                isPrivate: online.isPrivateFlight,
+                preparingInvite: invitePreparing,
                 onToggleMute: {
                     vm.toggleMute()
                     // Every panel action closes the panel immediately (Phase 9).
@@ -662,7 +689,12 @@ struct FocusSessionView: View {
                 onInvite: {
                     withAnimation(.easeOut(duration: 0.2)) { showControlsPanel = false }
                     appModel.tapFeedback()
-                    showInvite = true
+                    Task { await inviteFriends() }
+                },
+                onParticipants: {
+                    withAnimation(.easeOut(duration: 0.2)) { showControlsPanel = false }
+                    appModel.tapFeedback()
+                    showLobby = true
                 },
                 onCleanMode: {
                     appModel.setCleanFlightMode(true)
@@ -756,9 +788,13 @@ private struct FlightControlsPanel: View {
     /// Online (public/private) flights show the invite control; a Solo flight
     /// omits it entirely.
     let isOnline: Bool
+    /// A Private Flight (someone was invited) also shows Participants.
+    var isPrivate: Bool = false
+    var preparingInvite: Bool = false
     let onToggleMute: () -> Void
     let onToggleCabin: () -> Void
     let onInvite: () -> Void
+    var onParticipants: () -> Void = {}
     let onCleanMode: () -> Void
     @EnvironmentObject private var appModel: AppModel
 
@@ -795,7 +831,14 @@ private struct FlightControlsPanel: View {
 
             // Invite lives only on Online flights — a Solo flight has no one to
             // invite and no social surface, so the control is omitted entirely.
-            if isOnline { inviteButton }
+            // Participants (the one lobby) appears once the flight is Private.
+            if isOnline {
+                if isPrivate {
+                    row(icon: "person.2.fill", title: "Participants",
+                        subtitle: "See who's flying with you", action: onParticipants)
+                }
+                inviteButton
+            }
         }
         .padding(AppSpacing.md)
         .frame(width: Layout.pad(270, 300))
@@ -863,15 +906,26 @@ private struct FlightControlsPanel: View {
     private var inviteButton: some View {
         Button(action: onInvite) {
             HStack(spacing: 8) {
-                Image(systemName: "person.badge.plus").font(.system(size: 14, weight: .bold))
-                Text("Invite to flight").font(.system(size: 14, weight: .bold, design: .rounded))
+                Image(systemName: preparingInvite ? "hourglass" : "person.badge.plus")
+                    .font(.system(size: 14, weight: .bold))
+                Text(preparingInvite ? "Preparing…" : "Invite Friends")
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
                 Spacer()
-                Image(systemName: "chevron.right").font(.system(size: 11, weight: .bold)).opacity(0.6)
+                if !preparingInvite {
+                    Image(systemName: "chevron.right").font(.system(size: 11, weight: .bold)).opacity(0.6)
+                }
             }
             .foregroundStyle(Color(hex: 0x14120E))
             .padding(.vertical, 10).padding(.horizontal, 12)
             .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(AppColors.gold))
         }
         .buttonStyle(SoftPressStyle(scale: 0.98))
+        .disabled(preparingInvite)
     }
+}
+
+/// Identifiable wrapper so a URL can drive `.sheet(item:)` for the share sheet.
+private struct FlightShareURL: Identifiable {
+    let url: URL
+    var id: String { url.absoluteString }
 }

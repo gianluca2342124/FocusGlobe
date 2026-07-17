@@ -32,6 +32,8 @@ struct CabinView: View {
     var realPilots: [OnlinePilot] = []
     /// Private-room participants show persistent identity bubbles here too.
     var roomMode: Bool = false
+    /// A Private Flight shows invited pilots only (no decorative strangers).
+    var isPrivate: Bool = false
     /// Owned Store cabin decorations the pilot has placed (`StoreItem` ids) —
     /// purely additive dressing; the cabin stands alone without any of them.
     var equippedItemIDs: Set<String> = []
@@ -111,7 +113,7 @@ struct CabinView: View {
             if showPilots {
                 AmbientPilotsLayer(skyID: focusSky?.id ?? "classic",
                                    elapsed: elapsed, animated: animated,
-                                   realPilots: realPilots, roomMode: roomMode)
+                                   realPilots: realPilots, roomMode: roomMode, isPrivate: isPrivate)
                     .frame(width: W, height: H).clipped()
                     .allowsHitTesting(false)
             }
@@ -228,7 +230,7 @@ struct CabinView: View {
             if showPilots {
                 AmbientPilotsLayer(skyID: focusSky?.id ?? "classic",
                                    elapsed: elapsed, animated: animated,
-                                   realPilots: realPilots, roomMode: roomMode)
+                                   realPilots: realPilots, roomMode: roomMode, isPrivate: isPrivate)
                     .frame(width: winW, height: winH)
                     .clipShape(shape)
                     .allowsHitTesting(false)

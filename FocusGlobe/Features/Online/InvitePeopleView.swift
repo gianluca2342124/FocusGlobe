@@ -26,7 +26,6 @@ struct InvitePeopleView: View {
     @State private var loading = true
     @State private var copied = false
     @State private var shareURL: URL?          // drives the one-URL system share sheet
-    @State private var refreshingSeat = false   // in-flight guard for "Invite to a seat"
 
     private var isAppContext: Bool { if case .app = context { return true }; return false }
 
@@ -224,64 +223,21 @@ struct InvitePeopleView: View {
         .padding(AppSpacing.lg)
     }
 
-    // MARK: Private-room delivery (a lobby, with invitation as the secondary act)
+    // MARK: Invitation delivery — ONE action, straight to the iOS share sheet.
 
     private var roomMethods: some View {
         VStack(spacing: AppSpacing.md) {
-            // The lobby IS the hero: a live seat preview sits above the actions.
-            if let room = invitation?.room {
-                VStack(spacing: 6) {
-                    HStack(spacing: 6) {
-                        Circle().fill(Color(hex: 0x4ADE80)).frame(width: 6, height: 6)
-                        Text("\(FocusSky.byID(room.skyID)?.name ?? "Your Sky") · \(online.activeRoomParticipants.count)/\(room.maximumParticipants)")
-                            .font(.system(size: 12.5, weight: .semibold, design: .rounded))
-                            .foregroundStyle(AppColors.textSecondary)
-                    }
-                    LobbySeatGrid(participants: online.activeRoomParticipants,
-                                  ownerID: room.ownerPublicID,
-                                  myID: online.currentUserID,
-                                  capacity: room.maximumParticipants,
-                                  onInviteSeat: { Task { await inviteToSeat() } },
-                                  compact: true)
-                        .animation(.spring(response: 0.4, dampingFraction: 0.8),
-                                   value: online.activeRoomParticipants)
-                }
-            }
-
             if let url = invitation?.url {
-                Button {
-                    Task { await inviteToSeat() }
-                } label: {
-                    methodRow(icon: "person.crop.circle.badge.plus",
-                              title: refreshingSeat ? "Preparing seat…" : "Invite to a seat",
-                              subtitle: "A fresh single-use link for one friend")
-                }
-                .buttonStyle(SoftPressStyle())
-                .disabled(refreshingSeat)
-
                 Button {
                     appModel.tapFeedback()
                     shareURL = url
                 } label: {
-                    methodRow(icon: "square.and.arrow.up", title: "Share invitation",
-                              subtitle: "Messages, WhatsApp, AirDrop and more")
+                    methodRow(icon: "person.badge.plus", title: "Invite Friends",
+                              subtitle: "Share a one-time link — one tap to join")
                 }
                 .buttonStyle(SoftPressStyle())
 
-                Button {
-                    appModel.tapFeedback()
-                    #if canImport(UIKit)
-                    UIPasteboard.general.string = url.absoluteString
-                    #endif
-                    withAnimation { copied = true }
-                } label: {
-                    methodRow(icon: copied ? "checkmark" : "doc.on.doc",
-                              title: copied ? "Copied" : "Copy invitation link",
-                              subtitle: "Single-use · expires automatically")
-                }
-                .buttonStyle(SoftPressStyle())
-
-                Text("Each link admits one new pilot, then expires — share a fresh one per friend.")
+                Text("Each link admits one new pilot, then expires — share a fresh one per friend. Copy Link lives inside the share sheet.")
                     .font(AppTypography.caption)
                     .foregroundStyle(AppColors.textTertiary)
                     .multilineTextAlignment(.center)
@@ -300,23 +256,6 @@ struct InvitePeopleView: View {
             InviteShareSheet(url: item.url)
         }
         #endif
-        .task(id: invitation?.room.id) {
-            if let room = invitation?.room { await online.loadParticipants(of: room) }
-        }
-    }
-
-    /// Mint a fresh single-use invite for one seat, then open the share sheet.
-    /// In-flight guarded so double taps never create two links.
-    private func inviteToSeat() async {
-        guard !refreshingSeat, let room = invitation?.room,
-              room.ownerPublicID == online.currentUserID else { return }
-        refreshingSeat = true
-        appModel.tapFeedback()
-        if let fresh = await online.freshInvite(for: room) {
-            invitation = RoomInvitation(id: room.id, room: room, url: fresh)
-            shareURL = fresh
-        }
-        refreshingSeat = false
     }
 
     // MARK: App sharing (marketing ONLY — no room, no invitation)
@@ -398,54 +337,5 @@ struct InviteMethodRow: View {
         .padding(.horizontal, AppSpacing.md)
         .padding(.vertical, 12)
         .glassBackground(cornerRadius: 16, tintOpacity: 0.2, shadowRadius: 6, shadowY: 3)
-    }
-}
-
-/// The two-way invite chooser: a REAL private flight (creates a room + invite
-/// link) vs. simply recommending the app (marketing link, no room). Keeps the
-/// two intents unambiguous so a marketing share is never mistaken for a Crew
-/// invite.
-struct InviteChoiceView: View {
-    var onCreateRoom: () -> Void
-    var onShareApp: () -> Void
-    @EnvironmentObject private var appModel: AppModel
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        ZStack {
-            AppBackground().ignoresSafeArea()
-            VStack(spacing: AppSpacing.md) {
-                VStack(spacing: 6) {
-                    Capsule().fill(.white.opacity(0.2)).frame(width: 40, height: 4).padding(.top, 10)
-                    Text("Invite someone")
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundStyle(AppColors.textPrimary)
-                }
-                Button {
-                    appModel.tapFeedback()
-                    onCreateRoom()
-                } label: {
-                    InviteMethodRow(icon: "airplane.departure", title: "Create Private Flight",
-                                    subtitle: "Invite someone to focus together now.")
-                }
-                .buttonStyle(SoftPressStyle())
-
-                Button {
-                    appModel.tapFeedback()
-                    onShareApp()
-                } label: {
-                    InviteMethodRow(icon: "square.and.arrow.up", title: "Share FocusGlobe",
-                                    subtitle: "Recommend the app to someone.")
-                }
-                .buttonStyle(SoftPressStyle())
-
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, AppSpacing.screen)
-            .frame(maxWidth: 460)
-            .frame(maxWidth: .infinity)
-        }
-        .presentationDetents([.fraction(0.4)])
-        .presentationDragIndicator(.visible)
     }
 }

@@ -22,6 +22,10 @@ struct AmbientPilotsLayer: View {
     /// Private-room participants show their identity bubble persistently; public
     /// ambient pilots reveal it on tap.
     var roomMode: Bool = false
+    /// A Private Flight shows ONLY invited pilots — no decorative strangers.
+    /// Distinct from `roomMode` (which also turns off in Clean Mode): decorative
+    /// suppression must hold even in Clean Mode.
+    var isPrivate: Bool = false
     /// Compact contextual actions on a real pilot (long-press / context menu).
     /// A deliberate "View profile" may still open a small sheet via onSelectReal.
     var onSelectReal: ((OnlinePilot) -> Void)? = nil
@@ -100,10 +104,11 @@ struct AmbientPilotsLayer: View {
         GeometryReader { geo in
             let W = geo.size.width
             let H = geo.size.height
-            // Visual capacity: real pilots first, then decorative fill.
+            // Visual capacity: real pilots first, then decorative fill. A Private
+            // Flight renders invited pilots ONLY — never a fabricated stranger.
             let capacity = min(H, W) > 700 ? 14 : Self.count
             let real = Array(realPilots.prefix(capacity))
-            let fill = Array(pilots.prefix(max(0, capacity - real.count)))
+            let fill = isPrivate ? [] : Array(pilots.prefix(max(0, capacity - real.count)))
             TimelineView(.animation(minimumInterval: animated ? 1.0 / 20.0 : 5.0)) { _ in
                 let t = animated ? elapsed() : 0
                 ZStack {
@@ -126,25 +131,36 @@ struct AmbientPilotsLayer: View {
 
     @ViewBuilder
     private func pilotView(_ p: Pilot, index: Int, W: CGFloat, H: CGFloat, t: Double) -> some View {
-        // A gentle bob + sway around a STABLE position — floating like a pilot,
-        // never a continuous downward scroll.
-        let bob = CGFloat(Foundation.sin(t * (0.2 + p.depth * 0.14) + p.phase)) * (7 + CGFloat(p.depth) * 9)
-        let sway = CGFloat(Foundation.sin(t * (0.13 + p.depth * 0.1) + p.phase * 1.3)) * (6 + CGFloat(p.depth) * 8)
-        let x = CGFloat(p.fx) * W + sway
-        let y = CGFloat(p.fy) * H + bob
-        // Slightly smaller than the central user balloon (~82% of its cruising
-        // size) so the hero always reads as the largest, never scaled down by
-        // depth beyond that. Depth reads through opacity, keeping the user
-        // balloon dominant via full size + full opacity + glow.
-        let size = max(38, min(52, H * 0.07)) * 0.82
-        let alpha = 0.18 + p.depth * 0.16   // 0.18…0.34
-
-        // Decorative pilots are purely ambient: no name, flag, timer or tap —
-        // only a REAL online pilot (realPilotView) is interactive/identifiable.
-        BalloonView(height: size, showBurner: false, showGlow: false, skin: p.skin)
-            .opacity(alpha)
+        // Distributed around an invisible circle centred on the display (the same
+        // centre the user's balloon cruises to), gently bobbing — never a scroll.
+        let (x, y) = Self.orbit(angleSeed: p.fx, radiusSeed: p.depth, phase: p.phase,
+                                W: W, H: H, t: t)
+        // EXACT same size + full opacity as every other balloon — only position
+        // differs. Decorative pilots are purely ambient: no bubble, no tap.
+        BalloonView(height: Self.balloonSize(H), showBurner: false, showGlow: true, skin: p.skin)
             .position(x: x, y: y)
             .allowsHitTesting(false)
+    }
+
+    /// The ONE balloon size token every pilot (and the hero) shares.
+    static func balloonSize(_ H: CGFloat) -> CGFloat { max(38, min(52, H * 0.07)) }
+
+    /// A stable point on an invisible circle centred on the display. `angleSeed`
+    /// and `radiusSeed` are 0…1 (seeded per pilot) so positions never jump; the
+    /// ring is squashed vertically so balloons stay on-screen and orbit the
+    /// centred hero. Adds a gentle per-pilot bob + sway.
+    static func orbit(angleSeed: Double, radiusSeed: Double, phase: Double,
+                      W: CGFloat, H: CGFloat, t: Double) -> (CGFloat, CGFloat) {
+        let bob = CGFloat(Foundation.sin(t * 0.22 + phase)) * 8
+        let sway = CGFloat(Foundation.sin(t * 0.14 + phase * 1.3)) * 7
+        let angle = angleSeed * 2 * Double.pi
+        let radius = min(W, H) * (0.23 + radiusSeed * 0.17)
+        // Centred on the same point the hero cruises to (restY ≈ 0.5·H), so the
+        // user sits in the middle and everyone else visibly orbits them.
+        let cx = W * 0.5, cy = H * 0.5
+        let x = cx + CGFloat(Foundation.cos(angle)) * radius + sway
+        let y = cy + CGFloat(Foundation.sin(angle)) * radius * 0.82 + bob
+        return (x, y)
     }
 
     /// Deterministic per-pilot seed: hash(publicID + sessionID + skyID). Kept
@@ -162,29 +178,26 @@ struct AmbientPilotsLayer: View {
     /// whole session and identical in Cabin View.
     private func realPilotView(_ pilot: OnlinePilot, index: Int, W: CGFloat, H: CGFloat, t: Double) -> some View {
         var rng = SeededRNG(seed: stablePilotSeed(for: pilot))
-        let fx = 0.08 + rng.unit() * 0.84
-        let fy = 0.10 + rng.unit() * 0.5
+        let angleSeed = rng.unit()
+        let radiusSeed = rng.unit()
         let phase = rng.unit() * 6.28
-        let bob = CGFloat(Foundation.sin(t * 0.22 + phase)) * 9
-        let sway = CGFloat(Foundation.sin(t * 0.14 + phase * 1.3)) * 7
-        // Same ~82% of the hero's cruising size as decorative pilots — never
-        // larger than the user balloon.
-        let size = max(38, min(52, H * 0.07)) * 0.82
-        // Private-room participants read as identified crew: brighter, and their
-        // bubble stays up. Public ambient pilots reveal a bubble on tap only.
+        let (x, y) = Self.orbit(angleSeed: angleSeed, radiusSeed: radiusSeed, phase: phase,
+                                W: W, H: H, t: t)
+        // Identical size, opacity and glow to every other balloon — a real pilot
+        // is never faded or shrunk; only their POSITION differs. Their identity
+        // bubble stays up in a Private Flight; in the Global sky it reveals on tap.
+        let size = Self.balloonSize(H)
         let showBubble = roomMode || selectedRealID == pilot.id
-        let baseOpacity = roomMode ? 0.9 : (selectedRealID == pilot.id ? 0.48 : (pilot.isPaused ? 0.20 : 0.32))
         return ZStack(alignment: .bottom) {
             if showBubble {
                 realBubble(pilot)
                     .offset(y: -size - 14)
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
             }
-            BalloonView(height: size, showBurner: false, showGlow: roomMode,
+            BalloonView(height: size, showBurner: false, showGlow: true,
                         skin: BalloonSkin.skin(id: pilot.balloonSkinID))
-                .opacity(baseOpacity)
         }
-        .position(x: CGFloat(fx) * W + sway, y: CGFloat(fy) * H + bob)
+        .position(x: x, y: y)
         .onTapGesture {
             withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
                 selectedRealID = selectedRealID == pilot.id ? nil : pilot.id

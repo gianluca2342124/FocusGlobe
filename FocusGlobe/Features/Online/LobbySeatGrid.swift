@@ -28,7 +28,13 @@ struct LobbySeatGrid: View {
         }
     }
 
-    private var seatCount: Int { max(ordered.count, min(max(capacity, 2), FocusRoom.participantLimit)) }
+    /// Progressive, never a wall of empty seats: whoever's here plus a couple of
+    /// open invites, always a small huddle, never beyond the server capacity.
+    /// (1 pilot → 4 seats · 2 → 4 · 3 → 5 …, capped at capacity.)
+    private var seatCount: Int {
+        let cap = min(max(capacity, 2), FocusRoom.participantLimit)
+        return min(cap, max(ordered.count + 2, 4))
+    }
     private var balloonH: CGFloat { compact ? 40 : 54 }
     private var minCell: CGFloat { compact ? 74 : 88 }
 

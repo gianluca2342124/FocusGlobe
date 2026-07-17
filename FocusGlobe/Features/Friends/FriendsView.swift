@@ -18,12 +18,10 @@ struct FriendsView: View {
     @State private var removalTarget: FocusFriend?
     @State private var showSignIn = false
 
-    /// One item-driven sheet for the whole invite flow — the chooser first, then
-    /// whichever concrete invite the user picked (avoids nested-sheet races).
+    /// Item-driven sheet for recommending the app (the only invite entry point
+    /// on Friends — private flights are born in-flight).
     private struct InviteFlow: Identifiable {
-        enum Kind { case choice, privateFlight, shareApp }
         let id = UUID()
-        let kind: Kind
     }
 
     /// Rooms worth listing (lobby or in flight — not ended/closed),
@@ -77,11 +75,12 @@ struct FriendsView: View {
                         .glassBackground(cornerRadius: 14, tintOpacity: 0.16, shadowRadius: 4, shadowY: 2)
                     }
                     if !hasAnySocialContent { emptyState }
+                    // Active Flights · Friend Requests · Friends — nothing else.
+                    if !openRooms.isEmpty { roomsSection }
                     if !online.incomingRequests.isEmpty || !online.outgoingRequests.isEmpty {
                         requestsSection
                     }
                     if !online.crew.isEmpty { crewSection }
-                    if !openRooms.isEmpty { roomsSection }
                     inviteHero
                     if !hasAnySocialContent { howItWorks }
                 }
@@ -117,22 +116,12 @@ struct FriendsView: View {
             .environmentObject(appModel)
             .environmentObject(online)
         }
-        .sheet(item: $inviteFlow) { flow in
-            switch flow.kind {
-            case .choice:
-                InviteChoiceView(
-                    onCreateRoom: { inviteFlow = InviteFlow(kind: .privateFlight) },
-                    onShareApp: { inviteFlow = InviteFlow(kind: .shareApp) })
-                    .environmentObject(appModel)
-            case .privateFlight:
-                InvitePeopleView(context: .preFlight(skyID: appModel.selectedSky.id))
-                    .environmentObject(appModel)
-                    .environmentObject(online)
-            case .shareApp:
-                InvitePeopleView(context: .app)
-                    .environmentObject(appModel)
-                    .environmentObject(online)
-            }
+        .sheet(item: $inviteFlow) { _ in
+            // From Friends you recommend the app; a Private Flight is created
+            // in-flight (Invite Friends), never pre-emptively from here.
+            InvitePeopleView(context: .app)
+                .environmentObject(appModel)
+                .environmentObject(online)
         }
         .confirmationDialog("Remove from Crew?", isPresented: Binding(
             get: { removalTarget != nil }, set: { if !$0 { removalTarget = nil } }
@@ -159,7 +148,7 @@ struct FriendsView: View {
 
     private var requestsSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            sectionTitle("Pending requests", icon: "envelope.fill")
+            sectionTitle("Friend Requests", icon: "envelope.fill")
             VStack(spacing: AppSpacing.xs) {
                 ForEach(online.incomingRequests) { request in
                     incomingRow(request)
@@ -243,7 +232,7 @@ struct FriendsView: View {
 
     private var crewSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            sectionTitle("Your Crew", icon: "person.2.fill")
+            sectionTitle("Friends", icon: "person.2.fill")
             VStack(spacing: AppSpacing.xs) {
                 ForEach(online.crew) { friend in
                     crewRow(friend)
@@ -300,7 +289,7 @@ struct FriendsView: View {
 
     private var roomsSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            sectionTitle("Focus Rooms", icon: "airplane")
+            sectionTitle("Active Flights", icon: "airplane")
             VStack(spacing: AppSpacing.xs) {
                 ForEach(openRooms) { room in
                     RoomDetailsView(room: room) { lobbyRoom = $0 }
@@ -377,12 +366,12 @@ struct FriendsView: View {
             }
             Button {
                 appModel.tapFeedback()
-                inviteFlow = InviteFlow(kind: .choice)
+                inviteFlow = InviteFlow()
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "square.and.arrow.up")
                         .font(.system(size: 15, weight: .bold))
-                    Text("Invite someone")
+                    Text("Invite a friend")
                         .font(AppTypography.headline)
                 }
                 .foregroundStyle(AppColors.ctaText)
@@ -392,7 +381,7 @@ struct FriendsView: View {
                     .fill(AppColors.ctaFill))
             }
             .buttonStyle(SoftPressStyle())
-            Text("Real private flights use one-time invitation links — friends join with one tap.")
+            Text("Send a friend FocusGlobe — then tap Invite Friends mid-flight to fly together.")
                 .font(AppTypography.caption)
                 .foregroundStyle(AppColors.textTertiary)
                 .frame(maxWidth: .infinity)

@@ -75,6 +75,11 @@ final class FocusOnlineModel: ObservableObject {
     /// The ONE canonical online identity: the authenticated Supabase user UUID.
     /// Every self-filter and dedupe uses THIS — never alias, skin or device.
     var currentUserID: String? { myUserID }
+    /// True while the ACTIVE flight is a Private Flight (invited pilots only, no
+    /// strangers, no decorative fill). Distinct from the view's `roomBubbleMode`,
+    /// which also suppresses in Clean Mode — decorative suppression must hold
+    /// even in Clean Mode.
+    var isPrivateFlight: Bool { flightMode == .privateRoom }
 
     /// Deduplicate any participant list by user UUID (stable, first-wins).
     static func dedupe(_ list: [RoomParticipant]) -> [RoomParticipant] {
@@ -111,6 +116,10 @@ final class FocusOnlineModel: ObservableObject {
     private var flightSessionID: String?
     private var flightRoom: FocusRoom?
     private var serverSessionID: String?
+    /// The CURRENT flight's shared end (nil = infinite). Captured at take-off so
+    /// a mid-flight Global→Private promotion can inherit the exact remaining time
+    /// instead of starting a new timer.
+    private var flightExpectedEnd: Date?
     private var verifiedBonusSessionIDs = Set<String>()
     private var overlapSeconds: Double = 0
     private var lastOverlapSample: Date?
@@ -360,6 +369,7 @@ final class FocusOnlineModel: ObservableObject {
         guard flightMode.isOnline, availability.isAvailable, let profile else { return }
         flightSessionID = sessionID
         flightRoom = flightMode == .privateRoom ? pendingRoom : nil
+        flightExpectedEnd = expectedEndAt
         serverSessionID = nil
         overlapSeconds = 0
         lastOverlapSample = Date()
@@ -415,6 +425,7 @@ final class FocusOnlineModel: ObservableObject {
         let serverSession = serverSessionID
         flightRoom = nil
         flightSessionID = nil
+        flightExpectedEnd = nil
         serverSessionID = nil
         realPilots = []
         reconnecting = false
@@ -616,6 +627,42 @@ final class FocusOnlineModel: ObservableObject {
             }
             return nil
         }
+    }
+
+    /// Promote the CURRENTLY running Global Flight into a Private Flight without
+    /// restarting anything. The client-side timer/sky/sound/shield keep running;
+    /// only the online layer changes: a room is created, the shared end is set to
+    /// this flight's LIVE remaining time (so joiners inherit it — never a new
+    /// timer), the host leaves the public sky (no more strangers), and the live
+    /// pilot poll auto-switches to the room branch on its next tick. Returns the
+    /// host room, or nil if creation was throttled/failed. Idempotent: if already
+    /// private it just returns the current room.
+    @discardableResult
+    func beginPrivateFlight(skyID: String) async -> FocusRoom? {
+        if flightMode == .privateRoom { return flightRoom ?? pendingRoom }
+        guard availability.isAvailable, flightMode == .publicSky else { return nil }
+        guard let room = await requestPrivateFlightRoom(skyID: skyID) else { return nil }
+        let liveEnd = flightExpectedEnd            // inherit THIS flight's remaining (nil = infinite)
+        let myID = myUserID
+        // Bind the running flight to the room and flip the mode. pollOnce reads
+        // flightMode/flightRoom live, so its next tick renders room members only.
+        flightRoom = room
+        knownMemberIDs = []                         // host only so far — no false "joined"
+        activeRoomParticipants = []
+        joinToastAlias = nil
+        flightMode = .privateRoom
+        Task {
+            // Drop the host from every public sky — a Private Flight has no strangers.
+            await flightService.stopPublishing()
+            await realtimeService.leaveSky()
+            // Propagate the shared, synchronized end so joiners inherit it.
+            await roomService.setFlightEnd(roomID: room.id, endsAt: liveEnd)
+            if let myID, let refreshed = await roomService.room(id: room.id, myID: myID) {
+                flightRoom = refreshed
+                pendingRoom = refreshed
+            }
+        }
+        return room
     }
 
     private func scheduleThrottleReset(until date: Date) {

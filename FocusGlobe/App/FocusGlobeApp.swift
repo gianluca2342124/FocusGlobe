@@ -44,6 +44,10 @@ struct FocusGlobeApp: App {
                     // isn't signed in yet the token is kept and consumed right
                     // after sign-in. Everything else stays a widget deep link.
                     if DeepLinkService.inviteToken(from: url) != nil {
+                        // Any invite open lands in the ONE lobby: surface Friends
+                        // (its only observer) so the joined room's lobby appears
+                        // no matter which tab was showing.
+                        router.openFriends()
                         Task { await online.handleIncomingURL(url) }
                     } else {
                         router.handleDeepLink(url)
