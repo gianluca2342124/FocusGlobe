@@ -51,7 +51,8 @@ enum OnlineError: Error, Sendable {
                          // Global→Private promotion: the caller's canonical live
                          // session couldn't be proven yet (retryable), was empty,
                          // or its finite deadline already elapsed.
-                         "no_active_global_session", "invalid_session", "session_ended"]
+                         "no_active_global_session", "invalid_session", "session_ended",
+                         "invalid_sky"]
             for token in known where message.contains(token) { return token }
         }
         return nil

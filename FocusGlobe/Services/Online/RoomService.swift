@@ -226,14 +226,29 @@ actor RoomService {
                                                  p_ends_at: endsAt.map(PostgresDate.string))).execute()
     }
 
-    /// Member heartbeat while in a lobby/flight (direct column-granted update).
-    func heartbeat(roomID: String, myID: String) async {
-        guard let client else { return }
-        // Via RPC: refreshes my membership heartbeat AND (if I'm the owner of an
-        // Infinite flight) rolls the room's stale-cleanup window forward, so it
-        // never expires while I keep flying.
+    /// Server clock + canonical room state returned by a member heartbeat.
+    struct RoomHeartbeat: Sendable {
+        let serverNow: Date?
+        let endsAt: Date?
+        let status: String?
+    }
+
+    /// Member heartbeat while in a lobby/flight. Via RPC: refreshes my membership
+    /// heartbeat AND (if I'm the owner of an Infinite flight) rolls the room's
+    /// stale-cleanup window forward, so it never expires while I keep flying.
+    /// Returns server_now + the canonical room ends_at/status so the poll pipeline
+    /// keeps the shared clock and the shared deadline fresh.
+    @discardableResult
+    func heartbeat(roomID: String, myID: String) async -> RoomHeartbeat? {
+        guard let client else { return nil }
         struct Params: Encodable { let p_room_id: String }
-        _ = try? await client.rpc("heartbeat_room", params: Params(p_room_id: roomID)).execute()
+        struct Payload: Decodable { let server_now: String?; let ends_at: String?; let status: String? }
+        guard let p: Payload = try? await client
+            .rpc("heartbeat_room", params: Params(p_room_id: roomID))
+            .execute().value else { return nil }
+        return RoomHeartbeat(serverNow: PostgresDate.parse(p.server_now),
+                             endsAt: PostgresDate.parse(p.ends_at),
+                             status: p.status)
     }
 
     // MARK: Reads

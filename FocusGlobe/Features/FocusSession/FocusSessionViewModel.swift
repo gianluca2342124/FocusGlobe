@@ -44,6 +44,10 @@ final class FocusSessionViewModel: ObservableObject {
 
     private weak var appModel: AppModel?
     private var cancellable: AnyCancellable?
+    /// Watches the online model's server-canonical host deadline; the online HOST
+    /// adopts it (matched by session id) so its main timer targets the same
+    /// absolute instant the guests do.
+    private var deadlineCancellable: AnyCancellable?
     private var started = false
     /// Set the instant the journey finishes so the completion → interstitial →
     /// Landing transition can't be entered twice.
@@ -59,11 +63,13 @@ final class FocusSessionViewModel: ObservableObject {
         self.intention = journey.intention
         self.sharedEndsAt = journey.sharedEndsAt
         // A guest joining an in-progress Private Flight counts down to the SHARED
-        // absolute deadline (exact, resync-safe, no rounding). Every other flight
-        // uses its own duration exactly as before.
+        // absolute SERVER deadline via the shared clock (exact, resync-safe, no
+        // rounding, immune to clock skew). The online HOST adopts its own
+        // canonical deadline the instant the publish RPC lands (see startIfNeeded).
+        // Solo and Infinite flights use the local duration path, unchanged.
         if let deadline = journey.sharedEndsAt {
             self.timer = SessionTimerService(total: max(1, deadline.timeIntervalSinceNow),
-                                             sharedDeadline: deadline)
+                                             canonicalDeadline: deadline)
         } else {
             self.timer = SessionTimerService(total: journey.route.duration,
                                              startElapsed: TimeInterval(journey.resumeElapsedSeconds ?? 0))
@@ -94,6 +100,12 @@ final class FocusSessionViewModel: ObservableObject {
         // scrim in FocusSessionView keeps readouts legible. The user can switch
         // styles and toggle labels via the in-session menu.
         mapStyle = .terra
+        // Feed the shared server clock into the timer so a canonical/shared flight
+        // (online host + guest) counts down to the ABSOLUTE server deadline,
+        // monotonically and immune to device-clock changes. Set before start().
+        if let online = appModel.onlineRef {
+            timer.serverNow = { [weak online] in online?.serverAdjustedNow ?? Date() }
+        }
     }
 
     func setMapStyle(_ style: MapDisplayStyle) {
@@ -147,6 +159,17 @@ final class FocusSessionViewModel: ObservableObject {
                 self.progress = self.timer.progress
             }
         timer.onFinish = { [weak self] in self?.land() }
+        // The online HOST adopts its server-canonical deadline the instant the
+        // publish RPC lands, so its main countdown targets the exact same absolute
+        // instant the guests do — no restart, no rounding, matched by session id.
+        if let online = appModel.onlineRef {
+            deadlineCancellable = online.$hostCanonicalDeadline
+                .receive(on: RunLoop.main)
+                .sink { [weak self] hd in
+                    guard let self, let hd, hd.sessionID == self.onlineSessionID else { return }
+                    self.timer.adoptCanonicalDeadline(hd.deadline)
+                }
+        }
 
         appModel.analytics.log(.journeyStarted, ["route": route.id, "minutes": route.durationMinutes])
         appModel.haptics.takeoff()
@@ -181,6 +204,7 @@ final class FocusSessionViewModel: ObservableObject {
 
     func tearDown() {
         cancellable?.cancel()
+        deadlineCancellable?.cancel()
         // Always stop the engine timer (idempotent). Landing an endless flight
         // early leaves the repeating tick scheduled otherwise — a quiet leak.
         timer.stop()
@@ -193,7 +217,18 @@ final class FocusSessionViewModel: ObservableObject {
     }
 
     /// Call when the scene becomes active so a backgrounded session catches up.
-    func refresh() { timer.refresh() }
+    /// Also re-syncs the shared server clock (its monotonic reference does not
+    /// advance while the device sleeps), then re-ticks once the fresh sample lands
+    /// so the canonical countdown snaps to the true remaining time.
+    func refresh() {
+        timer.refresh()
+        if let online = appModel?.onlineRef {
+            Task { [weak self] in
+                await online.resyncServerClock()
+                self?.timer.refresh()
+            }
+        }
+    }
 
     // MARK: - Derived display values
 
@@ -212,20 +247,14 @@ final class FocusSessionViewModel: ObservableObject {
     var remainingSeconds: Int { max(0, Int(timer.remaining.rounded(.up))) }
     var remainingTimeText: String { Formatters.countdown(remainingSeconds) }
 
-    /// Personal focus seconds to BANK as the reward — always the local time flown
-    /// since take-off (`rewardStartedAt`), NEVER `route.duration − shared_remaining`.
-    ///  • Synchronized guest: measured from the local join and capped at the shared
-    ///    remaining they inherited, so a guest who joined with 10:43 left earns from
-    ///    0 up to at most 10:43 — the rounded symbolic route can't inflate it.
-    ///  • Every other flight: the pause-aware engine elapsed (clamped to total on a
-    ///    natural finish; the true flown time on "Land now" for an endless flight).
-    var bankedFocusSeconds: Int {
-        guard sharedEndsAt != nil, let rewardStartedAt else {
-            return Int(timer.elapsed.rounded())
-        }
-        let personal = max(0, Date().timeIntervalSince(rewardStartedAt))
-        return Int(min(timer.total, personal).rounded())
-    }
+    /// Personal focus seconds to BANK as the reward — the engine's elapsed, which
+    /// is NEVER `route.duration − shared_remaining`:
+    ///  • Canonical/shared flight (online host + guest): the SERVER time flown
+    ///    since take-off, starting at 0 and clamped to the flight's remaining, so a
+    ///    guest who joined with 10:43 left earns from 0 up to at most 10:43 — the
+    ///    rounded symbolic route can't inflate it.
+    ///  • Solo: the pause-aware local elapsed (the true flown time on "Land now").
+    var bankedFocusSeconds: Int { Int(timer.elapsed.rounded()) }
 
     #if DEBUG
     /// Runtime proof (DEBUG only) of the reward/countdown separation the flight

@@ -162,18 +162,18 @@ struct FriendsView: View {
         guard let room = pendingGuestLaunch else { return }
         pendingGuestLaunch = nil
         let sky = FocusSky.byID(room.skyID) ?? appModel.selectedSky
-        // room.endsAt is the host's SERVER-canonical deadline; shift it into this
-        // device's clock space so the countdown is correct despite clock skew.
-        let deadline = online.adjustedDeadline(room.endsAt)
-        // Minutes drive only the symbolic distance/route visuals; the actual
-        // countdown is the EXACT server-adjusted shared deadline passed below.
-        let (minutes, infinite) = FocusOnlineModel.inheritedMinutes(until: deadline)
+        // Minutes drive only the symbolic distance/route visuals — computed from
+        // the server-ADJUSTED remaining so the picture matches, but the real
+        // countdown below uses the RAW server deadline via the shared clock.
+        let (minutes, infinite) = FocusOnlineModel.inheritedMinutes(until: online.adjustedDeadline(room.endsAt))
         online.enterInvitedFlight(room)
         let origin = appModel.originForJourney
         let route = FlightRouteFactory.route(minutes: minutes, infinite: infinite,
                                              origin: origin, focusSky: sky)
+        // The guest's timer counts down to the host's RAW server deadline through
+        // the shared clock — exact, skew-immune, no rounding.
         router.startJourney(origin: origin, route: route, intention: nil,
-                            sharedEndsAt: deadline)
+                            sharedEndsAt: room.endsAt)
     }
 
     // MARK: - Pending requests

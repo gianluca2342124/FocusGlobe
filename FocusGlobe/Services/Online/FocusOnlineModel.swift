@@ -105,20 +105,38 @@ final class FocusOnlineModel: ObservableObject {
     /// The host has an outstanding invite but is STILL flying Global.
     var isInviteReady: Bool { socialState == .globalInviteReady || socialState == .preparingInvite }
 
-    /// serverNow − localNow, measured on RPCs that return the server clock. Every
-    /// shared-flight countdown derives from `deadline − serverAdjustedNow`, so two
-    /// devices with different clocks still finish together.
-    private(set) var serverClockOffset: TimeInterval = 0
-    var serverAdjustedNow: Date { Date().addingTimeInterval(serverClockOffset) }
-    /// A server timestamp shifted into LOCAL clock space, so the existing
-    /// `Date()`-based timer/label math yields the server-correct remaining time.
+    /// The shared, server-anchored, monotonic clock. Every online countdown reads
+    /// its estimate of server time from here (see ServerClock), so two devices
+    /// with different — even manually wrong — wall clocks still finish together.
+    let serverClock = ServerClock()
+    /// Best estimate of the current SERVER time (monotonic between syncs).
+    var serverAdjustedNow: Date { serverClock.estimatedServerNow }
+    /// serverNow − localNow, for legacy call sites (pilot bubbles, preview label)
+    /// that shift a server timestamp into local `Date()` space.
+    var serverClockOffset: TimeInterval { serverClock.offset }
+    /// A server timestamp shifted into LOCAL clock space, so `Date()`-based label
+    /// math (pilot bubbles) yields the server-correct remaining time.
     func adjustedDeadline(_ serverEnd: Date?) -> Date? {
-        serverEnd.map { $0.addingTimeInterval(-serverClockOffset) }
+        serverEnd.map { $0.addingTimeInterval(-serverClock.offset) }
     }
-    private func noteServerNow(_ serverNow: Date?) {
+    /// Fold one `server_now` sample into the shared clock. `requestStartedAt` is
+    /// stamped by the caller just before awaiting the RPC, so the round trip (and
+    /// thus the local midpoint) can be estimated.
+    private func syncServerClock(_ serverNow: Date?, since requestStartedAt: Date) {
         guard let serverNow else { return }
-        serverClockOffset = serverNow.timeIntervalSince(Date())
+        serverClock.record(serverNow: serverNow,
+                           requestStartedAt: requestStartedAt,
+                           responseReceivedAt: Date(),
+                           receivedUptime: ProcessInfo.processInfo.systemUptime)
     }
+
+    /// The online HOST's server-canonical finite deadline for the CURRENT flight
+    /// (nil for Solo / Infinite / guest). The active FocusSessionViewModel adopts
+    /// it — matched by session id — so the host's main timer counts down to the
+    /// exact same absolute instant the guests do. Republished each poll so a
+    /// missed publish still lands.
+    struct HostDeadline: Equatable { let sessionID: String; let deadline: Date }
+    @Published private(set) var hostCanonicalDeadline: HostDeadline?
 
     /// Deduplicate any participant list by user UUID (stable, first-wins).
     static func dedupe(_ list: [RoomParticipant]) -> [RoomParticipant] {
@@ -410,6 +428,7 @@ final class FocusOnlineModel: ObservableObject {
     func flightDidStart(skyID: String, sessionID: String, expectedEndAt: Date?, category: String) {
         // Every flight resets the social state; online ones then set their own.
         socialState = .solo
+        hostCanonicalDeadline = nil       // this flight's server deadline arrives from publish
         guard flightMode.isOnline, availability.isAvailable, let profile else { return }
         flightSessionID = sessionID
         flightRoom = flightMode == .privateRoom ? pendingRoom : nil
@@ -443,7 +462,16 @@ final class FocusOnlineModel: ObservableObject {
             // RLS, so a non-discoverable flyer stays hidden). The realtime sky
             // nudge remains discoverable-only.
             if flightMode == .publicSky {
-                await flightService.startPublishing(presence)
+                // Server-canonical publish: the SERVER stamps started_at /
+                // expected_end_at. Sync the shared clock from its server_now and
+                // adopt the canonical deadline for THIS session so the host's main
+                // timer counts down to the exact instant the guests will.
+                let t0 = Date()
+                let published = await flightService.startPublishing(presence)
+                syncServerClock(published?.serverNow, since: t0)
+                if let end = published?.expectedEndAt {
+                    hostCanonicalDeadline = HostDeadline(sessionID: sessionID, deadline: end)
+                }
                 if appModel?.profile.onlineDiscoverable ?? false {
                     await realtimeService.joinSky(skyID: skyID, myID: myID) { [weak self] in
                         Task { @MainActor [weak self] in await self?.pollSoon() }
@@ -467,7 +495,11 @@ final class FocusOnlineModel: ObservableObject {
 
     func flightPauseChanged(isPaused: Bool) {
         guard flightMode.isOnline else { return }
-        Task { await flightService.setPaused(isPaused) }
+        Task {
+            let t0 = Date()
+            let r = await flightService.setPaused(isPaused)
+            syncServerClock(r?.serverNow, since: t0)
+        }
         if isPaused { sampleOverlap(activeOthers: 0) } else { lastOverlapSample = Date() }
     }
 
@@ -485,6 +517,7 @@ final class FocusOnlineModel: ObservableObject {
         serverSessionID = nil
         realPilots = []
         reconnecting = false
+        hostCanonicalDeadline = nil
         socialState = .solo               // the journey is over — clear everything
         Task {
             await flightService.stopPublishing()
@@ -510,9 +543,31 @@ final class FocusOnlineModel: ObservableObject {
     func appDidEnterForeground() {
         Task {
             await refreshAvailability()
-            await flightService.heartbeatNow()
+            await resyncServerClock()
             if let lobbyRoomID, let myID = myUserID {
                 await roomService.heartbeat(roomID: lobbyRoomID, myID: myID)
+            }
+        }
+    }
+
+    /// Re-sync the shared clock immediately (foreground / reconnect / a long
+    /// background gap). The monotonic reference does NOT advance while the device
+    /// sleeps, so the estimate must be refreshed before the countdown is trusted
+    /// again. Uses the heartbeat that matches the current flight.
+    func resyncServerClock() async {
+        if flightMode == .publicSky {
+            let t0 = Date()
+            if let hb = await flightService.heartbeatNow() {
+                syncServerClock(hb.serverNow, since: t0)
+                if let end = hb.expectedEndAt, let sid = flightSessionID {
+                    hostCanonicalDeadline = HostDeadline(sessionID: sid, deadline: end)
+                }
+            }
+        } else if let room = flightRoom, let myID = myUserID {
+            let t0 = Date()
+            if let hb = await roomService.heartbeat(roomID: room.id, myID: myID) {
+                syncServerClock(hb.serverNow, since: t0)
+                if let end = hb.endsAt, flightRoom?.endsAt != end { flightRoom?.endsAt = end }
             }
         }
     }
@@ -563,6 +618,16 @@ final class FocusOnlineModel: ObservableObject {
                     await roomService.heartbeat(roomID: room.id, myID: me)
                 }
             }
+            // Server-canonical presence heartbeat: keep the row alive, refresh the
+            // shared clock, and (finite host) re-affirm the canonical deadline so
+            // the host's main timer stays locked to the exact server instant.
+            let t0 = Date()
+            if let hb = await flightService.heartbeatNow() {
+                syncServerClock(hb.serverNow, since: t0)
+                if let end = hb.expectedEndAt, let sid = flightSessionID {
+                    hostCanonicalDeadline = HostDeadline(sessionID: sid, deadline: end)
+                }
+            }
         } else if var room = flightRoom {
             // The owner propagates the shared end asynchronously at take-off; if a
             // co-member's earlier read lost that race, re-read the room until the
@@ -598,7 +663,15 @@ final class FocusOnlineModel: ObservableObject {
                 ($0.lastHeartbeatAt.map { Date().timeIntervalSince($0) < SupabaseConfig.presenceStaleInterval } ?? false)
             }.count
             sampleOverlap(activeOthers: activeOthers)
-            if let me { await roomService.heartbeat(roomID: room.id, myID: me) }
+            if let me {
+                let t0 = Date()
+                if let hb = await roomService.heartbeat(roomID: room.id, myID: me) {
+                    syncServerClock(hb.serverNow, since: t0)
+                    // Adopt any canonical ends_at that landed after we joined so the
+                    // guest's bubbles stay locked to the host's shared deadline.
+                    if let end = hb.endsAt, flightRoom?.endsAt != end { flightRoom?.endsAt = end }
+                }
+            }
         }
         lastPilotFetchAt = Date()
     }
@@ -729,8 +802,9 @@ final class FocusOnlineModel: ObservableObject {
             // The ONLY input is the stable client session id; the server derives
             // sky / start / end / active-status from the caller's canonical live
             // Global row in active_flights. No client timestamps are trusted.
+            let t0 = Date()
             let created = try await promoteWithSessionRetry(sessionID: sessionID, myID: myID)
-            noteServerNow(created.serverNow)
+            syncServerClock(created.serverNow, since: t0)
             flightRoom = created.room
             pendingRoom = created.room
             // Still Global on screen — do NOT flip flightMode yet.
@@ -760,9 +834,10 @@ final class FocusOnlineModel: ObservableObject {
             return try await roomService.promoteToPrivate(clientSessionID: sessionID, myID: myID)
         } catch {
             guard OnlineError.isNoActiveGlobalSession(error) else { throw error }
-            // Publish/refresh the active Global presence row (bound to this exact
-            // client_session_id), await it, then retry the promotion once.
-            await flightService.heartbeatNow()
+            // (Re)publish the canonical Global presence row (server-stamped,
+            // bound to this exact client_session_id), await it, then retry the
+            // promotion once.
+            await flightService.republish()
             return try await roomService.promoteToPrivate(clientSessionID: sessionID, myID: myID)
         }
     }
@@ -988,8 +1063,9 @@ final class FocusOnlineModel: ObservableObject {
     func previewInvite(token: String) async {
         guard let myID = myUserID else { return }
         do {
+            let t0 = Date()
             let p = try await roomService.previewInvite(token: token, myID: myID)
-            noteServerNow(p.serverNow)
+            syncServerClock(p.serverNow, since: t0)
             inviteJoinMessage = nil
             switch p.status {
             case "owner", "already_member":
@@ -1037,8 +1113,9 @@ final class FocusOnlineModel: ObservableObject {
     func acceptInvitePreview() async -> FocusRoom? {
         guard let myID = myUserID, let preview = invitePreview else { return nil }
         do {
+            let t0 = Date()
             let joined = try await roomService.acceptInvite(token: preview.token, myID: myID)
-            noteServerNow(joined.serverNow)
+            syncServerClock(joined.serverNow, since: t0)
             activeRoomParticipants = Self.dedupe(joined.members)
             invitePreview = nil
             inviteJoinMessage = nil

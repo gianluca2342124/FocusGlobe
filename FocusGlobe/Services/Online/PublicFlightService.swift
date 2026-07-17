@@ -3,81 +3,124 @@ import Supabase
 import OSLog
 
 /// Public-sky discoverability: one `active_flights` row per user (durable
-/// state), heartbeat ~40 s + lifecycle edges — never per-second. Fetching
-/// merges profile fields so pilots render with alias/skin/flag.
+/// state), heartbeat ~35 s + lifecycle edges — never per-second. All timing is
+/// SERVER-CANONICAL: the row is created/refreshed through `publish_global_flight`
+/// / `heartbeat_global_flight` (the server stamps started_at / expected_end_at),
+/// never a direct client upsert. Fetching merges profile fields so pilots render
+/// with alias/skin/flag.
 actor PublicFlightService {
     private var client: SupabaseClient? { SupabaseService.client }
-    private var heartbeatTask: Task<Void, Never>?
     private var current: OnlinePresence?
     private var userID: String?
 
+    /// Canonical timing returned by the publish / heartbeat RPCs, plus the
+    /// server clock at response — everything the model needs to anchor the host
+    /// timer and the shared clock. `requestStartedAt` is stamped by the CALLER.
+    struct FlightPublishResult: Sendable {
+        let serverNow: Date?
+        let startedAt: Date?
+        let expectedEndAt: Date?
+    }
+
     func configure(userID: String?) { self.userID = userID }
 
-    // MARK: Publishing
+    // MARK: Publishing (server-canonical)
 
-    func startPublishing(_ presence: OnlinePresence) {
+    /// Create (or refresh) the canonical Global-flight row. The SERVER stamps
+    /// started_at / expected_end_at; we only pass the intended duration (a
+    /// clock-skew-immune delta) and Sky. Returns the canonical timing so the host
+    /// timer can adopt the exact server deadline.
+    func startPublishing(_ presence: OnlinePresence) async -> FlightPublishResult? {
         current = presence
-        heartbeatTask?.cancel()
-        heartbeatTask = Task { [weak self] in
-            while let self, !Task.isCancelled {
-                await self.pushHeartbeat()
-                try? await Task.sleep(nanoseconds: UInt64(SupabaseConfig.presenceHeartbeatInterval * 1_000_000_000))
-            }
+        return await publish(presence)
+    }
+
+    /// Re-publish the current presence (recovery path: e.g. the promotion RPC
+    /// could not yet see the canonical row). Preserves timing for the same
+    /// session id server-side.
+    @discardableResult
+    func republish() async -> FlightPublishResult? {
+        guard let presence = current else { return nil }
+        return await publish(presence)
+    }
+
+    @discardableResult
+    func setPaused(_ paused: Bool) async -> FlightPublishResult? {
+        guard current != nil else { return nil }
+        current?.isPaused = paused
+        return await heartbeatNow()
+    }
+
+    /// One lightweight liveness ping (server_now + canonical timing). Falls back
+    /// to a full re-publish if the row has vanished (never fabricates timing).
+    @discardableResult
+    func heartbeatNow() async -> FlightPublishResult? {
+        guard let client, let presence = current else { return nil }
+        struct Params: Encodable { let p_client_session_id: String; let p_is_paused: Bool }
+        struct Payload: Decodable {
+            let server_now: String?; let started_at: String?; let expected_end_at: String?
+        }
+        do {
+            let p: Payload = try await client
+                .rpc("heartbeat_global_flight",
+                     params: Params(p_client_session_id: presence.sessionID, p_is_paused: presence.isPaused))
+                .execute().value
+            return FlightPublishResult(serverNow: PostgresDate.parse(p.server_now),
+                                       startedAt: PostgresDate.parse(p.started_at),
+                                       expectedEndAt: PostgresDate.parse(p.expected_end_at))
+        } catch {
+            if OnlineError.isNoActiveGlobalSession(error) { return await publish(presence) }
+            SupabaseService.log.error("flight heartbeat failed: \(OnlineError.category(for: error), privacy: .public)")
+            return nil
         }
     }
 
-    func setPaused(_ paused: Bool) async {
-        guard current != nil else { return }
-        current?.isPaused = paused
-        await pushHeartbeat()
-    }
-
-    func heartbeatNow() async { await pushHeartbeat() }
-
     /// Stop publishing and delete the row (every termination path).
     func stopPublishing() async {
-        heartbeatTask?.cancel()
-        heartbeatTask = nil
         current = nil
         guard let client, let userID else { return }
         _ = try? await client.from("active_flights").delete()
             .eq("user_id", value: userID).execute()
     }
 
-    private func pushHeartbeat() async {
-        guard let client, let presence = current, let userID else { return }
-        struct Upsert: Encodable {
-            let user_id: String
-            let client_session_id: String
-            let sky_id: String
-            let balloon_skin_id: String
-            let session_kind: String
-            let focus_category: String
-            let started_at: String
-            let expected_end_at: String?
-            let paused_at: String?
-            let status: String
-            let last_heartbeat_at: String
-            let expires_at: String
+    private func publish(_ presence: OnlinePresence) async -> FlightPublishResult? {
+        guard let client else { return nil }
+        // Intended focus length as a RELATIVE delta (both timestamps come from the
+        // same client clock, so their difference is skew-immune); the server owns
+        // the absolute start. Infinite flights carry no end.
+        let isInfinite = presence.expectedEndAt == nil
+        let duration = presence.expectedEndAt.map {
+            max(1, Int($0.timeIntervalSince(presence.startedAt).rounded()))
+        } ?? 0
+        struct Params: Encodable {
+            let p_client_session_id: String
+            let p_sky_id: String
+            let p_balloon_skin_id: String
+            let p_focus_category: String
+            let p_duration_seconds: Int
+            let p_is_infinite: Bool
+            let p_is_paused: Bool
         }
-        let row = Upsert(user_id: userID,
-                         // Binds this Global session row to its stable client id so
-                         // the promotion RPC can prove the session is the caller's.
-                         client_session_id: presence.sessionID,
-                         sky_id: presence.skyID,
-                         balloon_skin_id: presence.balloonSkinID,
-                         session_kind: presence.mode == .privateRoom ? "room" : "public",
-                         focus_category: presence.focusCategory,
-                         started_at: PostgresDate.string(presence.startedAt),
-                         expected_end_at: presence.expectedEndAt.map(PostgresDate.string),
-                         paused_at: presence.isPaused ? PostgresDate.string(Date()) : nil,
-                         status: "active",
-                         last_heartbeat_at: PostgresDate.string(Date()),
-                         expires_at: PostgresDate.string(Date().addingTimeInterval(13 * 3600)))
+        struct Payload: Decodable {
+            let server_now: String?; let started_at: String?; let expected_end_at: String?
+        }
         do {
-            try await client.from("active_flights").upsert(row, onConflict: "user_id").execute()
+            let p: Payload = try await client
+                .rpc("publish_global_flight",
+                     params: Params(p_client_session_id: presence.sessionID,
+                                    p_sky_id: presence.skyID,
+                                    p_balloon_skin_id: presence.balloonSkinID,
+                                    p_focus_category: presence.focusCategory,
+                                    p_duration_seconds: duration,
+                                    p_is_infinite: isInfinite,
+                                    p_is_paused: presence.isPaused))
+                .execute().value
+            return FlightPublishResult(serverNow: PostgresDate.parse(p.server_now),
+                                       startedAt: PostgresDate.parse(p.started_at),
+                                       expectedEndAt: PostgresDate.parse(p.expected_end_at))
         } catch {
-            SupabaseService.log.error("flight heartbeat failed: \(OnlineError.category(for: error), privacy: .public)")
+            SupabaseService.log.error("flight publish failed: \(OnlineError.category(for: error), privacy: .public)")
+            return nil
         }
     }
 
