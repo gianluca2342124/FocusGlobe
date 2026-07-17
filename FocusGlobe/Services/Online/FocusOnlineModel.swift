@@ -55,8 +55,19 @@ final class FocusOnlineModel: ObservableObject {
     @Published private(set) var roomCreationState: RoomCreationState = .idle
     /// Set when the active room flips to `active` (drives member auto-start).
     @Published private(set) var activeRoomStartedID: String?
-    /// A room joined from an invitation link (Friends surfaces it).
-    @Published private(set) var joinedInviteRoom: FocusRoom?
+    /// A previewed (NOT yet joined) invitation — opening a link shows this; only
+    /// tapping Join Flight creates membership. Drives the invitation screen.
+    @Published private(set) var invitePreview: InvitePreviewState?
+
+    /// A read-only invitation preview (no membership yet).
+    struct InvitePreviewState: Identifiable, Sendable {
+        let token: String
+        let room: FocusRoom
+        let hostAlias: String
+        let hostSkin: String
+        let participantCount: Int
+        var id: String { room.id }
+    }
     /// Friendly one-line outcome of the last invite-link join attempt.
     @Published private(set) var inviteJoinMessage: String?
     /// One-shot "<alias> joined" toast (set on a genuine new join; view clears).
@@ -287,7 +298,7 @@ final class FocusOnlineModel: ObservableObject {
         joinedRooms = []
         realPilots = []
         pendingRoom = nil
-        joinedInviteRoom = nil
+        invitePreview = nil
         inviteJoinMessage = nil
         resetRoomCreation()
     }
@@ -411,12 +422,17 @@ final class FocusOnlineModel: ObservableObject {
         let ownsFlightRoom = flightRoom?.isOwned ?? false
         let roomEnd = expectedEndAt
         Task {
-            // Public presence only for publicSky (room membership stays in
-            // member records; a room flight isn't broadcast publicly).
-            if flightMode == .publicSky, appModel?.profile.onlineDiscoverable ?? false {
+            // Every Global flight publishes its active_flights session row — this
+            // is the server-canonical record the promote RPC validates against
+            // (visibility to OTHER pilots is still gated by is_discoverable in
+            // RLS, so a non-discoverable flyer stays hidden). The realtime sky
+            // nudge remains discoverable-only.
+            if flightMode == .publicSky {
                 await flightService.startPublishing(presence)
-                await realtimeService.joinSky(skyID: skyID, myID: myID) { [weak self] in
-                    Task { @MainActor [weak self] in await self?.pollSoon() }
+                if appModel?.profile.onlineDiscoverable ?? false {
+                    await realtimeService.joinSky(skyID: skyID, myID: myID) { [weak self] in
+                        Task { @MainActor [weak self] in await self?.pollSoon() }
+                    }
                 }
             }
             if let room = flightRoom {
@@ -900,70 +916,88 @@ final class FocusOnlineModel: ObservableObject {
     // MARK: Invitations (deep links)
 
     /// Entry point for `focusglobe://join/<token>` and the future
-    /// `https://focusglobe.app/join/<token>` universal link.
+    /// `https://focusglobe.app/join/<token>` universal link. Opening a link only
+    /// PREVIEWS the flight — it never joins.
     func handleIncomingURL(_ url: URL) async {
         guard let token = DeepLinkService.inviteToken(from: url) else { return }
         await refreshAvailability()
         guard availability.isAvailable else {
-            // Keep the invitation; consume it right after sign-in.
+            // Keep the invitation; preview it right after sign-in.
             OnlineCache.pendingInviteToken = token
             inviteJoinMessage = "Sign in to join this private flight."
             return
         }
-        await joinInvite(token: token)
+        await previewInvite(token: token)
     }
 
     private func consumePendingInviteIfAny() async {
         guard let token = OnlineCache.pendingInviteToken else { return }
         OnlineCache.pendingInviteToken = nil
-        await joinInvite(token: token)
+        await previewInvite(token: token)
     }
 
-    private func joinInvite(token: String) async {
+    /// READ-ONLY preview: opening a link never consumes the token, creates
+    /// membership, changes the count or toasts. The owner opening their own link
+    /// is a silent no-op (they're already flying it).
+    func previewInvite(token: String) async {
         guard let myID = myUserID else { return }
         do {
-            let joined = try await roomService.joinRoom(token: token, myID: myID)
-            activeRoomParticipants = Self.dedupe(joined.members)
+            let p = try await roomService.previewInvite(token: token, myID: myID)
             inviteJoinMessage = nil
-            if joined.membership == "already_owner" || joined.room.isOwned {
-                // The owner opened their OWN link — nothing to join, no second
-                // participant, no invitation screen. They're already flying it.
-                joinedInviteRoom = nil
-            } else {
-                // A genuine guest → surface the compact invitation screen.
-                joinedInviteRoom = joined.room
+            if p.isOwner { invitePreview = nil; return }
+            guard p.valid else {
+                invitePreview = nil
+                inviteJoinMessage = "This invitation isn't available anymore."
+                return
             }
-            await refreshRooms()
+            invitePreview = InvitePreviewState(token: token, room: p.room, hostAlias: p.hostAlias,
+                                               hostSkin: p.hostSkin, participantCount: p.participantCount)
         } catch {
             applyOperationError(error)
             lastRoomErrorDetail = OnlineError.detail(for: error)
             inviteJoinMessage = OnlineError.map(error).userMessage
+            invitePreview = nil
         }
     }
 
+    /// The ONLY membership-creating call — runs when the guest taps Join Flight.
+    /// Atomically accepts + consumes the token server-side and returns the
+    /// canonical active flight (fresh ends_at) to launch, or nil on failure.
+    func acceptInvitePreview() async -> FocusRoom? {
+        guard let myID = myUserID, let preview = invitePreview else { return nil }
+        do {
+            let joined = try await roomService.acceptInvite(token: preview.token, myID: myID)
+            activeRoomParticipants = Self.dedupe(joined.members)
+            invitePreview = nil
+            inviteJoinMessage = nil
+            return joined.room
+        } catch {
+            applyOperationError(error)
+            lastRoomErrorDetail = OnlineError.detail(for: error)
+            inviteJoinMessage = OnlineError.map(error).userMessage
+            invitePreview = nil
+            return nil
+        }
+    }
+
+    /// Guest → dismiss the invitation with NO backend mutation (nothing joined).
+    func dismissInvitePreview() { invitePreview = nil }
     func clearInviteJoinMessage() { inviteJoinMessage = nil }
-    func clearJoinedInviteRoom() { joinedInviteRoom = nil }
 
     /// Guest → enter the invited ACTIVE flight. Binds the room + private mode so
     /// the guest's `flightDidStart` wires the shared, synchronized timer. The
-    /// caller launches the journey (router.startJourney) using `inheritedMinutes`.
+    /// caller launches the journey with the room's exact `endsAt` as the deadline.
     func enterInvitedFlight(_ room: FocusRoom) {
         flightMode = .privateRoom
         usePendingRoom(room)
         knownMemberIDs = []
         joinToastAlias = nil
-        joinedInviteRoom = nil
+        invitePreview = nil
     }
 
-    /// Guest → decline: release the membership created when the link opened.
-    func declineInvite(_ room: FocusRoom) {
-        joinedInviteRoom = nil
-        Task { await roomService.leaveRoom(roomID: room.id) }
-    }
-
-    /// Whole-minutes remaining until `endsAt` (nil = infinite) for the guest's
-    /// inherited local timer — rounded to the nearest minute (sub-minute clock
-    /// skew is within tolerance; the shared bubble shows the exact server time).
+    /// Whole-minutes remaining until `endsAt` (nil = infinite) — used ONLY for
+    /// the flight's symbolic distance/route visuals; the actual countdown is the
+    /// exact `sharedEndsAt` deadline, never this rounded value.
     static func inheritedMinutes(until endsAt: Date?) -> (minutes: Int, infinite: Bool) {
         guard let end = endsAt else { return (0, true) }
         let secs = end.timeIntervalSinceNow

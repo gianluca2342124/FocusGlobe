@@ -19,6 +19,14 @@ final class SessionTimerService: ObservableObject {
 
     let total: TimeInterval
 
+    /// A synchronized shared flight (a guest who joined an in-progress Private
+    /// Flight) counts down to this ABSOLUTE server deadline instead of a private
+    /// duration. Remaining is then always `deadline − wall clock`, recomputed on
+    /// every read/tick — so it survives background/foreground and reconnect and
+    /// lands exactly with the host. `nil` for normal Solo / Global / host flights
+    /// (their timer paths are completely unchanged).
+    let sharedDeadline: Date?
+
     @Published private(set) var elapsed: TimeInterval = 0
     @Published private(set) var isRunning = false
     @Published private(set) var isFinished = false
@@ -31,8 +39,9 @@ final class SessionTimerService: ObservableObject {
     private var timer: Timer?
     private let tickInterval: TimeInterval = 1.0
 
-    init(total: TimeInterval, startElapsed: TimeInterval = 0) {
+    init(total: TimeInterval, startElapsed: TimeInterval = 0, sharedDeadline: Date? = nil) {
         self.total = max(1, total)
+        self.sharedDeadline = sharedDeadline
         // Resume support: seed accumulated time so `start()` continues from here.
         self.accumulated = min(self.total, max(0, startElapsed))
         self.elapsed = self.accumulated
@@ -109,6 +118,13 @@ final class SessionTimerService: ObservableObject {
     }
 
     private func currentElapsed() -> TimeInterval {
+        if let sharedDeadline {
+            // Synchronized shared flight: elapsed is derived from the ABSOLUTE
+            // deadline every read, so remaining = deadline − now exactly, with no
+            // dependence on start/pause bookkeeping. This is what keeps a joined
+            // guest's countdown locked to the host's after background/reconnect.
+            return max(0, total - max(0, sharedDeadline.timeIntervalSinceNow))
+        }
         if let lastResume {
             return accumulated + Date().timeIntervalSince(lastResume)
         }

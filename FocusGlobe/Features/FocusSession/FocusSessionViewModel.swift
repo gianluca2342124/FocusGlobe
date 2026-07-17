@@ -10,6 +10,9 @@ final class FocusSessionViewModel: ObservableObject {
     let origin: JourneyOrigin
     let route: Route
     let intention: String?
+    /// Canonical shared deadline when this is a guest joining an in-progress
+    /// Private Flight (else nil). Drives the exact synchronized countdown.
+    let sharedEndsAt: Date?
 
     let timer: SessionTimerService
 
@@ -54,9 +57,17 @@ final class FocusSessionViewModel: ObservableObject {
         self.origin = journey.origin
         self.route = journey.route
         self.intention = journey.intention
-        // Resume support: seed elapsed when continuing an unfinished journey.
-        self.timer = SessionTimerService(total: journey.route.duration,
-                                         startElapsed: TimeInterval(journey.resumeElapsedSeconds ?? 0))
+        self.sharedEndsAt = journey.sharedEndsAt
+        // A guest joining an in-progress Private Flight counts down to the SHARED
+        // absolute deadline (exact, resync-safe, no rounding). Every other flight
+        // uses its own duration exactly as before.
+        if let deadline = journey.sharedEndsAt {
+            self.timer = SessionTimerService(total: max(1, deadline.timeIntervalSinceNow),
+                                             sharedDeadline: deadline)
+        } else {
+            self.timer = SessionTimerService(total: journey.route.duration,
+                                             startElapsed: TimeInterval(journey.resumeElapsedSeconds ?? 0))
+        }
         self.journeyDistanceKm = GeoMath.distanceKm(from: journey.origin.coordinate,
                                                     to: journey.route.destination)
     }
@@ -143,8 +154,11 @@ final class FocusSessionViewModel: ObservableObject {
         appModel.focusShield.applyForJourney(durationSeconds: Int(timer.remaining.rounded()))
         // FocusGlobe Online: publish presence for online modes (no-op for Solo;
         // remaining time is interpolated by peers from expectedEndAt).
-        let expectedEnd: Date? = route.id.hasPrefix(FlightRouteFactory.infinityIDPrefix)
-            ? nil : Date().addingTimeInterval(timer.remaining)
+        // The guest's canonical shared deadline is authoritative (presence +
+        // bubbles then match the host exactly); otherwise derive from the timer.
+        let expectedEnd: Date? = sharedEndsAt
+            ?? (route.id.hasPrefix(FlightRouteFactory.infinityIDPrefix)
+                ? nil : Date().addingTimeInterval(timer.remaining))
         appModel.onlineFlightDidStart(skyID: FocusSky.matching(routeID: route.id)?.id ?? appModel.selectedSky.id,
                                       sessionID: onlineSessionID,
                                       expectedEndAt: expectedEnd)

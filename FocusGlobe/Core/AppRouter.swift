@@ -11,6 +11,10 @@ struct Journey: Identifiable, Hashable {
     /// When resuming an unfinished journey, the elapsed seconds to start from.
     /// `nil` for a fresh journey.
     var resumeElapsedSeconds: Int? = nil
+    /// A synchronized shared deadline for a guest joining an in-progress Private
+    /// Flight — the timer counts down to THIS absolute instant instead of a
+    /// private duration. `nil` for every ordinary flight.
+    var sharedEndsAt: Date? = nil
 }
 
 /// Centralised navigation. Provider-independent and view-independent so flows
@@ -117,8 +121,10 @@ final class AppRouter: ObservableObject {
 
     // MARK: Journey lifecycle
 
-    func startJourney(origin: JourneyOrigin, route: Route, intention: String?) {
-        activeJourney = Journey(origin: origin, route: route, intention: intention)
+    func startJourney(origin: JourneyOrigin, route: Route, intention: String?,
+                      sharedEndsAt: Date? = nil) {
+        activeJourney = Journey(origin: origin, route: route, intention: intention,
+                                sharedEndsAt: sharedEndsAt)
     }
 
     /// Dismiss the journey cover and return to the Home root.

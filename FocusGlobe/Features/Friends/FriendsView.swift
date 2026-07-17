@@ -14,8 +14,7 @@ struct FriendsView: View {
     @EnvironmentObject private var online: FocusOnlineModel
 
     @State private var lobbyRoom: FocusRoom?
-    @State private var inviteRoom: FocusRoom?          // guest invitation screen
-    @State private var pendingGuestLaunch: FocusRoom?  // launched on sheet dismiss
+    @State private var pendingGuestLaunch: FocusRoom?  // launched on preview dismiss
     @State private var inviteFlow: InviteFlow?
     @State private var removalTarget: FocusFriend?
     @State private var showSignIn = false
@@ -99,20 +98,25 @@ struct FriendsView: View {
             guard now.isAvailable else { return }
             Task { await refresh() }
         }
-        // Opening an invitation link → the compact invitation screen (never a
-        // lobby). Join Flight launches directly into the active flight.
-        .onChange(of: online.joinedInviteRoom) { _, room in
-            if let room { inviteRoom = room }
-        }
         .sheet(isPresented: $showSignIn) {
             OnlineSignInView { Task { await refresh() } }
                 .environmentObject(online)
                 .environmentObject(appModel)
         }
-        .sheet(item: $inviteRoom, onDismiss: launchPendingGuest) { room in
-            JoinFlightView(room: room,
-                           onJoin: { pendingGuestLaunch = room; inviteRoom = nil },
-                           onDecline: { online.declineInvite(room); inviteRoom = nil })
+        // Opening an invitation link only PREVIEWS the flight (no join). Join
+        // Flight accepts + launches directly; Not now just dismisses.
+        .sheet(item: Binding(get: { online.invitePreview },
+                             set: { if $0 == nil { online.dismissInvitePreview() } }),
+               onDismiss: launchPendingGuest) { preview in
+            JoinFlightView(preview: preview,
+                           onJoin: {
+                               Task {
+                                   if let room = await online.acceptInvitePreview() {
+                                       pendingGuestLaunch = room   // launched on dismiss
+                                   }
+                               }
+                           },
+                           onDecline: { online.dismissInvitePreview() })
                 .environmentObject(appModel)
                 .environmentObject(online)
         }
@@ -158,12 +162,15 @@ struct FriendsView: View {
         guard let room = pendingGuestLaunch else { return }
         pendingGuestLaunch = nil
         let sky = FocusSky.byID(room.skyID) ?? appModel.selectedSky
+        // Minutes drive only the symbolic distance/route visuals; the actual
+        // countdown is the EXACT shared deadline (room.endsAt) passed below.
         let (minutes, infinite) = FocusOnlineModel.inheritedMinutes(until: room.endsAt)
         online.enterInvitedFlight(room)
         let origin = appModel.originForJourney
         let route = FlightRouteFactory.route(minutes: minutes, infinite: infinite,
                                              origin: origin, focusSky: sky)
-        router.startJourney(origin: origin, route: route, intention: nil)
+        router.startJourney(origin: origin, route: route, intention: nil,
+                            sharedEndsAt: room.endsAt)
     }
 
     // MARK: - Pending requests

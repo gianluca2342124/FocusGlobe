@@ -16,6 +16,18 @@ actor RoomService {
         var membership: String? = nil    // already_owner / already_member / joined
     }
 
+    /// A READ-ONLY preview of an invitation — the flight to join, WITHOUT
+    /// consuming the token or creating any membership.
+    struct InvitePreview: Sendable {
+        var room: FocusRoom
+        var hostAlias: String
+        var hostSkin: String
+        var participantCount: Int
+        var isOwner: Bool
+        var alreadyMember: Bool
+        var valid: Bool
+    }
+
     /// Map + dedupe a members payload by authenticated user UUID (never by
     /// alias/skin) — the single source of truth for a room's participant set.
     static func dedupedParticipants(_ members: [MemberPayload]?, roomID: String,
@@ -123,6 +135,42 @@ actor RoomService {
         struct Params: Encodable { let p_raw_token: String }
         let payload: RoomBundlePayload = try await client
             .rpc("join_room_by_token", params: Params(p_raw_token: token))
+            .execute().value
+        let room = payload.room.room(myID: myID)
+        let members = Self.dedupedParticipants(payload.members, roomID: room.id,
+                                               roomActive: room.status == .active)
+        return CreatedRoom(room: room, members: members, membership: payload.membership)
+    }
+
+    /// Preview an invitation WITHOUT joining — never consumes the token, never
+    /// creates membership, never changes the participant count.
+    func previewInvite(token: String, myID: String) async throws -> InvitePreview {
+        guard let client else { throw OnlineError.unavailable(.projectUnavailable) }
+        struct Params: Encodable { let p_raw_token: String }
+        struct Payload: Decodable {
+            let room: RoomPayload
+            let host_alias: String
+            let host_skin: String
+            let participant_count: Int
+            let is_owner: Bool
+            let already_member: Bool
+            let valid: Bool
+        }
+        let p: Payload = try await client
+            .rpc("preview_active_flight_invite", params: Params(p_raw_token: token))
+            .execute().value
+        return InvitePreview(room: p.room.room(myID: myID), hostAlias: p.host_alias,
+                             hostSkin: p.host_skin, participantCount: p.participant_count,
+                             isOwner: p.is_owner, alreadyMember: p.already_member, valid: p.valid)
+    }
+
+    /// Accept an invitation — the ONLY join path. Atomic validate + consume +
+    /// membership on the server (idempotent for owner/existing member).
+    func acceptInvite(token: String, myID: String) async throws -> CreatedRoom {
+        guard let client else { throw OnlineError.unavailable(.projectUnavailable) }
+        struct Params: Encodable { let p_raw_token: String }
+        let payload: RoomBundlePayload = try await client
+            .rpc("accept_active_flight_invite", params: Params(p_raw_token: token))
             .execute().value
         let room = payload.room.room(myID: myID)
         let members = Self.dedupedParticipants(payload.members, roomID: room.id,

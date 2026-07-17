@@ -1,30 +1,26 @@
 import SwiftUI
 
 /// The compact invitation screen a guest sees after opening a private-flight
-/// link. The flight is ALREADY airborne — so there is NO lobby, no Ready, no
-/// Start Flight, no duration picker and no ritual. `Join Flight` launches the
-/// guest straight into the host's active flight with the synchronized remaining
-/// time; `Not now` declines and releases the membership. Friendly error states
-/// (ended / expired / full / blocked / offline) are surfaced upstream before
-/// this screen ever appears — it only shows for a genuinely joinable flight.
+/// link. Backed by a READ-ONLY preview — opening the link never joined, never
+/// consumed the token, never changed the count. The flight is ALREADY airborne,
+/// so there is NO lobby, no Ready, no Start Flight, no duration picker and no
+/// ritual. Only `Join Flight` performs the atomic accept + membership; `Not now`
+/// simply dismisses with no backend mutation. Invalid/expired/full/blocked
+/// invitations are filtered upstream, so this only shows for a joinable flight.
 struct JoinFlightView: View {
-    let room: FocusRoom
+    let preview: FocusOnlineModel.InvitePreviewState
     var onJoin: () -> Void
     var onDecline: () -> Void
-    @EnvironmentObject private var online: FocusOnlineModel
     @EnvironmentObject private var appModel: AppModel
 
+    private var room: FocusRoom { preview.room }
     private var sky: FocusSky { FocusSky.byID(room.skyID) ?? .goldenHour }
-    private var host: RoomParticipant? {
-        online.activeRoomParticipants.first { $0.publicID == room.ownerPublicID }
-    }
-    private var hostAlias: String {
-        if let name = host?.displayName, !name.isEmpty { return name }
-        return "a pilot"
-    }
-    private var remainingLabel: String {
+
+    /// Live remaining, derived from the canonical `ends_at` — updates while the
+    /// screen is visible so the guest sees the true shared time before joining.
+    private func remainingLabel(_ now: Date) -> String {
         guard let end = room.endsAt else { return "Infinite Flight" }
-        let r = max(0, Int(end.timeIntervalSinceNow))
+        let r = max(0, Int(end.timeIntervalSince(now)))
         return r >= 60 ? "\(r / 60) min remaining" : "Landing soon"
     }
 
@@ -36,9 +32,9 @@ struct JoinFlightView: View {
             VStack(spacing: AppSpacing.lg) {
                 Spacer()
                 BalloonView(height: 100, showBurner: false, showGlow: true,
-                            skin: BalloonSkin.skin(id: host?.balloonSkinID ?? "default"))
+                            skin: BalloonSkin.skin(id: preview.hostSkin))
                 VStack(spacing: 6) {
-                    Text("Join \(hostAlias)'s Flight")
+                    Text("Join \(preview.hostAlias)'s Flight")
                         .font(.system(size: 26, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
@@ -47,10 +43,12 @@ struct JoinFlightView: View {
                         .font(AppTypography.caption)
                         .foregroundStyle(.white.opacity(0.7))
                 }
-                HStack(spacing: 8) {
-                    infoPill(sky.name, icon: "sparkles")
-                    infoPill(remainingLabel, icon: "clock")
-                    infoPill("\(online.activeRoomParticipants.count) flying", icon: "person.2.fill")
+                TimelineView(.periodic(from: .now, by: 1)) { ctx in
+                    HStack(spacing: 8) {
+                        infoPill(sky.name, icon: "sparkles")
+                        infoPill(remainingLabel(ctx.date), icon: "clock")
+                        infoPill("\(preview.participantCount) flying", icon: "person.2.fill")
+                    }
                 }
                 Spacer()
                 VStack(spacing: AppSpacing.sm) {
