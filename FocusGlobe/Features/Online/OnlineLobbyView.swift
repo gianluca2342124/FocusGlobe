@@ -1,31 +1,20 @@
 import SwiftUI
 
-/// THE lobby — the single participants screen in the whole app. Two faces of the
-/// same room:
-///  • Guest / pre-flight (`asParticipants == false`): Sky · Duration · pilots,
-///    Ready, Leave, and an elegant 3·2·1 take-off countdown when the flight
-///    begins.
-///  • Host in-flight roster (`asParticipants == true`): the same live seat grid
-///    plus Invite Friends and Done — no Ready/Start, because the host is already
-///    flying and the flight simply became private.
-/// Invited pilots only — never decorative fillers. Devices sync via shared
-/// timestamps; one fresh single-use link per friend, handed to the iOS share
-/// sheet.
+/// **Flight Participants** — the ONE roster screen for an active Private Flight.
+/// The flight is already airborne, so there is NO Ready, NO Start Flight, NO
+/// countdown and NO pre-flight language: it is purely a live roster you can
+/// invite into or leave. The host sees Invite Friends + Done; an invited member
+/// sees Leave Flight + Done. Invited pilots only — never decorative fillers.
 struct OnlineLobbyView: View {
     let room: FocusRoom
-    /// True when opened as the in-flight host's live roster (Participants).
-    var asParticipants: Bool = false
+    /// Retained for source compatibility; the screen is always the roster now.
+    var asParticipants: Bool = true
     var onStart: (() -> Void)? = nil
     @EnvironmentObject private var online: FocusOnlineModel
     @EnvironmentObject private var appModel: AppModel
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var ready = false
-    @State private var readyBusy = false
-    @State private var startBusy = false
     @State private var shareURL: URL?
     @State private var inviteBusy = false
-    @State private var countdown: Int?
 
     private var isOwner: Bool { room.ownerPublicID == online.currentUserID }
     private var sky: FocusSky { FocusSky.byID(room.skyID) ?? .goldenHour }
@@ -45,30 +34,11 @@ struct OnlineLobbyView: View {
                 actions
             }
             .padding(AppSpacing.screen)
-
-            if let n = countdown { countdownOverlay(n) }
         }
-        .task {
-            // The host roster reads the live poll's participants (no second
-            // subscription); a guest/pre-flight lobby joins for realtime + toast.
-            if !asParticipants {
-                await online.joinRoom(room)
-                // Joining a flight that's ALREADY airborne (the host promoted a
-                // running Global Flight) takes off right away — brief lobby, then
-                // the 3·2·1 into the shared sky.
-                if !isOwner, room.status == .active, countdown == nil {
-                    runCountdownThenStart()
-                }
-            }
-        }
-        .onDisappear { if !asParticipants { online.exitLobby() } }
-        // Shared take-off: when the OWNER starts, the server flips the room
-        // active; realtime delivers it and every guest takes off together with an
-        // elegant countdown — synchronized to the SAME shared end.
-        .onChange(of: online.activeRoomStartedID) { _, startedID in
-            guard startedID == room.id, !isOwner, !asParticipants, countdown == nil else { return }
-            runCountdownThenStart()
-        }
+        // A lightweight roster read (no realtime subscription, no lobby state) —
+        // the current flight's poll keeps this list live; a room opened from
+        // Friends just needs one fetch.
+        .task { await online.loadParticipants(of: room) }
         .refreshableIfAvailable { await online.loadParticipants(of: room) }
         #if canImport(UIKit)
         .sheet(item: Binding(get: { shareURL.map { LobbyShareURL(url: $0) } },
@@ -78,21 +48,22 @@ struct OnlineLobbyView: View {
         #endif
     }
 
-    // MARK: Header
-
     private var header: some View {
         VStack(spacing: 6) {
             HStack {
+                Text("Flight Participants")
+                    .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    .tracking(1).foregroundStyle(.white.opacity(0.6))
+                Spacer()
                 Button { appModel.tapFeedback(); dismiss() } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 15, weight: .bold)).foregroundStyle(.white)
                         .frame(width: 38, height: 38)
                         .background(Circle().fill(.ultraThinMaterial))
                 }
-                Spacer()
             }
             Text(sky.name)
-                .font(.system(size: 27, weight: .bold, design: .rounded))
+                .font(.system(size: 26, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
             HStack(spacing: 8) {
                 pill(durationLabel, icon: "clock")
@@ -112,9 +83,9 @@ struct OnlineLobbyView: View {
     }
 
     private var durationLabel: String {
-        guard let end = room.endsAt else { return "Open flight" }
+        guard let end = room.endsAt else { return "Infinite" }
         let r = max(0, Int(end.timeIntervalSinceNow))
-        return r >= 60 ? "\(r / 60) min" : "Landing soon"
+        return r >= 60 ? "\(r / 60) min left" : "Landing soon"
     }
 
     private var slots: some View {
@@ -122,16 +93,13 @@ struct OnlineLobbyView: View {
                       ownerID: room.ownerPublicID,
                       myID: online.currentUserID,
                       capacity: room.maximumParticipants,
-                      onInviteSeat: { Task { await inviteFriends() } })
+                      onInviteSeat: { if isOwner { Task { await inviteFriends() } } })
             .animation(.spring(response: 0.42, dampingFraction: 0.82),
                        value: online.activeRoomParticipants)
     }
 
-    // MARK: Actions
-
     @ViewBuilder private var actions: some View {
-        if asParticipants {
-            // In-flight host roster: invite + done, never restart the flight.
+        if isOwner {
             VStack(spacing: AppSpacing.sm) {
                 AppPrimaryButton(title: inviteBusy ? "Preparing…" : "Invite Friends",
                                  systemImage: "person.badge.plus") {
@@ -144,41 +112,12 @@ struct OnlineLobbyView: View {
                     .font(AppTypography.callout)
                     .foregroundStyle(.white.opacity(0.7))
             }
-        } else if isOwner {
-            VStack(spacing: AppSpacing.sm) {
-                AppPrimaryButton(title: startBusy ? "Starting…" : "Start Flight", systemImage: "arrow.up") {
-                    guard !startBusy else { return }
-                    startBusy = true
-                    appModel.tapFeedback()
-                    Task {
-                        await online.ownerStart(room, durationSeconds: nil)
-                        online.usePendingRoom(room)
-                        dismiss()
-                        onStart?()
-                    }
-                }
-                .disabled(startBusy)
-                Button(inviteBusy ? "Preparing…" : "Invite Friends") {
-                    guard !inviteBusy else { return }
-                    appModel.tapFeedback(); Task { await inviteFriends() }
-                }
-                .font(.system(size: 15, weight: .bold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.85))
-            }
         } else {
             VStack(spacing: AppSpacing.sm) {
-                // Clean two-state ready: "I'm Ready" → "Ready" with ONE check.
-                AppPrimaryButton(title: ready ? "Ready" : "I'm Ready",
-                                 systemImage: ready ? "checkmark.circle.fill" : "checkmark") {
-                    guard !readyBusy else { return }
-                    appModel.tapFeedback()
-                    let next = !ready
-                    readyBusy = true
-                    withAnimation(.snappy(duration: 0.2)) { ready = next }
-                    Task { await online.setReady(room, ready: next); readyBusy = false }
-                }
-                .disabled(readyBusy)
-                Button("Leave") {
+                Button("Done") { appModel.tapFeedback(); dismiss() }
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                Button("Leave Flight") {
                     appModel.tapFeedback()
                     Task { await online.leaveRoom(room) }
                     dismiss()
@@ -189,8 +128,6 @@ struct OnlineLobbyView: View {
         }
     }
 
-    // MARK: Invite + countdown
-
     /// Mint ONE fresh single-use link and hand it straight to the iOS share
     /// sheet. In-flight guarded so a double tap can't create two links.
     private func inviteFriends() async {
@@ -198,37 +135,6 @@ struct OnlineLobbyView: View {
         inviteBusy = true
         if let url = await online.freshInvite(for: room) { shareURL = url }
         inviteBusy = false
-    }
-
-    private func runCountdownThenStart() {
-        online.usePendingRoom(room)
-        Task {
-            for n in [3, 2, 1] {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { countdown = n }
-                appModel.haptics.tap()
-                try? await Task.sleep(nanoseconds: 700_000_000)
-            }
-            withAnimation(.easeOut(duration: 0.25)) { countdown = nil }
-            dismiss()
-            onStart?()
-        }
-    }
-
-    private func countdownOverlay(_ n: Int) -> some View {
-        ZStack {
-            Color.black.opacity(0.45).ignoresSafeArea()
-            VStack(spacing: 10) {
-                Text("\(n)")
-                    .font(.system(size: 88, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.white)
-                    .id(n)
-                    .transition(reduceMotion ? .opacity
-                                : .scale(scale: 0.4).combined(with: .opacity))
-                Text("Take off")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.8))
-            }
-        }
     }
 }
 

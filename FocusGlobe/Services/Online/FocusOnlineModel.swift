@@ -37,6 +37,18 @@ final class FocusOnlineModel: ObservableObject {
     @Published var flightMode: OnlineFlightMode = OnlineCache.lastFlightMode {
         didSet { OnlineCache.lastFlightMode = flightMode }
     }
+
+    /// The ONE authoritative social state of the active flight. Every view reads
+    /// this — never a sheet-open flag, a stray room object or a cached bool.
+    ///  • solo/global               → the flight the user started
+    ///  • globalInviteReady         → host shared an invite; STILL Global (real
+    ///                                strangers + decorative) until someone joins
+    ///  • privateActive             → a genuine remote participant joined; sticky
+    ///                                for the rest of the journey (no strangers)
+    enum ActiveFlightSocialState: String, Sendable {
+        case solo, global, preparingInvite, globalInviteReady, privateActive
+    }
+    @Published private(set) var socialState: ActiveFlightSocialState = .solo
     /// The private room chosen/created for the NEXT flight (privateRoom mode).
     @Published var pendingRoom: FocusRoom?
     /// Single authoritative room-creation pipeline state.
@@ -75,11 +87,12 @@ final class FocusOnlineModel: ObservableObject {
     /// The ONE canonical online identity: the authenticated Supabase user UUID.
     /// Every self-filter and dedupe uses THIS — never alias, skin or device.
     var currentUserID: String? { myUserID }
-    /// True while the ACTIVE flight is a Private Flight (invited pilots only, no
-    /// strangers, no decorative fill). Distinct from the view's `roomBubbleMode`,
-    /// which also suppresses in Clean Mode — decorative suppression must hold
-    /// even in Clean Mode.
-    var isPrivateFlight: Bool { flightMode == .privateRoom }
+    /// True ONLY once the flight has genuinely become Private (a remote pilot
+    /// joined). Reads the authoritative state, so sharing an invite alone never
+    /// removes the Global strangers/decorative pilots. Sticky for the journey.
+    var isPrivateFlight: Bool { socialState == .privateActive }
+    /// The host has an outstanding invite but is STILL flying Global.
+    var isInviteReady: Bool { socialState == .globalInviteReady || socialState == .preparingInvite }
 
     /// Deduplicate any participant list by user UUID (stable, first-wins).
     static func dedupe(_ list: [RoomParticipant]) -> [RoomParticipant] {
@@ -120,6 +133,9 @@ final class FocusOnlineModel: ObservableObject {
     /// a mid-flight Global→Private promotion can inherit the exact remaining time
     /// instead of starting a new timer.
     private var flightExpectedEnd: Date?
+    /// The CURRENT flight's canonical start — copied into the private-flight
+    /// record so the server carries the host's original startedAt.
+    private var flightStartedAt: Date?
     private var verifiedBonusSessionIDs = Set<String>()
     private var overlapSeconds: Double = 0
     private var lastOverlapSample: Date?
@@ -366,10 +382,17 @@ final class FocusOnlineModel: ObservableObject {
     // MARK: Flight lifecycle (called from AppModel hooks — never blocks Solo)
 
     func flightDidStart(skyID: String, sessionID: String, expectedEndAt: Date?, category: String) {
+        // Every flight resets the social state; online ones then set their own.
+        socialState = .solo
         guard flightMode.isOnline, availability.isAvailable, let profile else { return }
         flightSessionID = sessionID
         flightRoom = flightMode == .privateRoom ? pendingRoom : nil
         flightExpectedEnd = expectedEndAt
+        flightStartedAt = Date()
+        // A guest launching straight into an invited flight is already Private;
+        // a fresh online flight starts Global and only turns Private when a real
+        // remote pilot joins.
+        socialState = flightMode == .privateRoom ? .privateActive : .global
         serverSessionID = nil
         overlapSeconds = 0
         lastOverlapSample = Date()
@@ -422,16 +445,20 @@ final class FocusOnlineModel: ObservableObject {
         pilotPollTask?.cancel()
         pilotPollTask = nil
         let room = flightRoom
+        let wasOwnedPrivate = room?.isOwned ?? false
         let serverSession = serverSessionID
         flightRoom = nil
         flightSessionID = nil
         flightExpectedEnd = nil
+        flightStartedAt = nil
         serverSessionID = nil
         realPilots = []
         reconnecting = false
+        socialState = .solo               // the journey is over — clear everything
         Task {
             await flightService.stopPublishing()
             await realtimeService.leaveSky()
+            await realtimeService.unsubscribeRoom()
             if room != nil, let serverSession {
                 // Server-verified completion: the friend bonus is decided from
                 // server rows, once, idempotently.
@@ -440,7 +467,12 @@ final class FocusOnlineModel: ObservableObject {
                     verifiedBonusSessionIDs.insert(sessionID)
                 }
             }
-            if let room { try? await roomService.setReady(roomID: room.id, ready: false) }
+            // Ending the host journey CLOSES the private flight and invalidates
+            // outstanding invitations (expire_stale_rooms revokes them).
+            if let room {
+                if wasOwnedPrivate { await roomService.closeRoom(roomID: room.id) }
+                else { try? await roomService.setReady(roomID: room.id, ready: false) }
+            }
         }
     }
 
@@ -486,6 +518,14 @@ final class FocusOnlineModel: ObservableObject {
             let pilots = await flightService.fetchPilots(skyID: skyID, excluding: me)
             realPilots = pilots
             reconnecting = pilots.isEmpty && !availability.isAvailable
+            // Host shared an invite but is STILL flying Global: watch the private
+            // record; the FIRST genuine remote member flips us to Private.
+            if socialState == .globalInviteReady, let room = flightRoom {
+                let members = Self.dedupe(await roomService.participants(roomID: room.id, roomActive: true))
+                if members.contains(where: { $0.publicID != myUserID }) {
+                    activatePrivateFlight(room: room, members: members)
+                }
+            }
         } else if var room = flightRoom {
             // The owner propagates the shared end asynchronously at take-off; if a
             // co-member's earlier read lost that race, re-read the room until the
@@ -629,40 +669,78 @@ final class FocusOnlineModel: ObservableObject {
         }
     }
 
-    /// Promote the CURRENTLY running Global Flight into a Private Flight without
-    /// restarting anything. The client-side timer/sky/sound/shield keep running;
-    /// only the online layer changes: a room is created, the shared end is set to
-    /// this flight's LIVE remaining time (so joiners inherit it — never a new
-    /// timer), the host leaves the public sky (no more strangers), and the live
-    /// pilot poll auto-switches to the room branch on its next tick. Returns the
-    /// host room, or nil if creation was throttled/failed. Idempotent: if already
-    /// private it just returns the current room.
+    /// Invite Friends from within an ACTIVE Global Flight: create (or reuse) the
+    /// active private-flight backend record for THIS journey, bind it, and return
+    /// a fresh single-use invite URL — WITHOUT changing the visible flight. The
+    /// host stays Global (strangers + decorative still visible); it only becomes
+    /// Private once a real remote pilot joins (see `activatePrivateFlight`). The
+    /// timer/sky/sound/shield never change. Idempotent: repeated taps reuse the
+    /// one flight (server-keyed by clientSessionID) and mint a fresh link.
     @discardableResult
-    func beginPrivateFlight(skyID: String) async -> FocusRoom? {
-        if flightMode == .privateRoom { return flightRoom ?? pendingRoom }
-        guard availability.isAvailable, flightMode == .publicSky else { return nil }
-        guard let room = await requestPrivateFlightRoom(skyID: skyID) else { return nil }
-        let liveEnd = flightExpectedEnd            // inherit THIS flight's remaining (nil = infinite)
-        let myID = myUserID
-        // Bind the running flight to the room and flip the mode. pollOnce reads
-        // flightMode/flightRoom live, so its next tick renders room members only.
-        flightRoom = room
-        knownMemberIDs = []                         // host only so far — no false "joined"
-        activeRoomParticipants = []
-        joinToastAlias = nil
-        flightMode = .privateRoom
-        Task {
-            // Drop the host from every public sky — a Private Flight has no strangers.
-            await flightService.stopPublishing()
-            await realtimeService.leaveSky()
-            // Propagate the shared, synchronized end so joiners inherit it.
-            await roomService.setFlightEnd(roomID: room.id, endsAt: liveEnd)
-            if let myID, let refreshed = await roomService.room(id: room.id, myID: myID) {
-                flightRoom = refreshed
-                pendingRoom = refreshed
-            }
+    func prepareInvite(skyID: String) async -> URL? {
+        guard availability.isAvailable, let myID = myUserID, let sessionID = flightSessionID else { return nil }
+        // Already private → just mint a fresh link for the existing flight.
+        if socialState == .privateActive, let room = flightRoom ?? pendingRoom {
+            return await freshInvite(for: room)
         }
-        return room
+        socialState = .preparingInvite
+        do {
+            let created = try await roomService.promoteToPrivate(
+                clientSessionID: sessionID, skyID: skyID,
+                endsAt: flightExpectedEnd, startedAt: flightStartedAt, myID: myID)
+            flightRoom = created.room
+            pendingRoom = created.room
+            // Still Global on screen — do NOT flip flightMode yet.
+            socialState = .globalInviteReady
+            // Watch the private record so the first join flips us promptly.
+            await realtimeService.subscribeRoom(roomID: created.room.id) { [weak self] in
+                Task { @MainActor [weak self] in await self?.reconcileInviteWatch(roomID: created.room.id) }
+            }
+            return created.room.shareURL
+        } catch {
+            applyOperationError(error)
+            lastRoomErrorDetail = OnlineError.detail(for: error)
+            // Sharing failed — remain a normal Global Flight.
+            socialState = flightMode == .privateRoom ? .privateActive : .global
+            return nil
+        }
+    }
+
+    /// Realtime nudge while an invite is outstanding: if a genuine remote member
+    /// has joined the private record, flip to a Private Flight now.
+    private func reconcileInviteWatch(roomID: String) async {
+        guard socialState == .globalInviteReady, let room = flightRoom, room.id == roomID else { return }
+        let members = Self.dedupe(await roomService.participants(roomID: roomID, roomActive: true))
+        if members.contains(where: { $0.publicID != myUserID }) {
+            activatePrivateFlight(room: room, members: members)
+        }
+    }
+
+    /// The one-way, sticky transition Global → Private: a real invited pilot has
+    /// joined. Remove strangers + decorative, keep only the crew, toast the join,
+    /// and leave the public sky. The timer/sky never reload. Stays Private for
+    /// the rest of the journey even if every guest later leaves.
+    private func activatePrivateFlight(room: FocusRoom, members: [RoomParticipant]) {
+        guard socialState != .privateActive else { return }
+        socialState = .privateActive
+        flightMode = .privateRoom          // isPrivateFlight/roomBubbleMode follow
+        flightRoom = room
+        activeRoomParticipants = members
+        detectJoins(in: members)           // "<alias> joined"
+        // Only invited pilots remain visible (map below on next tick anyway).
+        realPilots = members.filter { $0.publicID != myUserID }.map { p in
+            OnlinePilot(id: p.publicID, sessionID: p.activeSessionID ?? p.id,
+                        displayName: p.displayName, countryCode: p.countryCode,
+                        balloonSkinID: p.balloonSkinID, skyID: room.skyID,
+                        startedAt: p.joinedAt, expectedEndAt: room.endsAt,
+                        lastHeartbeatAt: p.lastHeartbeatAt ?? .distantPast,
+                        isPaused: false, focusCategory: "",
+                        allowsFriendRequest: true, hasLiveSession: true)
+        }
+        Task {
+            await flightService.stopPublishing()   // no longer a public stranger
+            await realtimeService.leaveSky()
+        }
     }
 
     private func scheduleThrottleReset(until date: Date) {
@@ -845,16 +923,15 @@ final class FocusOnlineModel: ObservableObject {
         guard let myID = myUserID else { return }
         do {
             let joined = try await roomService.joinRoom(token: token, myID: myID)
-            // The server tells us the idempotent outcome. Owner / already-member
-            // just open their existing lobby — no false "friend joined", no
-            // second balloon, no consumed seat.
-            joinedInviteRoom = joined.room
             activeRoomParticipants = Self.dedupe(joined.members)
-            knownMemberIDs = Set(joined.members.map(\.publicID).filter { $0 != myID })
             inviteJoinMessage = nil
             if joined.membership == "already_owner" || joined.room.isOwned {
-                pendingRoom = joined.room
-                roomCreationState = .ready(joined.room)
+                // The owner opened their OWN link — nothing to join, no second
+                // participant, no invitation screen. They're already flying it.
+                joinedInviteRoom = nil
+            } else {
+                // A genuine guest → surface the compact invitation screen.
+                joinedInviteRoom = joined.room
             }
             await refreshRooms()
         } catch {
@@ -865,6 +942,34 @@ final class FocusOnlineModel: ObservableObject {
     }
 
     func clearInviteJoinMessage() { inviteJoinMessage = nil }
+    func clearJoinedInviteRoom() { joinedInviteRoom = nil }
+
+    /// Guest → enter the invited ACTIVE flight. Binds the room + private mode so
+    /// the guest's `flightDidStart` wires the shared, synchronized timer. The
+    /// caller launches the journey (router.startJourney) using `inheritedMinutes`.
+    func enterInvitedFlight(_ room: FocusRoom) {
+        flightMode = .privateRoom
+        usePendingRoom(room)
+        knownMemberIDs = []
+        joinToastAlias = nil
+        joinedInviteRoom = nil
+    }
+
+    /// Guest → decline: release the membership created when the link opened.
+    func declineInvite(_ room: FocusRoom) {
+        joinedInviteRoom = nil
+        Task { await roomService.leaveRoom(roomID: room.id) }
+    }
+
+    /// Whole-minutes remaining until `endsAt` (nil = infinite) for the guest's
+    /// inherited local timer — rounded to the nearest minute (sub-minute clock
+    /// skew is within tolerance; the shared bubble shows the exact server time).
+    static func inheritedMinutes(until endsAt: Date?) -> (minutes: Int, infinite: Bool) {
+        guard let end = endsAt else { return (0, true) }
+        let secs = end.timeIntervalSinceNow
+        if secs < 30 { return (1, false) }
+        return (max(1, Int((secs / 60).rounded())), false)
+    }
 
     // MARK: Crew
 

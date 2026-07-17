@@ -74,7 +74,7 @@ struct FocusSessionView: View {
     private var isOnlineFlight: Bool { online.flightMode.isOnline }
     /// Private-room participants get persistent identity bubbles (hidden in
     /// Clean Mode to keep it minimal).
-    private var roomBubbleMode: Bool { online.flightMode == .privateRoom && !cleanMode }
+    private var roomBubbleMode: Bool { online.isPrivateFlight && !cleanMode }
 
     private func quickAddFriend(_ pilot: OnlinePilot) {
         appModel.tapFeedback()
@@ -105,8 +105,9 @@ struct FocusSessionView: View {
         guard isOnlineFlight, !invitePreparing else { return }
         invitePreparing = true
         let skyID = (matchedSky ?? appModel.selectedSky).id
-        if let room = await online.beginPrivateFlight(skyID: skyID),
-           let url = await online.freshInvite(for: room) {
+        // Creates/reuses the private-flight record and mints one fresh link —
+        // the flight STAYS Global until a real pilot joins.
+        if let url = await online.prepareInvite(skyID: skyID) {
             shareInviteURL = url
         }
         invitePreparing = false
@@ -672,7 +673,7 @@ struct FocusSessionView: View {
                 muted: vm.isAudioMuted,
                 isCabin: viewMode == .cabin,
                 isOnline: isOnlineFlight,
-                isPrivate: online.isPrivateFlight,
+                isPrivate: online.isPrivateFlight || online.isInviteReady,
                 preparingInvite: invitePreparing,
                 onToggleMute: {
                     vm.toggleMute()

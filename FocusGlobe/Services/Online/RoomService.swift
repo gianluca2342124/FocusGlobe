@@ -64,6 +64,43 @@ actor RoomService {
         }
     }
 
+    /// Promote the caller's ALREADY-ACTIVE Global Flight into an active private
+    /// flight (never a lobby). Idempotent per `clientSessionID` — repeated Invite
+    /// taps in one journey reuse the SAME flight. The room carries the host's
+    /// canonical start + shared end; the returned `shareURL` is a fresh one-time
+    /// invitation.
+    func promoteToPrivate(clientSessionID: String, skyID: String,
+                          endsAt: Date?, startedAt: Date?, myID: String) async throws -> CreatedRoom {
+        guard let client else { throw OnlineError.unavailable(.projectUnavailable) }
+        struct Params: Encodable {
+            let p_client_session_id: String
+            let p_sky_id: String
+            let p_ends_at: String?
+            let p_started_at: String?
+        }
+        do {
+            let payload: RoomBundlePayload = try await client
+                .rpc("promote_global_flight_to_private",
+                     params: Params(p_client_session_id: clientSessionID,
+                                    p_sky_id: skyID,
+                                    p_ends_at: endsAt.map(PostgresDate.string),
+                                    p_started_at: startedAt.map(PostgresDate.string)))
+                .execute().value
+            var room = payload.room.room(myID: myID)
+            guard let token = payload.inviteToken,
+                  let url = SupabaseConfig.inviteURL(token: token) else {
+                throw OnlineError.roomUnavailable
+            }
+            room.shareURL = url
+            let members = Self.dedupedParticipants(payload.members, roomID: room.id,
+                                                   roomActive: room.status == .active)
+            return CreatedRoom(room: room, members: members, membership: payload.membership)
+        } catch {
+            SupabaseService.log.error("promoteToPrivate FAILED: \(OnlineError.detail(for: error), privacy: .public)")
+            throw error
+        }
+    }
+
     /// A fresh invite URL for an existing owned room (tokens are hashed
     /// server-side, so re-opening the sheet mints a new one).
     func freshInviteURL(roomID: String) async throws -> URL {

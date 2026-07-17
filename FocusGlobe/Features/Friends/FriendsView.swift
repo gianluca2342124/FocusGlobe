@@ -14,6 +14,8 @@ struct FriendsView: View {
     @EnvironmentObject private var online: FocusOnlineModel
 
     @State private var lobbyRoom: FocusRoom?
+    @State private var inviteRoom: FocusRoom?          // guest invitation screen
+    @State private var pendingGuestLaunch: FocusRoom?  // launched on sheet dismiss
     @State private var inviteFlow: InviteFlow?
     @State private var removalTarget: FocusFriend?
     @State private var showSignIn = false
@@ -97,24 +99,28 @@ struct FriendsView: View {
             guard now.isAvailable else { return }
             Task { await refresh() }
         }
-        // A room joined from an invitation link opens its lobby directly.
+        // Opening an invitation link → the compact invitation screen (never a
+        // lobby). Join Flight launches directly into the active flight.
         .onChange(of: online.joinedInviteRoom) { _, room in
-            if let room { lobbyRoom = room }
+            if let room { inviteRoom = room }
         }
         .sheet(isPresented: $showSignIn) {
             OnlineSignInView { Task { await refresh() } }
                 .environmentObject(online)
                 .environmentObject(appModel)
         }
+        .sheet(item: $inviteRoom, onDismiss: launchPendingGuest) { room in
+            JoinFlightView(room: room,
+                           onJoin: { pendingGuestLaunch = room; inviteRoom = nil },
+                           onDecline: { online.declineInvite(room); inviteRoom = nil })
+                .environmentObject(appModel)
+                .environmentObject(online)
+        }
+        // "Open" an active flight from the list → the Flight Participants roster.
         .fullScreenCover(item: $lobbyRoom) { room in
-            OnlineLobbyView(room: room) {
-                // Owner pressed Start Flight → home opens the pre-flight ritual
-                // with the room already pending (FlightSetup picks it up).
-                router.select(.home)
-                router.pendingNewFlight = true
-            }
-            .environmentObject(appModel)
-            .environmentObject(online)
+            OnlineLobbyView(room: room)
+                .environmentObject(appModel)
+                .environmentObject(online)
         }
         .sheet(item: $inviteFlow) { _ in
             // From Friends you recommend the app; a Private Flight is created
@@ -142,6 +148,22 @@ struct FriendsView: View {
         guard online.availability.isAvailable else { return }
         await online.refreshSocial()
         await online.refreshRooms()
+    }
+
+    /// Guest → launch the invited ACTIVE flight directly (no ritual, no Ready,
+    /// no Start): the host's Sky, the SYNCHRONIZED remaining time, private mode.
+    /// Runs after the invitation sheet has fully dismissed so the flight cover
+    /// can't contend with it (mirrors Home's take-off hand-off).
+    private func launchPendingGuest() {
+        guard let room = pendingGuestLaunch else { return }
+        pendingGuestLaunch = nil
+        let sky = FocusSky.byID(room.skyID) ?? appModel.selectedSky
+        let (minutes, infinite) = FocusOnlineModel.inheritedMinutes(until: room.endsAt)
+        online.enterInvitedFlight(room)
+        let origin = appModel.originForJourney
+        let route = FlightRouteFactory.route(minutes: minutes, infinite: infinite,
+                                             origin: origin, focusSky: sky)
+        router.startJourney(origin: origin, route: route, intention: nil)
     }
 
     // MARK: - Pending requests
