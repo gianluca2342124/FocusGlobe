@@ -14,6 +14,7 @@ enum OnlineError: Error, Sendable {
     case inviteInvalid
     case inviteExpired
     case blocked
+    case profileNotReady
     case requestFailed
     case cancelled
 
@@ -28,6 +29,7 @@ enum OnlineError: Error, Sendable {
         case .inviteInvalid:        return "This invitation link isn't valid."
         case .inviteExpired:        return "This invitation has expired — ask for a new one."
         case .blocked:              return "You can't join this Focus Room."
+        case .profileNotReady:      return "Finishing your online profile — please try again in a moment."
         case .requestFailed:        return "Something didn't reach the sky. Please try again."
         case .cancelled:            return ""
         }
@@ -42,14 +44,40 @@ enum OnlineError: Error, Sendable {
                          "room_closed", "invite_invalid", "invite_expired", "invite_revoked",
                          "blocked", "not_owner", "not_member", "request_not_found",
                          "already_friends", "invalid_reason", "session_not_found",
-                         "self", "requests_disabled", "duplicate"]
+                         "self", "requests_disabled", "duplicate",
+                         "profile_unavailable"]
             for token in known where message.contains(token) { return token }
         }
         return nil
     }
 
+    /// A missing/unexposed RPC (database predates a migration): PostgREST maps
+    /// it to `PGRST202`, Postgres to `42883`. Used to fall back to a legacy
+    /// path instead of surfacing a hard failure.
+    static func isMissingFunction(_ error: Error) -> Bool {
+        guard let pg = error as? PostgrestError else { return false }
+        if let code = pg.code, code == "PGRST202" || code == "42883" { return true }
+        let m = pg.message.lowercased()
+        return m.contains("could not find the function") || m.contains("does not exist")
+    }
+
+    /// A missing-profile foreign-key failure (`focus_rooms_owner_id_fkey` /
+    /// `room_members_user_id_fkey`, SQLSTATE 23503) or the explicit
+    /// `profile_unavailable` token — a transient, retryable setup gap, never
+    /// the generic "didn't reach the sky".
+    static func isProfileNotReady(_ error: Error) -> Bool {
+        if serverToken(from: error) == "profile_unavailable" { return true }
+        guard let pg = error as? PostgrestError else { return false }
+        if pg.code == "23503" {
+            let m = pg.message.lowercased()
+            return m.contains("owner_id") || m.contains("user_id") || m.contains("profiles")
+        }
+        return false
+    }
+
     /// Map any thrown error to a FocusGlobe OnlineError with friendly copy.
     static func map(_ error: Error) -> OnlineError {
+        if isProfileNotReady(error) { return .profileNotReady }
         if let token = serverToken(from: error) {
             switch token {
             case "not_authenticated":                    return .notSignedIn

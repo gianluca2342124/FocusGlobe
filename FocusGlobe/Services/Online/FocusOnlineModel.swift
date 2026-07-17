@@ -143,9 +143,16 @@ final class FocusOnlineModel: ObservableObject {
         do {
             if let userID = try await authService.restoreSession() {
                 myUserID = userID
-                if availability != .ready { availability = .ready }
-                if profile == nil || profile?.publicID != userID {
-                    await ensureIdentityAndProfile()
+                // Never declare `.ready` until a profile row is confirmed — a
+                // cached profile for THIS user counts, otherwise the
+                // server-guaranteed ensure must succeed first.
+                if profile != nil, profile?.publicID == userID {
+                    if availability != .ready { availability = .ready }
+                    Task { await ensureIdentityAndProfile() }   // refresh in background
+                } else if await ensureIdentityAndProfile() {
+                    availability = .ready
+                } else {
+                    availability = (lastErrorCategory == "network") ? .networkUnavailable : .reconnecting
                 }
             } else {
                 myUserID = nil
@@ -197,13 +204,18 @@ final class FocusOnlineModel: ObservableObject {
             do {
                 let userID = try await authService.signInWithApple(authorization: authorization,
                                                                    rawNonce: rawNonce)
-                // Load/create the profile BEFORE declaring ready, so Online is
-                // never entered without a valid profile (no "Sky Pilot" gap).
+                // Create/load the profile row BEFORE declaring ready — Online is
+                // never entered without a profile, so a room write can't hit the
+                // owner FK. If profile setup fails we stay authenticated but not
+                // ready and surface a retryable message.
                 myUserID = userID
-                await ensureIdentityAndProfile()
-                availability = .ready
-                await consumePendingInviteIfAny()
-                return nil
+                if await ensureIdentityAndProfile() {
+                    availability = .ready
+                    await consumePendingInviteIfAny()
+                    return nil
+                }
+                availability = (lastErrorCategory == "network") ? .networkUnavailable : .reconnecting
+                return OnlineError.profileNotReady.userMessage
             } catch {
                 // The token exchange may already have established a session even
                 // if a follow-up step threw — reconcile before declaring
@@ -212,10 +224,13 @@ final class FocusOnlineModel: ObservableObject {
                 // second tap.
                 if let recovered = try? await authService.restoreSession() {
                     myUserID = recovered
-                    await ensureIdentityAndProfile()
-                    availability = .ready
-                    await consumePendingInviteIfAny()
-                    return nil
+                    if await ensureIdentityAndProfile() {
+                        availability = .ready
+                        await consumePendingInviteIfAny()
+                        return nil
+                    }
+                    availability = (lastErrorCategory == "network") ? .networkUnavailable : .reconnecting
+                    return OnlineError.profileNotReady.userMessage
                 }
                 availability = .signedOut
                 lastErrorCategory = OnlineError.category(for: error)
@@ -252,9 +267,14 @@ final class FocusOnlineModel: ObservableObject {
         resetRoomCreation()
     }
 
-    /// Fetch-or-create my profile row + push current skin/settings.
-    func ensureIdentityAndProfile() async {
-        guard let myUserID else { return }
+    /// Fetch-or-create my profile row (server-guaranteed via
+    /// `ensure_current_profile`) + push current skin/settings. Returns whether
+    /// a valid profile is now loaded — callers must NOT declare Online `.ready`
+    /// unless this succeeded, so a room write can never hit the owner FK with a
+    /// missing profile row.
+    @discardableResult
+    func ensureIdentityAndProfile() async -> Bool {
+        guard let myUserID else { return false }
         do {
             var current = try await profileService.ensureProfile(
                 userID: myUserID,
@@ -268,12 +288,17 @@ final class FocusOnlineModel: ObservableObject {
                     createdAt: Date(), updatedAt: Date()))
             current.balloonSkinID = appModel?.equippedSkinIDForOnline ?? current.balloonSkinID
             current.isDiscoverable = appModel?.profile.onlineDiscoverable ?? current.isDiscoverable
-            try await profileService.updateProfile(current)
+            // A failed settings push must not discard a valid fetched profile —
+            // the row exists, which is what the FK needs.
+            try? await profileService.updateProfile(current)
             profile = current
             OnlineCache.save(profile: current)
             await flightService.configure(userID: myUserID)
+            return true
         } catch {
             applyOperationError(error)
+            lastRoomErrorDetail = OnlineError.detail(for: error)
+            return false
         }
     }
 

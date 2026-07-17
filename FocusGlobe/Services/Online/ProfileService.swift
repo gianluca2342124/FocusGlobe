@@ -5,10 +5,31 @@ import Supabase
 actor ProfileService {
     private var client: SupabaseClient? { SupabaseService.client }
 
-    /// Fetch-or-create my profile (the signup trigger normally creates it; the
-    /// upsert makes this robust even if the trigger predates this account).
+    /// Fetch-or-create my profile. The canonical path is the SECURITY DEFINER
+    /// `ensure_current_profile` RPC: it creates the `profiles` row for
+    /// `auth.uid()` if missing and returns it, bypassing RLS entirely. This is
+    /// what guarantees the `focus_rooms.owner_id` / `room_members.user_id`
+    /// foreign-key target always exists before any room write (the signup
+    /// trigger only fires on the first auth insert, which Apple re-sign-in
+    /// skips). A legacy select-or-upsert path remains only for a database that
+    /// predates the RPC.
     func ensureProfile(userID: String, defaults: OnlineProfile?) async throws -> OnlineProfile {
         guard let client else { throw OnlineError.unavailable(.projectUnavailable) }
+        do {
+            let row: ProfileRow = try await client.rpc("ensure_current_profile").execute().value
+            return Self.profile(from: row)
+        } catch {
+            // Only fall back when the RPC itself is absent (pre-migration DB);
+            // real failures (network/auth) must propagate so Online never
+            // reports "ready" without a profile.
+            guard OnlineError.isMissingFunction(error) else { throw error }
+            return try await legacyEnsureProfile(client: client, userID: userID, defaults: defaults)
+        }
+    }
+
+    /// Pre-RPC fallback: direct select, then upsert (subject to RLS).
+    private func legacyEnsureProfile(client: SupabaseClient, userID: String,
+                                     defaults: OnlineProfile?) async throws -> OnlineProfile {
         if let existing: ProfileRow = try? await client.from("profiles")
             .select().eq("id", value: userID).single().execute().value {
             return Self.profile(from: existing)
