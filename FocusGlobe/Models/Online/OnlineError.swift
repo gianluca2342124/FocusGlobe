@@ -41,7 +41,8 @@ enum OnlineError: Error, Sendable {
             let known = ["not_authenticated", "rate_limited", "room_full", "room_not_found",
                          "room_closed", "invite_invalid", "invite_expired", "invite_revoked",
                          "blocked", "not_owner", "not_member", "request_not_found",
-                         "already_friends", "invalid_reason", "session_not_found"]
+                         "already_friends", "invalid_reason", "session_not_found",
+                         "self", "requests_disabled", "duplicate"]
             for token in known where message.contains(token) { return token }
         }
         return nil

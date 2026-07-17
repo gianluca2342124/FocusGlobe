@@ -161,9 +161,11 @@ struct RoomBundlePayload: Codable, Sendable {
     let room: RoomPayload
     let members: [MemberPayload]?
     let inviteToken: String?
+    /// Idempotent join outcome: `already_owner` / `already_member` / `joined`.
+    let membership: String?
 
     enum CodingKeys: String, CodingKey {
-        case room, members
+        case room, members, membership
         case inviteToken = "invite_token"
     }
 }
@@ -214,6 +216,7 @@ extension RoomPayload {
                   allowsLateJoin: true,
                   purpose: purpose == "sky_unlock" ? .skyUnlock : .flight,
                   startedAt: PostgresDate.parse(startsAt),
+                  endsAt: PostgresDate.parse(endsAt),
                   isOwned: myID != nil && ownerID == myID,
                   shareURL: nil)
     }

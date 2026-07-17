@@ -26,10 +26,13 @@ struct FriendsView: View {
         let kind: Kind
     }
 
-    /// Rooms worth listing (lobby or in flight — not ended/closed).
+    /// Rooms worth listing (lobby or in flight — not ended/closed),
+    /// deduplicated by room id so a room never shows twice.
     private var openRooms: [FocusRoom] {
-        (online.ownedRooms + online.joinedRooms)
+        var seen = Set<String>()
+        return (online.ownedRooms + online.joinedRooms)
             .filter { $0.status == .lobby || $0.status == .active }
+            .filter { seen.insert($0.id).inserted }
     }
 
     private var hasAnySocialContent: Bool {

@@ -93,11 +93,11 @@ actor PublicFlightService {
                 .order("last_heartbeat_at", ascending: false)
                 .limit(limit)
                 .execute().value
+            // NEVER render myself as a remote pilot (self-filter by auth UUID).
             let others = flights.filter { $0.userID != publicID }
             guard !others.isEmpty else { return [] }
-            let list = "(\(others.map(\.userID).joined(separator: ",")))"
             let profiles: [ProfileRow] = (try? await client.from("profiles")
-                .select().filter("id", operator: "in", value: list)
+                .select().in("id", values: others.map(\.userID))
                 .execute().value) ?? []
             let byID = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
             var seen = Set<String>()
@@ -119,7 +119,8 @@ actor PublicFlightService {
                     lastHeartbeatAt: heartbeat,
                     isPaused: flight.pausedAt != nil,
                     focusCategory: flight.focusCategory,
-                    allowsFriendRequest: profile?.allowFriendRequests ?? true))
+                    allowsFriendRequest: profile?.allowFriendRequests ?? true,
+                    hasLiveSession: true))
             }
             return pilots
         } catch {
@@ -146,13 +147,13 @@ actor PublicFlightService {
             let flight = flights.first,
             let heartbeat = PostgresDate.parse(flight.lastHeartbeatAt) else { return nil }
         return OnlinePilot(id: flight.userID, sessionID: flight.userID,
-                           displayName: "Sky Pilot", countryCode: nil,
+                           displayName: "", countryCode: nil,
                            balloonSkinID: flight.balloonSkinID, skyID: flight.skyID,
                            startedAt: PostgresDate.parse(flight.startedAt) ?? heartbeat,
                            expectedEndAt: PostgresDate.parse(flight.expectedEndAt),
                            lastHeartbeatAt: heartbeat,
                            isPaused: flight.pausedAt != nil,
                            focusCategory: flight.focusCategory,
-                           allowsFriendRequest: true)
+                           allowsFriendRequest: true, hasLiveSession: true)
     }
 }

@@ -57,13 +57,34 @@ struct FocusSessionView: View {
     @State private var showControlsPanel = false
     /// Clean mode: hide chrome down to a tiny timer + a reveal button.
     @State private var cleanMode = false
-    /// FocusGlobe Online: the real pilot whose profile sheet is open.
+    /// FocusGlobe Online: the real pilot whose (compact) profile sheet is open —
+    /// opened only from a deliberate action, never a normal in-flight tap.
     @State private var selectedRealPilot: OnlinePilot? = nil
+    /// A transient social confirmation ("Request sent", etc.) shown as a pill.
+    @State private var socialNote: String? = nil
     @EnvironmentObject private var online: FocusOnlineModel
 
     /// True while this is an Online (public or private) flight. A Solo flight
     /// renders no pilots, publishes nothing, and hides every social control.
     private var isOnlineFlight: Bool { online.flightMode.isOnline }
+    /// Private-room participants get persistent identity bubbles (hidden in
+    /// Clean Mode to keep it minimal).
+    private var roomBubbleMode: Bool { online.flightMode == .privateRoom && !cleanMode }
+
+    private func quickAddFriend(_ pilot: OnlinePilot) {
+        appModel.tapFeedback()
+        Task { @MainActor in
+            let note = await online.sendFriendRequest(to: pilot)
+            socialNote = note ?? "Request sent"
+            try? await Task.sleep(nanoseconds: 2_200_000_000)
+            if socialNote != nil { withAnimation { socialNote = nil } }
+        }
+    }
+    private func quickBlock(_ pilot: OnlinePilot) {
+        appModel.tapFeedback()
+        appModel.hidePilot(pilot.id)
+        Task { @MainActor in _ = await online.blockPilot(pilot) }
+    }
 
     /// Real pilots for this flight (hidden ones filtered locally). Decorative
     /// ambient pilots fill the remaining visual capacity inside the layer.
@@ -139,7 +160,12 @@ struct FocusSessionView: View {
                                        elapsed: { displayElapsed(at: Date()) },
                                        animated: !reduceMotion,
                                        realPilots: visibleRealPilots,
-                                       onSelectReal: { selectedRealPilot = $0 })
+                                       roomMode: roomBubbleMode,
+                                       onSelectReal: { selectedRealPilot = $0 },
+                                       onAddFriend: quickAddFriend,
+                                       onHide: { appModel.hidePilot($0.id) },
+                                       onBlock: quickBlock,
+                                       onReport: { selectedRealPilot = $0 })
                         .transition(.opacity)
                 }
                 balloon
@@ -151,6 +177,7 @@ struct FocusSessionView: View {
                           focusSky: matchedSky,
                           showPilots: isOnlineFlight,
                           realPilots: visibleRealPilots,
+                          roomMode: roomBubbleMode,
                           equippedItemIDs: appModel.profile.equippedCabinItemIDs ?? [])
                     .transition(.opacity)
             }
@@ -243,6 +270,42 @@ struct FocusSessionView: View {
                     .transition(.opacity)
             }
         }
+        // "<alias> joined" — a subtle glass pill, auto-dismissing, once per real
+        // join (never for the current user, reconnects, or decorative pilots).
+        .overlay(alignment: .top) {
+            if let alias = online.joinToastAlias, isOnlineFlight {
+                HStack(spacing: 7) {
+                    Image(systemName: "person.fill.badge.plus")
+                        .font(.system(size: 12, weight: .bold)).foregroundStyle(AppColors.gold)
+                    Text("\(alias) joined")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                }
+                .padding(.horizontal, 13).padding(.vertical, 8)
+                .background(Capsule().fill(.ultraThinMaterial))
+                .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 1))
+                .padding(.top, 96)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .task(id: alias) {
+                    try? await Task.sleep(nanoseconds: 2_600_000_000)
+                    withAnimation(.easeOut(duration: 0.3)) { online.clearJoinToast() }
+                }
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if let socialNote {
+                Text(socialNote)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14).padding(.vertical, 8)
+                    .background(Capsule().fill(.ultraThinMaterial))
+                    .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 1))
+                    .padding(.bottom, 130)
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: online.joinToastAlias)
+        .animation(.easeInOut(duration: 0.3), value: socialNote)
         .sheet(item: $selectedRealPilot) { pilot in
             PilotProfileSheet(pilot: pilot)
                 .environmentObject(online).environmentObject(appModel)
@@ -310,13 +373,28 @@ struct FocusSessionView: View {
             // that it just breathes (sway + bob + drift).
             let restY = h * (0.82 - 0.32 * takeoffLift)
             let takeoffScale = 1 + (1 - takeoffLift) * 1.4
-            FlightBalloonView(size: balloonSize, showGlow: true)
-                .scaleEffect(takeoffScale)
-                .rotationEffect(.degrees(Double(balloonSway) * 0.6))
-                .offset(x: balloonSway + balloonDrift, y: balloonBob)
-                .position(x: geo.size.width / 2, y: restY)
-                .shadow(color: .black.opacity(0.28),
-                        radius: 10 + 8 * (1 - takeoffLift), y: 6 + 8 * (1 - takeoffLift))
+            ZStack {
+                FlightBalloonView(size: balloonSize, showGlow: true)
+                    .scaleEffect(takeoffScale)
+                    .rotationEffect(.degrees(Double(balloonSway) * 0.6))
+                    .offset(x: balloonSway + balloonDrift, y: balloonBob)
+                    .position(x: geo.size.width / 2, y: restY)
+                    .shadow(color: .black.opacity(0.28),
+                            radius: 10 + 8 * (1 - takeoffLift), y: 6 + 8 * (1 - takeoffLift))
+                // The user's own balloon is always labelled exactly "YOU" —
+                // never their alias. Hidden in Clean Mode and until take-off.
+                if roomBubbleMode && takeoffLift > 0.9 {
+                    Text("YOU")
+                        .font(.system(size: 11, weight: .heavy, design: .rounded))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 11).padding(.vertical, 5)
+                        .background(Capsule().fill(.ultraThinMaterial))
+                        .overlay(Capsule().fill(AppColors.gold.opacity(0.28)))
+                        .overlay(Capsule().strokeBorder(.white.opacity(0.25), lineWidth: 1))
+                        .position(x: geo.size.width / 2 + balloonSway + balloonDrift,
+                                  y: restY + balloonBob - balloonSize - 16)
+                }
+            }
         }
         .allowsHitTesting(false)
     }

@@ -14,19 +14,14 @@ actor FriendService {
 
     // MARK: Requests
 
+    /// Typed, self-protected, idempotent — the server raises a stable token
+    /// (self / blocked / already_friends / requests_disabled / duplicate /
+    /// rate_limited) the model maps to friendly copy.
     func sendRequest(from senderID: String, to recipientID: String) async throws {
         guard let client else { throw OnlineError.unavailable(.projectUnavailable) }
         guard senderID != recipientID else { throw OnlineError.requestFailed }
-        if let last = OnlineCache.lastFriendRequestAt, Date().timeIntervalSince(last) < 10 {
-            throw OnlineError.rateLimited
-        }
-        struct Insert: Encodable {
-            let sender_id: String
-            let receiver_id: String
-        }
-        try await client.from("friend_requests")
-            .insert(Insert(sender_id: senderID, receiver_id: recipientID))
-            .execute()
+        struct Params: Encodable { let p_receiver_id: String }
+        try await client.rpc("send_friend_request", params: Params(p_receiver_id: recipientID)).execute()
         OnlineCache.lastFriendRequestAt = Date()
     }
 

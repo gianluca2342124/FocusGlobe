@@ -47,12 +47,13 @@ actor ProfileService {
             .execute()
     }
 
-    /// Profiles for a set of pilot ids (RLS restricts to visible profiles).
+    /// Profiles for a set of pilot ids in ONE batched request (RLS restricts to
+    /// visible profiles). Uses the idiomatic `.in(_:values:)` builder rather
+    /// than a hand-built filter string.
     func fetchProfiles(publicIDs: [String]) async -> [OnlineProfile] {
         guard let client, !publicIDs.isEmpty else { return [] }
-        let list = "(\(publicIDs.joined(separator: ",")))"
         guard let rows: [ProfileRow] = try? await client.from("profiles")
-            .select().filter("id", operator: "in", value: list)
+            .select().in("id", values: Array(Set(publicIDs)))
             .execute().value else { return [] }
         return rows.map(Self.profile(from:))
     }

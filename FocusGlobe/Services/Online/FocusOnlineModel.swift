@@ -47,6 +47,10 @@ final class FocusOnlineModel: ObservableObject {
     @Published private(set) var joinedInviteRoom: FocusRoom?
     /// Friendly one-line outcome of the last invite-link join attempt.
     @Published private(set) var inviteJoinMessage: String?
+    /// One-shot "<alias> joined" toast (set on a genuine new join; view clears).
+    @Published private(set) var joinToastAlias: String?
+    /// Members seen so far in the active room (by UUID) — the join-toast baseline.
+    private var knownMemberIDs: Set<String> = []
 
     /// Real pilots currently visible in the active Sky (public or room).
     @Published private(set) var realPilots: [OnlinePilot] = []
@@ -67,6 +71,17 @@ final class FocusOnlineModel: ObservableObject {
     @Published private(set) var lastRoomErrorDetail: String?
 
     var isSignedIn: Bool { availability == .ready || myUserID != nil }
+
+    /// The ONE canonical online identity: the authenticated Supabase user UUID.
+    /// Every self-filter and dedupe uses THIS — never alias, skin or device.
+    var currentUserID: String? { myUserID }
+
+    /// Deduplicate any participant list by user UUID (stable, first-wins).
+    static func dedupe(_ list: [RoomParticipant]) -> [RoomParticipant] {
+        var seen = Set<String>(); var out: [RoomParticipant] = []
+        for p in list where !seen.contains(p.publicID) { seen.insert(p.publicID); out.append(p) }
+        return out
+    }
 
     // MARK: Services
 
@@ -182,12 +197,26 @@ final class FocusOnlineModel: ObservableObject {
             do {
                 let userID = try await authService.signInWithApple(authorization: authorization,
                                                                    rawNonce: rawNonce)
+                // Load/create the profile BEFORE declaring ready, so Online is
+                // never entered without a valid profile (no "Sky Pilot" gap).
                 myUserID = userID
-                availability = .ready
                 await ensureIdentityAndProfile()
+                availability = .ready
                 await consumePendingInviteIfAny()
                 return nil
             } catch {
+                // The token exchange may already have established a session even
+                // if a follow-up step threw — reconcile before declaring
+                // failure. This is the one-tap fix: a session created on the
+                // FIRST authorization is picked up here instead of forcing a
+                // second tap.
+                if let recovered = try? await authService.restoreSession() {
+                    myUserID = recovered
+                    await ensureIdentityAndProfile()
+                    availability = .ready
+                    await consumePendingInviteIfAny()
+                    return nil
+                }
                 availability = .signedOut
                 lastErrorCategory = OnlineError.category(for: error)
                 lastRoomErrorDetail = OnlineError.detail(for: error)
@@ -316,6 +345,13 @@ final class FocusOnlineModel: ObservableObject {
                                       isPaused: false, focusCategory: category,
                                       balloonSkinID: profile.balloonSkinID)
         let myID = profile.publicID
+        // Seed the join-toast baseline for a room flight so the first in-flight
+        // poll never toasts pre-existing members.
+        if flightMode == .privateRoom {
+            knownMemberIDs = Set(activeRoomParticipants.map(\.publicID).filter { $0 != myID })
+        }
+        let ownsFlightRoom = flightRoom?.isOwned ?? false
+        let roomEnd = expectedEndAt
         Task {
             // Public presence only for publicSky (room membership stays in
             // member records; a room flight isn't broadcast publicly).
@@ -326,8 +362,15 @@ final class FocusOnlineModel: ObservableObject {
                 }
             }
             if let room = flightRoom {
+                // The OWNER propagates the real duration to the room so every
+                // co-member's bubble shows the same synchronized remaining time.
+                if ownsFlightRoom { await roomService.setFlightEnd(roomID: room.id, endsAt: roomEnd) }
                 await roomService.heartbeat(roomID: room.id, myID: myID)
                 serverSessionID = await roomService.mySession(roomID: room.id, myID: myID)
+                // Re-read the room so flightRoom.endsAt reflects the propagated end.
+                if let refreshed = await roomService.room(id: room.id, myID: myID) {
+                    flightRoom = refreshed
+                }
             }
         }
         startPilotPolling(skyID: skyID)
@@ -407,17 +450,29 @@ final class FocusOnlineModel: ObservableObject {
             let pilots = await flightService.fetchPilots(skyID: skyID, excluding: me)
             realPilots = pilots
             reconnecting = pilots.isEmpty && !availability.isAvailable
-        } else if let room = flightRoom {
-            let participants = await roomService.participants(roomID: room.id, roomActive: true)
-            let others = participants.filter { $0.publicID != me }
+        } else if var room = flightRoom {
+            // The owner propagates the shared end asynchronously at take-off; if a
+            // co-member's earlier read lost that race, re-read the room until the
+            // end lands so every device converges on the same synchronized timer.
+            if room.endsAt == nil, let me, let refreshed = await roomService.room(id: room.id, myID: me) {
+                flightRoom = refreshed
+                room = refreshed
+            }
+            let participants = Self.dedupe(await roomService.participants(roomID: room.id, roomActive: true))
+            detectJoins(in: participants)   // "<alias> joined" for in-flight joins
+            activeRoomParticipants = participants
+            // Deduplicate by UUID and NEVER render myself as a remote pilot.
+            let others = participants.filter { $0.publicID != myUserID }
             realPilots = others.map { p in
+                // Remaining time is the room's shared, server-canonical end —
+                // synchronized across devices, not a free-running local timer.
                 OnlinePilot(id: p.publicID, sessionID: p.activeSessionID ?? p.id,
                             displayName: p.displayName, countryCode: p.countryCode,
                             balloonSkinID: p.balloonSkinID, skyID: room.skyID,
-                            startedAt: p.joinedAt, expectedEndAt: nil,
+                            startedAt: p.joinedAt, expectedEndAt: room.endsAt,
                             lastHeartbeatAt: p.lastHeartbeatAt ?? .distantPast,
-                            isPaused: false, focusCategory: "Focus",
-                            allowsFriendRequest: true)
+                            isPaused: false, focusCategory: "",
+                            allowsFriendRequest: true, hasLiveSession: true)
             }
             // Verified friend-flight overlap: another participant actively
             // flying with a fresh heartbeat.
@@ -579,44 +634,66 @@ final class FocusOnlineModel: ObservableObject {
         joinedRooms = joined
     }
 
-    func loadParticipants(of room: FocusRoom) async {
-        activeRoomParticipants = await roomService.participants(roomID: room.id,
-                                                                roomActive: room.status == .active)
+    /// `announceJoins`: when true (realtime reconcile / in-flight poll), a
+    /// genuinely NEW non-self member fires a one-shot join toast. When false
+    /// (first load on entering a room) the current set is seeded silently so
+    /// pre-existing members never toast, and reconnects never re-toast.
+    func loadParticipants(of room: FocusRoom, announceJoins: Bool = false) async {
+        let fresh = Self.dedupe(await roomService.participants(roomID: room.id, roomActive: room.status == .active))
+        if announceJoins { detectJoins(in: fresh) }
+        else { knownMemberIDs = Set(fresh.map(\.publicID).filter { $0 != myUserID }) }
+        activeRoomParticipants = fresh
     }
+
+    /// One-shot "<alias> joined" toast for genuinely new non-self members.
+    private func detectJoins(in participants: [RoomParticipant]) {
+        let otherIDs = Set(participants.map(\.publicID).filter { $0 != myUserID })
+        let newIDs = otherIDs.subtracting(knownMemberIDs)
+        knownMemberIDs = otherIDs
+        if let id = newIDs.first,
+           let p = participants.first(where: { $0.publicID == id }), !p.displayName.isEmpty {
+            joinToastAlias = p.displayName
+        }
+    }
+    func clearJoinToast() { joinToastAlias = nil }
+
+    /// Members other than me — the ONLY basis for a "joined" count. Owner is not
+    /// counted as a joined friend; dedupe + self-filter are by UUID.
+    var joinedOthers: [RoomParticipant] {
+        activeRoomParticipants.filter { $0.publicID != myUserID }
+    }
+    var joinedOthersCount: Int { joinedOthers.count }
 
     /// Lobby entry: membership already exists (create/join RPC); heartbeat +
     /// realtime change feed keep the member list and start state live.
     func joinRoom(_ room: FocusRoom) async {
         guard let myID = myUserID else { return }
         lobbyRoomID = room.id
+        joinToastAlias = nil
         await roomService.heartbeat(roomID: room.id, myID: myID)
-        await loadParticipants(of: room)
+        await loadParticipants(of: room)   // seeds the join-toast baseline silently
         await realtimeService.subscribeRoom(roomID: room.id) { [weak self] in
             Task { @MainActor [weak self] in await self?.reconcileLobby(roomID: room.id) }
         }
     }
 
-    /// Realtime/lobby reconciliation: refresh members and detect the owner's
-    /// shared start so every member's device flies together.
+    /// Realtime/lobby reconciliation: refresh members (announcing genuine new
+    /// joins) and detect the owner's shared start so every member flies together.
     private func reconcileLobby(roomID: String) async {
         guard lobbyRoomID == roomID, let myID = myUserID else { return }
         if let fresh = await roomService.room(id: roomID, myID: myID) {
             if pendingRoom?.id == roomID { pendingRoom = fresh }
-            await loadParticipants(of: fresh)
+            await loadParticipants(of: fresh, announceJoins: true)
             if fresh.status == .active, activeRoomStartedID != roomID {
                 activeRoomStartedID = roomID
             }
-        } else {
-            await loadParticipants(of: FocusRoom(id: roomID, ownerPublicID: "", title: "",
-                                                 skyID: "", createdAt: Date(), expiresAt: nil,
-                                                 maximumParticipants: 8, status: .lobby,
-                                                 allowsLateJoin: true, purpose: .flight,
-                                                 startedAt: nil, isOwned: false, shareURL: nil))
         }
     }
 
     func exitLobby() {
         lobbyRoomID = nil
+        knownMemberIDs = []
+        joinToastAlias = nil
         Task { await realtimeService.unsubscribeRoom() }
     }
 
@@ -696,9 +773,17 @@ final class FocusOnlineModel: ObservableObject {
         guard let myID = myUserID else { return }
         do {
             let joined = try await roomService.joinRoom(token: token, myID: myID)
+            // The server tells us the idempotent outcome. Owner / already-member
+            // just open their existing lobby — no false "friend joined", no
+            // second balloon, no consumed seat.
             joinedInviteRoom = joined.room
-            activeRoomParticipants = joined.members
+            activeRoomParticipants = Self.dedupe(joined.members)
+            knownMemberIDs = Set(joined.members.map(\.publicID).filter { $0 != myID })
             inviteJoinMessage = nil
+            if joined.membership == "already_owner" || joined.room.isOwned {
+                pendingRoom = joined.room
+                roomCreationState = .ready(joined.room)
+            }
             await refreshRooms()
         } catch {
             applyOperationError(error)
@@ -752,23 +837,28 @@ final class FocusOnlineModel: ObservableObject {
         crew = list.sorted { $0.displayName < $1.displayName }
     }
 
+    /// Returns a friendly, typed result (nil on success) — never the generic
+    /// "didn't reach the sky". Self-guarded by auth UUID before any network.
     func sendFriendRequest(to pilot: OnlinePilot) async -> String? {
         guard availability.isAvailable else { return availability.userMessage }
         guard let myID = myUserID else { return OnlineError.notSignedIn.userMessage }
+        guard pilot.id != myID else { return "That's you" }
         guard pilot.allowsFriendRequest else { return "This pilot isn't accepting requests." }
         do {
             try await friendService.sendRequest(from: myID, to: pilot.id)
             await refreshSocial()
             return nil
-        } catch let error as OnlineError {
-            return error.userMessage
         } catch {
             lastErrorCategory = OnlineError.category(for: error)
-            if let pgCode = (error as? Any).flatMap({ _ in OnlineError.detail(for: error) }),
-               pgCode.contains("23505") {
-                return "Request already sent."
+            switch OnlineError.serverToken(from: error) {
+            case "self":              return "That's you"
+            case "blocked":           return "You can't add this pilot."
+            case "already_friends":   return "You're already friends."
+            case "requests_disabled": return "This pilot isn't accepting requests."
+            case "duplicate":         return "Request already sent."
+            case "rate_limited":      return OnlineError.rateLimited.userMessage
+            default:                  return OnlineError.requestFailed.userMessage
             }
-            return OnlineError.requestFailed.userMessage
         }
     }
 

@@ -30,10 +30,15 @@ struct FocusRoom: Identifiable, Equatable, Sendable {
     var allowsLateJoin: Bool
     var purpose: Purpose
     var startedAt: Date?
-    /// True when the current user owns this room (lives in the private DB).
+    /// Server-canonical shared end of an active room flight (nil = infinite).
+    var endsAt: Date?
+    /// True when the current user owns this room.
     var isOwned: Bool
     /// The one-time server invitation URL (from the create/invite RPC).
     var shareURL: URL?
 
-    static let participantLimit = 8
+    /// Client-side fallback cap only — the SERVER's `max_members` (returned per
+    /// room as `maximumParticipants`) is authoritative. Kept in sync with the
+    /// pass-2 migration default (12 total participants including the host).
+    static let participantLimit = 12
 }

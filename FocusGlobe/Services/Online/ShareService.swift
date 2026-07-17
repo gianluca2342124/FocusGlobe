@@ -18,8 +18,9 @@ enum MarketingConfig {
     /// One-line marketing hook used across share cards and rich previews.
     static let tagline = "Focus feels better in the sky. Your phone becomes a focus balloon flight."
 
-    /// The image asset used for the rich share-sheet preview (link thumbnail).
-    static let previewImageName = "PaywallBalloonHero"
+    /// The image asset used for the rich share-sheet preview (link thumbnail) —
+    /// the committed FocusGlobe logo image set (`AppLogo`).
+    static let previewImageName = "AppLogo"
 }
 
 /// One reusable sharing payload builder. Everything is explicit-user-action

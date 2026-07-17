@@ -17,6 +17,9 @@ struct PilotProfileSheet: View {
     private let reportReasons = ["Inappropriate alias", "Harassment or bullying",
                                  "Spam", "Something else"]
 
+    /// The sheet's pilot is the current user (never offer social actions on self).
+    private var isSelf: Bool { pilot.id == online.currentUserID }
+
     var body: some View {
         ZStack {
             AppBackground().ignoresSafeArea()
@@ -31,52 +34,69 @@ struct PilotProfileSheet: View {
                         .foregroundStyle(AppColors.textPrimary)
                     if let cc = pilot.countryCode { Text(flagEmoji(cc)) }
                 }
+                // Only REAL, meaningful metadata — never generic "Focus" +
+                // "Infinite focus" pills. Remaining time shows only for a live
+                // session; the paused state shows only when genuinely paused.
                 HStack(spacing: 8) {
-                    label(pilot.focusCategory, icon: "target")
-                    label(pilot.isPaused ? "Paused" : pilot.remainingLabel, icon: "timer")
+                    if pilot.isPaused {
+                        label("Paused", icon: "pause.circle")
+                    } else if !pilot.remainingLabel.isEmpty {
+                        label(pilot.remainingLabel, icon: "timer")
+                    }
                 }
                 if let note {
                     Text(note).font(AppTypography.caption).foregroundStyle(AppColors.textSecondary)
                 }
                 VStack(spacing: AppSpacing.sm) {
-                    if let status = online.requestStatus(for: pilot.id) {
-                        Text(status)
+                    if isSelf {
+                        // Never offer a friend action on yourself.
+                        Text("That's you")
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .foregroundStyle(AppColors.textSecondary)
+                            .frame(maxWidth: .infinity).frame(height: 50)
+                            .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.14,
+                                             shadowRadius: 4, shadowY: 2)
+                    } else if let status = online.requestStatus(for: pilot.id) {
+                        Text(status)   // "Crew member" / "Request sent"
                             .font(.system(size: 15, weight: .bold, design: .rounded))
                             .foregroundStyle(AppColors.gold)
                             .frame(maxWidth: .infinity).frame(height: 50)
                             .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.18,
                                              shadowRadius: 4, shadowY: 2)
                     } else if pilot.allowsFriendRequest {
-                        AppPrimaryButton(title: busy ? "Sending…" : "Add to Crew", systemImage: "person.badge.plus") {
+                        AppPrimaryButton(title: busy ? "Sending…" : "Add Friend", systemImage: "person.badge.plus") {
                             guard !busy else { return }
                             busy = true
                             appModel.tapFeedback()
                             Task { @MainActor in
                                 note = await online.sendFriendRequest(to: pilot)
                                 busy = false
-                                if note == nil { note = "Crew request sent." }
+                                if note == nil { note = "Request sent." }
                             }
                         }
+                        .disabled(busy)
                     }
-                    HStack(spacing: AppSpacing.lg) {
-                        Button("Hide this pilot") {
-                            appModel.tapFeedback()
-                            appModel.hidePilot(pilot.id)
-                            dismiss()
+                    if !isSelf {
+                        HStack(spacing: AppSpacing.lg) {
+                            Button("Hide this pilot") {
+                                appModel.tapFeedback()
+                                appModel.hidePilot(pilot.id)
+                                dismiss()
+                            }
+                            .foregroundStyle(AppColors.textTertiary)
+                            Button("Block") {
+                                appModel.tapFeedback()
+                                showBlock = true
+                            }
+                            .foregroundStyle(AppColors.danger.opacity(0.85))
+                            Button("Report") {
+                                appModel.tapFeedback()
+                                showReport = true
+                            }
+                            .foregroundStyle(AppColors.danger.opacity(0.85))
                         }
-                        .foregroundStyle(AppColors.textTertiary)
-                        Button("Block") {
-                            appModel.tapFeedback()
-                            showBlock = true
-                        }
-                        .foregroundStyle(AppColors.danger.opacity(0.85))
-                        Button("Report") {
-                            appModel.tapFeedback()
-                            showReport = true
-                        }
-                        .foregroundStyle(AppColors.danger.opacity(0.85))
+                        .font(AppTypography.callout)
                     }
-                    .font(AppTypography.callout)
                 }
                 .padding(.horizontal, AppSpacing.screen)
                 Spacer(minLength: 0)

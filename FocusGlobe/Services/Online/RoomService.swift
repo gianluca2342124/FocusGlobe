@@ -13,6 +13,20 @@ actor RoomService {
     struct CreatedRoom: Sendable {
         var room: FocusRoom
         var members: [RoomParticipant]
+        var membership: String? = nil    // already_owner / already_member / joined
+    }
+
+    /// Map + dedupe a members payload by authenticated user UUID (never by
+    /// alias/skin) — the single source of truth for a room's participant set.
+    static func dedupedParticipants(_ members: [MemberPayload]?, roomID: String,
+                                    roomActive: Bool) -> [RoomParticipant] {
+        var seen = Set<String>()
+        var out: [RoomParticipant] = []
+        for m in members ?? [] where !seen.contains(m.userID) {
+            seen.insert(m.userID)
+            out.append(m.participant(roomID: roomID, roomActive: roomActive))
+        }
+        return out
     }
 
     /// Create (or reuse the fresh lobby of) a private room. The returned
@@ -40,10 +54,10 @@ actor RoomService {
                 throw OnlineError.roomUnavailable
             }
             room.shareURL = url
-            let active = room.status == .active
-            let members = (payload.members ?? []).map { $0.participant(roomID: room.id, roomActive: active) }
+            let members = Self.dedupedParticipants(payload.members, roomID: room.id,
+                                                   roomActive: room.status == .active)
             SupabaseService.log.log("createRoom OK room=\(room.id, privacy: .public) purpose=\(room.purpose.rawValue, privacy: .public)")
-            return CreatedRoom(room: room, members: members)
+            return CreatedRoom(room: room, members: members, membership: payload.membership)
         } catch {
             SupabaseService.log.error("createRoom FAILED: \(OnlineError.detail(for: error), privacy: .public) [rpc=create_private_room sky=\(skyID, privacy: .public)]")
             throw error
@@ -64,7 +78,9 @@ actor RoomService {
         return url
     }
 
-    /// Join a room from an invitation token (deep link).
+    /// Join a room from an invitation token (deep link). `membership` reports
+    /// the idempotent server outcome: already_owner / already_member / joined —
+    /// so opening one's own link never creates a second seat.
     func joinRoom(token: String, myID: String) async throws -> CreatedRoom {
         guard let client else { throw OnlineError.unavailable(.projectUnavailable) }
         struct Params: Encodable { let p_raw_token: String }
@@ -72,10 +88,9 @@ actor RoomService {
             .rpc("join_room_by_token", params: Params(p_raw_token: token))
             .execute().value
         let room = payload.room.room(myID: myID)
-        let members = (payload.members ?? []).map {
-            $0.participant(roomID: room.id, roomActive: room.status == .active)
-        }
-        return CreatedRoom(room: room, members: members)
+        let members = Self.dedupedParticipants(payload.members, roomID: room.id,
+                                               roomActive: room.status == .active)
+        return CreatedRoom(room: room, members: members, membership: payload.membership)
     }
 
     func setReady(roomID: String, ready: Bool) async throws {
@@ -93,8 +108,8 @@ actor RoomService {
             .rpc("start_private_room", params: Params(p_room_id: roomID))
             .execute().value
         let room = payload.room.room(myID: myID)
-        let members = (payload.members ?? []).map { $0.participant(roomID: room.id, roomActive: true) }
-        return CreatedRoom(room: room, members: members)
+        let members = Self.dedupedParticipants(payload.members, roomID: room.id, roomActive: true)
+        return CreatedRoom(room: room, members: members, membership: payload.membership)
     }
 
     func leaveRoom(roomID: String) async {
@@ -114,6 +129,16 @@ actor RoomService {
         guard let client else { return }
         struct Params: Encodable { let p_room_id: String }
         _ = try? await client.rpc("close_private_room", params: Params(p_room_id: roomID)).execute()
+    }
+
+    /// Owner propagates the real chosen flight end (synchronized remaining time
+    /// for every co-member). Pass nil for a genuinely infinite flight.
+    func setFlightEnd(roomID: String, endsAt: Date?) async {
+        guard let client else { return }
+        struct Params: Encodable { let p_room_id: String; let p_ends_at: String? }
+        _ = try? await client.rpc("set_room_flight_end",
+                                  params: Params(p_room_id: roomID,
+                                                 p_ends_at: endsAt.map(PostgresDate.string))).execute()
     }
 
     /// Member heartbeat while in a lobby/flight (direct column-granted update).
@@ -177,39 +202,17 @@ actor RoomService {
         return (owned, joined)
     }
 
-    /// Live members of a room (RLS: members only) merged with profile fields.
+    /// Live members of a room via the SECURITY DEFINER `room_members_detailed`
+    /// RPC — aliases + skins always arrive (they are NOT subject to a
+    /// client-side RLS/`in`-filter edge), deduplicated by user UUID. This is
+    /// what removed "Sky Pilot" from real participants.
     func participants(roomID: String, roomActive: Bool) async -> [RoomParticipant] {
         guard let client else { return [] }
-        guard let rows: [RoomMemberRow] = try? await client.from("room_members")
-            .select()
-            .eq("room_id", value: roomID)
-            .eq("status", value: "joined")
-            .order("joined_at", ascending: true)
-            .limit(16)
-            .execute().value, !rows.isEmpty else { return [] }
-        let ids = rows.map(\.userID)
-        let list = "(\(ids.joined(separator: ",")))"
-        let profiles: [ProfileRow] = (try? await client.from("profiles")
-            .select().filter("id", operator: "in", value: list)
-            .execute().value) ?? []
-        let byID = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
-        return rows.map { row in
-            let profile = byID[row.userID]
-            let heartbeat = PostgresDate.parse(row.lastHeartbeatAt)
-            let fresh = heartbeat.map { Date().timeIntervalSince($0) < SupabaseConfig.presenceStaleInterval } ?? false
-            let status: RoomParticipant.Status = (roomActive && fresh) ? .flying : (row.isReady ? .ready : .joined)
-            return RoomParticipant(id: "\(row.roomID)_\(row.userID)",
-                                   roomPublicID: row.roomID,
-                                   publicID: row.userID,
-                                   displayName: profile?.publicAlias ?? "Sky Pilot",
-                                   balloonSkinID: profile?.balloonSkinID ?? "default",
-                                   countryCode: profile?.countryCode,
-                                   joinedAt: PostgresDate.parse(row.joinedAt) ?? Date(),
-                                   status: status,
-                                   readyAt: nil,
-                                   activeSessionID: nil,
-                                   lastHeartbeatAt: heartbeat)
-        }
+        struct Params: Encodable { let p_room_id: String }
+        guard let members: [MemberPayload] = try? await client
+            .rpc("room_members_detailed", params: Params(p_room_id: roomID))
+            .execute().value else { return [] }
+        return Self.dedupedParticipants(members, roomID: roomID, roomActive: roomActive)
     }
 
     /// One room by id (reconnect reconciliation).

@@ -19,8 +19,16 @@ struct AmbientPilotsLayer: View {
     /// the exact same size/behaviour as decorative ones; decorative ambient
     /// pilots then fill the remaining visual capacity so the Sky stays alive.
     var realPilots: [OnlinePilot] = []
-    /// Tapping a REAL pilot opens their profile; decorative taps do nothing.
+    /// Private-room participants show their identity bubble persistently; public
+    /// ambient pilots reveal it on tap.
+    var roomMode: Bool = false
+    /// Compact contextual actions on a real pilot (long-press / context menu).
+    /// A deliberate "View profile" may still open a small sheet via onSelectReal.
     var onSelectReal: ((OnlinePilot) -> Void)? = nil
+    var onAddFriend: ((OnlinePilot) -> Void)? = nil
+    var onHide: ((OnlinePilot) -> Void)? = nil
+    var onBlock: ((OnlinePilot) -> Void)? = nil
+    var onReport: ((OnlinePilot) -> Void)? = nil
 
     @State private var selectedPilot: Int? = nil
 
@@ -162,38 +170,51 @@ struct AmbientPilotsLayer: View {
         // Same ~82% of the hero's cruising size as decorative pilots — never
         // larger than the user balloon.
         let size = max(38, min(52, H * 0.07)) * 0.82
-        let selected = selectedRealID == pilot.id
+        // Private-room participants read as identified crew: brighter, and their
+        // bubble stays up. Public ambient pilots reveal a bubble on tap only.
+        let showBubble = roomMode || selectedRealID == pilot.id
+        let baseOpacity = roomMode ? 0.9 : (selectedRealID == pilot.id ? 0.48 : (pilot.isPaused ? 0.20 : 0.32))
         return ZStack(alignment: .bottom) {
-            if selected {
+            if showBubble {
                 realBubble(pilot)
                     .offset(y: -size - 14)
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
             }
-            BalloonView(height: size, showBurner: false, showGlow: false,
+            BalloonView(height: size, showBurner: false, showGlow: roomMode,
                         skin: BalloonSkin.skin(id: pilot.balloonSkinID))
-                // A tapped real pilot brightens to ~0.48; otherwise it sits in
-                // the same subdued 0.20–0.32 band as everyone else.
-                .opacity(selected ? 0.48 : (pilot.isPaused ? 0.20 : 0.32))
+                .opacity(baseOpacity)
         }
         .position(x: CGFloat(fx) * W + sway, y: CGFloat(fy) * H + bob)
         .onTapGesture {
             withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
                 selectedRealID = selectedRealID == pilot.id ? nil : pilot.id
             }
-            onSelectReal?(pilot)
+        }
+        // Compact contextual actions — no giant modal on a normal tap.
+        .contextMenu {
+            if let onAddFriend { Button { onAddFriend(pilot) } label: { Label("Add Friend", systemImage: "person.badge.plus") } }
+            if let onSelectReal { Button { onSelectReal(pilot) } label: { Label("View profile", systemImage: "person.crop.circle") } }
+            if let onHide { Button { onHide(pilot) } label: { Label("Hide this pilot", systemImage: "eye.slash") } }
+            if let onBlock { Button(role: .destructive) { onBlock(pilot) } label: { Label("Block", systemImage: "hand.raised") } }
+            if let onReport { Button(role: .destructive) { onReport(pilot) } label: { Label("Report", systemImage: "flag") } }
         }
     }
 
     @State private var selectedRealID: String? = nil
 
     private func realBubble(_ pilot: OnlinePilot) -> some View {
+        // Alias + synchronized remaining time. The time line is shown ONLY when
+        // the pilot has a real live session (never a fabricated "Focus" pill).
         VStack(spacing: 2) {
             Text("\(pilot.displayName)\(pilot.countryCode.map { " " + flagEmoji($0) } ?? "")")
                 .font(.system(size: 12, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
-            Text(pilot.remainingLabel)
-                .font(.system(size: 10.5, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.7))
+            if !pilot.remainingLabel.isEmpty {
+                Text(pilot.remainingLabel)
+                    .font(.system(size: 10.5, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .monospacedDigit()
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 7)

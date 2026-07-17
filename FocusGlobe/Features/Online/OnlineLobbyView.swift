@@ -11,8 +11,10 @@ struct OnlineLobbyView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showInvite = false
     @State private var ready = false
+    @State private var readyBusy = false
+    @State private var startBusy = false
 
-    private var isOwner: Bool { room.ownerPublicID == online.profile?.publicID }
+    private var isOwner: Bool { room.ownerPublicID == online.currentUserID }
     private var sky: FocusSky { FocusSky.byID(room.skyID) ?? .goldenHour }
 
     var body: some View {
@@ -74,45 +76,13 @@ struct OnlineLobbyView: View {
     }
 
     private var slots: some View {
-        let participants = online.activeRoomParticipants
-        let empty = max(0, min(room.maximumParticipants, FocusRoom.participantLimit) - participants.count)
-        return LazyVGrid(columns: [GridItem(.adaptive(minimum: 88), spacing: AppSpacing.sm)],
-                         spacing: AppSpacing.sm) {
-            ForEach(participants) { p in
-                VStack(spacing: 5) {
-                    BalloonView(height: 54, showBurner: false, showGlow: false,
-                                skin: BalloonSkin.skin(id: p.balloonSkinID))
-                    Text(p.displayName)
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                    Text(p.status == .ready ? "Ready" : (p.status == .flying ? "Flying" : "Joined"))
-                        .font(.system(size: 10.5, weight: .semibold, design: .rounded))
-                        .foregroundStyle(p.status == .ready || p.status == .flying
-                                         ? Color(hex: 0x4ADE80) : .white.opacity(0.55))
-                }
-                .padding(10)
-                .glassBackground(cornerRadius: 16, tintOpacity: 0.24, shadowRadius: 6, shadowY: 3)
-            }
-            ForEach(0..<empty, id: \.self) { _ in
-                Button { appModel.tapFeedback(); showInvite = true } label: {
-                    VStack(spacing: 6) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundStyle(.white.opacity(0.6))
-                            .frame(height: 54)
-                        Text("Invite a friend")
-                            .font(.system(size: 11.5, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.6))
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(10)
-                    .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .strokeBorder(.white.opacity(0.25), style: StrokeStyle(lineWidth: 1.4, dash: [5, 4])))
-                }
-                .buttonStyle(SoftPressStyle())
-            }
-        }
+        LobbySeatGrid(participants: online.activeRoomParticipants,
+                      ownerID: room.ownerPublicID,
+                      myID: online.currentUserID,
+                      capacity: room.maximumParticipants,
+                      onInviteSeat: { appModel.tapFeedback(); showInvite = true })
+            .animation(.spring(response: 0.42, dampingFraction: 0.82),
+                       value: online.activeRoomParticipants)
     }
 
     private var summary: some View {
@@ -125,22 +95,37 @@ struct OnlineLobbyView: View {
     private var actions: some View {
         VStack(spacing: AppSpacing.sm) {
             if isOwner {
-                AppPrimaryButton(title: "Start Flight", systemImage: "arrow.up") {
+                AppPrimaryButton(title: startBusy ? "Starting…" : "Start Flight", systemImage: "arrow.up") {
+                    guard !startBusy else { return }
+                    startBusy = true
                     appModel.tapFeedback()
-                    Task { await online.ownerStart(room, durationSeconds: nil) }
-                    online.usePendingRoom(room)
-                    dismiss()
-                    onStart?()
+                    Task {
+                        await online.ownerStart(room, durationSeconds: nil)
+                        online.usePendingRoom(room)
+                        dismiss()
+                        onStart?()
+                    }
                 }
-                Button("Invite Friends") { appModel.tapFeedback(); showInvite = true }
+                .disabled(startBusy)
+                Button("Invite") { appModel.tapFeedback(); showInvite = true }
                     .font(.system(size: 15, weight: .bold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.85))
             } else {
-                AppPrimaryButton(title: ready ? "Ready ✓" : "I'm Ready", systemImage: "checkmark") {
+                // Clean two-state ready: "I'm Ready" → "Ready" with ONE check;
+                // in-flight guarded so double taps can't spam the mutation.
+                AppPrimaryButton(title: ready ? "Ready" : "I'm Ready",
+                                 systemImage: ready ? "checkmark.circle.fill" : "checkmark") {
+                    guard !readyBusy else { return }
                     appModel.tapFeedback()
-                    ready.toggle()
-                    Task { await online.setReady(room, ready: ready) }
+                    let next = !ready
+                    readyBusy = true
+                    withAnimation(.snappy(duration: 0.2)) { ready = next }
+                    Task {
+                        await online.setReady(room, ready: next)
+                        readyBusy = false
+                    }
                 }
+                .disabled(readyBusy)
                 Button("Leave Room") {
                     appModel.tapFeedback()
                     Task { await online.leaveRoom(room) }

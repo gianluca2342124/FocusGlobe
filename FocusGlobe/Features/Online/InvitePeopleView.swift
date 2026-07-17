@@ -25,8 +25,17 @@ struct InvitePeopleView: View {
     @State private var invitation: RoomInvitation?
     @State private var loading = true
     @State private var copied = false
+    @State private var shareURL: URL?          // drives the one-URL system share sheet
+    @State private var refreshingSeat = false   // in-flight guard for "Invite to a seat"
 
     private var isAppContext: Bool { if case .app = context { return true }; return false }
+
+    /// A member (not the host) viewing an existing room — they see the live
+    /// lobby but can't mint invitations (owner-only on the server).
+    private var isMemberRoomContext: Bool {
+        if case .room(let r) = context { return r.ownerPublicID != online.currentUserID }
+        return false
+    }
 
     /// Contexts that actually create a room (and so can be throttled/failed).
     private var isRoomCreatingContext: Bool {
@@ -57,7 +66,7 @@ struct InvitePeopleView: View {
                 } else if isRoomCreatingContext, case .failed(let failure) = online.roomCreationState,
                           invitation?.url == nil {
                     failedCard(message: failure.message)
-                } else if invitation?.url == nil {
+                } else if invitation?.url == nil && !isMemberRoomContext {
                     roomErrorCard
                 } else {
                     roomMethods
@@ -79,20 +88,34 @@ struct InvitePeopleView: View {
             loading = false
         case .preFlight(let skyID):
             if online.roomThrottledUntil != nil { loading = false; return }
-            if let pending = online.pendingRoom, pending.shareURL != nil {
-                invitation = RoomInvitation(id: pending.id, room: pending, url: pending.shareURL)
+            if let pending = online.pendingRoom {
+                // Tokens are single-use: the stored creation-time link may
+                // already be consumed, so the owner mints a fresh one each
+                // time the sheet opens (server rate-limits minting).
+                if pending.ownerPublicID == online.currentUserID,
+                   let fresh = await online.freshInvite(for: pending) {
+                    invitation = RoomInvitation(id: pending.id, room: pending, url: fresh)
+                } else if pending.shareURL != nil {
+                    invitation = RoomInvitation(id: pending.id, room: pending, url: pending.shareURL)
+                }
             } else if let room = await online.requestPrivateFlightRoom(skyID: skyID,
                                                                        title: "FocusGlobe Flight") {
                 invitation = RoomInvitation(id: room.id, room: room, url: room.shareURL)
             }
             loading = false
         case .room(let room):
-            // Tokens are hashed server-side, so a reopened sheet mints a fresh
-            // one-time link for the same room.
-            if let url = room.shareURL {
-                invitation = RoomInvitation(id: room.id, room: room, url: url)
-            } else if let url = await online.freshInvite(for: room) {
-                invitation = RoomInvitation(id: room.id, room: room, url: url)
+            // Single-use tokens: the OWNER mints a fresh link on every open
+            // (the stored one may be consumed). Members can't mint (server
+            // enforces not_owner) — they get the live lobby preview with a
+            // host hint instead of invite actions or a misleading error.
+            if room.ownerPublicID == online.currentUserID {
+                if let fresh = await online.freshInvite(for: room) {
+                    invitation = RoomInvitation(id: room.id, room: room, url: fresh)
+                } else if room.shareURL != nil {
+                    invitation = RoomInvitation(id: room.id, room: room, url: room.shareURL)
+                }
+            } else {
+                invitation = RoomInvitation(id: room.id, room: room, url: nil)
             }
             loading = false
         case .skyUnlock(let sky):
@@ -201,20 +224,49 @@ struct InvitePeopleView: View {
         .padding(AppSpacing.lg)
     }
 
-    // MARK: Private-room delivery (one-time server invite link)
+    // MARK: Private-room delivery (a lobby, with invitation as the secondary act)
 
     private var roomMethods: some View {
-        VStack(spacing: AppSpacing.sm) {
+        VStack(spacing: AppSpacing.md) {
+            // The lobby IS the hero: a live seat preview sits above the actions.
+            if let room = invitation?.room {
+                VStack(spacing: 6) {
+                    HStack(spacing: 6) {
+                        Circle().fill(Color(hex: 0x4ADE80)).frame(width: 6, height: 6)
+                        Text("\(FocusSky.byID(room.skyID)?.name ?? "Your Sky") · \(online.activeRoomParticipants.count)/\(room.maximumParticipants)")
+                            .font(.system(size: 12.5, weight: .semibold, design: .rounded))
+                            .foregroundStyle(AppColors.textSecondary)
+                    }
+                    LobbySeatGrid(participants: online.activeRoomParticipants,
+                                  ownerID: room.ownerPublicID,
+                                  myID: online.currentUserID,
+                                  capacity: room.maximumParticipants,
+                                  onInviteSeat: { Task { await inviteToSeat() } },
+                                  compact: true)
+                        .animation(.spring(response: 0.4, dampingFraction: 0.8),
+                                   value: online.activeRoomParticipants)
+                }
+            }
+
             if let url = invitation?.url {
-                ShareLink(item: url,
-                          subject: Text(verbatim: "FocusGlobe private flight"),
-                          message: Text(verbatim: ShareCopyService.roomInvitation(url: url)),
-                          preview: SharePreview(Text(verbatim: "Join my FocusGlobe flight"),
-                                                image: Image(MarketingConfig.previewImageName))) {
-                    methodRow(icon: "square.and.arrow.up", title: "Send private invitation",
+                Button {
+                    Task { await inviteToSeat() }
+                } label: {
+                    methodRow(icon: "person.crop.circle.badge.plus",
+                              title: refreshingSeat ? "Preparing seat…" : "Invite to a seat",
+                              subtitle: "A fresh single-use link for one friend")
+                }
+                .buttonStyle(SoftPressStyle())
+                .disabled(refreshingSeat)
+
+                Button {
+                    appModel.tapFeedback()
+                    shareURL = url
+                } label: {
+                    methodRow(icon: "square.and.arrow.up", title: "Share invitation",
                               subtitle: "Messages, WhatsApp, AirDrop and more")
                 }
-                .simultaneousGesture(TapGesture().onEnded { appModel.tapFeedback() })
+                .buttonStyle(SoftPressStyle())
 
                 Button {
                     appModel.tapFeedback()
@@ -224,18 +276,47 @@ struct InvitePeopleView: View {
                     withAnimation { copied = true }
                 } label: {
                     methodRow(icon: copied ? "checkmark" : "doc.on.doc",
-                              title: copied ? "Copied" : "Copy invite link",
-                              subtitle: "One-time link · expires automatically")
+                              title: copied ? "Copied" : "Copy invitation link",
+                              subtitle: "Single-use · expires automatically")
                 }
                 .buttonStyle(SoftPressStyle())
 
-                Text("Anyone with this link can join until it expires or the room is full — share it only with people you want on board.")
+                Text("Each link admits one new pilot, then expires — share a fresh one per friend.")
+                    .font(AppTypography.caption)
+                    .foregroundStyle(AppColors.textTertiary)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 2)
+            } else if isMemberRoomContext {
+                Text("Only the host can invite new pilots.")
                     .font(AppTypography.caption)
                     .foregroundStyle(AppColors.textTertiary)
                     .multilineTextAlignment(.center)
                     .padding(.top, 2)
             }
         }
+        #if canImport(UIKit)
+        .sheet(item: Binding(get: { shareURL.map { ShareURL(url: $0) } },
+                             set: { shareURL = $0?.url })) { item in
+            InviteShareSheet(url: item.url)
+        }
+        #endif
+        .task(id: invitation?.room.id) {
+            if let room = invitation?.room { await online.loadParticipants(of: room) }
+        }
+    }
+
+    /// Mint a fresh single-use invite for one seat, then open the share sheet.
+    /// In-flight guarded so double taps never create two links.
+    private func inviteToSeat() async {
+        guard !refreshingSeat, let room = invitation?.room,
+              room.ownerPublicID == online.currentUserID else { return }
+        refreshingSeat = true
+        appModel.tapFeedback()
+        if let fresh = await online.freshInvite(for: room) {
+            invitation = RoomInvitation(id: room.id, room: room, url: fresh)
+            shareURL = fresh
+        }
+        refreshingSeat = false
     }
 
     // MARK: App sharing (marketing ONLY — no room, no invitation)
@@ -281,6 +362,12 @@ struct InvitePeopleView: View {
     private func methodRow(icon: String, title: String, subtitle: String) -> some View {
         InviteMethodRow(icon: icon, title: title, subtitle: subtitle)
     }
+}
+
+/// Identifiable wrapper so a URL can drive `.sheet(item:)` for the share sheet.
+private struct ShareURL: Identifiable {
+    let url: URL
+    var id: String { url.absoluteString }
 }
 
 /// A reusable invite/method row (image chip + title + subtitle + chevron).

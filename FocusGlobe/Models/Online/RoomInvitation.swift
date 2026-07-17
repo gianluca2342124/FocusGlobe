@@ -7,7 +7,9 @@ struct RoomInvitation: Identifiable, Equatable, Sendable {
     let room: FocusRoom
     let url: URL?
 
+    /// Invitation copy WITHOUT the URL — the link travels exclusively as the
+    /// single shared item (InviteShareSheet), so it can never appear twice.
     var message: String {
-        "Join my FocusGlobe flight — we focus together, side by side. \(url?.absoluteString ?? "")"
+        "Join my FocusGlobe flight — we focus together, side by side."
     }
 }
