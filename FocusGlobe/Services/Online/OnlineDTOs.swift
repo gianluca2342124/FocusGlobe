@@ -156,7 +156,8 @@ struct MemberPayload: Codable, Sendable {
     }
 }
 
-/// `create_private_room` / `join_room_by_token` / `start_private_room`.
+/// Shared bundle returned by `promote_global_flight_to_private` /
+/// `accept_active_flight_invite` / `create_private_room` / `start_private_room`.
 struct RoomBundlePayload: Codable, Sendable {
     let room: RoomPayload
     let members: [MemberPayload]?

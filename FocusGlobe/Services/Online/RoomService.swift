@@ -124,21 +124,6 @@ actor RoomService {
         return url
     }
 
-    /// Join a room from an invitation token (deep link). `membership` reports
-    /// the idempotent server outcome: already_owner / already_member / joined —
-    /// so opening one's own link never creates a second seat.
-    func joinRoom(token: String, myID: String) async throws -> CreatedRoom {
-        guard let client else { throw OnlineError.unavailable(.projectUnavailable) }
-        struct Params: Encodable { let p_raw_token: String }
-        let payload: RoomBundlePayload = try await client
-            .rpc("join_room_by_token", params: Params(p_raw_token: token))
-            .execute().value
-        let room = payload.room.room(myID: myID)
-        let members = Self.dedupedParticipants(payload.members, roomID: room.id,
-                                               roomActive: room.status == .active)
-        return CreatedRoom(room: room, members: members, membership: payload.membership)
-    }
-
     /// Preview an invitation WITHOUT joining — never consumes the token, never
     /// creates membership, never changes the participant count.
     func previewInvite(token: String, myID: String) async throws -> InvitePreview {

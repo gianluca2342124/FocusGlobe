@@ -177,25 +177,45 @@ begin
 end $$;
 
 -- ----------------------------------------------------------------------------
--- 6. heartbeat_room — the member heartbeat. The OWNER of an Infinite flight
---    rolls the room's stale-cleanup window forward so it never expires while
---    they keep flying; when the owner heartbeat disappears, stale cleanup
---    expires it within the stale threshold. Returns server_now + the canonical
---    room ends_at / status so the guest's poll keeps the shared clock fresh.
+-- 6. heartbeat_room — the private-flight member heartbeat. AUTHORIZATION: only a
+--    currently-joined member may call it; a non-member is rejected and learns
+--    nothing about the room (no existence oracle, no ends_at/status leak). The
+--    OWNER of an Infinite flight rolls its stale-cleanup window forward; a GUEST
+--    can never extend the owner-controlled lifetime. Self-healing: an Infinite
+--    room whose owner heartbeat has gone stale is expired right here (the
+--    caller's own heartbeat is refreshed first, so an owner never expires their
+--    own live flight), so a guest's own poll surfaces the end without waiting for
+--    anyone to preview/accept. Returns server_now + the canonical ends_at/status.
 -- ----------------------------------------------------------------------------
 create or replace function public.heartbeat_room(p_room_id uuid)
 returns jsonb language plpgsql volatile security definer set search_path = '' as $$
 declare uid uuid := auth.uid(); r public.focus_rooms;
 begin
   if uid is null then raise exception 'not_authenticated'; end if;
+
+  -- Refresh the caller's own liveness. This UPDATE both authorises the call and
+  -- proves membership: no row touched → not a joined member → reject.
   update public.room_members
      set last_heartbeat_at = now()
    where room_id = p_room_id and user_id = uid and status = 'joined';
-  -- Only an Infinite flight (null ends_at) rolls its window forward; a finite
-  -- room's expiry stays pinned to its canonical deadline.
+  if not found then raise exception 'not_member'; end if;
+
+  -- Only the OWNER of an Infinite flight rolls its cleanup window forward.
   update public.focus_rooms
      set expires_at = greatest(expires_at, now() + interval '13 hours')
    where id = p_room_id and owner_id = uid and status = 'active' and ends_at is null;
+
+  -- Self-healing: expire an Infinite room whose OWNER is no longer actively
+  -- flying (stale membership heartbeat). The owner's own heartbeat was just
+  -- refreshed above, so an owner calling this never trips this check.
+  update public.focus_rooms fr
+     set status = 'expired'
+   where fr.id = p_room_id and fr.status = 'active' and fr.ends_at is null
+     and not exists (
+       select 1 from public.room_members m
+        where m.room_id = fr.id and m.user_id = fr.owner_id
+          and m.status = 'joined' and m.last_heartbeat_at > now() - interval '150 seconds');
+
   select * into r from public.focus_rooms where id = p_room_id;
   return jsonb_build_object('server_now', clock_timestamp(),
                             'ends_at',     r.ends_at,
@@ -337,13 +357,17 @@ begin
 end $$;
 
 -- ----------------------------------------------------------------------------
--- 9. accept_active_flight_invite — the ONLY join path. Re-validates the ACTIVE
---    state ATOMICALLY at acceptance (a preview seconds earlier is not trusted):
---    a NEW joiner is refused if the room is blocked/ended, the finite deadline
---    passed, or the Infinite host went stale — BEFORE delegating to the
---    canonical join helper (which enforces token / capacity / owner-member
---    idempotency and re-checks room status under a row lock). Returns the join
---    result plus server_now.
+-- 9. accept_active_flight_invite — the ONLY join path, fully self-contained and
+--    atomic (no delegation to a helper that can't guarantee these invariants).
+--    In ONE transaction it locks the invite then the room (FOR UPDATE), so the
+--    single-use token can't be consumed twice and two racers can't both take the
+--    final seat. Ended-state checks (closed/expired room, finite deadline passed,
+--    Infinite host stale) apply to EVERYONE — an owner/member never re-enters an
+--    ended journey. Owner/existing-member return idempotently WITHOUT consuming
+--    the token or a seat. A genuinely new joiner is validated (blocked / revoked
+--    / expired / consumed / capacity), then the token is consumed once and the
+--    membership inserted-or-restored exactly once. Returns canonical room/members
+--    /membership + server_now.
 -- ----------------------------------------------------------------------------
 create or replace function public.accept_active_flight_invite(p_raw_token text)
 returns jsonb language plpgsql volatile security definer set search_path = '' as $$
@@ -352,44 +376,81 @@ declare
   invite public.room_invites;
   room public.focus_rooms;
   owner_active boolean;
-  is_incumbent boolean;
-  result jsonb;
+  cnt integer;
+  membership text;
 begin
   if uid is null then raise exception 'not_authenticated'; end if;
+  perform private.ensure_profile(uid);   -- FK safety for the membership insert
   perform private.expire_stale_rooms();
 
+  -- Lock the invite, then the room (consistent order → no deadlock; serialises
+  -- concurrent accepts of the same token / same room).
   select * into invite from public.room_invites
-   where token_hash = encode(extensions.digest(p_raw_token, 'sha256'), 'hex');
+   where token_hash = encode(extensions.digest(p_raw_token, 'sha256'), 'hex')
+   for update;
   if invite.id is null then raise exception 'invite_invalid'; end if;
-  select * into room from public.focus_rooms where id = invite.room_id;
+  select * into room from public.focus_rooms where id = invite.room_id for update;
   if room.id is null then raise exception 'invite_invalid'; end if;
 
-  -- Owner / existing member are idempotent and bypass token & capacity, but the
-  -- ended-state checks below still apply to everyone via the join helper's final
-  -- room-status gate. A genuinely NEW joiner is validated against the live
-  -- active state here so nothing joins a flight that ended after preview.
-  is_incumbent := (room.owner_id = uid) or private.is_room_member(room.id, uid);
-  if not is_incumbent then
-    if private.is_blocked_pair(room.owner_id, uid) then raise exception 'blocked'; end if;
-    if room.status not in ('lobby','active') then raise exception 'room_closed'; end if;
-    if room.ends_at is not null and room.ends_at <= now() then raise exception 'room_closed'; end if;
-    if room.ends_at is null then
-      select exists (
-        select 1 from public.room_members m
-         where m.room_id = room.id and m.user_id = room.owner_id
-           and m.status = 'joined' and m.last_heartbeat_at > now() - interval '150 seconds'
-      ) into owner_active;
-      if not owner_active then raise exception 'room_closed'; end if;
-    end if;
+  -- Ended-state gate — applies to EVERYONE (owner/member included): never let
+  -- anyone re-enter an ended journey, even inside the finite cleanup grace.
+  if room.status not in ('lobby','active') then raise exception 'room_closed'; end if;
+  if room.ends_at is not null and room.ends_at <= now() then raise exception 'session_ended'; end if;
+  if room.ends_at is null then
+    select exists (
+      select 1 from public.room_members m
+       where m.room_id = room.id and m.user_id = room.owner_id
+         and m.status = 'joined' and m.last_heartbeat_at > now() - interval '150 seconds'
+    ) into owner_active;
+    if not owner_active then raise exception 'room_closed'; end if;
   end if;
 
-  result := public.join_room_by_token(p_raw_token);
-  return result || jsonb_build_object('server_now', clock_timestamp());
+  if room.owner_id = uid then
+    -- Owner returning to their own flight: idempotent, no token consumed.
+    insert into public.room_members (room_id, user_id, role, status, last_heartbeat_at)
+    values (room.id, uid, 'owner', 'joined', now())
+    on conflict (room_id, user_id)
+      do update set status = 'joined', left_at = null, last_heartbeat_at = now();
+    membership := 'already_owner';
+  elsif private.is_room_member(room.id, uid) then
+    -- Existing joined member returning: idempotent, no token consumed.
+    update public.room_members
+       set status = 'joined', left_at = null, last_heartbeat_at = now()
+     where room_id = room.id and user_id = uid;
+    membership := 'already_member';
+  else
+    -- A genuinely NEW member: full validation, then consume exactly one use and
+    -- one seat under the locks held above.
+    if private.is_blocked_pair(room.owner_id, uid) then raise exception 'blocked'; end if;
+    if invite.revoked_at is not null then raise exception 'invite_revoked'; end if;
+    if invite.expires_at <= now() then raise exception 'invite_expired'; end if;
+    if invite.uses >= invite.max_uses then raise exception 'invite_expired'; end if;
+    select count(*) into cnt from public.room_members
+     where room_id = room.id and status = 'joined';
+    if cnt >= room.max_members then raise exception 'room_full'; end if;
+    insert into public.room_members (room_id, user_id, role, status, last_heartbeat_at)
+    values (room.id, uid, 'member', 'joined', now())
+    on conflict (room_id, user_id)
+      do update set status = 'joined', left_at = null, last_heartbeat_at = now();
+    update public.room_invites set uses = uses + 1 where id = invite.id;
+    membership := 'joined';
+  end if;
+
+  return jsonb_build_object('room', private.room_payload(room),
+                            'members', private.members_payload(room.id),
+                            'membership', membership,
+                            'server_now', clock_timestamp());
 end $$;
 
 -- ----------------------------------------------------------------------------
 -- 10. Grants — revoke from PUBLIC + anon, grant authenticated only.
+--     accept_active_flight_invite is now the ONLY join path; the legacy
+--     join_room_by_token (which does not enforce the canonical deadline /
+--     Infinite-stale invariants) is revoked from every client role so it can
+--     never be called directly to bypass them. SECURITY DEFINER functions that
+--     may still reference it run as the owner, so this does not affect them.
 -- ----------------------------------------------------------------------------
+revoke execute on function public.join_room_by_token(text) from public, anon, authenticated;
 revoke execute on function public.publish_global_flight(text, text, text, text, integer, boolean, boolean) from public, anon;
 revoke execute on function public.heartbeat_global_flight(text, boolean)              from public, anon;
 revoke execute on function public.promote_global_flight_to_private(text)              from public, anon;
