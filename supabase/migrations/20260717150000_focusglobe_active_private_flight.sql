@@ -451,6 +451,10 @@ end $$;
 --     may still reference it run as the owner, so this does not affect them.
 -- ----------------------------------------------------------------------------
 revoke execute on function public.join_room_by_token(text) from public, anon, authenticated;
+-- private.expire_stale_rooms is an internal maintenance routine — invoked only
+-- as the definer inside other SECURITY DEFINER functions, never directly by a
+-- client role.
+revoke execute on function private.expire_stale_rooms() from public, anon, authenticated;
 revoke execute on function public.publish_global_flight(text, text, text, text, integer, boolean, boolean) from public, anon;
 revoke execute on function public.heartbeat_global_flight(text, boolean)              from public, anon;
 revoke execute on function public.promote_global_flight_to_private(text)              from public, anon;
