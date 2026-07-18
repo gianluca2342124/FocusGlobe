@@ -202,12 +202,18 @@ struct PaywallView: View {
 
     // MARK: Plans + purchase
 
+    /// The plans OFFERED to new purchasers: Annual (hero) + Monthly only.
+    /// Lifetime is retired from the purchase UI — existing Lifetime owners keep
+    /// their entitlement (any active entitlement = Pro) and Restore Purchases
+    /// continues to recognise it; nothing about ownership is revoked.
+    private static let offeredPlans: [PlanKind] = [.annual, .monthly]
+
     private var purchaseSection: some View {
         VStack(spacing: AppSpacing.sm) {
-            ForEach(PlanKind.allCases) { kind in planCard(kind) }
+            ForEach(Self.offeredPlans) { kind in planCard(kind) }
 
             purchaseButton
-                .padding(.top, 2)
+                .padding(.top, 4)
 
             if let message = subs.errorMessage {
                 Text(message)
@@ -356,13 +362,16 @@ struct PaywallView: View {
     }
 
     /// The plan the CTA actually purchases: the current selection when it has a
-    /// loaded package, else the preferred available plan (annual → monthly →
-    /// lifetime). `nil` only when no real package exists — so the CTA stays enabled
-    /// and truthful even for the brief partial-offering frame before
-    /// `syncSelection` moves the highlighted card onto an available plan.
+    /// loaded package, else the first OFFERED plan with a package (annual →
+    /// monthly). Restricted to `offeredPlans`, so the CTA can never sell the
+    /// retired Lifetime plan. `nil` only when no offered package exists — so the
+    /// CTA stays enabled and truthful even for the brief partial-offering frame
+    /// before `syncSelection` moves the highlighted card onto an available plan.
     private var effectiveKind: PlanKind? {
-        if subs.plan(selectedKind)?.available == true { return selectedKind }
-        return subs.preferredKind
+        if Self.offeredPlans.contains(selectedKind), subs.plan(selectedKind)?.available == true {
+            return selectedKind
+        }
+        return Self.offeredPlans.first { subs.plan($0)?.available == true }
     }
 
     private func buttonTitle(for kind: PlanKind?) -> String {
@@ -397,7 +406,8 @@ struct PaywallView: View {
     /// user's manual choice is never overridden once real plans are on screen.
     private func syncSelection() {
         guard subs.hasAnyPackage else { return }
-        if subs.plan(selectedKind)?.available != true, let preferred = subs.preferredKind {
+        if !Self.offeredPlans.contains(selectedKind) || subs.plan(selectedKind)?.available != true,
+           let preferred = Self.offeredPlans.first(where: { subs.plan($0)?.available == true }) {
             selectedKind = preferred
         }
     }

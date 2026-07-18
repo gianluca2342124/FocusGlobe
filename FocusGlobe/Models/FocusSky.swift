@@ -122,16 +122,16 @@ struct FocusSky: Identifiable, Hashable {
 
     // MARK: Asset naming (drop-in art; procedural fallbacks always compile)
 
-    /// "paris-sunset" → "ParisSunset": the asset-safe PascalCase base name.
+    /// "rainy-tokyo" → "RainyTokyo": the asset-safe PascalCase base name.
     var assetBaseName: String {
         id.split(separator: "-").map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined()
     }
-    /// Full-screen background art: `Sky_ParisSunset_Background_Portrait` /
+    /// Full-screen background art: `Sky_RainyTokyo_Background_Portrait` /
     /// `…_Landscape`. Missing assets fall back to the procedural scene.
     func backgroundAssetName(landscape: Bool) -> String {
         "Sky_\(assetBaseName)_Background_\(landscape ? "Landscape" : "Portrait")"
     }
-    /// The take-off ground plate (`Sky_ParisSunset_Ground`) — shown only during
+    /// The take-off ground plate (`Sky_RainyTokyo_Ground`) — shown only during
     /// lift-off, never tiled or repeated.
     var groundAssetName: String { "Sky_\(assetBaseName)_Ground" }
 
@@ -140,8 +140,14 @@ struct FocusSky: Identifiable, Hashable {
 
     // MARK: Catalog
 
+    // NOTE ON NAMES: `name` is the USER-FACING display name only. The `id`,
+    // asset names, persistence keys and backend identifiers never change with a
+    // rename — saved selections, analytics, Supabase records, routes and unlock
+    // progress all key off `id`. Historical session records store the display
+    // name at flight time; `currentDisplayName(forHistorical:)` maps old names
+    // forward so Passport stats/badges stay continuous across renames.
     static let goldenHour = FocusSky(
-        id: "golden-hour", name: "Golden Hour", subtitle: "Free Sky",
+        id: "golden-hour", name: "Amber Highlands", subtitle: "Free Sky",
         description: "Warm sunset light over peaceful mountains — the home of every first flight.",
         category: .nature, unlockRequirement: .free,
         moodPalette: [0x2E2350, 0x9A4A56, 0xF29B5C, 0xF6C08A], glowHex: 0xFFC873,
@@ -160,29 +166,20 @@ struct FocusSky: Identifiable, Hashable {
                  landmark: .island, accent: .none, stars: 0.05,
                  estimatedActivityRange: 60...180, soundscapeID: "ocean",
                  visualPresetID: "sky-golden-hour", flightOpening: 1),
-        FocusSky(id: "kyoto-lanterns", name: "Kyoto Lanterns", subtitle: "City Sky",
+        FocusSky(id: "kyoto-lanterns", name: "Kyoto Lantern Night", subtitle: "City Sky",
                  description: "A calm Japanese evening — lantern glow and quiet temple roofs below.",
                  category: .city, unlockRequirement: .invite(5),
                  moodPalette: [0x1E1638, 0x442A52, 0x8E4658, 0xE09A6E], glowHex: 0xF2AA6A,
                  landmark: .pagoda, accent: .lanterns, stars: 0.25,
                  estimatedActivityRange: 70...200, soundscapeID: "relaxing",
                  visualPresetID: "sky-silent-dawn", flightOpening: 2),
-        FocusSky(id: "aurora-snowfield", name: "Aurora Snowfield", subtitle: "Nature Sky",
+        FocusSky(id: "aurora-snowfield", name: "Northern Aurora", subtitle: "Nature Sky",
                  description: "Curtains of green and violet breathing over silent snow.",
                  category: .nature, unlockRequirement: .focusMinutes(1000),
                  moodPalette: [0x040A18, 0x0C2238, 0x14524E, 0x54E0A8], glowHex: 0x54E0A8,
                  landmark: .aurora, accent: .aurora, stars: 0.7,
                  estimatedActivityRange: 50...170, soundscapeID: "wind",
                  visualPresetID: "sky-starfield", flightOpening: 2),
-        // Paris sits after Aurora in the order — a mid-journey city reward,
-        // not the very first aspiration a new pilot sees.
-        FocusSky(id: "paris-sunset", name: "Paris Sunset", subtitle: "City Sky",
-                 description: "A romantic warm dusk over the rooftops, the tower resting far below.",
-                 category: .city, unlockRequirement: .invite(3),
-                 moodPalette: [0x33234E, 0x8E4A66, 0xE08A6A, 0xF2BE8C], glowHex: 0xF6B27A,
-                 landmark: .tower, accent: .none, stars: 0.12,
-                 estimatedActivityRange: 90...260, soundscapeID: "jazz",
-                 visualPresetID: "sky-golden-hour", flightOpening: 1),
         FocusSky(id: "rainy-tokyo", name: "Rainy Tokyo", subtitle: "City Sky",
                  description: "Soft rain over a muted neon skyline — cozy, blue, and quiet.",
                  category: .city, unlockRequirement: .streakDays(3),
@@ -190,13 +187,6 @@ struct FocusSky: Identifiable, Hashable {
                  landmark: .skyline, accent: .rain, stars: 0.2,
                  estimatedActivityRange: 100...280, soundscapeID: "rain",
                  visualPresetID: "sky-starfield", flightOpening: 0),
-        FocusSky(id: "moon-garden", name: "Moon Garden", subtitle: "Cosmic Sky",
-                 description: "A vast pale moon and quiet night clouds, lit in cream.",
-                 category: .cosmic, unlockRequirement: .focusMinutes(3000),
-                 moodPalette: [0x0E1428, 0x1E2A44, 0x3A4A66, 0x8A98B4], glowHex: 0xEDF2FB,
-                 landmark: .generic, accent: .moon, stars: 0.55,
-                 estimatedActivityRange: 60...190, soundscapeID: "relaxing",
-                 visualPresetID: "sky-starfield", flightOpening: 3),
         FocusSky(id: "swiss-alps", name: "Swiss Alps", subtitle: "Nature Sky",
                  description: "High snowy peaks in a cold, clean sunrise glow.",
                  category: .nature, unlockRequirement: .streakDays(7),
@@ -211,7 +201,7 @@ struct FocusSky: Identifiable, Hashable {
                  landmark: .desert, accent: .bigStars, stars: 0.8,
                  estimatedActivityRange: 40...140, soundscapeID: "wind",
                  visualPresetID: "sky-starfield", flightOpening: 3),
-        FocusSky(id: "galaxy-drift", name: "Galaxy Drift", subtitle: "Cosmic Sky",
+        FocusSky(id: "galaxy-drift", name: "Starfall Nebula", subtitle: "Cosmic Sky",
                  description: "Purple-blue nebula mist and distant stars, drifting slowly.",
                  category: .cosmic, unlockRequirement: .premium,
                  moodPalette: [0x0A0620, 0x1C1048, 0x3A2E7E, 0x6E4AE8], glowHex: 0x8F7BE8,
@@ -230,6 +220,32 @@ struct FocusSky: Identifiable, Hashable {
     static func byID(_ id: String?) -> FocusSky? {
         guard let id else { return nil }
         return all.first { $0.id == id }
+    }
+
+    /// Display names change; history records keep the name that was current at
+    /// flight time. This maps every RETIRED display name to today's, so
+    /// Passport stats and badges stay continuous across renames (and removed
+    /// Skies keep their historical identity). Unknown names pass through.
+    static func currentDisplayName(forHistorical name: String) -> String {
+        switch name {
+        case "Golden Hour":      return "Amber Highlands"
+        case "Kyoto Lanterns":   return "Kyoto Lantern Night"
+        case "Aurora Snowfield": return "Northern Aurora"
+        case "Galaxy Drift":     return "Starfall Nebula"
+        default:                 return name
+        }
+    }
+
+    /// Every display name (past + present) a Sky has carried — for history
+    /// matching (badges/stats) that must survive display renames.
+    static func allDisplayNames(for sky: FocusSky) -> [String] {
+        switch sky.id {
+        case "golden-hour":      return ["Amber Highlands", "Golden Hour"]
+        case "kyoto-lanterns":   return ["Kyoto Lantern Night", "Kyoto Lanterns"]
+        case "aurora-snowfield": return ["Northern Aurora", "Aurora Snowfield"]
+        case "galaxy-drift":     return ["Starfall Nebula", "Galaxy Drift"]
+        default:                 return [sky.name]
+        }
     }
 
     /// The Sky embedded in a synthetic flight route id (routes are named

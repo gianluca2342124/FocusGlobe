@@ -33,7 +33,8 @@ struct VisitedPlace: Identifiable, Hashable {
         var out: [VisitedPlace] = []
         for (routeID, records) in Dictionary(grouping: landed, by: { $0.routeID }) {
             guard let sample = records.first else { continue }
-            let name = sample.destinationName
+            // Old records carry the display name from flight time — show today's.
+            let name = FocusSky.currentDisplayName(forHistorical: sample.destinationName)
             let code = String(routeID.split(separator: "|").first ?? "")
             let coordinate = nodeByID[routeID]?.coordinate
                 ?? TravelNetworkCatalog.allNodes.first { $0.name == name }?.coordinate

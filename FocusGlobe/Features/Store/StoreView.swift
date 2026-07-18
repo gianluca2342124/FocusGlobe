@@ -27,6 +27,7 @@ struct StoreView: View {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
                     header
                     coinsCard
+                    ShopHeroPreview()
                     todayItemsSection
                     skinsSection
                     cabinSection
@@ -88,7 +89,7 @@ struct StoreView: View {
     private var todayItemsSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
             HStack {
-                SectionLabel(text: "Today's items")
+                SectionLabel(text: "Featured Today")
                 Spacer()
                 TimelineView(.periodic(from: .now, by: 60)) { ctx in
                     Label("Refreshes in \(refreshLabel(at: ctx.date))", systemImage: "clock")
@@ -108,7 +109,7 @@ struct StoreView: View {
     }
 
     private var cabinSection: some View {
-        itemsSection(title: "Cabin & charms",
+        itemsSection(title: "Cabin Interior & Charms",
                      items: StoreItem.all.filter { $0.kind == .cabinDecoration || $0.kind == .charm })
     }
 
@@ -160,7 +161,7 @@ struct StoreView: View {
 
     private var skinsSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            SectionLabel(text: "Balloon skins")
+            SectionLabel(text: "Balloon Skins")
             LazyVGrid(columns: cardColumns, spacing: AppSpacing.sm) {
                 ForEach(BalloonSkin.all) { skin in
                     SkinCard(skin: skin,
@@ -187,7 +188,7 @@ struct StoreView: View {
         let owned = StoreItem.all.filter { appModel.ownsStoreItem($0) }
         if !owned.isEmpty {
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                SectionLabel(text: "Your collection")
+                SectionLabel(text: "Your Collection")
                 LazyVGrid(columns: cardColumns, spacing: AppSpacing.sm) {
                     ForEach(owned) { item in
                         StoreItemCard(item: item)
@@ -552,5 +553,304 @@ private struct SmileArc: Shape {
         p.addQuadCurve(to: CGPoint(x: rect.maxX, y: rect.minY),
                        control: CGPoint(x: rect.midX, y: rect.maxY))
         return p
+    }
+}
+
+// MARK: - Shop hero preview (Balloon / Interior)
+
+/// The Store's interactive hero: a large atmospheric preview with two modes —
+/// **Balloon** (try on any skin, equip owned ones instantly) and **Interior**
+/// (the REAL CabinView rendering the pilot's actual placed decorations, with
+/// tap-to-preview for anything not yet owned). Everything routes through the
+/// EXISTING systems — `selectSkin`, `isSkinUnlocked`, `toggleCabinItem`,
+/// `purchaseStoreItem`, the paywall — so no purchase/equip rule changes here,
+/// only presentation. States are explicit: Equipped / Owned / Locked / Preview.
+private struct ShopHeroPreview: View {
+    @EnvironmentObject private var appModel: AppModel
+    @EnvironmentObject private var router: AppRouter
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private enum Mode: String, CaseIterable { case balloon = "Balloon", interior = "Interior" }
+    @State private var mode: Mode = .balloon
+    /// The skin being tried on (defaults to the equipped one on appear).
+    @State private var previewSkinID: String? = nil
+    /// The cabin item highlighted in Interior mode (nil = just your cabin).
+    @State private var previewItemID: String? = nil
+    @State private var float: CGFloat = 0
+
+    private var previewSkin: BalloonSkin { BalloonSkin.skin(id: previewSkinID ?? appModel.selectedSkin.id) }
+    private var previewItem: StoreItem? { previewItemID.flatMap { StoreItem.byID($0) } }
+    private var cabinItems: [StoreItem] { StoreItem.all.filter { $0.kind == .cabinDecoration } }
+
+    var body: some View {
+        VStack(spacing: AppSpacing.sm) {
+            modePicker
+            Group {
+                if mode == .balloon { balloonStage } else { interiorStage }
+            }
+            .frame(height: Layout.pad(236, 300))
+            .frame(maxWidth: .infinity)
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            statusRow
+            thumbStrip
+        }
+        .padding(AppSpacing.md)
+        .glassBackground(cornerRadius: AppSpacing.cardRadius, tintOpacity: 0.22,
+                         shadowRadius: 16, shadowY: 8)
+        .onAppear {
+            if previewSkinID == nil { previewSkinID = appModel.selectedSkin.id }
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 3.6).repeatForever(autoreverses: true)) { float = -7 }
+        }
+        .animation(.snappy(duration: 0.22), value: mode)
+    }
+
+    // MARK: Mode picker — two quiet capsules, gold when active.
+
+    private var modePicker: some View {
+        HStack(spacing: 6) {
+            ForEach(Mode.allCases, id: \.rawValue) { m in
+                Button {
+                    appModel.tapFeedback()
+                    withAnimation(.snappy(duration: 0.22)) { mode = m }
+                } label: {
+                    Text(m.rawValue)
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundStyle(mode == m ? Color(hex: 0x14120E) : AppColors.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 9)
+                        .background(
+                            Capsule().fill(mode == m ? AppColors.gold : Color.white.opacity(0.06))
+                        )
+                }
+                .buttonStyle(SoftPressStyle(scale: 0.98))
+                .accessibilityLabel("\(m.rawValue) preview")
+                .accessibilityAddTraits(mode == m ? .isSelected : [])
+            }
+        }
+    }
+
+    // MARK: Balloon stage — the skin, large, over its own soft accent light.
+
+    private var balloonStage: some View {
+        ZStack {
+            AppColors.neutralDeep
+            RadialGradient(colors: [previewSkin.theme.accent.opacity(0.34),
+                                    previewSkin.theme.accent.opacity(0.10), .clear],
+                           center: .center, startRadius: 4, endRadius: 200)
+                .blur(radius: 14)
+            BalloonView(height: Layout.pad(168, 220), showBurner: false, showGlow: false,
+                        skin: previewSkin)
+                .offset(y: float)
+        }
+        .accessibilityLabel("\(previewSkin.name) balloon preview")
+    }
+
+    // MARK: Interior stage — the REAL cabin with the pilot's real decorations
+    // (plus the highlighted item so unowned pieces feel tangible before buying).
+
+    private var interiorStage: some View {
+        var ids = Set(appModel.profile.equippedCabinItemIDs ?? [])
+        if let previewItemID { ids.insert(previewItemID) }
+        return ZStack {
+            AppColors.neutralDeep
+            CabinView(elapsed: { 0 }, seed: 0xC0FFEE, animated: false,
+                      focusSky: appModel.selectedSky, showPilots: false,
+                      equippedItemIDs: ids)
+                .allowsHitTesting(false)
+        }
+        .accessibilityLabel("Cabin interior preview")
+    }
+
+    // MARK: Status + primary action for the highlighted collectible.
+
+    @ViewBuilder private var statusRow: some View {
+        if mode == .balloon { balloonStatus } else { interiorStatus }
+    }
+
+    private var balloonStatus: some View {
+        let skin = previewSkin
+        let unlocked = appModel.isSkinUnlocked(skin)
+        let equipped = appModel.selectedSkin.id == skin.id
+        return HStack(spacing: AppSpacing.sm) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(skin.name)
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppColors.textPrimary)
+                    .lineLimit(1).minimumScaleFactor(0.8)
+                Text(equipped ? "Equipped" : unlocked ? "Owned" : skin.isPremium ? "Premium" : skin.requirementText)
+                    .font(.system(size: 12.5, weight: .semibold, design: .rounded))
+                    .foregroundStyle(equipped ? AppColors.success : unlocked ? AppColors.textSecondary : AppColors.textTertiary)
+                    .lineLimit(1).minimumScaleFactor(0.8)
+            }
+            Spacer()
+            if equipped {
+                Label("Flying", systemImage: "checkmark.seal.fill")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppColors.gold)
+            } else if unlocked {
+                heroActionButton("Equip") { appModel.selectSkin(skin); appModel.tapFeedback() }
+            } else if skin.isPremium {
+                heroActionButton("Unlock with Ultra") { appModel.tapFeedback(); router.presentPaywall() }
+            }
+        }
+    }
+
+    @ViewBuilder private var interiorStatus: some View {
+        if let item = previewItem {
+            let owned = appModel.ownsStoreItem(item)
+            let placed = appModel.isCabinItemEquipped(item)
+            HStack(spacing: AppSpacing.sm) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(item.name)
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                        .foregroundStyle(AppColors.textPrimary)
+                        .lineLimit(1).minimumScaleFactor(0.8)
+                    Text(placed ? "In your cabin" : owned ? "Owned" : item.isPremium ? "Premium" : "Previewing")
+                        .font(.system(size: 12.5, weight: .semibold, design: .rounded))
+                        .foregroundStyle(placed ? AppColors.success : AppColors.textSecondary)
+                }
+                Spacer()
+                if owned {
+                    heroActionButton(placed ? "Remove" : "Place") {
+                        appModel.toggleCabinItem(item); appModel.tapFeedback()
+                    }
+                } else if item.isPremium && !appModel.isPro {
+                    heroActionButton("Unlock with Ultra") { appModel.tapFeedback(); router.presentPaywall() }
+                } else {
+                    Button {
+                        if !appModel.purchaseStoreItem(item) { appModel.haptics.tap() }
+                    } label: {
+                        HStack(spacing: 5) {
+                            FocusCoinIcon(size: 13)
+                            Text("\(item.price)")
+                                .font(.system(size: 14, weight: .heavy, design: .rounded))
+                        }
+                        .foregroundStyle(Color(hex: 0x14120E))
+                        .padding(.horizontal, 14).padding(.vertical, 8)
+                        .background(Capsule().fill(AppColors.gold))
+                    }
+                    .buttonStyle(SoftPressStyle(scale: 0.97))
+                    .accessibilityLabel("Buy \(item.name) for \(item.price) Focus Coins")
+                }
+            }
+        } else {
+            HStack {
+                Text("Your cabin")
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppColors.textPrimary)
+                Spacer()
+                Text("Tap an item to preview it")
+                    .font(.system(size: 12.5, weight: .semibold, design: .rounded))
+                    .foregroundStyle(AppColors.textTertiary)
+            }
+        }
+    }
+
+    private func heroActionButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundStyle(Color(hex: 0x14120E))
+                .padding(.horizontal, 16).padding(.vertical, 8)
+                .background(Capsule().fill(AppColors.gold))
+        }
+        .buttonStyle(SoftPressStyle(scale: 0.97))
+    }
+
+    // MARK: Thumbnails — every skin / cabin item, with explicit states.
+
+    @ViewBuilder private var thumbStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: AppSpacing.xs) {
+                if mode == .balloon {
+                    ForEach(BalloonSkin.all) { skin in skinThumb(skin) }
+                } else {
+                    ForEach(cabinItems) { item in itemThumb(item) }
+                }
+            }
+            .padding(.horizontal, 2).padding(.vertical, 2)
+        }
+    }
+
+    private func skinThumb(_ skin: BalloonSkin) -> some View {
+        let unlocked = appModel.isSkinUnlocked(skin)
+        let equipped = appModel.selectedSkin.id == skin.id
+        let selected = previewSkin.id == skin.id
+        return Button {
+            appModel.haptics.tap()
+            withAnimation(.snappy(duration: 0.2)) { previewSkinID = skin.id }
+        } label: {
+            ZStack(alignment: .topTrailing) {
+                BalloonView(height: 46, showBurner: false, showGlow: false, skin: skin)
+                    .opacity(unlocked ? 1 : 0.55)
+                    .frame(width: 62, height: 62)
+                if equipped {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(AppColors.gold)
+                } else if !unlocked {
+                    Image(systemName: skin.isPremium ? "crown.fill" : "lock.fill")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(skin.isPremium ? AppColors.gold : AppColors.textTertiary)
+                        .padding(3)
+                        .background(Circle().fill(.ultraThinMaterial))
+                }
+            }
+            .padding(5)
+            .background(RoundedRectangle(cornerRadius: 15, style: .continuous)
+                .fill(Color.white.opacity(selected ? 0.10 : 0.04)))
+            .overlay(RoundedRectangle(cornerRadius: 15, style: .continuous)
+                .strokeBorder(selected ? AppColors.gold.opacity(0.8) : Color.white.opacity(0.08),
+                              lineWidth: selected ? 1.6 : 1))
+        }
+        .buttonStyle(SoftPressStyle(scale: 0.95))
+        .accessibilityLabel("\(skin.name). \(equipped ? "Equipped" : unlocked ? "Owned" : "Locked")")
+    }
+
+    private func itemThumb(_ item: StoreItem) -> some View {
+        let owned = appModel.ownsStoreItem(item)
+        let placed = appModel.isCabinItemEquipped(item)
+        let selected = previewItemID == item.id
+        return Button {
+            appModel.haptics.tap()
+            withAnimation(.snappy(duration: 0.2)) {
+                previewItemID = selected ? nil : item.id
+            }
+        } label: {
+            ZStack(alignment: .topTrailing) {
+                Group {
+                    #if canImport(UIKit)
+                    if let ui = UIImage(named: item.bestAssetName) {
+                        Image(uiImage: ui).resizable().scaledToFit()
+                    } else {
+                        Image(systemName: item.systemImage)
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundStyle(item.tint)
+                    }
+                    #else
+                    Image(systemName: item.systemImage)
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(item.tint)
+                    #endif
+                }
+                .opacity(owned ? 1 : 0.8)
+                .frame(width: 62, height: 62)
+                .padding(2)
+                if placed {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(AppColors.success)
+                }
+            }
+            .padding(5)
+            .background(RoundedRectangle(cornerRadius: 15, style: .continuous)
+                .fill(Color.white.opacity(selected ? 0.10 : 0.04)))
+            .overlay(RoundedRectangle(cornerRadius: 15, style: .continuous)
+                .strokeBorder(selected ? AppColors.gold.opacity(0.8) : Color.white.opacity(0.08),
+                              lineWidth: selected ? 1.6 : 1))
+        }
+        .buttonStyle(SoftPressStyle(scale: 0.95))
+        .accessibilityLabel("\(item.name). \(placed ? "In your cabin" : owned ? "Owned" : "\(item.price) Focus Coins")")
     }
 }

@@ -98,6 +98,15 @@ final class AppModel: ObservableObject {
             loadedProfile.hasCompletedOnboarding = true
             persistence.save(loadedProfile, for: .profile)
         }
+        // Sky-catalog migration: a persisted selection pointing at a removed Sky
+        // (e.g. the retired Moon Garden / Paris Sunset) is normalised to the free
+        // default once, so no invalid identifier is ever left behind. (The
+        // `selectedSky` getter also falls back at read time — this just keeps
+        // storage clean.)
+        if let storedSkyID = loadedProfile.selectedSkyID, FocusSky.byID(storedSkyID) == nil {
+            loadedProfile.selectedSkyID = FocusSky.goldenHour.id
+            persistence.save(loadedProfile, for: .profile)
+        }
         self.profile = loadedProfile
         LaunchLog.mark("AppModel.init persistence loaded")
 

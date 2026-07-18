@@ -34,16 +34,28 @@ struct PassportView: View {
     }
 
     /// Most-visited destination across completed flights (a "home sky").
+    /// Historical records keep the display name from flight time; they are
+    /// mapped to today's name so renamed Skies aggregate (and display) as one.
     private var favoriteSky: String? {
         guard !completedFlights.isEmpty else { return nil }
         var counts: [String: Int] = [:]
-        for r in completedFlights { counts[r.destinationName, default: 0] += 1 }
+        for r in completedFlights {
+            counts[FocusSky.currentDisplayName(forHistorical: r.destinationName), default: 0] += 1
+        }
         return counts.max { $0.value < $1.value }?.key
     }
 
     var body: some View {
         ZStack {
-            AnimatedTileBackground(assetName: "Background_Passport_Tile", overlayOpacity: 0.55)
+            // A stable, prestigious logbook ground: the app's #181721 neutral by
+            // night (soft warm paper by day), with only a whisper of top light so
+            // cards keep their depth. No motion — the achievements are the visual
+            // here, not the backdrop.
+            AppColors.paper.ignoresSafeArea()
+            LinearGradient(colors: [Color.white.opacity(0.035), .clear],
+                           startPoint: .top, endPoint: .center)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
                     header
@@ -359,8 +371,13 @@ struct PassportView: View {
     private func visited(_ name: String) -> Bool {
         completedFlights.contains { $0.destinationName == name }
     }
-    private func visitedCount(_ name: String) -> Int {
-        completedFlights.filter { $0.destinationName == name }.count
+    /// Rename-safe visit check: history records store the display name that was
+    /// current at flight time, so a badge matches any name the Sky has carried.
+    private func visitedAny(_ names: [String]) -> Bool {
+        completedFlights.contains { names.contains($0.destinationName) }
+    }
+    private func visitedCount(_ names: [String]) -> Int {
+        completedFlights.filter { names.contains($0.destinationName) }.count
     }
     private func flewAtHour(_ test: (Int) -> Bool) -> Bool {
         completedFlights.contains { test(Calendar.current.component(.hour, from: $0.date)) }
@@ -389,12 +406,15 @@ struct PassportView: View {
             Achievement("flame.circle.fill", "14-Day Streak", streak >= 14, AppColors.danger),
             Achievement("moon.stars.fill", "Night Owl", flewAtHour { $0 >= 22 || $0 < 4 }, AppColors.brand),
             Achievement("sunrise.fill", "Early Bird", flewAtHour { $0 >= 4 && $0 < 8 }, AppColors.gold),
-            Achievement("sun.max.fill", "Golden Hour Regular", visitedCount("Golden Hour") >= 5, AppColors.gold),
-            Achievement("building.2.fill", "Paris Pilot", visited("Paris Sunset"), AppColors.terracotta),
+            Achievement("sun.max.fill", "Highlands Regular",
+                        visitedCount(["Amber Highlands", "Golden Hour"]) >= 5, AppColors.gold),
+            Achievement("cloud.rain.fill", "Tokyo Pilot", visited("Rainy Tokyo"), AppColors.terracotta),
             Achievement("beach.umbrella.fill", "Fiji Pilot", visited("Fiji Lagoon"), AppColors.teal),
-            Achievement("lantern", "Kyoto Lantern", visited("Kyoto Lanterns"), AppColors.gold),
-            Achievement("sparkles", "Aurora Explorer", visited("Aurora Snowfield"), AppColors.success),
-            Achievement("moon.fill", "Moon Visitor", visited("Moon Garden"), AppColors.brand),
+            Achievement("lantern", "Kyoto Lantern",
+                        visitedAny(["Kyoto Lantern Night", "Kyoto Lanterns"]), AppColors.gold),
+            Achievement("sparkles", "Aurora Explorer",
+                        visitedAny(["Northern Aurora", "Aurora Snowfield"]), AppColors.success),
+            Achievement("star.fill", "Sahara Stargazer", visited("Sahara Night"), AppColors.brand),
             Achievement("moon.stars.circle.fill", "Deep Space Pilot", visited("Deep Space"), AppColors.teal),
             Achievement("circle.hexagongrid.circle.fill", "Focus Coin Saver", coins >= 100, AppColors.gold),
             Achievement("leaf.fill", "Cabin Decorator", ownsCabin, AppColors.success),

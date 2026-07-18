@@ -124,10 +124,7 @@ struct FlightModeSelectorView: View {
                     .font(.system(size: 23, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .lineLimit(1).minimumScaleFactor(0.7)
-                Text(subtitle)
-                    .font(.system(size: 12.5, weight: .semibold, design: .rounded))
-                    .foregroundStyle(selected ? AppColors.textSecondary : AppColors.textTertiary)
-                    .lineLimit(1).minimumScaleFactor(0.8)
+                cardSubtitle(mode: mode, fallback: subtitle, selected: selected)
             }
             .frame(maxWidth: .infinity)
             .frame(minHeight: 146)
@@ -149,6 +146,32 @@ struct FlightModeSelectorView: View {
             }
         }
         .buttonStyle(SoftPressStyle(scale: 0.97))
+    }
+
+    /// The Online card's second line: the LIVE ambient count for the selected
+    /// Sky ("N pilots focusing now"), so the Global Sky reads as alive right
+    /// where the choice is made. Counts come from the existing `SkyActivity`
+    /// provider (never hardcoded); when Online is unavailable the card falls
+    /// back to its quiet neutral subtitle. Solo always stays quiet/private.
+    @ViewBuilder
+    private func cardSubtitle(mode: OnlineFlightMode, fallback: String, selected: Bool) -> some View {
+        if mode == .publicSky && onlineAvailable {
+            HStack(spacing: 5) {
+                Circle().fill(Color(hex: 0x4ADE80)).frame(width: 6, height: 6)
+                Text("\(SkyActivity.count(for: appModel.selectedSky)) pilots focusing now")
+                    .font(.system(size: 12.5, weight: .semibold, design: .rounded))
+                    .foregroundStyle(selected ? AppColors.textSecondary : AppColors.textTertiary)
+                    .monospacedDigit()
+            }
+            .lineLimit(1).minimumScaleFactor(0.7)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Live. \(SkyActivity.count(for: appModel.selectedSky)) pilots focusing now")
+        } else {
+            Text(fallback)
+                .font(.system(size: 12.5, weight: .semibold, design: .rounded))
+                .foregroundStyle(selected ? AppColors.textSecondary : AppColors.textTertiary)
+                .lineLimit(1).minimumScaleFactor(0.8)
+        }
     }
 
     private var liveDot: some View {

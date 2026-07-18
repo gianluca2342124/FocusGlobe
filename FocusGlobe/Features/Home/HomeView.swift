@@ -24,7 +24,6 @@ struct HomeView: View {
     @State private var showCoinSpin = false
     @State private var showBoostGift = false
     @State private var balloonFloat: CGFloat = 0
-    @State private var activityPulse = false
     @State private var streakPulse = false
     /// The Sky the pager is resting on (an index into `FocusSky.all`).
     @State private var skyIndex = 0
@@ -385,8 +384,6 @@ struct HomeView: View {
             }
             .animation(.easeInOut(duration: 0.25), value: skyIndex)
 
-            activityIsland
-
             if appModel.resumableJourney != nil {
                 resumeBanner
             }
@@ -457,32 +454,9 @@ struct HomeView: View {
         }
     }
 
-    /// The floating activity island — a green pulse + "N focusing now". Counts
-    /// come from the clearly-simulated `SkyActivity` provider until a live
-    /// backend replaces it (see that type's honesty contract).
-    private var activityIsland: some View {
-        HStack(spacing: 7) {
-            Circle()
-                .fill(Color(hex: 0x4ADE80))
-                .frame(width: 8, height: 8)
-                .shadow(color: Color(hex: 0x4ADE80).opacity(0.8), radius: activityPulse ? 5 : 2)
-            Text("\(SkyActivity.count(for: currentSky)) users focusing now")
-                .font(.system(size: Layout.pad(13, 15), weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-        }
-        .padding(.horizontal, Layout.pad(13, 16))
-        .padding(.vertical, Layout.pad(9, 11))
-        .background(Capsule().fill(.ultraThinMaterial))
-        .overlay(Capsule().fill(Color.black.opacity(0.2)))
-        .overlay(Capsule().strokeBorder(.white.opacity(0.16), lineWidth: 1))
-        .onAppear {
-            guard !reduceMotion else { return }
-            withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
-                activityPulse = true
-            }
-        }
-        .animation(.easeInOut(duration: 0.25), value: skyIndex)
-    }
+    // The former "N users focusing now" island was removed from Home — the live
+    // activity now lives inside the Online card on Choose your Flight, keeping
+    // Home focused on the Sky, the hero balloon and the main action.
 
     /// The locked-Sky call to action: unmistakable but elegant.
     private var lockedCTA: some View {
@@ -716,15 +690,13 @@ private struct SkyPreviewFlightView: View {
     // Rotating headline copy — three lines, adapted to the Sky.
     private var headlines: [String] {
         switch sky.id {
-        case "paris-sunset":     return ["Study above Paris", "A sunset made for deep work", "Unlock this Sky to fly here"]
         case "fiji-lagoon":      return ["Focus above the lagoon", "Turquoise calm for deep work", "Unlock this Sky to fly here"]
         case "kyoto-lanterns":   return ["Study among the lanterns", "A quiet Kyoto evening", "Unlock this Sky to fly here"]
         case "aurora-snowfield": return ["Focus under the aurora", "Northern lights for deep work", "Unlock this Sky to fly here"]
         case "rainy-tokyo":      return ["Study over rainy Tokyo", "Neon calm and soft rain", "Unlock this Sky to fly here"]
-        case "moon-garden":      return ["Focus beneath the moon", "A silver night for deep work", "Unlock this Sky to fly here"]
         case "swiss-alps":       return ["Study above the Alps", "Crisp mountain air for focus", "Unlock this Sky to fly here"]
         case "sahara-night":     return ["Focus under desert stars", "A vast night made for depth", "Unlock this Sky to fly here"]
-        case "galaxy-drift":     return ["Focus among the stars", "Drift through a living galaxy", "Unlock this Sky to fly here"]
+        case "galaxy-drift":     return ["Focus among the stars", "Drift through falling starlight", "Unlock this Sky to fly here"]
         case "deep-space":       return ["Study in deep space", "Cosmic silence for deep work", "Unlock this Sky to fly here"]
         default:                 return ["Focus in \(sky.name)", "A Sky made for deep work", "Unlock this Sky to fly here"]
         }

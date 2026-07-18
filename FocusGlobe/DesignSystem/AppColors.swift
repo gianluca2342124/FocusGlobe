@@ -9,13 +9,26 @@ import SwiftUI
 /// screen that consumes them inherits the new look with no layout edits.
 enum AppColors {
 
-    // MARK: Backgrounds  (deep warm near-black / soft warm paper)
-    static let backgroundTop    = Color.dynamic(light: 0xF7F0E4, dark: 0x050706)
-    static let backgroundBottom = Color.dynamic(light: 0xEFE6D6, dark: 0x0B0E10)
+    // MARK: The ONE neutral foundation — #181721
+    /// FocusGlobe's canonical dark neutral (the color behind the app logo).
+    /// EVERY neutral dark surface — Settings/Passport backgrounds, dark modals,
+    /// neutral sheets and cards, supporting chrome — derives from this single
+    /// value (or an opacity/shade variant of it), never from ad-hoc charcoals.
+    /// Sky artwork and atmospheric environments are exempt: they provide the
+    /// emotional color; this provides the calm ground beneath everything else.
+    static let neutralBase = Color(hex: 0x181721)
+    /// A slightly deeper shade of the same hue for gradient bottoms/depth.
+    static let neutralDeep = Color(hex: 0x100F16)
+    /// A slightly lifted shade of the same hue for elevated surfaces.
+    static let neutralRaised = Color(hex: 0x1E1D29)
 
-    // MARK: Surfaces / glass
-    static let glassTint   = Color.dynamic(light: 0xFCF7EC, dark: 0x14181A)
-    static let islandTint  = Color.dynamic(light: 0xFAF4E7, dark: 0x101416)
+    // MARK: Backgrounds  (the #181721 neutral by night / soft warm paper by day)
+    static let backgroundTop    = Color.dynamic(light: 0xF7F0E4, dark: 0x181721)
+    static let backgroundBottom = Color.dynamic(light: 0xEFE6D6, dark: 0x100F16)
+
+    // MARK: Surfaces / glass (dark variants derive from the #181721 family)
+    static let glassTint   = Color.dynamic(light: 0xFCF7EC, dark: 0x1E1D29)
+    static let islandTint  = Color.dynamic(light: 0xFAF4E7, dark: 0x1B1A25)
 
     // MARK: Text  (warm cream on night / warm ink on paper)
     static let textPrimary   = Color.dynamic(light: 0x26221D, dark: 0xF7F1E7)
@@ -50,9 +63,10 @@ enum AppColors {
     /// Soft shadow used under floating elements.
     static var shadow: Color { Color.black.opacity(0.24) }
 
-    // MARK: - Expedition/material tokens (kept for compatibility; re-tuned)
-    static let paper       = Color.dynamic(light: 0xF7F0E4, dark: 0x0B0E10)
-    static let paperDeep   = Color.dynamic(light: 0xEFE6D6, dark: 0x14181A)
+    // MARK: - Expedition/material tokens (kept for compatibility; re-tuned to
+    // the #181721 neutral family in dark)
+    static let paper       = Color.dynamic(light: 0xF7F0E4, dark: 0x181721)
+    static let paperDeep   = Color.dynamic(light: 0xEFE6D6, dark: 0x1E1D29)
     static let sepia       = Color.dynamic(light: 0x8A7D6A, dark: 0xA89D8C)
     static let ink         = Color.dynamic(light: 0x26221D, dark: 0xF7F1E7)
     static let terracotta  = Color.dynamic(light: 0xD4553B, dark: 0xE9654B)

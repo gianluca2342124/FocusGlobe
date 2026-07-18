@@ -55,11 +55,11 @@ private struct HistoryRow: View {
                 HStack(alignment: .top) {
                     moodBadge
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(record.routeName)
+                        Text(FocusSky.currentDisplayName(forHistorical: record.routeName))
                             .font(AppTypography.headline)
                             .foregroundStyle(AppColors.textPrimary)
                             .lineLimit(1)
-                        Text("\(record.originName) → \(record.destinationName)")
+                        Text("\(record.originName) → \(FocusSky.currentDisplayName(forHistorical: record.destinationName))")
                             .font(AppTypography.caption)
                             .foregroundStyle(AppColors.textSecondary)
                             .lineLimit(1)

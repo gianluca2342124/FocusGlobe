@@ -37,9 +37,7 @@ struct AmbientPilotsLayer: View {
     @State private var selectedPilot: Int? = nil
 
     private struct Pilot {
-        let fx: Double        // stable horizontal position (0…1)
-        let fy: Double        // stable vertical position (0…1)
-        let depth: Double     // 0 far … 1 near (size + speed + opacity)
+        let preferredSlot: Int // seeded starting index into `skySlots`
         let phase: Double
         let minutesLeft: Int
         let profileIndex: Int // into PilotDirectory (unique per flight)
@@ -75,23 +73,7 @@ struct AmbientPilotsLayer: View {
         var list: [Pilot] = []
         for k in 0..<min(Self.count, indices.count) {
             let skin = Self.skinBag[Int(rng.unit() * Double(Self.skinBag.count)) % Self.skinBag.count]
-            // Seeded position with simple constraints: keep a horizontal gap from
-            // already-placed pilots and stay out of the user balloon's central
-            // column, so same-size pilots never clump or hide the hero.
-            var fx = 0.06 + rng.unit() * 0.88
-            var fy = 0.08 + rng.unit() * 0.52
-            var attempts = 0
-            while attempts < 8 {
-                let clashesCentre = fx > 0.40 && fx < 0.60 && fy > 0.30
-                let clashesPilot = list.contains { abs($0.fx - fx) < 0.13 && abs($0.fy - fy) < 0.12 }
-                if !clashesCentre && !clashesPilot { break }
-                fx = 0.06 + rng.unit() * 0.88
-                fy = 0.08 + rng.unit() * 0.52
-                attempts += 1
-            }
-            list.append(Pilot(fx: fx,
-                              fy: fy,
-                              depth: rng.unit(),
+            list.append(Pilot(preferredSlot: Int(rng.unit() * Double(Self.skySlots.count)),
                               phase: rng.unit() * 6.28,
                               minutesLeft: 3 + Int(rng.unit() * 55),
                               profileIndex: indices[k],
@@ -100,23 +82,80 @@ struct AmbientPilotsLayer: View {
         return list
     }
 
+    // MARK: - Sky-wide slot placement (collision-free by construction)
+
+    /// Hand-placed, deliberately ASYMMETRIC anchor points spread across the whole
+    /// sky — above, below, left and right of the centred user, never a ring. Every
+    /// pair sits ≥ ~77 pt apart on the smallest supported iPhone (verified against
+    /// 375×667 with the shared balloon size + bob/sway amplitude), so same-size
+    /// balloons can never touch or overlap. All slots stay clear of the safe
+    /// zones: the top status/timer area, the user balloon's centre, and the
+    /// bottom flight/Cabin controls.
+    static let skySlots: [CGPoint] = [
+        CGPoint(x: 0.14, y: 0.14), CGPoint(x: 0.82, y: 0.12),
+        CGPoint(x: 0.33, y: 0.22), CGPoint(x: 0.68, y: 0.24),
+        CGPoint(x: 0.10, y: 0.34), CGPoint(x: 0.90, y: 0.38),
+        CGPoint(x: 0.22, y: 0.48), CGPoint(x: 0.79, y: 0.52),
+        CGPoint(x: 0.12, y: 0.63), CGPoint(x: 0.88, y: 0.68),
+        CGPoint(x: 0.30, y: 0.72), CGPoint(x: 0.63, y: 0.78),
+        CGPoint(x: 0.40, y: 0.82), CGPoint(x: 0.93, y: 0.80),
+    ]
+
+    /// Deterministic slot assignment: REAL pilots (sorted by stable id) claim
+    /// slots first, each scanning forward from its seed-preferred slot; the
+    /// decorative fill then takes remaining slots in its own seeded order. The
+    /// same participant set therefore always produces the SAME layout (poll
+    /// refreshes never shuffle anyone); only a genuine join/leave can shift the
+    /// few pilots it displaced.
+    private func assignedSlots(real: [OnlinePilot], fill: [Pilot])
+        -> (real: [String: CGPoint], fill: [CGPoint]) {
+        var taken = Set<Int>()
+        func claim(from preferred: Int) -> Int {
+            var i = preferred % Self.skySlots.count
+            while taken.contains(i) { i = (i + 1) % Self.skySlots.count }
+            taken.insert(i)
+            return i
+        }
+        var realSlots: [String: CGPoint] = [:]
+        for pilot in real.sorted(by: { $0.id < $1.id }) {
+            let preferred = Int(stablePilotSeed(for: pilot) % UInt64(Self.skySlots.count))
+            realSlots[pilot.id] = Self.skySlots[claim(from: preferred)]
+        }
+        var fillSlots: [CGPoint] = []
+        for pilot in fill {
+            fillSlots.append(Self.skySlots[claim(from: pilot.preferredSlot)])
+        }
+        return (realSlots, fillSlots)
+    }
+
+    /// The gentle per-pilot idle motion around a slot — small enough that the
+    /// verified slot spacing can never be closed by two balloons drifting
+    /// toward each other.
+    private static func drift(phase: Double, t: Double) -> (CGFloat, CGFloat) {
+        (CGFloat(Foundation.sin(t * 0.14 + phase * 1.3)) * 5,
+         CGFloat(Foundation.sin(t * 0.22 + phase)) * 6)
+    }
+
     var body: some View {
         GeometryReader { geo in
             let W = geo.size.width
             let H = geo.size.height
             // Visual capacity: real pilots first, then decorative fill. A Private
             // Flight renders invited pilots ONLY — never a fabricated stranger.
-            let capacity = min(H, W) > 700 ? 14 : Self.count
+            // Capacity never exceeds the collision-free slot count.
+            let capacity = min(Self.skySlots.count, min(H, W) > 700 ? 14 : Self.count)
             let real = Array(realPilots.prefix(capacity))
             let fill = isPrivate ? [] : Array(pilots.prefix(max(0, capacity - real.count)))
+            let slots = assignedSlots(real: real, fill: fill)
             TimelineView(.animation(minimumInterval: animated ? 1.0 / 20.0 : 5.0)) { _ in
                 let t = animated ? elapsed() : 0
                 ZStack {
-                    ForEach(Array(real.enumerated()), id: \.element.id) { index, pilot in
-                        realPilotView(pilot, index: index, W: W, H: H, t: t)
+                    ForEach(Array(real.enumerated()), id: \.element.id) { _, pilot in
+                        realPilotView(pilot, slot: slots.real[pilot.id] ?? Self.skySlots[0],
+                                      W: W, H: H, t: t)
                     }
                     ForEach(Array(fill.enumerated()), id: \.offset) { index, pilot in
-                        pilotView(pilot, index: index + real.count, W: W, H: H, t: t)
+                        pilotView(pilot, slot: slots.fill[index], W: W, H: H, t: t)
                     }
                 }
             }
@@ -130,38 +169,20 @@ struct AmbientPilotsLayer: View {
     }
 
     @ViewBuilder
-    private func pilotView(_ p: Pilot, index: Int, W: CGFloat, H: CGFloat, t: Double) -> some View {
-        // Distributed around an invisible circle centred on the display (the same
-        // centre the user's balloon cruises to), gently bobbing — never a scroll.
-        let (x, y) = Self.orbit(angleSeed: p.fx, radiusSeed: p.depth, phase: p.phase,
-                                W: W, H: H, t: t)
+    private func pilotView(_ p: Pilot, slot: CGPoint, W: CGFloat, H: CGFloat, t: Double) -> some View {
+        // A stable patch of sky (see `skySlots`) with a gentle bob + sway.
         // EXACT same size + full opacity as every other balloon — only position
-        // differs. Decorative pilots are purely ambient: no bubble, no tap.
-        BalloonView(height: Self.balloonSize(H), showBurner: false, showGlow: true, skin: p.skin)
-            .position(x: x, y: y)
+        // differs; NO artificial outer glow, so fellow balloons feel naturally
+        // present in the environment rather than highlighted. Decorative pilots
+        // are purely ambient: no bubble, no tap.
+        let (sway, bob) = Self.drift(phase: p.phase, t: t)
+        BalloonView(height: Self.balloonSize(H), showBurner: false, showGlow: false, skin: p.skin)
+            .position(x: slot.x * W + sway, y: slot.y * H + bob)
             .allowsHitTesting(false)
     }
 
     /// The ONE balloon size token every pilot (and the hero) shares.
     static func balloonSize(_ H: CGFloat) -> CGFloat { max(38, min(52, H * 0.07)) }
-
-    /// A stable point on an invisible circle centred on the display. `angleSeed`
-    /// and `radiusSeed` are 0…1 (seeded per pilot) so positions never jump; the
-    /// ring is squashed vertically so balloons stay on-screen and orbit the
-    /// centred hero. Adds a gentle per-pilot bob + sway.
-    static func orbit(angleSeed: Double, radiusSeed: Double, phase: Double,
-                      W: CGFloat, H: CGFloat, t: Double) -> (CGFloat, CGFloat) {
-        let bob = CGFloat(Foundation.sin(t * 0.22 + phase)) * 8
-        let sway = CGFloat(Foundation.sin(t * 0.14 + phase * 1.3)) * 7
-        let angle = angleSeed * 2 * Double.pi
-        let radius = min(W, H) * (0.23 + radiusSeed * 0.17)
-        // Centred on the same point the hero cruises to (restY ≈ 0.5·H), so the
-        // user sits in the middle and everyone else visibly orbits them.
-        let cx = W * 0.5, cy = H * 0.5
-        let x = cx + CGFloat(Foundation.cos(angle)) * radius + sway
-        let y = cy + CGFloat(Foundation.sin(angle)) * radius * 0.82 + bob
-        return (x, y)
-    }
 
     /// Deterministic per-pilot seed: hash(publicID + sessionID + skyID). Kept
     /// out of the view builder so the loop isn't imperative control flow inside
@@ -174,18 +195,16 @@ struct AmbientPilotsLayer: View {
     }
 
     /// A REAL online pilot: same size token and float behaviour as everyone
-    /// else; position seeded from `stablePilotSeed` so it is stable for the
+    /// else; slot assigned from `stablePilotSeed` so it is stable for the
     /// whole session and identical in Cabin View.
-    private func realPilotView(_ pilot: OnlinePilot, index: Int, W: CGFloat, H: CGFloat, t: Double) -> some View {
+    private func realPilotView(_ pilot: OnlinePilot, slot: CGPoint, W: CGFloat, H: CGFloat, t: Double) -> some View {
         var rng = SeededRNG(seed: stablePilotSeed(for: pilot))
-        let angleSeed = rng.unit()
-        let radiusSeed = rng.unit()
         let phase = rng.unit() * 6.28
-        let (x, y) = Self.orbit(angleSeed: angleSeed, radiusSeed: radiusSeed, phase: phase,
-                                W: W, H: H, t: t)
-        // Identical size, opacity and glow to every other balloon — a real pilot
-        // is never faded or shrunk; only their POSITION differs. Their identity
-        // bubble stays up in a Private Flight; in the Global sky it reveals on tap.
+        let (sway, bob) = Self.drift(phase: phase, t: t)
+        // Identical size, full opacity and NO outer glow — exactly like every
+        // other balloon; a real pilot is never faded or shrunk; only their
+        // POSITION differs. Their identity bubble stays up in a Private Flight;
+        // in the Global sky it reveals on tap.
         let size = Self.balloonSize(H)
         let showBubble = roomMode || selectedRealID == pilot.id
         return ZStack(alignment: .bottom) {
@@ -194,10 +213,10 @@ struct AmbientPilotsLayer: View {
                     .offset(y: -size - 14)
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
             }
-            BalloonView(height: size, showBurner: false, showGlow: true,
+            BalloonView(height: size, showBurner: false, showGlow: false,
                         skin: BalloonSkin.skin(id: pilot.balloonSkinID))
         }
-        .position(x: x, y: y)
+        .position(x: slot.x * W + sway, y: slot.y * H + bob)
         .onTapGesture {
             withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
                 selectedRealID = selectedRealID == pilot.id ? nil : pilot.id
