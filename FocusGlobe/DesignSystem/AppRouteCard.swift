@@ -77,7 +77,7 @@ struct AppRouteCard: View {
     private var lockBadge: some View {
         HStack(spacing: 4) {
             Image(systemName: "lock.fill").font(.system(size: 10, weight: .bold))
-            Text("Pro").font(AppTypography.micro)
+            Text("PRO").font(AppTypography.micro)
         }
         .foregroundStyle(.white)
         .padding(.horizontal, AppSpacing.xs)

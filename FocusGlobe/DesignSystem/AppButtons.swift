@@ -38,14 +38,16 @@ struct AppPrimaryButton: View {
             .foregroundStyle(AppColors.ctaText)
             .frame(maxWidth: .infinity)
             .frame(height: Layout.pad(56, 64))
+            // Primary CTAs use a FULLY ROUNDED capsule — the app's signature
+            // major-action geometry (Start Focus, Continue, Join Flight…).
             .background {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                Capsule(style: .continuous)
                     .fill(AppColors.ctaFill)
                     // Subtle adaptive edge so the white pill separates cleanly from
                     // light surfaces in Light Mode; invisible over dark surfaces and
                     // in Dark Mode (so Dark Mode is unchanged).
                     .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        Capsule(style: .continuous)
                             .strokeBorder(AppColors.hairline, lineWidth: 1)
                     )
             }

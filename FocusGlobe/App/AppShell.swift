@@ -43,15 +43,18 @@ struct AppTabBar: View {
     private let items: [Item] = [
         Item(id: .passport, title: "Passport", system: "book.closed.fill"),
         Item(id: .shop,     title: "Shop",     system: "bag.fill"),
-        Item(id: .home,     title: "Home",     system: "house.fill"),
+        // A quieter, more minimal home glyph (outline, no heavy door/chimney
+        // detailing) — consistent with the rest of the icon language.
+        Item(id: .home,     title: "Home",     system: "house"),
         Item(id: .friends,  title: "Friends",  system: "person.2.fill"),
         Item(id: .settings, title: "Settings", system: "gearshape.fill"),
     ]
 
     var body: some View {
-        // A rigid, app-like bar pinned to the bottom edge: the tab row sits above
-        // the home-indicator safe area, and the material fills all the way down to
-        // the screen edge so nothing floats. Rounded only at the top.
+        // A rigid bar ATTACHED to the bottom edge: full-width, square-cornered,
+        // grounded on the #181721 neutral — never a floating rounded card. The
+        // item row keeps a comfortable max width on iPad while the surface runs
+        // edge to edge; only a subtle top hairline separates it from content.
         HStack(spacing: 0) {
             ForEach(items) { item in
                 tab(item)
@@ -63,16 +66,11 @@ struct AppTabBar: View {
         .frame(maxWidth: Layout.pad(CGFloat(640), CGFloat(760)))
         .frame(maxWidth: .infinity)
         .background(
-            UnevenRoundedRectangle(topLeadingRadius: 22, bottomLeadingRadius: 0,
-                                   bottomTrailingRadius: 0, topTrailingRadius: 22, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(UnevenRoundedRectangle(topLeadingRadius: 22, bottomLeadingRadius: 0,
-                                                bottomTrailingRadius: 0, topTrailingRadius: 22, style: .continuous)
-                    .fill(Color.black.opacity(0.34)))
-                .overlay(alignment: .top) { Rectangle().fill(.white.opacity(0.12)).frame(height: 1) }
+            Rectangle()
+                .fill(AppColors.neutralBase.opacity(0.98))
+                .overlay(alignment: .top) { Rectangle().fill(.white.opacity(0.08)).frame(height: 1) }
                 .ignoresSafeArea(edges: .bottom)
         )
-        .shadow(color: .black.opacity(0.28), radius: 12, y: -2)
     }
 
     private func tab(_ item: Item) -> some View {

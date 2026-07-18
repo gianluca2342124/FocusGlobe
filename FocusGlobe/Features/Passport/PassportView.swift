@@ -60,7 +60,8 @@ struct PassportView: View {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
                     header
                     statsGrid
-                    missionsSection      // Today's Objectives — directly under stats
+                    consistencySection   // the core Passport analysis tool
+                    missionsSection      // Today's Objectives
                     achievementsSection  // Badges
                     WidgetsGallerySection()
                 }
@@ -79,11 +80,77 @@ struct PassportView: View {
         }
     }
 
+    // MARK: Focus Consistency — the shared contribution grid (one model with
+    // the streak popover and the share card, so a day can never disagree).
+
+    @State private var shareItems: [Any]? = nil
+
+    private var consistencySection: some View {
+        let summary = FocusConsistency.summary(history: appModel.history)
+        return VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            HStack {
+                SectionLabel(text: "Focus Consistency")
+                Spacer()
+                Button {
+                    appModel.tapFeedback()
+                    shareGrid()
+                } label: {
+                    Label("Share", systemImage: "square.and.arrow.up")
+                        .font(.system(size: 12.5, weight: .bold, design: .rounded))
+                        .foregroundStyle(AppColors.gold)
+                }
+                .buttonStyle(SoftPressStyle())
+                .accessibilityLabel("Share your focus grid")
+            }
+            VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                FocusConsistencyGrid(history: appModel.history, weeks: 53)
+                HStack(spacing: AppSpacing.md) {
+                    consistencyStat("\(summary.activeDays)", "focus days")
+                    consistencyStat("\(progress.currentStreak)", "day streak")
+                    consistencyStat("\(progress.longestStreak)", "best streak")
+                    consistencyStat("\(summary.consistencyPercent)%", "consistency")
+                    Spacer(minLength: 0)
+                }
+            }
+            .padding(AppSpacing.md)
+            .glassBackground(cornerRadius: AppSpacing.cardRadius, tintOpacity: 0.20,
+                             shadowRadius: 10, shadowY: 5)
+        }
+        .sheet(isPresented: Binding(get: { shareItems != nil },
+                                    set: { if !$0 { shareItems = nil } })) {
+            if let shareItems { ActivityShareSheet(items: shareItems) }
+        }
+    }
+
+    private func consistencyStat(_ value: String, _ label: String) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(value)
+                .font(.system(size: 17, weight: .heavy, design: .rounded))
+                .foregroundStyle(AppColors.gold)
+                .monospacedDigit()
+            Text(label)
+                .font(AppTypography.micro)
+                .foregroundStyle(AppColors.textTertiary)
+        }
+    }
+
+    /// Render the dedicated share card (never a screenshot); degrade silently
+    /// with a haptic if rendering ever fails.
+    private func shareGrid() {
+        if let image = FocusGridShare.renderImage(history: appModel.history,
+                                                 displayName: appModel.profile.name,
+                                                 currentStreak: progress.currentStreak) {
+            shareItems = [image]
+        } else {
+            appModel.haptics.tap()
+        }
+    }
+
     // MARK: Header
 
     private var header: some View {
         HStack(alignment: .top) {
-            ScreenHeader(title: "Passport", subtitle: "Your flight logbook", showsBack: false)
+            ScreenHeader(title: "Passport", showsBack: false)
             Spacer()
             // The crown only opens the paywall — hide it once Pro.
             if !appModel.isPro {
@@ -420,7 +487,7 @@ struct PassportView: View {
             Achievement("leaf.fill", "Cabin Decorator", ownsCabin, AppColors.success),
             Achievement("circle.grid.2x2.fill", "Skin Collector", skinsOwned >= 3, AppColors.brand),
             Achievement("person.2.fill", "Friend Flight", friendsInvited >= 1, AppColors.success),
-            Achievement("crown.fill", "Premium Pilot", appModel.isPro, AppColors.gold),
+            Achievement("crown.fill", "PRO Pilot", appModel.isPro, AppColors.gold),
             Achievement("arrow.uturn.up.circle.fill", "Comeback Pilot",
                         progress.longestStreak > progress.currentStreak && progress.currentStreak >= 1,
                         AppColors.terracotta),
@@ -467,7 +534,7 @@ struct PassportView: View {
                             appModel.selectJourneyAudio(option)
                         } else {
                             appModel.tapFeedback()
-                            router.presentPaywall()
+                            router.presentPaywall(context: .sound)
                         }
                     }
                 }

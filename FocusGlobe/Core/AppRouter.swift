@@ -59,6 +59,13 @@ final class AppRouter: ObservableObject {
     @Published var path: [Destination] = []
     @Published var activeJourney: Journey?
     @Published var showPaywall = false
+    /// WHY the paywall is being shown — drives the contextual hero/headline of
+    /// the ONE reusable paywall (never a duplicated paywall view per source).
+    @Published var paywallContext: PaywallContext = .general
+    /// An opaque root curtain raised for the Boarding-cut → journey hand-off so
+    /// Home can never flash between the two presentation layers. The journey
+    /// container lowers it the moment it is mounted (plus a watchdog fallback).
+    @Published var takeoffCurtain = false
     /// Set when the Landing screen asks for a fresh flight; Home observes it and
     /// opens the flight setup as soon as the journey cover has dismissed.
     @Published var pendingNewFlight = false
@@ -89,7 +96,20 @@ final class AppRouter: ObservableObject {
     func openFriends() { select(.friends) }
     func openHistory() { path.append(.history) }
     func openSettings() { select(.settings) }
-    func presentPaywall() { showPaywall = true }
+    func presentPaywall(context: PaywallContext = .general) {
+        paywallContext = context
+        showPaywall = true
+    }
+
+    /// Raise the take-off curtain (with a 3 s watchdog so an interrupted
+    /// hand-off can never leave the app stuck behind an opaque cover).
+    func raiseTakeoffCurtain() {
+        takeoffCurtain = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+            self?.takeoffCurtain = false
+        }
+    }
+    func lowerTakeoffCurtain() { takeoffCurtain = false }
 
     // MARK: Deep links (widgets)
 
@@ -153,5 +173,31 @@ final class AppRouter: ObservableObject {
         activeJourney = nil
         path.removeAll()
         selectedTab = .passport
+    }
+}
+
+
+/// The reason a FocusGlobe PRO paywall was opened — one reusable paywall view
+/// renders a context-appropriate headline + hero from this, so a balloon-skin
+/// tap never shows Sky imagery (and vice versa).
+enum PaywallContext: Equatable {
+    case general          // crown / broad entry: "Upgrade to FocusGlobe PRO"
+    case sky              // locked Sky:          "Unlock All Skies with PRO"
+    case balloonSkin      // premium skin:        "Unlock Exclusive Balloons with PRO"
+    case interior         // premium cabin item:  "Unlock Premium Cabin Items with PRO"
+    case sound            // locked sound:        "Unlock Every Focus Sound with PRO"
+    case widget           // locked widget:       "Unlock All Widgets with PRO"
+    case rewards          // 2x rewards:          "Double Every Reward with PRO"
+
+    var headline: String {
+        switch self {
+        case .general:     return "Upgrade to FocusGlobe PRO"
+        case .sky:         return "Unlock All Skies with PRO"
+        case .balloonSkin: return "Unlock Exclusive Balloons with PRO"
+        case .interior:    return "Unlock Premium Cabin Items with PRO"
+        case .sound:       return "Unlock Every Focus Sound with PRO"
+        case .widget:      return "Unlock All Widgets with PRO"
+        case .rewards:     return "Double Every Reward with PRO"
+        }
     }
 }

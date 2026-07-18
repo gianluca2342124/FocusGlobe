@@ -91,14 +91,19 @@ struct AmbientPilotsLayer: View {
     /// balloons can never touch or overlap. All slots stay clear of the safe
     /// zones: the top status/timer area, the user balloon's centre, and the
     /// bottom flight/Cabin controls.
+    /// Reserved UI rectangles this layout must respect (normalised): the top
+    /// give-up / controls buttons and FocusGlobe watermark (y < ~0.09), the
+    /// user's centred balloon (a ≥88 pt clearance around 0.5 / 0.5), and the
+    /// bottom hero-timer + horizon band (y > ~0.72). Balanced 7 above / 5 below
+    /// / 2 mid-side — organic, never a ring, never symmetric. Verified ≥70 pt
+    /// between every pair on the smallest supported iPhone.
     static let skySlots: [CGPoint] = [
-        CGPoint(x: 0.14, y: 0.14), CGPoint(x: 0.82, y: 0.12),
-        CGPoint(x: 0.33, y: 0.22), CGPoint(x: 0.68, y: 0.24),
-        CGPoint(x: 0.10, y: 0.34), CGPoint(x: 0.90, y: 0.38),
-        CGPoint(x: 0.22, y: 0.48), CGPoint(x: 0.79, y: 0.52),
-        CGPoint(x: 0.12, y: 0.63), CGPoint(x: 0.88, y: 0.68),
-        CGPoint(x: 0.30, y: 0.72), CGPoint(x: 0.63, y: 0.78),
-        CGPoint(x: 0.40, y: 0.82), CGPoint(x: 0.93, y: 0.80),
+        CGPoint(x: 0.20, y: 0.15), CGPoint(x: 0.50, y: 0.12), CGPoint(x: 0.80, y: 0.15),
+        CGPoint(x: 0.28, y: 0.26), CGPoint(x: 0.72, y: 0.27),
+        CGPoint(x: 0.10, y: 0.38), CGPoint(x: 0.90, y: 0.39),
+        CGPoint(x: 0.13, y: 0.52), CGPoint(x: 0.87, y: 0.54),
+        CGPoint(x: 0.24, y: 0.62), CGPoint(x: 0.76, y: 0.63),
+        CGPoint(x: 0.40, y: 0.68), CGPoint(x: 0.60, y: 0.69), CGPoint(x: 0.90, y: 0.70),
     ]
 
     /// Deterministic slot assignment: REAL pilots (sorted by stable id) claim
@@ -206,6 +211,9 @@ struct AmbientPilotsLayer: View {
         // POSITION differs. Their identity bubble stays up in a Private Flight;
         // in the Global sky it reveals on tap.
         let size = Self.balloonSize(H)
+        // Persistent identity: every REAL pilot carries a compact alias +
+        // live-countdown bubble for the whole online flight — never tap-to-
+        // reveal. (`roomMode` = "social labels on"; decorative pilots get none.)
         let showBubble = roomMode || selectedRealID == pilot.id
         return ZStack(alignment: .bottom) {
             if showBubble {
@@ -235,17 +243,20 @@ struct AmbientPilotsLayer: View {
     @State private var selectedRealID: String? = nil
 
     private func realBubble(_ pilot: OnlinePilot) -> some View {
-        // Alias + synchronized remaining time. The time line is shown ONLY when
-        // the pilot has a real live session (never a fabricated "Focus" pill).
+        // Alias + LIVE second-exact countdown to the pilot's server-canonical
+        // end ("42:18", "∞" for Infinite). Shown ONLY when the pilot has a real
+        // live session — never a fabricated pill. Ticks once per second.
         VStack(spacing: 2) {
             Text("\(pilot.displayName)\(pilot.countryCode.map { " " + flagEmoji($0) } ?? "")")
                 .font(.system(size: 12, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
-            if !pilot.remainingLabel.isEmpty {
-                Text(pilot.remainingLabel)
-                    .font(.system(size: 10.5, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.7))
-                    .monospacedDigit()
+            if pilot.hasLiveSession {
+                TimelineView(.periodic(from: .now, by: 1)) { ctx in
+                    Text(pilot.liveCountdown(at: ctx.date))
+                        .font(.system(size: 10.5, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.72))
+                        .monospacedDigit()
+                }
             }
         }
         .padding(.horizontal, 12)

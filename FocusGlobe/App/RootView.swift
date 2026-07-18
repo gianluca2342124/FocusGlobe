@@ -43,10 +43,24 @@ struct RootView: View {
         // modal never crashes on Mac.
         .adaptiveModal(isPresented: $router.showPaywall,
                        width: Layout.paywallPanelWidth, height: Layout.paywallPanelHeight) {
-            PaywallView()
+            PaywallView(context: router.paywallContext)
                 .environmentObject(appModel)
                 .environmentObject(router)
         }
+        // The take-off curtain: an opaque neutral cover raised the instant the
+        // Boarding Pass is cut, so Home can never flash between the setup
+        // cover's dismissal and the journey cover's presentation. The journey
+        // container lowers it on mount (plus the router's own 3 s watchdog).
+        .overlay {
+            if router.takeoffCurtain {
+                LinearGradient(colors: [AppColors.neutralBase, AppColors.neutralDeep],
+                               startPoint: .top, endPoint: .bottom)
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+                    .allowsHitTesting(true)
+            }
+        }
+        .animation(.easeOut(duration: 0.25), value: router.takeoffCurtain)
         .preferredColorScheme(appModel.settings.appearance.colorScheme)
         // The branded in-app loading state covers the very first launch frame,
         // then crossfades away. No artificial delay — it is only ever briefly up.

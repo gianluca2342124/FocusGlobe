@@ -280,7 +280,7 @@ struct RouteSelectionView: View {
             router.openFocusLoadout(journey.route)
         } else {
             appModel.tapFeedback()
-            router.presentPaywall()
+            router.presentPaywall(context: .sky)
         }
     }
 }

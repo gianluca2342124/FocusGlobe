@@ -34,20 +34,37 @@ struct PilotProfileSheet: View {
                         .foregroundStyle(AppColors.textPrimary)
                     if let cc = pilot.countryCode { Text(flagEmoji(cc)) }
                 }
-                // Only REAL, meaningful metadata — never generic "Focus" +
-                // "Infinite focus" pills. Remaining time shows only for a live
-                // session; the paused state shows only when genuinely paused.
+                // Only REAL shared-for-this-flight metadata — clean human
+                // labels, nothing fabricated: focus category, a plain PRO badge
+                // when the pilot's client shared one, the fixed-catalog sound
+                // name when shared, and the LIVE second-exact countdown.
+                HStack(spacing: 8) {
+                    if !pilot.focusCategory.isEmpty {
+                        label(pilot.focusCategory.capitalized, icon: "target")
+                    }
+                    if pilot.isPro == true {
+                        label("PRO", icon: "crown.fill")
+                    }
+                    if let soundName = sharedSoundName {
+                        label(soundName, icon: "music.note")
+                    }
+                }
                 HStack(spacing: 8) {
                     if pilot.isPaused {
                         label("Paused", icon: "pause.circle")
-                    } else if !pilot.remainingLabel.isEmpty {
-                        label(pilot.remainingLabel, icon: "timer")
+                    } else if pilot.hasLiveSession {
+                        TimelineView(.periodic(from: .now, by: 1)) { ctx in
+                            label(pilot.liveCountdown(at: ctx.date), icon: "timer")
+                        }
                     }
                 }
                 if let note {
                     Text(note).font(AppTypography.caption).foregroundStyle(AppColors.textSecondary)
                 }
                 VStack(spacing: AppSpacing.sm) {
+                    if !isSelf {
+                        applaudButton
+                    }
                     if isSelf {
                         // Never offer a friend action on yourself.
                         Text("That's you")
@@ -137,6 +154,43 @@ struct PilotProfileSheet: View {
         } message: {
             Text("Reports are anonymous and reviewed by our team. Only this pilot's anonymous ID and your chosen reason are sent — never any personal details.")
         }
+    }
+
+    /// The pilot's shared sound, resolved against the app's FIXED catalog —
+    /// unknown/absent ids show nothing (never an arbitrary client string).
+    private var sharedSoundName: String? {
+        guard let id = pilot.soundID else { return nil }
+        return JourneyAudioOption.all.first { $0.id == id }?.displayName
+    }
+
+    @State private var applauded = false
+
+    /// 👏 Applaud — a genuine realtime ping to the pilot's device (the model
+    /// rate-limits per recipient; the button reflects the cooldown honestly).
+    private var applaudButton: some View {
+        let cooling = applauded || online.applauseOnCooldown(for: pilot)
+        return Button {
+            guard !cooling else { return }
+            appModel.tapFeedback()
+            Task { @MainActor in
+                if await online.applaud(pilot) {
+                    applauded = true
+                    appModel.haptics.rewardClaim()
+                }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Text("👏")
+                Text(cooling ? "Applauded" : "Applaud")
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+            }
+            .foregroundStyle(cooling ? AppColors.textSecondary : Color(hex: 0x2B2510))
+            .frame(maxWidth: .infinity).frame(height: 50)
+            .background(Capsule().fill(cooling ? Color.white.opacity(0.08) : AppColors.gold))
+        }
+        .buttonStyle(SoftPressStyle(scale: 0.97))
+        .disabled(cooling)
+        .accessibilityLabel(cooling ? "Already applauded" : "Applaud this pilot")
     }
 
     private func label(_ text: String, icon: String) -> some View {

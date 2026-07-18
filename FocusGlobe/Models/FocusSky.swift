@@ -86,7 +86,7 @@ struct FocusSky: Identifiable, Hashable {
     var unlockMethodLabel: String {
         switch unlockRequirement {
         case .free:              return "Free"
-        case .premium:           return "Premium only"
+        case .premium:           return "FocusGlobe PRO only"
         case .invite(let n):     return "Invite \(n) friend\(n == 1 ? "" : "s")"
         case .focusMinutes(let n): return "\(n) focus minutes"
         case .streakDays(let n): return "\(n)-day streak"

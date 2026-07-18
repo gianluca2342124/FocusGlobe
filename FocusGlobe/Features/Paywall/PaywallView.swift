@@ -11,11 +11,14 @@ import UIKit
 /// the fallback placeholders only appear in the disabled "products unavailable"
 /// state.
 struct PaywallView: View {
+    /// WHY this paywall opened — one reusable view renders the right headline
+    /// and hero per context (never a duplicated paywall implementation).
+    var context: PaywallContext = .general
+
     @EnvironmentObject private var appModel: AppModel
     @Environment(\.dismiss) private var dismiss
 
     @State private var selectedKind: PlanKind = .annual
-    @State private var animateBlobs = false
     /// Drives the periodic gloss sweep across the purchase CTA (off-screen at rest).
     @State private var shineX: CGFloat = -0.5
     private let shineTimer = Timer.publish(every: 3.6, on: .main, in: .common).autoconnect()
@@ -25,10 +28,10 @@ struct PaywallView: View {
 
     private let benefits: [(String, String)] = [
         ("nosign", "No ads"),
-        ("sparkles", "Ultra skies & flights"),
-        ("balloon.fill", "Exclusive balloons & postcards"),
+        ("sparkles", "All PRO Skies & flights"),
+        ("balloon.fill", "Exclusive balloons & cabin items"),
         ("gift.fill", "2x rewards"),
-        ("music.note", "Focus sounds & music"),
+        ("music.note", "Every focus sound & music"),
         ("square.grid.2x2.fill", "All widgets unlocked"),
     ]
 
@@ -41,7 +44,7 @@ struct PaywallView: View {
 
     var body: some View {
         ZStack {
-            goldBackground
+            staticBackground
             // The close button, plans and the gold CTA are pinned so the purchase
             // button is always visible without scrolling on every iPhone. Only the
             // hero + benefits live in a flexible scroll area (they compress to fit
@@ -50,11 +53,17 @@ struct PaywallView: View {
                 closeRow
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: AppSpacing.sm) {
-                        balloonHero
-                        Text("Unlock FocusGlobe Ultra")
-                            .font(.system(size: Layout.pad(26, 34), weight: .bold, design: .serif))
+                        contextHero
+                        Text(context.headline)
+                            .font(.system(size: Layout.pad(25, 32), weight: .bold, design: .serif))
                             .foregroundStyle(.white)
                             .multilineTextAlignment(.center)
+                        contextShowcase
+                        if context != .general {
+                            Text("+ Unlock so much more with PRO")
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.65))
+                        }
                         benefitsCard
                     }
                     .padding(.bottom, AppSpacing.xs)
@@ -80,30 +89,112 @@ struct PaywallView: View {
         .onChange(of: subs.plans) { _, _ in syncSelection() }
     }
 
-    // MARK: Background
+    // MARK: Background — a STABLE dark atmosphere on the #181721 neutral.
+    // No motion, no looping blobs: the hero and the gold plans are the visual.
 
-    private var goldBackground: some View {
+    private var staticBackground: some View {
         ZStack {
-            // The premium pattern appears when Background_Premium_Tile ships; the
-            // translucent gold gradient above keeps text readable and preserves the
-            // warm premium identity even before the art lands.
-            AnimatedTileBackground(assetName: "Background_Premium_Tile", overlayOpacity: 0.0)
-            LinearGradient(colors: [Color(hex: 0x241B0E).opacity(0.82), Color(hex: 0x100E08).opacity(0.9)],
+            LinearGradient(colors: [AppColors.neutralRaised, AppColors.neutralBase, AppColors.neutralDeep],
                            startPoint: .top, endPoint: .bottom)
-                .ignoresSafeArea()
-            blob(AppColors.gold.opacity(0.45), 320, x: animateBlobs ? -120 : -70, y: animateBlobs ? -230 : -180)
-            blob(Color(hex: 0xF2C879).opacity(0.40), 280, x: animateBlobs ? 150 : 110, y: animateBlobs ? -40 : -120)
-            blob(Color(hex: 0xE0A23E).opacity(0.32), 260, x: animateBlobs ? -110 : -150, y: animateBlobs ? 220 : 280)
+            RadialGradient(colors: [AppColors.gold.opacity(0.14), .clear],
+                           center: .top, startRadius: 10, endRadius: 420)
         }
         .ignoresSafeArea()
-        .onAppear {
-            withAnimation(.easeInOut(duration: 9).repeatForever(autoreverses: true)) { animateBlobs = true }
-        }
         .allowsHitTesting(false)
     }
 
-    private func blob(_ color: Color, _ size: CGFloat, x: CGFloat, y: CGFloat) -> some View {
-        Circle().fill(color).frame(width: size, height: size).blur(radius: 80).offset(x: x, y: y)
+    // MARK: Contextual hero + showcase (ONE paywall, many entries)
+
+    /// The hero visual per context: the King balloon for broad entries, the
+    /// premium collectibles themselves for Sky/skin/interior entries.
+    @ViewBuilder private var contextHero: some View {
+        switch context {
+        case .balloonSkin, .interior, .sky:
+            EmptyView()   // their showcase row below IS the hero
+        default:
+            balloonHero
+        }
+    }
+
+    /// What actually becomes available — REAL premium content previews, so a
+    /// balloon-skin tap never shows Sky imagery (and vice versa).
+    @ViewBuilder private var contextShowcase: some View {
+        switch context {
+        case .sky:
+            HStack(spacing: AppSpacing.sm) {
+                ForEach(FocusSky.all.filter { $0.isPremium }.prefix(3)) { sky in
+                    VStack(spacing: 6) {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(LinearGradient(colors: sky.paletteColors,
+                                                 startPoint: .top, endPoint: .bottom))
+                            .frame(height: 92)
+                            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .strokeBorder(.white.opacity(0.16), lineWidth: 1))
+                        Text(sky.name)
+                            .font(.system(size: 11.5, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.85))
+                            .lineLimit(1).minimumScaleFactor(0.7)
+                    }
+                }
+            }
+            .padding(.top, 2)
+        case .balloonSkin:
+            HStack(spacing: AppSpacing.md) {
+                ForEach(BalloonSkin.all.filter { $0.isPremium }.prefix(4)) { skin in
+                    VStack(spacing: 5) {
+                        BalloonView(height: 72, showBurner: false, showGlow: false, skin: skin)
+                        Text(skin.name)
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.85))
+                    }
+                }
+            }
+            .padding(.vertical, 6)
+        case .interior:
+            HStack(spacing: AppSpacing.md) {
+                ForEach(premiumInteriorShowcase) { item in
+                    VStack(spacing: 5) {
+                        Group {
+                            if let ui = UIImage(named: item.bestAssetName) {
+                                Image(uiImage: ui).resizable().scaledToFit()
+                            } else {
+                                Image(systemName: item.systemImage)
+                                    .font(.system(size: 30, weight: .semibold))
+                                    .foregroundStyle(item.tint)
+                            }
+                        }
+                        .frame(width: 74, height: 74)
+                        Text(item.name)
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.85))
+                            .lineLimit(1).minimumScaleFactor(0.7)
+                    }
+                }
+            }
+            .padding(.vertical, 6)
+        case .sound:
+            HStack(spacing: AppSpacing.sm) {
+                ForEach(JourneyAudioOption.all.filter { $0.isPremium }.prefix(3)) { option in
+                    Label(option.displayName, systemImage: "music.note")
+                        .font(.system(size: 12.5, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.9))
+                        .padding(.horizontal, 12).padding(.vertical, 8)
+                        .background(Capsule().fill(.white.opacity(0.08)))
+                        .overlay(Capsule().strokeBorder(AppColors.gold.opacity(0.3), lineWidth: 1))
+                }
+            }
+        default:
+            EmptyView()
+        }
+    }
+
+    /// Premium-first cabin showcase; falls back to the highest-priced pieces so
+    /// the row always shows REAL catalog items.
+    private var premiumInteriorShowcase: [StoreItem] {
+        let cabin = StoreItem.all.filter { $0.kind == .cabinDecoration }
+        let premium = cabin.filter { $0.isPremium }
+        let rest = cabin.filter { !$0.isPremium }.sorted { $0.price > $1.price }
+        return Array((premium + rest).prefix(3))
     }
 
     // MARK: Header
@@ -186,7 +277,7 @@ struct PaywallView: View {
 
     private var proState: some View {
         VStack(spacing: AppSpacing.sm) {
-            Label("You're a Pro member", systemImage: "checkmark.seal.fill")
+            Label("FocusGlobe PRO is active", systemImage: "checkmark.seal.fill")
                 .font(AppTypography.headline)
                 .foregroundStyle(AppColors.gold)
             Button { appModel.tapFeedback(); dismiss() } label: {
@@ -222,20 +313,21 @@ struct PaywallView: View {
                     .multilineTextAlignment(.center)
             }
 
-            // Compact bottom legal cluster: Restore sits low with Privacy / Terms
-            // (small and quiet) instead of a tall row right under the CTA, so the
-            // feature/benefit area above gets more vertical breathing room.
-            // RevenueCat restore/purchase logic and the CTA behaviour are unchanged.
-            VStack(spacing: 6) {
+            // ONE compact footer line — Restore Purchases • Privacy • Terms —
+            // each independently tappable. RevenueCat restore is unchanged.
+            HStack(spacing: 6) {
                 Button { restore() } label: {
                     Text("Restore Purchases")
-                        .font(AppTypography.caption)
-                        .foregroundStyle(.white.opacity(0.75))
                 }
                 .buttonStyle(SoftPressStyle())
-                footer
+                Text("•").foregroundStyle(.white.opacity(0.35))
+                Link("Privacy", destination: LegalLinks.privacy)
+                Text("•").foregroundStyle(.white.opacity(0.35))
+                Link("Terms", destination: LegalLinks.terms)
             }
-            .padding(.top, 2)
+            .font(AppTypography.caption)
+            .foregroundStyle(.white.opacity(0.7))
+            .padding(.top, 4)
         }
     }
 
@@ -381,19 +473,6 @@ struct PaywallView: View {
     private var goldGradient: LinearGradient {
         LinearGradient(colors: [Color(hex: 0xF6D38A), Color(hex: 0xDE9F38)],
                        startPoint: .topLeading, endPoint: .bottomTrailing)
-    }
-
-    /// Legal-only footer — Restore lives on its own row above (App Store-safe,
-    /// not mixed with the legal links).
-    private var footer: some View {
-        HStack(spacing: AppSpacing.sm) {
-            Link("Privacy", destination: LegalLinks.privacy)
-            Text("·").foregroundStyle(.white.opacity(0.4))
-            Link("Terms", destination: LegalLinks.terms)
-        }
-        .font(AppTypography.caption)
-        .foregroundStyle(.white.opacity(0.65))
-        .padding(.top, AppSpacing.xs)
     }
 
     // MARK: Actions

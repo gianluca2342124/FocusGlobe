@@ -446,7 +446,11 @@ final class FocusOnlineModel: ObservableObject {
                                       roomPublicID: flightRoom?.id,
                                       startedAt: Date(), expectedEndAt: expectedEndAt,
                                       isPaused: false, focusCategory: category,
-                                      balloonSkinID: profile.balloonSkinID)
+                                      balloonSkinID: profile.balloonSkinID,
+                                      // Display-level popover metadata: a plain
+                                      // PRO boolean + the fixed-catalog sound id.
+                                      isPro: appModel?.isPro ?? false,
+                                      soundID: appModel?.selectedJourneyAudio.id)
         let myID = profile.publicID
         // Seed the join-toast baseline for a room flight so the first in-flight
         // poll never toasts pre-existing members.
@@ -478,6 +482,11 @@ final class FocusOnlineModel: ObservableObject {
                     }
                 }
             }
+            // Every ONLINE flight listens for applause addressed to me for its
+            // whole duration (torn down in flightDidEnd).
+            await realtimeService.subscribeApplause(myID: myID) { [weak self] alias in
+                Task { @MainActor [weak self] in self?.receiveApplause(from: alias) }
+            }
             if let room = flightRoom {
                 // The OWNER propagates the real duration to the room so every
                 // co-member's bubble shows the same synchronized remaining time.
@@ -503,6 +512,51 @@ final class FocusOnlineModel: ObservableObject {
         if isPaused { sampleOverlap(activeOthers: 0) } else { lastOverlapSample = Date() }
     }
 
+    // MARK: Applause (small positive social ping between real pilots)
+
+    /// The alias whose applause just arrived (one-shot toast; the flight view
+    /// shows and clears it).
+    @Published private(set) var applauseFrom: String?
+    /// Per-recipient send cooldown (anti-spam) + a display throttle for bursts.
+    private var applauseSentAt: [String: Date] = [:]
+    private var lastApplauseShownAt: Date = .distantPast
+
+    /// Send applause to a real pilot. Returns false while that pilot is still in
+    /// the cooldown window (the UI shows a quiet "already applauded" state).
+    /// Delivery is a genuine realtime broadcast to the recipient's personal
+    /// topic — never a locally faked interaction; network failure is silent and
+    /// harmless (best-effort social ping).
+    @discardableResult
+    func applaud(_ pilot: OnlinePilot) async -> Bool {
+        if let last = applauseSentAt[pilot.id], Date().timeIntervalSince(last) < 45 { return false }
+        applauseSentAt[pilot.id] = Date()
+        let alias = profile?.displayName ?? "A pilot"
+        await realtimeService.sendApplause(to: pilot.id, fromAlias: alias)
+        return true
+    }
+
+    /// Whether applauding this pilot is currently on cooldown.
+    func applauseOnCooldown(for pilot: OnlinePilot) -> Bool {
+        if let last = applauseSentAt[pilot.id] { return Date().timeIntervalSince(last) < 45 }
+        return false
+    }
+
+    private func receiveApplause(from alias: String) {
+        // Burst throttle: at most one toast every 2 s even if several arrive.
+        guard Date().timeIntervalSince(lastApplauseShownAt) > 2 else { return }
+        lastApplauseShownAt = Date()
+        applauseFrom = alias
+        appModel?.haptics.rewardClaim()
+    }
+
+    func clearApplause() { applauseFrom = nil }
+
+    /// REAL pilots currently in a Sky — for the pre-flight joining screen (no
+    /// presence is published yet; this is a plain read). Never fabricated.
+    func previewPilots(skyID: String) async -> [OnlinePilot] {
+        await flightService.fetchPilots(skyID: skyID, excluding: myUserID, limit: 8)
+    }
+
     func flightDidEnd(sessionID: String) {
         guard flightSessionID == sessionID else { return }
         pilotPollTask?.cancel()
@@ -523,6 +577,7 @@ final class FocusOnlineModel: ObservableObject {
             await flightService.stopPublishing()
             await realtimeService.leaveSky()
             await realtimeService.unsubscribeRoom()
+            await realtimeService.unsubscribeApplause()
             if room != nil, let serverSession {
                 // Server-verified completion: the friend bonus is decided from
                 // server rows, once, idempotently.

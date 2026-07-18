@@ -112,19 +112,38 @@ struct SettingsView: View {
                           isOn: Binding(get: { appModel.notifications.isEnabled },
                                         set: { appModel.tapFeedback(); appModel.setNotificationsEnabled($0) }))
                 RowDivider()
-                ToggleRow(systemImage: "eye.slash", title: "Clean flight mode",
-                          subtitle: "Start flights with minimal controls",
-                          isOn: Binding(get: { appModel.isCleanFlightMode },
-                                        set: { appModel.tapFeedback(); appModel.setCleanFlightMode($0) }))
+                // The pilot's PRIVATE preferred name — personalises the Home
+                // greeting only; it is never published as the Online alias.
+                HStack(spacing: AppSpacing.sm) {
+                    Image(systemName: "person.text.rectangle")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(AppColors.brand)
+                        .frame(width: 30)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Your name")
+                            .font(AppTypography.callout)
+                            .foregroundStyle(AppColors.textPrimary)
+                        TextField("Add your name", text: Binding(
+                            get: { appModel.profile.name ?? "" },
+                            set: { appModel.profile.name = $0.isEmpty ? nil : String($0.prefix(24)) }))
+                            .font(AppTypography.caption)
+                            .foregroundStyle(AppColors.textSecondary)
+                            .textInputAutocapitalization(.words)
+                            .autocorrectionDisabled()
+                    }
+                    Spacer()
+                }
+                .padding(.vertical, 6)
+
             }
         }
     }
 
     private var ultraSection: some View {
-        SettingsCard(title: "FocusGlobe Ultra") {
+        SettingsCard(title: "FocusGlobe PRO") {
             VStack(spacing: 0) {
                 if appModel.isPro {
-                    SettingsRow(systemImage: "checkmark.seal.fill", title: "Ultra is active",
+                    SettingsRow(systemImage: "checkmark.seal.fill", title: "PRO is active",
                                 subtitle: "Thank you for your support", tint: AppColors.success,
                                 trailing: AnyView(EmptyView()))
                     #if canImport(RevenueCatUI)
@@ -145,8 +164,8 @@ struct SettingsView: View {
                         appModel.tapFeedback()
                         router.presentPaywall()
                     } label: {
-                        SettingsRow(systemImage: "sparkles", title: "Unlock FocusGlobe Ultra",
-                                    subtitle: "No ads · Ultra skies & flights · exclusive extras", tint: AppColors.gold,
+                        SettingsRow(systemImage: "sparkles", title: "Unlock FocusGlobe PRO",
+                                    subtitle: "No ads · all PRO Skies & flights · exclusive extras", tint: AppColors.gold,
                                     trailing: AnyView(Image(systemName: "chevron.right")
                                         .font(.system(size: 13, weight: .semibold))
                                         .foregroundStyle(AppColors.textTertiary)))

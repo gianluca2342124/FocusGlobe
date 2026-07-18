@@ -100,6 +100,8 @@ actor PublicFlightService {
             let p_duration_seconds: Int
             let p_is_infinite: Bool
             let p_is_paused: Bool
+            let p_is_pro: Bool
+            let p_sound_id: String?
         }
         struct Payload: Decodable {
             let server_now: String?; let started_at: String?; let expected_end_at: String?
@@ -113,7 +115,9 @@ actor PublicFlightService {
                                     p_focus_category: presence.focusCategory,
                                     p_duration_seconds: duration,
                                     p_is_infinite: isInfinite,
-                                    p_is_paused: presence.isPaused))
+                                    p_is_paused: presence.isPaused,
+                                    p_is_pro: presence.isPro,
+                                    p_sound_id: presence.soundID))
                 .execute().value
             return FlightPublishResult(serverNow: PostgresDate.parse(p.server_now),
                                        startedAt: PostgresDate.parse(p.started_at),
@@ -167,7 +171,9 @@ actor PublicFlightService {
                     isPaused: flight.pausedAt != nil,
                     focusCategory: flight.focusCategory,
                     allowsFriendRequest: profile?.allowFriendRequests ?? true,
-                    hasLiveSession: true))
+                    hasLiveSession: true,
+                    isPro: flight.isPro,
+                    soundID: flight.soundID))
             }
             return pilots
         } catch {
@@ -201,6 +207,7 @@ actor PublicFlightService {
                            lastHeartbeatAt: heartbeat,
                            isPaused: flight.pausedAt != nil,
                            focusCategory: flight.focusCategory,
-                           allowsFriendRequest: true, hasLiveSession: true)
+                           allowsFriendRequest: true, hasLiveSession: true,
+                           isPro: flight.isPro, soundID: flight.soundID)
     }
 }

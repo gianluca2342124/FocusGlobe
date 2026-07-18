@@ -33,6 +33,7 @@ struct StreakDetailsView: View {
                 VStack(spacing: AppSpacing.lg) {
                     hero
                     weekRow
+                    consistencyCard
                     todayStatus
                     goalsSection
                 }
@@ -47,6 +48,52 @@ struct StreakDetailsView: View {
         // Appearance-adaptive (light card + dark text in Light Mode); no forced dark.
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
+    }
+
+    // MARK: Focus consistency (the SAME shared model as Passport — one rule,
+    // one grid, identical day states everywhere) + the share action.
+
+    @State private var shareItems: [Any]? = nil
+
+    private var consistencyCard: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            HStack {
+                Text("YOUR FOCUS JOURNEY")
+                    .font(.system(size: 10.5, weight: .heavy, design: .rounded))
+                    .tracking(1.4)
+                    .foregroundStyle(.white.opacity(0.5))
+                Spacer()
+                Button {
+                    appModel.tapFeedback()
+                    if let image = FocusGridShare.renderImage(history: appModel.history,
+                                                              displayName: appModel.profile.name,
+                                                              currentStreak: streak) {
+                        shareItems = [image]
+                    } else {
+                        appModel.haptics.tap()
+                    }
+                } label: {
+                    Label("Share", systemImage: "square.and.arrow.up")
+                        .font(.system(size: 12.5, weight: .bold, design: .rounded))
+                        .foregroundStyle(AppColors.gold)
+                }
+                .buttonStyle(SoftPressStyle())
+                .accessibilityLabel("Share your focus grid")
+            }
+            FocusConsistencyGrid(history: appModel.history, weeks: 20, cellSize: 10, spacing: 2.5)
+            Text("Every gold square is a day you truly focused. Keep the sky lit.")
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(.white.opacity(0.55))
+        }
+        .padding(AppSpacing.md)
+        .background(RoundedRectangle(cornerRadius: 18, style: .continuous)
+            .fill(Color.white.opacity(0.06)))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
+            .strokeBorder(.white.opacity(0.10), lineWidth: 1))
+        .sheet(isPresented: Binding(get: { shareItems != nil },
+                                    set: { if !$0 { shareItems = nil } })) {
+            if let shareItems { ActivityShareSheet(items: shareItems) }
+        }
     }
 
     private func animateIn() {

@@ -619,7 +619,7 @@ struct OnboardingView: View {
                 .padding(.horizontal, 2)
             }
             VStack(spacing: AppSpacing.sm) {
-                AppPrimaryButton(title: "Try Premium", systemImage: "crown.fill") {
+                AppPrimaryButton(title: "Try FocusGlobe PRO", systemImage: "crown.fill") {
                     appModel.tapFeedback()
                     complete(thenPaywall: true)
                 }
@@ -686,7 +686,7 @@ struct OnboardingView: View {
     private var premiumBenefits: some View {
         VStack(spacing: AppSpacing.xs) {
             premiumBenefit("moon.stars.fill", "All premium Skies")
-            premiumBenefit("circle.circle.fill", "Premium balloon skins")
+            premiumBenefit("circle.circle.fill", "Exclusive PRO balloon skins")
             premiumBenefit("person.2.fill", "Fly with friends")
             premiumBenefit("bolt.fill", "2× Focus Coins on every flight")
             premiumBenefit("hand.thumbsup.fill", "No ads, ever")

@@ -44,7 +44,7 @@ struct FriendsView: View {
             AppBackground()
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
-                    ScreenHeader(title: "Friends", subtitle: "Focus feels better together", showsBack: false)
+                    ScreenHeader(title: "Friends", showsBack: false)
                     if !online.availability.isAvailable {
                         // One compact banner near the top — the unavailable
                         // state never dominates the whole page. Signed-out
@@ -171,7 +171,10 @@ struct FriendsView: View {
         let route = FlightRouteFactory.route(minutes: minutes, infinite: infinite,
                                              origin: origin, focusSky: sky)
         // The guest's timer counts down to the host's RAW server deadline through
-        // the shared clock — exact, skew-immune, no rounding.
+        // the shared clock — exact, skew-immune, no rounding. The curtain keeps
+        // Friends from flashing while the journey cover rises; the container
+        // then shows the private joining moment over the already-active flight.
+        router.raiseTakeoffCurtain()
         router.startJourney(origin: origin, route: route, intention: nil,
                             sharedEndsAt: room.endsAt)
     }

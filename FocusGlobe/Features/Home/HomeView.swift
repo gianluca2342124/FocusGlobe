@@ -25,6 +25,11 @@ struct HomeView: View {
     @State private var showBoostGift = false
     @State private var balloonFloat: CGFloat = 0
     @State private var streakPulse = false
+    /// True while an arrow tap is animating into a sentinel wrap page (the tap
+    /// normalises the index itself; the pager onChange must not double-jump).
+    @State private var arrowWrapping = false
+    /// Drives the Resume tab's one-time rise from behind Start Focus.
+    @State private var resumeTabIn = false
     /// The Sky the pager is resting on (an index into `FocusSky.all`).
     @State private var skyIndex = 0
     @State private var didInitSky = false
@@ -44,10 +49,25 @@ struct HomeView: View {
     var body: some View {
         ZStack {
             // The Sky pager IS the background: swiping travels between Skies.
+            // Sentinel pages at both ends (a copy of the last Sky before the
+            // first, and of the first after the last) make the carousel truly
+            // CIRCULAR: swiping past either end lands on identical content, then
+            // the selection is silently normalised with animations disabled — no
+            // visible jump, flash or reset, and the dots stay in step.
             TabView(selection: $skyIndex) {
+                if let last = FocusSky.all.last {
+                    SkyPreviewView(sky: last, animated: !reduceMotion)
+                        .tag(-1)
+                        .ignoresSafeArea()
+                }
                 ForEach(Array(FocusSky.all.enumerated()), id: \.element.id) { index, sky in
                     SkyPreviewView(sky: sky, animated: !reduceMotion)
                         .tag(index)
+                        .ignoresSafeArea()
+                }
+                if let first = FocusSky.all.first {
+                    SkyPreviewView(sky: first, animated: !reduceMotion)
+                        .tag(FocusSky.all.count)
                         .ignoresSafeArea()
                 }
             }
@@ -111,9 +131,24 @@ struct HomeView: View {
             }
         }
         // Travelling the pager: a soft haptic, and unlocked Skies become the
-        // active choice immediately (locked ones stay preview-only).
-        .onChange(of: skyIndex) { _, _ in
+        // active choice immediately (locked ones stay preview-only). Landing on
+        // a SENTINEL page (the circular wrap) normalises to the real index with
+        // animations disabled once the page has settled — the content is
+        // pixel-identical, so nothing visibly moves; sentinels never select a
+        // Sky, fire analytics or persist anything.
+        .onChange(of: skyIndex) { _, new in
             guard didInitSky else { return }
+            let n = FocusSky.all.count
+            if new == -1 || new == n {
+                guard !arrowWrapping else { return }   // the arrow tap normalises itself
+                let target = new == -1 ? n - 1 : 0
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    guard skyIndex == new else { return }
+                    var t = Transaction(); t.disablesAnimations = true
+                    withTransaction(t) { skyIndex = target }
+                }
+                return
+            }
             appModel.haptics.tap()
             if currentSkyUnlocked { appModel.selectSky(currentSky) }
         }
@@ -160,6 +195,9 @@ struct HomeView: View {
     private func beginTakeOff(route: Route, intention: String?) {
         pendingTakeoff = (route, intention)
         handingOff = true
+        // Raise the opaque curtain BEFORE the setup cover dismisses: the gap
+        // between the two presentation layers shows the curtain, never Home.
+        router.raiseTakeoffCurtain()
         showSetup = false
     }
 
@@ -177,6 +215,7 @@ struct HomeView: View {
 
     private func continueResumableJourney() {
         guard let journey = appModel.makeResumeJourney() else { return }
+        router.raiseTakeoffCurtain()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
             router.activeJourney = journey
         }
@@ -219,107 +258,81 @@ struct HomeView: View {
 
     // MARK: Top bar — streak ember (left) · coins + premium (right)
 
+    // One coherent circular control family (streak · reward spin · PRO), with
+    // Focus Coins as the matching expandable capsule — never four unrelated
+    // pill shapes. All targets ≥ 44 pt.
     private var topBar: some View {
-        HStack(alignment: .top, spacing: AppSpacing.xs) {
-            streakChip
-            CoinSpinButton { appModel.tapFeedback(); showCoinSpin = true }
+        HStack(alignment: .center, spacing: AppSpacing.xs) {
+            StreakCircleButton(streak: appModel.progress.currentStreak, pulsing: streakPulse) {
+                appModel.tapFeedback(); showStreak = true
+            }
+            CoinSpinCircleButton { appModel.tapFeedback(); showCoinSpin = true }
             Spacer()
             coinsChip
             if appModel.isPro {
-                proChip
+                ProCircleBadge { appModel.tapFeedback(); router.presentPaywall(context: .general) }
             } else {
-                CrownButton(size: Layout.pad(42, 50)) { appModel.tapFeedback(); router.presentPaywall() }
+                CrownButton(size: Layout.pad(46, 54)) {
+                    appModel.tapFeedback(); router.presentPaywall(context: .general)
+                }
             }
         }
         .padding(.top, AppSpacing.xs)
     }
 
-    /// The Pro badge — a subtle gold "Ultra" capsule with a soft glow.
-    private var proChip: some View {
-        HStack(spacing: 5) {
-            Image(systemName: "crown.fill")
-                .font(.system(size: Layout.pad(12, 14), weight: .bold))
-            Text("Ultra")
-                .font(.system(size: Layout.pad(13, 15), weight: .heavy, design: .rounded))
-        }
-        .foregroundStyle(Color(hex: 0x2B2510))
-        .padding(.horizontal, Layout.pad(11, 14))
-        .padding(.vertical, Layout.pad(8, 10))
-        .background(Capsule().fill(AppColors.gold))
-        .shadow(color: AppColors.gold.opacity(0.55), radius: 8, y: 0)
-        .accessibilityLabel("FocusGlobe Ultra is active")
-    }
-
+    /// Focus Coins — the one member of the family that expands horizontally
+    /// (balances grow to many digits) while sharing the same glass language.
     private var coinsChip: some View {
         Button { appModel.tapFeedback(); router.openStore() } label: {
             HStack(spacing: 5) {
                 FocusCoinIcon(size: Layout.pad(22, 25))
                 Text(Formatters.miles(appModel.focusCoins))
                     .font(.system(size: Layout.pad(14, 17), weight: .heavy, design: .rounded))
+                    .monospacedDigit()
                     .foregroundStyle(.white)
+                    .lineLimit(1).minimumScaleFactor(0.7)
             }
-            .padding(.leading, Layout.pad(8, 11))
-            .padding(.trailing, Layout.pad(11, 14))
-            .padding(.vertical, Layout.pad(6, 8))
-            .background(Capsule().fill(.white.opacity(0.1)))
-            .overlay(Capsule().strokeBorder(.white.opacity(0.12), lineWidth: 1))
+            .padding(.leading, Layout.pad(9, 12))
+            .padding(.trailing, Layout.pad(12, 15))
+            .frame(height: Layout.pad(46, 54))
+            .background(Capsule().fill(.ultraThinMaterial))
+            .overlay(Capsule().fill(AppColors.neutralBase.opacity(0.30)))
+            .overlay(Capsule().strokeBorder(.white.opacity(0.14), lineWidth: 1))
         }
-        .buttonStyle(SoftPressStyle())
+        .buttonStyle(SoftPressStyle(scale: 0.94))
         .accessibilityLabel("\(appModel.focusCoins) Focus Coins. Opens the Store.")
-    }
-
-    /// The streak ember — a warm flame that glows and softly pulses while the
-    /// streak is alive (the app's most emotional number, upper-left).
-    private var streakChip: some View {
-        let streak = appModel.progress.currentStreak
-        let alive = streak > 0
-        return Button {
-            appModel.tapFeedback()
-            showStreak = true
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "flame.fill")
-                    .font(.system(size: Layout.pad(15, 18), weight: .bold))
-                    .foregroundStyle(
-                        LinearGradient(colors: alive ? [Color(hex: 0xFFB65C), Color(hex: 0xF2643C)]
-                                                     : [.white.opacity(0.5), .white.opacity(0.5)],
-                                       startPoint: .top, endPoint: .bottom))
-                Text("\(streak)")
-                    .font(.system(size: Layout.pad(15, 19), weight: .heavy, design: .rounded))
-                    .foregroundStyle(.white)
-            }
-            .padding(.horizontal, Layout.pad(12, 15))
-            .padding(.vertical, Layout.pad(8, 10))
-            .background(Capsule().fill(.white.opacity(0.1)))
-            .overlay(Capsule().strokeBorder(
-                (alive ? Color(hex: 0xF2643C).opacity(0.4) : Color.white.opacity(0.12)), lineWidth: 1))
-            .shadow(color: Color(hex: 0xF2643C).opacity(alive ? (streakPulse ? 0.6 : 0.28) : 0),
-                    radius: streakPulse ? 12 : 7, y: 0)
-        }
-        .buttonStyle(SoftPressStyle())
-        .accessibilityLabel("\(streak) day streak. Opens streak details.")
     }
 
     // MARK: Greeting + selected Sky
 
-    // The hero text: just the greeting, big and premium — no date line, no
-    // instructions, nothing competing with it.
+    /// The refined greeting: a smaller contextual daypart line, and — only when
+    /// the pilot gave a REAL preferred name — their name beneath with stronger
+    /// emphasis. No blank second line, never the generated online alias.
     private var greetingBlock: some View {
-        Text(personalGreeting)
-            .font(.system(size: Layout.pad(44, 60), weight: .semibold, design: .serif))
-            .foregroundStyle(.white)
-            .minimumScaleFactor(0.55)
-            .lineLimit(1)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, AppSpacing.sm)
-            .shadow(color: .black.opacity(0.4), radius: 8, y: 2)
+        VStack(alignment: .leading, spacing: 0) {
+            Text(viewModel.greeting + (preferredName != nil ? "," : ""))
+                .font(.system(size: Layout.pad(23, 29), weight: .medium, design: .serif))
+                .foregroundStyle(.white.opacity(preferredName != nil ? 0.82 : 1))
+            if let preferredName {
+                Text(preferredName)
+                    .font(.system(size: Layout.pad(36, 46), weight: .semibold, design: .serif))
+                    .foregroundStyle(.white)
+                    .lineLimit(1).minimumScaleFactor(0.5)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, AppSpacing.sm)
+        .shadow(color: .black.opacity(0.4), radius: 8, y: 2)
+        .animation(.easeInOut(duration: 0.3), value: viewModel.greeting)
+        .accessibilityElement(children: .combine)
     }
 
-    private var personalGreeting: String {
-        if let name = appModel.profile.name, !name.isEmpty {
-            return "\(viewModel.greeting), \(name)"
-        }
-        return viewModel.greeting
+    /// A REAL user-provided name only (set in Settings) — trimmed, and never
+    /// the auto-generated Sky-pilot alias.
+    private var preferredName: String? {
+        guard let raw = appModel.profile.name?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !raw.isEmpty else { return nil }
+        return raw
     }
 
     // MARK: Edge arrows (flank the hero at the screen edges)
@@ -337,15 +350,26 @@ struct HomeView: View {
         .offset(y: -28)
     }
 
-    /// Move one Sky in either direction, wrapping around the ends (last → first
-    /// and first → last) with a soft haptic tick on the wrap.
+    /// Move one Sky in either direction. A wrap ANIMATES into the adjacent
+    /// sentinel page (identical content to the far end), then silently
+    /// normalises the index with animations disabled — so last → first and
+    /// first → last look exactly like any other page turn.
     private func stepSky(_ delta: Int) {
         let n = FocusSky.all.count
         guard n > 0 else { return }
-        let wrapping = (delta > 0 && skyIndex == n - 1) || (delta < 0 && skyIndex == 0)
-        if wrapping { appModel.haptics.bubble() }
-        let next = ((skyIndex + delta) % n + n) % n
-        withAnimation(.easeInOut(duration: 0.35)) { skyIndex = next }
+        let target = skyIndex + delta
+        if target == -1 || target == n {
+            appModel.haptics.bubble()
+            arrowWrapping = true
+            withAnimation(.easeInOut(duration: 0.35)) { skyIndex = target }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.38) {
+                var t = Transaction(); t.disablesAnimations = true
+                withTransaction(t) { skyIndex = (target == -1 ? n - 1 : 0) }
+                arrowWrapping = false
+            }
+        } else {
+            withAnimation(.easeInOut(duration: 0.35)) { skyIndex = max(0, min(n - 1, target)) }
+        }
     }
 
     private func edgeArrow(system: String, action: @escaping () -> Void) -> some View {
@@ -384,72 +408,95 @@ struct HomeView: View {
             }
             .animation(.easeInOut(duration: 0.25), value: skyIndex)
 
-            if appModel.resumableJourney != nil {
-                resumeBanner
-            }
-
             // A subtle tag while a Coins Boost is armed, sitting just above the
             // Start Focus button so the pilot sees it before flying.
             if appModel.isCoinBoostArmed {
                 CoinBoostTag().environmentObject(appModel)
             }
 
-            if currentSkyUnlocked {
-                AppPrimaryButton(title: "Start Focus", systemImage: "arrow.up") {
-                    appModel.tapFeedback()
-                    appModel.selectSky(currentSky)
-                    showSetup = true
+            // Start Focus stays THE action; a resumable flight appears as a small
+            // tab rising from BEHIND its upper edge — one attached action area,
+            // both independently tappable, no stacked second card.
+            ZStack(alignment: .top) {
+                if appModel.resumableJourney != nil {
+                    resumeTab
+                        .offset(y: resumeTabIn ? -Layout.pad(34, 38) : 0)
+                        .opacity(resumeTabIn ? 1 : 0)
+                        .zIndex(0)
                 }
-            } else {
-                lockedCTA
+                Group {
+                    if currentSkyUnlocked {
+                        AppPrimaryButton(title: "Start Focus", systemImage: "arrow.up") {
+                            appModel.tapFeedback()
+                            appModel.selectSky(currentSky)
+                            showSetup = true
+                        }
+                    } else {
+                        lockedCTA
+                    }
+                }
+                .zIndex(1)
+            }
+            .padding(.top, appModel.resumableJourney != nil ? Layout.pad(30, 34) : 0)
+            .onAppear { riseResumeTab() }
+            .onChange(of: appModel.resumableJourney != nil) { _, has in
+                if has { resumeTabIn = false; riseResumeTab() } else { resumeTabIn = false }
             }
         }
     }
 
-    /// A subtle, non-blocking resume card (replaces the old modal pop-up): shown
-    /// only when an unfinished flight is saved. Tapping continues it.
-    private var resumeBanner: some View {
+    /// Animate the Resume tab into view once Home has settled — a short premium
+    /// spring (instant under Reduce Motion), never replayed by unrelated state.
+    private func riseResumeTab() {
+        guard appModel.resumableJourney != nil, !resumeTabIn else { return }
+        if reduceMotion { resumeTabIn = true; return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.82)) { resumeTabIn = true }
+        }
+    }
+
+    /// The compact Resume tab that peeks from behind Start Focus.
+    private var resumeTab: some View {
         Button {
             appModel.tapFeedback()
             continueResumableJourney()
         } label: {
-            HStack(spacing: AppSpacing.sm) {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(AppColors.gold)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Resume your flight")
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                    Text("You have an unfinished flight")
-                        .font(.system(size: 11.5, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.6))
-                }
-                Spacer()
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.uturn.up")
+                    .font(.system(size: 11, weight: .heavy))
+                Text("Resume your flight")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.5))
+                    .font(.system(size: 10, weight: .bold))
+                    .opacity(0.7)
             }
-            .padding(.horizontal, AppSpacing.md)
-            .padding(.vertical, 11)
+            .foregroundStyle(Color(hex: 0x2B2510))
+            .padding(.horizontal, 16)
+            .padding(.top, 9)
+            // Taller than its visible lip: the lower part stays tucked behind
+            // the Start Focus capsule, so the tab reads as attached to it.
+            .frame(height: Layout.pad(34, 38) + 16, alignment: .top)
             .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.black.opacity(0.26)))
-                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .strokeBorder(AppColors.gold.opacity(0.3), lineWidth: 1))
+                UnevenRoundedRectangle(topLeadingRadius: 14, bottomLeadingRadius: 0,
+                                       bottomTrailingRadius: 0, topTrailingRadius: 14,
+                                       style: .continuous)
+                    .fill(AppColors.gold)
             )
         }
-        .buttonStyle(SoftPressStyle(scale: 0.99))
+        .buttonStyle(SoftPressStyle(scale: 0.97))
+        .accessibilityLabel("Resume your unfinished flight")
     }
 
-    /// One dot per Sky, the selected one stretched into a gold capsule.
+    /// One dot per Sky, the selected one stretched into a gold capsule. The
+    /// index is normalised so the sentinel wrap pages light the correct dot.
     private var skyDots: some View {
-        HStack(spacing: 5) {
+        let n = max(1, FocusSky.all.count)
+        let current = ((skyIndex % n) + n) % n
+        return HStack(spacing: 5) {
             ForEach(FocusSky.all.indices, id: \.self) { i in
                 Capsule()
-                    .fill(i == skyIndex ? AppColors.gold : .white.opacity(0.30))
-                    .frame(width: i == skyIndex ? 16 : 5, height: 5)
+                    .fill(i == current ? AppColors.gold : .white.opacity(0.30))
+                    .frame(width: i == current ? 16 : 5, height: 5)
             }
         }
     }
@@ -474,9 +521,8 @@ struct HomeView: View {
             .foregroundStyle(Color(hex: 0x14120E))
             .frame(maxWidth: .infinity)
             .frame(height: Layout.pad(56, 64))
-            .background(RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color(hex: 0xF4EFE4)))
-            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
+            .background(Capsule(style: .continuous).fill(Color(hex: 0xF4EFE4)))
+            .overlay(Capsule(style: .continuous)
                 .strokeBorder(AppColors.gold.opacity(0.55), lineWidth: 1.5))
             .shadow(color: .black.opacity(0.3), radius: 12, y: 6)
         }
@@ -591,10 +637,10 @@ private struct SkyPreviewFlightView: View {
 
     private var actions: some View {
         VStack(spacing: AppSpacing.sm) {
-            AppPrimaryButton(title: "Unlock FocusGlobe Pro", systemImage: "crown.fill") {
+            AppPrimaryButton(title: "Unlock FocusGlobe PRO", systemImage: "crown.fill") {
                 appModel.tapFeedback()
                 dismiss()
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { router.presentPaywall() }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { router.presentPaywall(context: .sky) }
             }
             if isPremiumOnly {
                 softSecondary(title: "Maybe later") { dismiss() }
@@ -705,13 +751,13 @@ private struct SkyPreviewFlightView: View {
     private var subtitle: String {
         switch sky.unlockRequirement {
         case .premium:
-            return "Upgrade to FocusGlobe Pro to unlock \(sky.name)."
+            return "Upgrade to FocusGlobe PRO to unlock \(sky.name)."
         case .invite(let n):
-            return "Invite \(n) friend\(n == 1 ? "" : "s") or upgrade to FocusGlobe Pro to unlock \(sky.name)."
+            return "Invite \(n) friend\(n == 1 ? "" : "s") or upgrade to FocusGlobe PRO to unlock \(sky.name)."
         case .focusMinutes(let n):
-            return "Focus \(n.formatted()) minutes or upgrade to FocusGlobe Pro to unlock \(sky.name)."
+            return "Focus \(n.formatted()) minutes or upgrade to FocusGlobe PRO to unlock \(sky.name)."
         case .streakDays(let n):
-            return "Reach a \(n)-day streak or upgrade to FocusGlobe Pro to unlock \(sky.name)."
+            return "Reach a \(n)-day streak or upgrade to FocusGlobe PRO to unlock \(sky.name)."
         case .free:
             return "Fly \(sky.name) any time."
         }

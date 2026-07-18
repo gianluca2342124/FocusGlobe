@@ -21,7 +21,7 @@ struct CrownButton: View {
                 }
         }
         .buttonStyle(SoftPressStyle())
-        .accessibilityLabel("FocusGlobe Pro")
+        .accessibilityLabel("FocusGlobe PRO")
     }
 }
 

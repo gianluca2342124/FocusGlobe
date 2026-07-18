@@ -40,6 +40,10 @@ struct ActiveFlightRow: Codable, Sendable {
     var status: String
     var lastHeartbeatAt: String
     var expiresAt: String
+    /// Display metadata (optional so rows written before the metadata migration
+    /// — or by older clients — still decode cleanly).
+    var isPro: Bool?
+    var soundID: String?
 
     enum CodingKeys: String, CodingKey {
         case userID = "user_id"
@@ -53,6 +57,8 @@ struct ActiveFlightRow: Codable, Sendable {
         case status
         case lastHeartbeatAt = "last_heartbeat_at"
         case expiresAt = "expires_at"
+        case isPro = "is_pro"
+        case soundID = "sound_id"
     }
 }
 

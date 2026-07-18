@@ -49,7 +49,7 @@ struct BalloonSkin: Identifiable, Hashable {
         case .free:             return "Default"
         case .journeys(let n):  return "\(n) expeditions"
         case .miles(let n):     return "\(n) miles"
-        case .pro:              return "Pro"
+        case .pro:              return "PRO"
         }
     }
 

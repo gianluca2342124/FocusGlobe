@@ -6,7 +6,14 @@ import SwiftUI
 struct FocusSessionContainerView: View {
     let journey: Journey
     @EnvironmentObject private var appModel: AppModel
+    @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var online: FocusOnlineModel
     @StateObject private var vm: FocusSessionViewModel
+    /// The Online-only "pilots are joining" moment shown over the freshly
+    /// mounted flight (Solo skips it entirely). It always completes — min beat,
+    /// pilot fetch, or hard timeout — so it can never deadlock navigation.
+    @State private var joining = false
+    @State private var decidedJoining = false
 
     init(journey: Journey) {
         self.journey = journey
@@ -22,12 +29,35 @@ struct FocusSessionContainerView: View {
                 FocusSessionView(vm: vm)
                     .transition(.opacity)
             }
+            if joining {
+                OnlineJoiningView(mode: joiningMode) {
+                    withAnimation(.easeInOut(duration: 0.45)) { joining = false }
+                }
+                .transition(.opacity)
+                .zIndex(2)
+            }
         }
         .onAppear {
             vm.attach(appModel: appModel)
             vm.startIfNeeded()
+            // Decide the joining phase exactly once per cover: ONLINE journeys
+            // (host or invited guest) get the connection moment; Solo never.
+            if !decidedJoining {
+                decidedJoining = true
+                joining = online.flightMode.isOnline
+            }
+            // The journey surface is mounted — the take-off curtain (raised at
+            // the Boarding cut so Home can never flash) comes down beneath us.
+            router.lowerTakeoffCurtain()
         }
         .onDisappear { vm.tearDown() }
+    }
+
+    private var joiningMode: OnlineJoiningView.Mode {
+        if journey.sharedEndsAt != nil || online.isPrivateFlight {
+            return .privateGuest(hostAlias: nil)
+        }
+        return .global(FocusSky.matching(routeID: journey.route.id) ?? FocusSky.byID(appModel.selectedSky.id))
     }
 }
 
@@ -74,7 +104,10 @@ struct FocusSessionView: View {
     private var isOnlineFlight: Bool { online.flightMode.isOnline }
     /// Private-room participants get persistent identity bubbles (hidden in
     /// Clean Mode to keep it minimal).
-    private var roomBubbleMode: Bool { online.isPrivateFlight && !cleanMode }
+    /// Persistent social labels (YOU + alias/countdown bubbles) are on for
+    /// EVERY online flight — Global and Private alike; Solo never shows them.
+    /// Clean Mode hides them with the rest of the chrome.
+    private var roomBubbleMode: Bool { isOnlineFlight && !cleanMode }
 
     private func quickAddFriend(_ pilot: OnlinePilot) {
         appModel.tapFeedback()
@@ -324,6 +357,29 @@ struct FocusSessionView: View {
             PilotProfileSheet(pilot: pilot)
                 .environmentObject(online).environmentObject(appModel)
         }
+        // A quiet, elegant applause moment when another pilot applauds ME —
+        // auto-dismisses; bursts are throttled in the model.
+        .overlay(alignment: .top) {
+            if let from = online.applauseFrom {
+                HStack(spacing: 8) {
+                    Text("👏")
+                    Text("\(from) applauds your focus")
+                        .font(.system(size: 13.5, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                }
+                .padding(.horizontal, 16).padding(.vertical, 10)
+                .background(Capsule().fill(.ultraThinMaterial))
+                .overlay(Capsule().fill(AppColors.gold.opacity(0.22)))
+                .overlay(Capsule().strokeBorder(.white.opacity(0.2), lineWidth: 1))
+                .padding(.top, 54)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+                .task {
+                    try? await Task.sleep(nanoseconds: 2_600_000_000)
+                    withAnimation(.easeOut(duration: 0.35)) { online.clearApplause() }
+                }
+            }
+        }
+        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: online.applauseFrom)
         // Invite Friends hands ONE link to the native share sheet — no custom UI.
         #if canImport(UIKit)
         .sheet(item: Binding(get: { shareInviteURL.map { FlightShareURL(url: $0) } },
@@ -349,7 +405,6 @@ struct FocusSessionView: View {
             // Anchor the display clock exactly once. Seeding from the engine's
             // live elapsed makes a resumed flight continue from the right point;
             // a fresh flight anchors at now.
-            cleanMode = appModel.isCleanFlightMode
             if flightStartedAt == nil {
                 let anchor = Date().addingTimeInterval(-vm.timer.liveElapsed)
                 flightStartedAt = anchor
@@ -698,7 +753,8 @@ struct FocusSessionView: View {
                     showLobby = true
                 },
                 onCleanMode: {
-                    appModel.setCleanFlightMode(true)
+                    // Session-local only: Clean Mode is an intentional in-flight
+                    // action and never persists as a future default.
                     withAnimation(.easeInOut(duration: 0.3)) {
                         showControlsPanel = false
                         cleanMode = true
@@ -799,8 +855,6 @@ private struct FlightControlsPanel: View {
     let onCleanMode: () -> Void
     @EnvironmentObject private var appModel: AppModel
 
-    private var shielded: Bool { appModel.profile.focusShieldOptIn }
-
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
             Text("FLIGHT CONTROLS")
@@ -819,13 +873,6 @@ private struct FlightControlsPanel: View {
                 action: onToggleMute)
 
             soundChips
-
-            row(icon: shielded ? "shield.fill" : "shield.slash",
-                title: shielded ? "Focus Shield on" : "Focus Shield off",
-                subtitle: "Ground distracting apps") {
-                withAnimation(.snappy(duration: 0.2)) { appModel.profile.focusShieldOptIn = !shielded }
-                appModel.haptics.tap()
-            }
 
             row(icon: "eye.slash", title: "Clean mode",
                 subtitle: "Hide controls, keep a tiny timer", action: onCleanMode)
