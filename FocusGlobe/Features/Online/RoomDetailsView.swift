@@ -8,7 +8,7 @@ struct RoomDetailsView: View {
     @EnvironmentObject private var online: FocusOnlineModel
     @EnvironmentObject private var appModel: AppModel
 
-    private var sky: FocusSky { FocusSky.byID(room.skyID) ?? .goldenHour }
+    private var sky: FocusSky { FocusSky.byID(room.skyID) ?? .defaultFree }
 
     var body: some View {
         HStack(spacing: AppSpacing.sm) {

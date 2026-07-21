@@ -306,7 +306,7 @@ struct HomeView: View {
             if appModel.isPro {
                 ProCircleBadge { appModel.tapFeedback(); router.presentPaywall(context: .general) }
             } else {
-                CrownButton(size: Layout.pad(46, 54)) {
+                CrownButton(size: Layout.pad(46, 54), onWhite: true) {
                     appModel.tapFeedback(); router.presentPaywall(context: .general)
                 }
             }
@@ -323,15 +323,17 @@ struct HomeView: View {
                 Text(Formatters.miles(appModel.focusCoins))
                     .font(.system(size: Layout.pad(14, 17), weight: .heavy, design: .rounded))
                     .monospacedDigit()
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color(hex: 0x14120E))
                     .lineLimit(1).minimumScaleFactor(0.7)
             }
             .padding(.leading, Layout.pad(9, 12))
             .padding(.trailing, Layout.pad(12, 15))
             .frame(height: Layout.pad(46, 54))
-            .background(Capsule().fill(.ultraThinMaterial))
-            .overlay(Capsule().fill(AppColors.neutralBase.opacity(0.30)))
-            .overlay(Capsule().strokeBorder(.white.opacity(0.14), lineWidth: 1))
+            // Genuine white capsule with dark digits — matches the circular
+            // control family and the Start Focus pill (not a dim grey glass).
+            .background(Capsule().fill(AppColors.ctaFill)
+                .shadow(color: .black.opacity(0.22), radius: 12, y: 6))
+            .overlay(Capsule().strokeBorder(Color(hex: 0x26221D).opacity(0.08), lineWidth: 1))
         }
         .buttonStyle(SoftPressStyle(scale: 0.94))
         .accessibilityLabel("\(appModel.focusCoins) Focus Coins. Opens the Store.")
@@ -410,12 +412,14 @@ struct HomeView: View {
         Button(action: action) {
             Image(systemName: system)
                 .font(.system(size: Layout.pad(19, 23), weight: .bold))
-                .foregroundStyle(.white.opacity(0.92))
+                // A genuine white disc with a dark chevron — reads as an
+                // intentional control on every Sky, not a dim grey smudge.
+                // (This sits OUTSIDE the force-dark chrome, so literal colours.)
+                .foregroundStyle(Color(hex: 0x14120E))
                 .frame(width: Layout.pad(48, 56), height: Layout.pad(48, 56))
-                .background(Circle().fill(.ultraThinMaterial))
-                .overlay(Circle().fill(Color.black.opacity(0.18)))
-                .overlay(Circle().strokeBorder(.white.opacity(0.16), lineWidth: 1))
-                .shadow(color: .black.opacity(0.28), radius: 9, y: 4)
+                .background(Circle().fill(Color(hex: 0xF4EFE4))
+                    .shadow(color: .black.opacity(0.28), radius: 12, y: 6))
+                .overlay(Circle().strokeBorder(Color(hex: 0x26221D).opacity(0.08), lineWidth: 1))
         }
         .buttonStyle(SoftPressStyle())
         .accessibilityLabel(system == "chevron.left" ? "Previous Sky" : "Next Sky")

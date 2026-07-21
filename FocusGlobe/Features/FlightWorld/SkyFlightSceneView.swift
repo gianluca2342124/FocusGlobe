@@ -44,18 +44,23 @@ struct SkyFlightSceneView: View {
         GeometryReader { geo in
             let W = geo.size.width
             let H = max(1, geo.size.height)
-            TimelineView(.animation(minimumInterval: animated ? 1.0 / 30.0 : 5.0)) { _ in
-                let t = animated ? max(0, elapsed()) : 0
+            TimelineView(.animation(minimumInterval: animated ? 1.0 / 30.0 : 600)) { _ in
+                // Static frame: a fixed, SETTLED moment (celestial faded in,
+                // scenery composed) — a constant, so Reduce Motion and off-
+                // screen previews show no movement at all, never the bare t=0
+                // frame that hides the celestial bodies.
+                let t = animated ? max(0, elapsed()) : 24
                 ZStack {
                     gradientField(W: W, H: H, t: t)
                     atmosphere(W: W, H: H, t: t)
                     celestial(W: W, H: H, t: t)
                     effects(W: W, H: H, t: t)
-                    // Layered silhouette planes with glacial parallax — the
-                    // depth between the vast sky above and the Ground below.
-                    SkyDepthScenery(sky: sky, t: t, horizon: 0.82, intensity: 0.9)
+                    // The integrated living scenery IS the ground now: authored
+                    // per-Sky silhouette planes that skirt to the physical bottom
+                    // (no separate static Ground plate — that old PNG card sat
+                    // frozen in front of the parallax and read as a seam).
+                    SkyDepthScenery(sky: sky, t: t, horizon: 0.82, intensity: 0.95)
                     weather(W: W, H: H, t: t)
-                    groundLayer(W: W, H: H)
                     #if DEBUG
                     if livingSkyInspectorEnabled { inspector(t: t) }
                     #endif
@@ -267,16 +272,29 @@ struct SkyFlightSceneView: View {
                 .position(x: W * 0.26 + drift, y: H * 0.16)
                 .opacity(fadeIn * 0.8)
         case "galaxy-drift":
-            softPlanet(d: W * 0.14)
-                .position(x: W * 0.24 + drift, y: H * 0.18)
-                .opacity(fadeIn * 0.9)
+            ZStack {
+                softPlanet(d: W * 0.14)
+                    .position(x: W * 0.24 + drift, y: H * 0.18)
+                // A tiny distant second world for depth, far to the other side.
+                softPlanet(d: W * 0.05)
+                    .position(x: W * 0.82 - drift, y: H * 0.30)
+                    .opacity(0.7)
+            }
+            .opacity(fadeIn * 0.9)
         case "deep-space":
             ZStack {
                 galaxySmudge(W: W, H: H)
-                softPlanet(d: W * 0.10)
-                    .position(x: W * 0.78 + drift, y: H * 0.22)
+                // The hero: a Saturn-like ringed planet, high and to the side so
+                // it never sits behind the timer or balloon. Slow parallax.
+                SkyCosmic.ringedPlanet(d: W * 0.22)
+                    .position(x: W * 0.72 + drift * 1.6, y: H * 0.24)
+                // A small moon at a different depth.
+                softMoon(d: W * 0.07, dim: true)
+                    .position(x: W * 0.2 - drift, y: H * 0.32)
+                // A very rare, very distant UFO — an easter egg, not a fixture.
+                SkyCosmic.rareUFO(W: W, H: H, t: t, k: 1.0, seed: skySeed)
             }
-            .opacity(fadeIn * 0.85)
+            .opacity(fadeIn * 0.9)
         default:
             EmptyView()
         }
@@ -747,54 +765,12 @@ struct SkyFlightSceneView: View {
         }
     }
 
-    // MARK: 6 — The permanent Ground
-
-    /// The Sky's Ground artwork, anchored to the bottom for the WHOLE flight —
-    /// never scrolling, never fading, never repeating. Its top edge dissolves
-    /// into the sky, and a whisper of the current palette settles over it.
-    @ViewBuilder private func groundLayer(W: CGFloat, H: CGFloat) -> some View {
-        let gh = H * 0.30
-        let tintColor = SkyGradientTimeline.stops(skyID: sky.id, at: max(0, elapsed())).last ?? sky.glowColor
-        Group {
-            #if canImport(UIKit)
-            if let ui = UIImage(named: sky.groundAssetName) {
-                Image(uiImage: ui)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: W, height: gh, alignment: .top)
-                    .clipped()
-                    .mask(LinearGradient(stops: [
-                        .init(color: .clear, location: 0),
-                        .init(color: .black, location: 0.3),
-                        .init(color: .black, location: 1),
-                    ], startPoint: .top, endPoint: .bottom))
-                    .overlay(LinearGradient(colors: [.clear, tintColor.opacity(0.16)],
-                                            startPoint: .top, endPoint: .bottom))
-            } else {
-                proceduralGround(W: W, H: H)
-            }
-            #else
-            proceduralGround(W: W, H: H)
-            #endif
-        }
-        .frame(width: W, height: gh)
-        .position(x: W / 2, y: H - gh / 2)
-    }
-
-    /// Fallback ground: the Sky's landmark silhouette resting low, permanent.
-    private func proceduralGround(W: CGFloat, H: CGFloat) -> some View {
-        ZStack(alignment: .bottom) {
-            LinearGradient(colors: [.clear, Color.black.opacity(0.45)],
-                           startPoint: .top, endPoint: .bottom)
-            LandmarkSilhouette(landmark: sky.landmark)
-                .fill(Color.black.opacity(0.3))
-                .frame(width: W * 1.15, height: H * 0.16)
-                .offset(y: -H * 0.03)
-            LandmarkSilhouette(landmark: sky.landmark)
-                .fill(Color.black.opacity(0.5))
-                .frame(width: W * 1.3, height: H * 0.12)
-        }
-    }
+    // MARK: 6 — (The old static Ground plate has been removed.)
+    //
+    // The bottom of the world is now the integrated SkyDepthScenery, whose
+    // authored per-Sky planes skirt to the physical bottom of the frame. There
+    // is no separate Ground image/silhouette layer any more — it read as a
+    // frozen foreground card sitting in front of the living parallax scenery.
 
     #if DEBUG
     private func inspector(t: Double) -> some View {

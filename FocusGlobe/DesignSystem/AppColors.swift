@@ -23,6 +23,17 @@ enum AppColors {
     static let neutralRaised = Color(hex: 0x1E1D29)
     /// The tab-bar surface: the same #181721 by night, clean warm white by day.
     static let tabBarFill = Color.dynamic(light: 0xFCF7EC, dark: 0x181721)
+    /// The Store product panel: warm paper by day, the #181721 neutral by night
+    /// (dark value byte-identical to the old neutralBase, so Dark is unchanged).
+    static let storePanel = Color.dynamic(light: 0xFAF4E7, dark: 0x181721)
+    /// A raised item-card surface inside the Store panel.
+    static func storeCard(selected: Bool) -> Color {
+        Color.dynamic(light: 0xFFFFFF, lightAlpha: selected ? 0.95 : 0.72,
+                      dark: 0xFFFFFF, darkAlpha: selected ? 0.10 : 0.05)
+    }
+    /// The neutral hairline on Store cards / the panel edge.
+    static let storeCardStroke = Color.dynamic(light: 0x26221D, lightAlpha: 0.08,
+                                               dark: 0xFFFFFF, darkAlpha: 0.07)
 
     // MARK: Backgrounds  (the #181721 neutral by night / soft warm paper by day)
     static let backgroundTop    = Color.dynamic(light: 0xF7F0E4, dark: 0x181721)

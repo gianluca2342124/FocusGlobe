@@ -104,6 +104,12 @@ struct PassportView: View {
             }
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
                 FocusConsistencyGrid(history: appModel.history, weeks: 53)
+                // Make the qualification rule legible: a day lights only with a
+                // real 5-minute focus (so a 1-minute flight lifts the streak but
+                // not the grid — deliberately different questions).
+                Text("Each square is a day with 5+ focused minutes.")
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(AppColors.textTertiary)
                 HStack(spacing: AppSpacing.md) {
                     consistencyStat("\(summary.activeDays)", "focus days")
                     consistencyStat("\(progress.currentStreak)", "day streak")
@@ -473,15 +479,15 @@ struct PassportView: View {
             Achievement("flame.circle.fill", "14-Day Streak", streak >= 14, AppColors.danger),
             Achievement("moon.stars.fill", "Night Owl", flewAtHour { $0 >= 22 || $0 < 4 }, AppColors.brand),
             Achievement("sunrise.fill", "Early Bird", flewAtHour { $0 >= 4 && $0 < 8 }, AppColors.gold),
-            Achievement("sun.max.fill", "Highlands Regular",
-                        visitedCount(["Amber Highlands", "Golden Hour"]) >= 5, AppColors.gold),
             Achievement("cloud.rain.fill", "Tokyo Pilot", visited("Rainy Tokyo"), AppColors.terracotta),
             Achievement("beach.umbrella.fill", "Fiji Pilot", visited("Fiji Lagoon"), AppColors.teal),
             Achievement("lantern", "Kyoto Lantern",
                         visitedAny(["Kyoto Lantern Night", "Kyoto Lanterns"]), AppColors.gold),
             Achievement("sparkles", "Aurora Explorer",
                         visitedAny(["Northern Aurora", "Aurora Snowfield"]), AppColors.success),
-            Achievement("star.fill", "Sahara Stargazer", visited("Sahara Night"), AppColors.brand),
+            Achievement("star.fill", "Desert Stargazer",
+                        visitedAny(["Desert Night", "Sahara Night", "Amber Highlands", "Golden Hour"]), AppColors.brand),
+            Achievement("mountain.2.fill", "Alpine Pilot", visited("Swiss Alps"), AppColors.brand),
             Achievement("moon.stars.circle.fill", "Deep Space Pilot", visited("Deep Space"), AppColors.teal),
             Achievement("circle.hexagongrid.circle.fill", "Focus Coin Saver", coins >= 100, AppColors.gold),
             Achievement("leaf.fill", "Cabin Decorator", ownsCabin, AppColors.success),

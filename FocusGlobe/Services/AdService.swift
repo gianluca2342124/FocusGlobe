@@ -25,9 +25,11 @@ import UserMessagingPlatform
 ///  • Fails silently and gracefully everywhere.
 ///
 /// > The code in the `canImport(GoogleMobileAds)` blocks targets the modern
-/// > Google Mobile Ads Swift Package (v11+/v12). If you link a different major
-/// > version, a few type names (`MobileAds`, `InterstitialAd`, `RewardedAd`,
-/// > `Request`) may need a minor adjustment — the non-SDK fallback is unaffected.
+/// > no-`GAD`-prefix Google Mobile Ads Swift Package API (v12–v13; the app pins
+/// > v13.5.0+). `MobileAds`, `InterstitialAd`, `RewardedAd`, `Request`,
+/// > `FullScreenContentDelegate` are the current names — the non-SDK fallback is
+/// > unaffected. The SDK is initialised unconditionally; only ad REQUESTS wait
+/// > on UMP consent.
 @MainActor
 final class AdService: NSObject, ObservableObject {
 
@@ -59,6 +61,7 @@ final class AdService: NSObject, ObservableObject {
     private var rewardedAds: [String: RewardedAd] = [:]
     private var rewardContinuation: CheckedContinuation<Bool, Never>?
     private var rewardEarnedThisPresentation = false
+    private var rewardedDidPresent = false
     private var interstitialCompletion: (() -> Void)?
     private var interstitialDidPresent = false
     #endif
@@ -117,21 +120,31 @@ final class AdService: NSObject, ObservableObject {
         canRequestAds = true
         #endif
         analytics?.log(.admobConsentReady, ["canRequestAds": canRequestAds])
-        guard canRequestAds else { return }
         #if canImport(GoogleMobileAds)
-        // Preload only AFTER SDK initialisation completes — loading before
-        // `start` finishes can silently fail (which is why the interstitial was
-        // never ready while the on-demand rewarded ad worked).
+        // Initialise the SDK UNCONDITIONALLY. Gating `MobileAds.shared.start`
+        // behind `canRequestAds` was a fail-CLOSED blackout: any EEA/UK user, a
+        // consent-info-update error, or a missing consent message left the SDK
+        // uninitialised and every placement early-returned — no ads at all.
+        // Only ad REQUESTS wait on consent (see `preloadIfAllowed`). Preloading
+        // only starts AFTER init completes (loading before `start` finishes can
+        // silently fail).
         MobileAds.shared.start { [weak self] _ in
-            Task { @MainActor in
-                guard let self else { return }
-                self.loadInterstitial()
-                self.preloadRewarded(AdMobConfig.rewardedDoubleMilesID)
-                self.preloadRewarded(AdMobConfig.rewardedDailyBoostID)
-            }
+            Task { @MainActor in self?.preloadIfAllowed() }
         }
         #endif
     }
+
+    #if canImport(GoogleMobileAds)
+    /// Preload the interstitial + both rewarded placements, but only when
+    /// consent currently allows ad requests. Idempotent; safe to call whenever
+    /// consent flips true (SDK init, or after the privacy form is answered).
+    private func preloadIfAllowed() {
+        guard canRequestAds else { return }
+        loadInterstitial()
+        preloadRewarded(AdMobConfig.rewardedDoubleMilesID)
+        preloadRewarded(AdMobConfig.rewardedDailyBoostID)
+    }
+    #endif
 
     /// Preload the journey-complete interstitial (call when a journey starts) so
     /// it is ready by the time the journey ends. No-op for Pro / before consent.
@@ -147,7 +160,17 @@ final class AdService: NSObject, ObservableObject {
     func presentPrivacyOptions() {
         #if canImport(UserMessagingPlatform)
         guard let vc = Self.topViewController() else { return }
-        ConsentForm.presentPrivacyOptionsForm(from: vc) { _ in }
+        ConsentForm.presentPrivacyOptionsForm(from: vc) { [weak self] _ in
+            // Consent may have just changed — refresh the flag and, if ads are
+            // now allowed, preload immediately (the SDK is already initialised).
+            Task { @MainActor in
+                guard let self else { return }
+                self.canRequestAds = ConsentInformation.shared.canRequestAds
+                #if canImport(GoogleMobileAds)
+                self.preloadIfAllowed()
+                #endif
+            }
+        }
         #endif
     }
 
@@ -192,12 +215,23 @@ final class AdService: NSObject, ObservableObject {
 
         ad.fullScreenContentDelegate = self
         rewardEarnedThisPresentation = false
+        rewardedDidPresent = false
         analytics?.log(.rewardedAdPresented)
         let earned = await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
             rewardContinuation = cont
             ad.present(from: vc) { [weak self] in
                 self?.rewardEarnedThisPresentation = true
                 self?.analytics?.log(.rewardedAdCompleted)
+            }
+            // Safety net (mirrors the interstitial): if `present` never actually
+            // shows the ad AND no delegate callback fires within 5 s, resolve
+            // false instead of stranding the caller on "Playing…" forever. Once
+            // the ad has presented, the dismiss/fail delegates own the outcome.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
+                guard let self, self.rewardContinuation != nil, !self.rewardedDidPresent else { return }
+                self.rewardContinuation = nil
+                self.analytics?.log(.rewardedAdFailed, ["reason": "present_timeout"])
+                cont.resume(returning: false)
             }
         }
         preloadRewarded(placement.adUnitID)
@@ -316,7 +350,9 @@ final class AdService: NSObject, ObservableObject {
 #if canImport(GoogleMobileAds)
 extension AdService: FullScreenContentDelegate {
     func adWillPresentFullScreenContent(_ ad: FullScreenPresentingAd) {
-        // Only relevant for the interstitial (rewarded logs its own present).
+        // Mark actual presentation so the rewarded/interstitial present-timeout
+        // safety nets know the ad really showed (and step aside).
+        if rewardContinuation != nil { rewardedDidPresent = true }
         if interstitialCompletion != nil {
             interstitialDidPresent = true
             analytics?.log(.interstitialJourneyCompletePresented)

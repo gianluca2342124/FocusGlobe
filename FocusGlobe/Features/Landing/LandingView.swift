@@ -29,7 +29,7 @@ struct LandingView: View {
         _earnedMiles = State(initialValue: summary.baseMiles)
     }
 
-    private var matchedSky: FocusSky { FocusSky.matching(routeID: summary.route.id) ?? .goldenHour }
+    private var matchedSky: FocusSky { FocusSky.matching(routeID: summary.route.id) ?? .defaultFree }
 
     var body: some View {
         ZStack {

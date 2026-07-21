@@ -6,7 +6,7 @@ import SwiftUI
 /// pills. (Focus Coins keeps a matching capsule because balances grow wide.)
 struct StatusCircleButton<Content: View>: View {
     var size: CGFloat = Layout.pad(46, 54)
-    var ring: Color = .white.opacity(0.14)
+    var ring: Color = Color(hex: 0x26221D).opacity(0.08)
     var accessibilityText: String
     let action: () -> Void
     @ViewBuilder var content: () -> Content
@@ -15,8 +15,10 @@ struct StatusCircleButton<Content: View>: View {
         Button(action: action) {
             content()
                 .frame(width: size, height: size)
-                .background(Circle().fill(.ultraThinMaterial))
-                .overlay(Circle().fill(AppColors.neutralBase.opacity(0.30)))
+                // A genuine WHITE surface (matches the Start Focus pill), not a
+                // dim translucent glass — dark glyphs read cleanly on every Sky.
+                .background(Circle().fill(AppColors.ctaFill)
+                    .shadow(color: .black.opacity(0.22), radius: 12, y: 6))
                 .overlay(Circle().strokeBorder(ring, lineWidth: 1))
                 .contentShape(Circle())
         }
@@ -35,23 +37,25 @@ struct StreakCircleButton: View {
     private var alive: Bool { streak > 0 }
 
     var body: some View {
-        StatusCircleButton(ring: alive ? Color(hex: 0xF2643C).opacity(0.45) : .white.opacity(0.14),
+        StatusCircleButton(ring: alive ? Color(hex: 0xF2643C).opacity(0.45) : Color(hex: 0x26221D).opacity(0.08),
                            accessibilityText: "\(streak) day streak. Opens streak details.",
                            action: action) {
             Image(systemName: "flame.fill")
                 .font(.system(size: Layout.pad(19, 22), weight: .bold))
                 .foregroundStyle(
+                    // On the white surface the inactive flame is a warm grey
+                    // (a white flame would vanish), the active one the ember.
                     LinearGradient(colors: alive ? [Color(hex: 0xFFB65C), Color(hex: 0xF2643C)]
-                                                 : [.white.opacity(0.5), .white.opacity(0.5)],
+                                                 : [Color(hex: 0xB6A890), Color(hex: 0x9C8E76)],
                                    startPoint: .top, endPoint: .bottom))
         }
         .overlay(alignment: .top) {
             Text("\(min(streak, 999))")
                 .font(.system(size: 11, weight: .heavy, design: .rounded))
                 .monospacedDigit()
-                .foregroundStyle(.white)
+                .foregroundStyle(alive ? .white : Color(hex: 0x2B2510))
                 .padding(.horizontal, 6).padding(.vertical, 2)
-                .background(Capsule().fill(alive ? Color(hex: 0xC7482A) : Color.white.opacity(0.22)))
+                .background(Capsule().fill(alive ? Color(hex: 0xC7482A) : Color(hex: 0xE7DFCF)))
                 .overlay(Capsule().strokeBorder(.white.opacity(0.25), lineWidth: 0.8))
                 .offset(y: -7)
                 .allowsHitTesting(false)

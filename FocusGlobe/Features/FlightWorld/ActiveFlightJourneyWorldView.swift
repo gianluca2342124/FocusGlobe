@@ -22,7 +22,7 @@ struct ActiveFlightJourneyWorldView: View {
     var focusSky: FocusSky? = nil
 
     var body: some View {
-        SkyFlightSceneView(sky: focusSky ?? .goldenHour,
+        SkyFlightSceneView(sky: focusSky ?? .defaultFree,
                            elapsed: elapsed, animated: animated, seed: seed)
     }
 }

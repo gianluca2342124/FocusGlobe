@@ -44,10 +44,10 @@ struct SkyPreviewView: View {
             if sky.stars > 0.01 { starField(W: W, H: H, t: t) }
             accent(W: W, H: H, t: t)
             glowPool(W: W, H: H, t: t)
-            // Procedural depth belongs to procedural skies only — bundled art
-            // already carries its own scenery.
+            // The authored per-Sky scenery IS the ground (it skirts to the
+            // bottom). Procedural depth belongs to procedural skies only —
+            // bundled art already carries its own scenery.
             if art == nil { SkyDepthScenery(sky: sky, t: t, horizon: 0.84) }
-            landmarkLayer(W: W, H: H)
             distantBalloons(W: W, H: H, t: t)
         }
         .frame(width: W, height: H)
@@ -145,16 +145,23 @@ struct SkyPreviewView: View {
         case .aurora:
             auroraAccent(W: W, H: H, t: t)
         case .planet:
-            let breathe = t == 0 ? 1.0 : 0.8 + 0.2 * Foundation.sin(t * 0.05 + 1.1)
-            ZStack {
-                Circle().fill(RadialGradient(colors: [sky.glowColor.opacity(0.4 * breathe), .clear],
-                                             center: .center, startRadius: 1, endRadius: W * 0.3))
-                    .frame(width: W * 0.6, height: W * 0.6)
-                Circle().fill(LinearGradient(colors: [Color(hex: 0xAABDE6), Color(hex: 0x3A4A72)],
-                                             startPoint: .top, endPoint: .bottom))
-                    .frame(width: W * 0.22, height: W * 0.22)
+            let drift = CGFloat(t == 0 ? 0 : Foundation.sin(t * 0.05) * 5)
+            if sky.id == "deep-space" {
+                // Parity with the flight: the same Saturn-like ringed planet.
+                SkyCosmic.ringedPlanet(d: W * 0.22)
+                    .position(x: W * 0.72, y: H * 0.22 + drift)
+            } else {
+                let breathe = t == 0 ? 1.0 : 0.8 + 0.2 * Foundation.sin(t * 0.05 + 1.1)
+                ZStack {
+                    Circle().fill(RadialGradient(colors: [sky.glowColor.opacity(0.4 * breathe), .clear],
+                                                 center: .center, startRadius: 1, endRadius: W * 0.3))
+                        .frame(width: W * 0.6, height: W * 0.6)
+                    Circle().fill(LinearGradient(colors: [Color(hex: 0xAABDE6), Color(hex: 0x3A4A72)],
+                                                 startPoint: .top, endPoint: .bottom))
+                        .frame(width: W * 0.22, height: W * 0.22)
+                }
+                .position(x: W * 0.26, y: H * 0.2 + drift)
             }
-            .position(x: W * 0.26, y: H * 0.2 + CGFloat(t == 0 ? 0 : Foundation.sin(t * 0.05) * 5))
         case .lanterns:
             lanternAccent(W: W, H: H, t: t)
         case .rain:
@@ -264,19 +271,6 @@ struct SkyPreviewView: View {
     /// depth (reuses the Passport postcard silhouette art). These stay the
     /// darkest, nearest planes; the hazed distance behind them comes from
     /// `SkyDepthScenery`.
-    private func landmarkLayer(W: CGFloat, H: CGFloat) -> some View {
-        ZStack {
-            LandmarkSilhouette(landmark: sky.landmark)
-                .fill(Color.black.opacity(0.30))
-                .frame(width: W * 1.1, height: H * 0.20)
-                .position(x: W * 0.52, y: H * 0.86)
-            LandmarkSilhouette(landmark: sky.landmark)
-                .fill(Color.black.opacity(0.5))
-                .frame(width: W * 1.2, height: H * 0.17)
-                .position(x: W * 0.48, y: H * 0.93)
-        }
-    }
-
     /// One or two tiny travellers far away — ambient life, never a crowd.
     private func distantBalloons(W: CGFloat, H: CGFloat, t: Double) -> some View {
         let bobA = t == 0 ? 0.0 : Foundation.sin(t * 0.11) * 6

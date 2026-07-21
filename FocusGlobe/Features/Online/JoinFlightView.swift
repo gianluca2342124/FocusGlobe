@@ -15,7 +15,7 @@ struct JoinFlightView: View {
     @EnvironmentObject private var online: FocusOnlineModel
 
     private var room: FocusRoom { preview.room }
-    private var sky: FocusSky { FocusSky.byID(room.skyID) ?? .goldenHour }
+    private var sky: FocusSky { FocusSky.byID(room.skyID) ?? .defaultFree }
 
     /// Live remaining, derived from the canonical `ends_at` — updates while the
     /// screen is visible so the guest sees the true shared time before joining.

@@ -38,13 +38,21 @@ struct StoreView: View {
         ZStack {
             AnimatedTileBackground(assetName: "Background_Store_Tile", overlayOpacity: 0.5)
             VStack(spacing: 0) {
-                header
-                    .padding(.horizontal, AppSpacing.screen)
-                stage
-                    .frame(maxHeight: .infinity)
-                statusRow
-                    .padding(.horizontal, AppSpacing.screen)
-                    .padding(.bottom, AppSpacing.sm)
+                // The header, live preview stage and the selected-item status
+                // sit over the dark atmospheric background, so they resolve
+                // their tokens in DARK in both appearances (white text stays
+                // white). The item panel below reads the true scheme and turns
+                // to clean warm paper in Light Mode.
+                Group {
+                    header
+                        .padding(.horizontal, AppSpacing.screen)
+                    stage
+                        .frame(maxHeight: .infinity)
+                    statusRow
+                        .padding(.horizontal, AppSpacing.screen)
+                        .padding(.bottom, AppSpacing.sm)
+                }
+                .environment(\.colorScheme, .dark)
                 itemPanel
             }
         }
@@ -296,12 +304,12 @@ struct StoreView: View {
             UnevenRoundedRectangle(topLeadingRadius: 28, bottomLeadingRadius: 0,
                                    bottomTrailingRadius: 0, topTrailingRadius: 28,
                                    style: .continuous)
-                .fill(AppColors.neutralBase.opacity(0.97))
+                .fill(AppColors.storePanel.opacity(0.97))
                 .overlay(alignment: .top) {
                     UnevenRoundedRectangle(topLeadingRadius: 28, bottomLeadingRadius: 0,
                                            bottomTrailingRadius: 0, topTrailingRadius: 28,
                                            style: .continuous)
-                        .strokeBorder(.white.opacity(0.09), lineWidth: 1)
+                        .strokeBorder(AppColors.storeCardStroke, lineWidth: 1)
                 }
                 .ignoresSafeArea(edges: .bottom)
         )
@@ -357,8 +365,9 @@ struct StoreView: View {
             }
         }
         .padding(4)
-        .background(Capsule().fill(Color.white.opacity(0.06)))
-        .overlay(Capsule().strokeBorder(.white.opacity(0.08), lineWidth: 1))
+        .background(Capsule().fill(Color.dynamic(light: 0x26221D, lightAlpha: 0.06,
+                                                 dark: 0xFFFFFF, darkAlpha: 0.06)))
+        .overlay(Capsule().strokeBorder(AppColors.storeCardStroke, lineWidth: 1))
     }
 
     // MARK: Balloon grid — equipped → owned → locked (stable within groups).
@@ -477,7 +486,7 @@ private struct StoreItemCard: View {
             .frame(width: featured ? CGFloat(140) : nil, alignment: .leading)
             .frame(maxWidth: featured ? nil : .infinity, alignment: .leading)
             .background(RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.white.opacity(selected ? 0.10 : 0.05)))
+                .fill(AppColors.storeCard(selected: selected)))
             .overlay {
                 if selected {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -490,7 +499,7 @@ private struct StoreItemCard: View {
                         .strokeBorder(AppColors.success.opacity(0.4), lineWidth: 1.2)
                 } else {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.07), lineWidth: 1)
+                        .strokeBorder(AppColors.storeCardStroke, lineWidth: 1)
                 }
             }
         }
@@ -625,7 +634,7 @@ private struct SkinCard: View {
             .padding(AppSpacing.sm)
             .frame(maxWidth: .infinity)
             .background(RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.white.opacity(selected ? 0.10 : 0.05)))
+                .fill(AppColors.storeCard(selected: selected)))
             .overlay {
                 if selected {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -635,7 +644,7 @@ private struct SkinCard: View {
                         .strokeBorder(AppColors.success.opacity(0.25), lineWidth: 1)
                 } else {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.07), lineWidth: 1)
+                        .strokeBorder(AppColors.storeCardStroke, lineWidth: 1)
                 }
             }
         }

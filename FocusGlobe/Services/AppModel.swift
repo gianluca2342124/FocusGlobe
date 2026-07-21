@@ -103,8 +103,10 @@ final class AppModel: ObservableObject {
         // default once, so no invalid identifier is ever left behind. (The
         // `selectedSky` getter also falls back at read time — this just keeps
         // storage clean.)
+        // A stored id no longer in the catalog (e.g. the retired "golden-hour")
+        // migrates to the free default (Desert Night) here.
         if let storedSkyID = loadedProfile.selectedSkyID, FocusSky.byID(storedSkyID) == nil {
-            loadedProfile.selectedSkyID = FocusSky.goldenHour.id
+            loadedProfile.selectedSkyID = FocusSky.defaultFree.id
             persistence.save(loadedProfile, for: .profile)
         }
         self.profile = loadedProfile
@@ -245,12 +247,12 @@ final class AppModel: ObservableObject {
 
     // MARK: - Skies (destination system) + invites
 
-    /// The currently selected Sky. Falls back to the free Golden Hour whenever
-    /// nothing is chosen or the stored choice is no longer unlocked (e.g. Pro
-    /// lapsed before 3 invites) — premium Skies are never permanently kept.
+    /// The currently selected Sky. Falls back to the free default (Desert Night)
+    /// whenever nothing is chosen or the stored choice is no longer unlocked
+    /// (e.g. Pro lapsed) — premium Skies are never permanently kept.
     var selectedSky: FocusSky {
-        let stored = FocusSky.byID(profile.selectedSkyID) ?? .goldenHour
-        return isSkyUnlocked(stored) ? stored : .goldenHour
+        let stored = FocusSky.byID(profile.selectedSkyID) ?? .defaultFree
+        return isSkyUnlocked(stored) ? stored : .defaultFree
     }
 
     /// Whether a Sky is flyable for this pilot: free Sky always; Premium unlocks

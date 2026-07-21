@@ -5,6 +5,9 @@ import SwiftUI
 /// never loud.
 struct CrownButton: View {
     var size: CGFloat = 44
+    /// `true` on Home, where the whole control family is a genuine white surface
+    /// with a gold crown (matching Start Focus); elsewhere it keeps its glass.
+    var onWhite: Bool = false
     let action: () -> Void
 
     var body: some View {
@@ -14,10 +17,16 @@ struct CrownButton: View {
                 .foregroundStyle(AppColors.gold)
                 .frame(width: size, height: size)
                 .background {
-                    Circle().fill(.regularMaterial)
-                        .overlay(Circle().fill(AppColors.gold.opacity(0.14)))
-                        .overlay(Circle().strokeBorder(AppColors.gold.opacity(0.45), lineWidth: 1))
-                        .shadow(color: AppColors.shadow, radius: 10, y: 5)
+                    if onWhite {
+                        Circle().fill(AppColors.ctaFill)
+                            .overlay(Circle().strokeBorder(AppColors.gold.opacity(0.4), lineWidth: 1))
+                            .shadow(color: .black.opacity(0.22), radius: 12, y: 6)
+                    } else {
+                        Circle().fill(.regularMaterial)
+                            .overlay(Circle().fill(AppColors.gold.opacity(0.14)))
+                            .overlay(Circle().strokeBorder(AppColors.gold.opacity(0.45), lineWidth: 1))
+                            .shadow(color: AppColors.shadow, radius: 10, y: 5)
+                    }
                 }
         }
         .buttonStyle(SoftPressStyle())

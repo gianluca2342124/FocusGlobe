@@ -15,6 +15,11 @@ struct FocusGlobeApp: App {
         // Decode + trim every balloon-skin image in the background NOW, so the
         // first Shop tap never stalls on synchronous image work.
         BalloonSkinImage.warmUp()
+        #if DEBUG
+        // Guard the consistency-grid qualification rule (299 inactive / 300
+        // active / same-day sum / two-day split / cancelled excluded).
+        assert(FocusConsistency._selfCheck() == nil, FocusConsistency._selfCheck() ?? "")
+        #endif
         // Google Maps is the temporary MVP provider. Keep all business logic
         // provider-independent so we can migrate to Apple Maps / MapKit later.
         #if canImport(GoogleMaps)

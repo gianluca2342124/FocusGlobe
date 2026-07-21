@@ -109,6 +109,45 @@ enum FocusConsistency {
         return Summary(activeDays: days.count, activeDaysThisYear: thisYear,
                        consistencyPercent: min(100, percent))
     }
+
+    #if DEBUG
+    /// A focused self-check of the day-qualification rule, callable from a
+    /// debugger or a launch assertion. Returns nil on success, or the first
+    /// failing case. NOT a production dependency — pure functions only.
+    static func _selfCheck(calendar: Calendar = .current) -> String? {
+        func rec(_ seconds: Int, daysAgo: Int, completed: Bool = true) -> FocusSessionRecord {
+            let d = calendar.date(byAdding: .day, value: -daysAgo, to: Date()) ?? Date()
+            return FocusSessionRecord(routeID: "t", routeName: "t", originName: "t",
+                                      destinationName: "t", mood: .sunset, theme: .gold,
+                                      date: d, plannedMinutes: 25, focusedSeconds: seconds,
+                                      distanceKm: 1, focusMiles: 1, intention: nil,
+                                      completed: completed)
+        }
+        let today = calendar.startOfDay(for: Date())
+        // 299 s → inactive.
+        if activeDays(history: [rec(299, daysAgo: 0)], calendar: calendar)[today] != nil {
+            return "299s should NOT qualify"
+        }
+        // 300 s → active today.
+        if activeDays(history: [rec(300, daysAgo: 0)], calendar: calendar)[today] == nil {
+            return "300s should qualify"
+        }
+        // Two qualifying sessions one day → one active cell, minutes summed.
+        let twoToday = activeDays(history: [rec(360, daysAgo: 0), rec(600, daysAgo: 0)], calendar: calendar)
+        if twoToday.count != 1 || (twoToday[today] ?? 0) < 16 {
+            return "two sessions one day should sum to one cell (>=16 min)"
+        }
+        // Qualifying sessions on two local days → two cells.
+        if activeDays(history: [rec(300, daysAgo: 0), rec(300, daysAgo: 1)], calendar: calendar).count != 2 {
+            return "two days should be two cells"
+        }
+        // A cancelled 600 s session never lights the grid.
+        if activeDays(history: [rec(600, daysAgo: 0, completed: false)], calendar: calendar)[today] != nil {
+            return "cancelled session should NOT qualify"
+        }
+        return nil
+    }
+    #endif
 }
 
 // MARK: - The grid view (full + compact)

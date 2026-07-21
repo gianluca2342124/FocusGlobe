@@ -130,7 +130,7 @@ enum DurationScale {
 struct FlightSetupView: View {
     /// The Sky chosen on Home — carried through the whole ritual: the backdrop
     /// matches its mood, the ticket names it, and the flight is biased to it.
-    var focusSky: FocusSky = .goldenHour
+    var focusSky: FocusSky = .defaultFree
     /// Hands the validated flight back to the presenter (Home) so it can swap the
     /// setup cover directly into the flight cover — with the Home chrome held
     /// hidden across the swap, the base screen never flashes between them.
@@ -151,15 +151,14 @@ struct FlightSetupView: View {
     /// Shield infrastructure; this is the premium pre-flight control for it.)
     @State private var blockApps = true
 
-    /// The ritual backdrop mapped from the chosen Sky (closest existing preset).
-    private var sky: SkyScene { focusSky.scene }
-
     var body: some View {
         ZStack {
-            // The world sits still behind every step — one continuous place.
-            // It only begins to move when the flight itself begins.
-            SkySceneView(scene: sky, altitude: 0.03,
-                         motion: reduceMotion ? .still : .ambient)
+            // The world sits still behind every step — the REAL destination Sky
+            // (the same living renderer as the flight, held static), so the
+            // pre-flight ritual, the take-off curtain and the flight are one
+            // continuous place with no visual identity change.
+            SkyFlightSceneView(sky: focusSky, elapsed: { 8 }, animated: false)
+                .ignoresSafeArea()
             LinearGradient(colors: [.black.opacity(0.34), .clear, .black.opacity(0.60)],
                            startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea().allowsHitTesting(false)

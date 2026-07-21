@@ -146,19 +146,26 @@ struct FocusSky: Identifiable, Hashable {
     // progress all key off `id`. Historical session records store the display
     // name at flight time; `currentDisplayName(forHistorical:)` maps old names
     // forward so Passport stats/badges stay continuous across renames.
-    static let goldenHour = FocusSky(
-        id: "golden-hour", name: "Amber Highlands", subtitle: "Free Sky",
-        description: "Warm sunset light over peaceful mountains — the home of every first flight.",
+    /// The default free Sky — a vast, silent desert night. (Internal id stays
+    /// "sahara-night" so saved selections, analytics, routes and unlock progress
+    /// remain stable; only the user-facing name is "Desert Night".)
+    static let desertNight = FocusSky(
+        id: "sahara-night", name: "Desert Night", subtitle: "Free Sky",
+        description: "A vast, silent desert night under a star-heavy sky.",
         category: .nature, unlockRequirement: .free,
-        moodPalette: [0x2E2350, 0x9A4A56, 0xF29B5C, 0xF6C08A], glowHex: 0xFFC873,
-        landmark: .mountain, accent: .none, stars: 0.08,
-        estimatedActivityRange: 140...320, soundscapeID: "wind",
-        visualPresetID: "sky-golden-hour", flightOpening: 1)
+        moodPalette: [0x0A0A1E, 0x201838, 0x4A2E44, 0x8E5A46], glowHex: 0xE8B080,
+        landmark: .desert, accent: .bigStars, stars: 0.8,
+        estimatedActivityRange: 40...140, soundscapeID: "wind",
+        visualPresetID: "sky-starfield", flightOpening: 3)
+
+    /// The single canonical default: the free Sky (Desert Night). Every default
+    /// and every "invalid/removed selection" fallback resolves here.
+    static var defaultFree: FocusSky { all.first { $0.isDefaultFree } ?? desertNight }
 
     // Strategic order: free → early aspirational → varied unlock paths →
     // ultimate premium. Each Sky earns its place a different way.
     static let all: [FocusSky] = [
-        goldenHour,
+        desertNight,
         FocusSky(id: "fiji-lagoon", name: "Fiji Lagoon", subtitle: "Nature Sky",
                  description: "Turquoise air over a quiet lagoon, soft islands drifting far below.",
                  category: .nature, unlockRequirement: .premium,
@@ -194,13 +201,6 @@ struct FocusSky: Identifiable, Hashable {
                  landmark: .mountain, accent: .none, stars: 0.1,
                  estimatedActivityRange: 50...160, soundscapeID: "wind",
                  visualPresetID: "sky-silent-dawn", flightOpening: 2),
-        FocusSky(id: "sahara-night", name: "Sahara Night", subtitle: "Nature Sky",
-                 description: "Warm dunes under a huge, star-heavy desert night.",
-                 category: .nature, unlockRequirement: .invite(1),
-                 moodPalette: [0x0A0A1E, 0x201838, 0x4A2E44, 0x8E5A46], glowHex: 0xE8B080,
-                 landmark: .desert, accent: .bigStars, stars: 0.8,
-                 estimatedActivityRange: 40...140, soundscapeID: "wind",
-                 visualPresetID: "sky-starfield", flightOpening: 3),
         FocusSky(id: "galaxy-drift", name: "Starfall Nebula", subtitle: "Cosmic Sky",
                  description: "Purple-blue nebula mist and distant stars, drifting slowly.",
                  category: .cosmic, unlockRequirement: .premium,
@@ -228,7 +228,9 @@ struct FocusSky: Identifiable, Hashable {
     /// Skies keep their historical identity). Unknown names pass through.
     static func currentDisplayName(forHistorical name: String) -> String {
         switch name {
-        case "Golden Hour":      return "Amber Highlands"
+        // The retired Amber Highlands folds forward into the new free Sky.
+        case "Golden Hour", "Amber Highlands": return "Desert Night"
+        case "Sahara Night":     return "Desert Night"
         case "Kyoto Lanterns":   return "Kyoto Lantern Night"
         case "Aurora Snowfield": return "Northern Aurora"
         case "Galaxy Drift":     return "Starfall Nebula"
@@ -240,7 +242,9 @@ struct FocusSky: Identifiable, Hashable {
     /// matching (badges/stats) that must survive display renames.
     static func allDisplayNames(for sky: FocusSky) -> [String] {
         switch sky.id {
-        case "golden-hour":      return ["Amber Highlands", "Golden Hour"]
+        // Desert Night inherits Sahara Night's history AND the retired
+        // Amber Highlands (folded into the free Sky).
+        case "sahara-night":     return ["Desert Night", "Sahara Night", "Amber Highlands", "Golden Hour"]
         case "kyoto-lanterns":   return ["Kyoto Lantern Night", "Kyoto Lanterns"]
         case "aurora-snowfield": return ["Northern Aurora", "Aurora Snowfield"]
         case "galaxy-drift":     return ["Starfall Nebula", "Galaxy Drift"]

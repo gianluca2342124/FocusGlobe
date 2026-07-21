@@ -17,7 +17,7 @@ struct OnlineLobbyView: View {
     @State private var inviteBusy = false
 
     private var isOwner: Bool { room.ownerPublicID == online.currentUserID }
-    private var sky: FocusSky { FocusSky.byID(room.skyID) ?? .goldenHour }
+    private var sky: FocusSky { FocusSky.byID(room.skyID) ?? .defaultFree }
     private var pilotCount: Int { online.activeRoomParticipants.count }
 
     var body: some View {

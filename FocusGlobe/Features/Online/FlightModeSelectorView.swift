@@ -159,7 +159,7 @@ struct FlightModeSelectorView: View {
         if mode == .publicSky {
             HStack(spacing: 5) {
                 Circle().fill(Color(hex: 0x4ADE80)).frame(width: 6, height: 6)
-                Text("\(SkyActivity.count(for: appModel.selectedSky)) users focusing now")
+                Text("\(SkyActivity.count(for: appModel.selectedSky)) focusing now")
                     .font(.system(size: 12.5, weight: .semibold, design: .rounded))
                     // Always clearly readable — the live count is information,
                     // not decoration, so it never sinks into the card tint.
@@ -168,7 +168,7 @@ struct FlightModeSelectorView: View {
             }
             .lineLimit(1).minimumScaleFactor(0.7)
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("Live. \(SkyActivity.count(for: appModel.selectedSky)) users focusing now")
+            .accessibilityLabel("Live. \(SkyActivity.count(for: appModel.selectedSky)) focusing now")
         } else {
             Text(fallback)
                 .font(.system(size: 12.5, weight: .semibold, design: .rounded))
