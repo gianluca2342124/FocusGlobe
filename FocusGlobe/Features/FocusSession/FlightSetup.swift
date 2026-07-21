@@ -277,6 +277,7 @@ struct DurationDialView: View {
     @Binding var infinite: Bool
     let onContinue: () -> Void
     @EnvironmentObject private var appModel: AppModel
+    @EnvironmentObject private var router: AppRouter
 
     @State private var index = 0
     @State private var didInit = false
@@ -450,6 +451,11 @@ struct DurationDialView: View {
             ForEach(presets, id: \.label) { p in
                 let selected = (p.infinite && infinite) || (!p.infinite && !infinite && minutes == p.minutes)
                 Button {
+                    // Infinite is PRO-only: a free tap opens the Infinite paywall
+                    // and leaves the current finite choice untouched (no silent swap).
+                    if p.infinite && !appModel.isPro {
+                        appModel.tapFeedback(); router.presentPaywall(context: .infinite); return
+                    }
                     appModel.haptics.tap()
                     infinite = p.infinite
                     minutes = p.minutes
@@ -490,9 +496,17 @@ struct DurationDialView: View {
     }
 
     private func setIndex(_ newIndex: Int) {
-        guard newIndex != index else { return }
-        index = newIndex
-        let v = DurationScale.value(at: newIndex)
+        var target = newIndex
+        // Infinite is visible on the dial but PRO-locked: reaching it opens the
+        // Infinite paywall and caps the knob at the last finite stop — never a
+        // silent finite swap of a chosen infinite flight.
+        if DurationScale.value(at: target).infinite && !appModel.isPro {
+            if !router.showPaywall { appModel.tapFeedback(); router.presentPaywall(context: .infinite) }
+            target = max(0, DurationScale.infinityIndex - 1)
+        }
+        guard target != index else { return }
+        index = target
+        let v = DurationScale.value(at: target)
         minutes = v.minutes
         infinite = v.infinite
         appModel.haptics.tap()

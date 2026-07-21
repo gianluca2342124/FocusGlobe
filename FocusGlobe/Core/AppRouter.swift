@@ -193,6 +193,10 @@ enum PaywallContext: Equatable {
     case sound            // locked sound:        "Unlock Every Focus Sound with PRO"
     case widget           // locked widget:       "Unlock All Widgets with PRO"
     case rewards          // 2x rewards:          "Double Every Reward with PRO"
+    case online           // Online flight:       "Focus Together with PRO"
+    case invite           // invite friends:      "Invite Friends with PRO"
+    case infinite         // infinite duration:   "Focus Without Limits with PRO"
+    case pause            // pause a flight:       "Pause Your Flight with PRO"
 
     var headline: String {
         switch self {
@@ -203,6 +207,10 @@ enum PaywallContext: Equatable {
         case .sound:       return "Unlock Every Focus Sound with PRO"
         case .widget:      return "Unlock All Widgets with PRO"
         case .rewards:     return "Double Every Reward with PRO"
+        case .online:      return "Focus Together with PRO"
+        case .invite:      return "Invite Friends with PRO"
+        case .infinite:    return "Focus Without Limits with PRO"
+        case .pause:       return "Pause Your Flight with PRO"
         }
     }
 }

@@ -141,6 +141,13 @@ struct FocusSessionView: View {
     /// link. In-flight guarded so a double tap can't create two rooms/links.
     private func inviteFriends() async {
         guard isOnlineFlight, !invitePreparing else { return }
+        // Inviting friends into a Private Flight is FocusGlobe PRO — a free tap
+        // opens the Invite paywall and creates NO token, room or share link.
+        // (Online is already PRO-gated, so this is defence-in-depth. The Kyoto
+        // referral share is a separate, still-free flow and is untouched.)
+        guard appModel.isPro else {
+            appModel.tapFeedback(); router.presentPaywall(context: .invite); return
+        }
         invitePreparing = true
         let skyID = (matchedSky ?? appModel.selectedSky).id
         // Creates/reuses the private-flight record and mints one fresh link —
@@ -660,6 +667,12 @@ struct FocusSessionView: View {
             } else {
                 subtleControl(icon: vm.isPaused ? "play.fill" : "pause.fill",
                               title: vm.isPaused ? "Resume" : "Pause") {
+                    // Pausing is FocusGlobe PRO. A free tap opens the Pause paywall
+                    // and the timer KEEPS running — we never pause to present it.
+                    // Resuming is always allowed (only a PRO pilot could have paused).
+                    if !vm.isPaused && !appModel.isPro {
+                        appModel.tapFeedback(); router.presentPaywall(context: .pause); return
+                    }
                     vm.togglePause()
                 }
             }

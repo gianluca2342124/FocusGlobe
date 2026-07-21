@@ -9,6 +9,7 @@ import SwiftUI
 struct FlightModeSelectorView: View {
     @EnvironmentObject private var online: FocusOnlineModel
     @EnvironmentObject private var appModel: AppModel
+    @EnvironmentObject private var router: AppRouter
     @Environment(\.horizontalSizeClass) private var hSize
     /// Called with the chosen mode when the user continues.
     var onContinue: (OnlineFlightMode) -> Void
@@ -39,8 +40,10 @@ struct FlightModeSelectorView: View {
             }
             .frame(maxWidth: hSize == .regular ? 540 : .infinity)
 
-            // The ONLY thing under the cards: sign in when Online needs it.
-            if onlineSelected && canSignIn {
+            // The ONLY thing under the cards: sign in when Online needs it — and
+            // only for PRO pilots. A free pilot sees the Online card + live count
+            // but is taken to the Online paywall on Continue (no sign-in first).
+            if onlineSelected && canSignIn && appModel.isPro {
                 signInPrompt
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
@@ -82,6 +85,15 @@ struct FlightModeSelectorView: View {
     private func continueTapped() {
         let mode = selection
         guard mode.isOnline else { finish(.solo); return }
+        // Online is a FocusGlobe PRO feature. A free pilot gets the contextual
+        // Online paywall on Continue — NO auth, NO presence, NO room is created
+        // first (the entitlement is the real RevenueCat/StoreKit `isPro`, never a
+        // client flag). Signed-out PRO users still get Sign in with Apple below.
+        guard appModel.isPro else {
+            appModel.tapFeedback()
+            router.presentPaywall(context: .online)
+            return
+        }
         // Online requires a session first.
         if !onlineAvailable {
             if canSignIn { showSignIn = true }
@@ -104,7 +116,9 @@ struct FlightModeSelectorView: View {
                           subtitle: String) -> some View {
         let selected = selection == mode || (mode == .publicSky && selection.isOnline)
         return Button {
-            if mode == .publicSky && !onlineAvailable && canSignIn {
+            // Only PRO pilots get the sign-in shortcut from the Online card; a
+            // free pilot simply selects Online and meets the paywall on Continue.
+            if mode == .publicSky && appModel.isPro && !onlineAvailable && canSignIn {
                 appModel.tapFeedback(); showSignIn = true; return
             }
             appModel.tapFeedback()
