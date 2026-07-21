@@ -48,6 +48,54 @@ struct DuneField: Shape {
     }
 }
 
+// MARK: Desert camp — a tiny, distant Bedouin camp on a far dune ridge
+
+/// One or two low, wide tents with a softly peaked ridge — never a sharp
+/// cartoon triangle. Authored to read as a distant camp at very small size.
+struct TentCamp: Shape {
+    func path(in rect: CGRect) -> Path {
+        let w = rect.width, h = rect.height, base = rect.maxY
+        var p = Path()
+        // Main tent: wide skirt, a gentle peaked ridge left of centre.
+        p.move(to: CGPoint(x: rect.minX, y: base))
+        p.addQuadCurve(to: CGPoint(x: rect.minX + w * 0.40, y: rect.minY + h * 0.08),
+                       control: CGPoint(x: rect.minX + w * 0.20, y: rect.minY + h * 0.46))
+        p.addQuadCurve(to: CGPoint(x: rect.minX + w * 0.60, y: base),
+                       control: CGPoint(x: rect.minX + w * 0.52, y: rect.minY + h * 0.40))
+        p.closeSubpath()
+        // A smaller second tent to the right.
+        p.move(to: CGPoint(x: rect.minX + w * 0.56, y: base))
+        p.addQuadCurve(to: CGPoint(x: rect.minX + w * 0.80, y: rect.minY + h * 0.34),
+                       control: CGPoint(x: rect.minX + w * 0.70, y: rect.minY + h * 0.60))
+        p.addQuadCurve(to: CGPoint(x: rect.maxX, y: base),
+                       control: CGPoint(x: rect.minX + w * 0.90, y: rect.minY + h * 0.52))
+        p.closeSubpath()
+        return p
+    }
+}
+
+/// A minimal camel silhouette (two humps, neck, head) — faint and secondary.
+struct CamelSilhouette: Shape {
+    func path(in rect: CGRect) -> Path {
+        let w = rect.width, h = rect.height, base = rect.maxY
+        var p = Path()
+        p.move(to: CGPoint(x: rect.minX, y: base))
+        p.addLine(to: CGPoint(x: rect.minX + w * 0.08, y: rect.minY + h * 0.5))
+        // Two humps.
+        p.addQuadCurve(to: CGPoint(x: rect.minX + w * 0.48, y: rect.minY + h * 0.5),
+                       control: CGPoint(x: rect.minX + w * 0.28, y: rect.minY - h * 0.12))
+        p.addQuadCurve(to: CGPoint(x: rect.minX + w * 0.74, y: rect.minY + h * 0.42),
+                       control: CGPoint(x: rect.minX + w * 0.60, y: rect.minY - h * 0.02))
+        // Neck up-right, small head, back down to the leg line.
+        p.addLine(to: CGPoint(x: rect.minX + w * 0.86, y: rect.minY + h * 0.06))
+        p.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + h * 0.12))
+        p.addLine(to: CGPoint(x: rect.minX + w * 0.90, y: rect.minY + h * 0.34))
+        p.addLine(to: CGPoint(x: rect.minX + w * 0.94, y: base))
+        p.closeSubpath()
+        return p
+    }
+}
+
 // MARK: Alpine / ice ridge — sharp, irregular, non-repeating peaks
 
 /// A jagged mountain ridge from authored peak points

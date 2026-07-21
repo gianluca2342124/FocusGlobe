@@ -111,36 +111,104 @@ enum SkyWorld {
 
     @ViewBuilder
     static func desertNight(W: CGFloat, H: CGFloat, t: Double, k: Double) -> some View {
-        // Three authored dune fields, each with its own asymmetric crest set —
-        // sized so the pilot feels small above a large, sweeping desert.
+        // FOUR authored dune depth layers — each a BROAD, ROUNDED, wind-shaped
+        // mass with long shallow slopes (never a pointed peak or sine wave).
+        // Farthest reads tiny, hazy and cool; nearest is a large smooth
+        // foreground dune with a crisp moonlit crest. A single distant camp
+        // nestles on the far ridge.
+        let farthest: [(x: CGFloat, h: CGFloat, wind: CGFloat, lee: CGFloat)] = [
+            (0.08, 0.30, 0.22, 0.18), (0.30, 0.40, 0.26, 0.20),
+            (0.52, 0.28, 0.22, 0.17), (0.74, 0.36, 0.24, 0.19), (0.95, 0.30, 0.20, 0.16),
+        ]
         let far: [(x: CGFloat, h: CGFloat, wind: CGFloat, lee: CGFloat)] = [
-            (0.10, 0.34, 0.16, 0.07), (0.34, 0.48, 0.20, 0.08),
-            (0.60, 0.38, 0.17, 0.06), (0.86, 0.5, 0.19, 0.09),
+            (0.12, 0.34, 0.30, 0.24), (0.42, 0.46, 0.36, 0.28),
+            (0.70, 0.36, 0.32, 0.26), (0.93, 0.42, 0.32, 0.26),
         ]
         let mid: [(x: CGFloat, h: CGFloat, wind: CGFloat, lee: CGFloat)] = [
-            (0.05, 0.5, 0.20, 0.09), (0.40, 0.66, 0.26, 0.10), (0.78, 0.54, 0.22, 0.08),
+            (0.06, 0.44, 0.36, 0.30), (0.44, 0.56, 0.42, 0.36), (0.82, 0.48, 0.38, 0.32),
         ]
         let near: [(x: CGFloat, h: CGFloat, wind: CGFloat, lee: CGFloat)] = [
-            (0.24, 0.62, 0.30, 0.12), (0.72, 0.72, 0.34, 0.13),
+            (0.28, 0.52, 0.46, 0.42), (0.80, 0.60, 0.50, 0.46),
         ]
         ZStack {
+            // A low warm horizon wash behind the dunes (cool shadow valleys read
+            // from the dark plane bottoms).
+            LinearGradient(colors: [.clear, Color(hex: 0xE8A85E).opacity(0.14 * k)],
+                           startPoint: .top, endPoint: .bottom)
+                .frame(width: W, height: H * 0.24)
+                .position(x: W / 2, y: H * 0.80)
+                .blur(radius: 8)
+
+            // Layer 1 — farthest: small, hazy, cool, barely lifted off the horizon.
+            plane(DuneField(crests: farthest, parallax: drift(t, depth: 0, points: 5)),
+                  base: 0.84, height: 0.16, tint: Color(hex: 0x4A3A54),
+                  top: 0.18, bottom: 0.42, k: k, W: W, H: H)
+
+            // Layer 2 — far: the ridge the camp sits on.
             plane(DuneField(crests: far, parallax: drift(t, depth: 0, points: 8)),
-                  base: 0.9, height: 0.2, tint: Color(hex: 0x6A4448),
-                  top: 0.32, bottom: 0.6, k: k, W: W, H: H)
+                  base: 0.90, height: 0.20, tint: Color(hex: 0x6A4448),
+                  top: 0.34, bottom: 0.62, k: k, W: W, H: H)
+            // The distant desert camp, nestled on the far ridge (small, secondary),
+            // drawn before the nearer dunes so they tuck its base — it reads far.
+            desertCamp(W: W, H: H, t: t, k: k)
+
+            // Layer 3 — mid, with its own warm moonlit crest highlight.
             plane(DuneField(crests: mid, parallax: drift(t, depth: 1, points: 12)),
                   base: 0.96, height: 0.26, tint: Color(hex: 0x412A38),
                   top: 0.55, bottom: 0.82, k: k, W: W, H: H)
-            // The nearest dunes, with a warm moonlit rim caught on their crest
-            // (drawn in the SAME geometry so the highlight sits on the ridge).
+            DuneField(crests: mid, parallax: drift(t, depth: 1, points: 12))
+                .stroke(Color(hex: 0xE8B080).opacity(0.16 * k), lineWidth: 1.1)
+                .frame(width: W, height: H * 0.26)
+                .position(x: W / 2, y: H - H * 0.02 - (H * 0.26) / 2)
+                .blur(radius: 0.6)
+
+            // Layer 4 — the large, smooth foreground dune mass, with a crisp
+            // moonlit crest caught in the SAME geometry so the highlight rides
+            // exactly on the ridge.
             ZStack {
                 plane(DuneField(crests: near, parallax: drift(t, depth: 2, points: 16)),
                       base: 1.0, height: 0.34, tint: Color(hex: 0x241726),
                       top: 0.82, bottom: 0.97, k: k, W: W, H: H)
                 DuneField(crests: near, parallax: drift(t, depth: 2, points: 16))
-                    .stroke(Color(hex: 0xE8B080).opacity(0.22 * k), lineWidth: 1.4)
+                    .stroke(Color(hex: 0xF0BE8A).opacity(0.26 * k), lineWidth: 1.5)
                     .frame(width: W, height: H * 0.34)
                     .position(x: W / 2, y: H - H * 0.17)
                     .blur(radius: 0.5)
+            }
+        }
+    }
+
+    /// A tiny distant camp on the far dune ridge: two low tents, 2–3 warm
+    /// lantern lights that gently flicker, and a couple of faint camels — all
+    /// small and secondary, never cartoonish or branded.
+    private static func desertCamp(W: CGFloat, H: CGFloat, t: Double, k: Double) -> some View {
+        let cx = W * 0.66 + drift(t, depth: 0, points: 8)   // rides the far ridge's parallax
+        let cy = H * 0.80
+        let cw = W * 0.085
+        let ch = H * 0.026
+        func flicker(_ phase: Double) -> Double {
+            t == 0 ? 1.0 : 0.72 + 0.28 * Foundation.sin(t * 0.9 + phase)
+        }
+        return ZStack {
+            // Faint camels just left of the tents.
+            CamelSilhouette()
+                .fill(Color(hex: 0x1A1020).opacity(0.55 * k))
+                .frame(width: cw * 0.66, height: ch * 0.9)
+                .position(x: cx - cw * 0.95, y: cy + ch * 0.55)
+            // The tents.
+            TentCamp()
+                .fill(Color(hex: 0x1C1122).opacity(0.9 * k))
+                .frame(width: cw, height: ch)
+                .position(x: cx, y: cy)
+            // 2–3 warm lantern lights with a gentle, uncorrelated flicker.
+            ForEach(0..<3, id: \.self) { i in
+                Circle()
+                    .fill(Color(hex: 0xF3BC66))
+                    .frame(width: 2.4, height: 2.4)
+                    .blur(radius: 0.4)
+                    .shadow(color: Color(hex: 0xF3BC66).opacity(0.6 * k), radius: 3)
+                    .opacity((0.9 * k) * flicker(Double(i) * 2.1))
+                    .position(x: cx + cw * (CGFloat(i) - 1) * 0.26, y: cy + ch * 0.16)
             }
         }
     }

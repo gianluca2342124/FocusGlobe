@@ -36,7 +36,18 @@ struct StoreView: View {
 
     var body: some View {
         ZStack {
-            AnimatedTileBackground(assetName: "Background_Store_Tile", overlayOpacity: 0.5)
+            // The Store's open-air stage sits over the free Desert Night Sky —
+            // never the retired Amber Highlands tile, never the pilot's randomly
+            // selected Sky — so the balloon and the real Cabin float over the
+            // same calm desert night in both preview modes. A static settled
+            // frame keeps the shop smooth (the balloon still floats on its own).
+            SkyFlightSceneView(sky: .desertNight, elapsed: { 24 }, animated: false)
+                .ignoresSafeArea()
+            // A soft top/bottom scrim so the header and status text stay readable.
+            LinearGradient(colors: [.black.opacity(0.38), .clear, .black.opacity(0.28)],
+                           startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
             VStack(spacing: 0) {
                 // The header, live preview stage and the selected-item status
                 // sit over the dark atmospheric background, so they resolve
@@ -136,7 +147,7 @@ struct StoreView: View {
             // the highlighted item) inside a coherent soft viewport.
             ZStack {
                 CabinView(elapsed: { 0 }, seed: 0xC0FFEE, animated: false,
-                          focusSky: appModel.selectedSky, showPilots: false,
+                          focusSky: .desertNight, showPilots: false,
                           equippedItemIDs: previewCabinIDs)
                     .allowsHitTesting(false)
                 if let item = previewItem, !appModel.ownsStoreItem(item) {

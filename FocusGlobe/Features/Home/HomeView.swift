@@ -613,10 +613,10 @@ private struct SkyPreviewFlightView: View {
     var body: some View {
         ZStack {
             // The real, animated Sky world — same renderer as an active flight.
+            // A LOCKED-Sky preview shows only the Sky and the pilot's OWN balloon:
+            // no public/ambient pilots or labels here (real Global journeys and
+            // Private participants are unaffected — this is a preview, not a room).
             SkyFlightSceneView(sky: sky, elapsed: previewElapsed, animated: !reduceMotion)
-                .ignoresSafeArea()
-            AmbientPilotsLayer(skyID: sky.id, elapsed: previewElapsed, animated: !reduceMotion)
-                .allowsHitTesting(false)
                 .ignoresSafeArea()
             // A soft premium darkening — light enough to appreciate the living
             // sky, strong enough at the edges for the copy and buttons.
