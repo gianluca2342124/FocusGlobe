@@ -81,27 +81,26 @@ actor RealtimeService {
         }
     }
 
-    // MARK: Applause (per-user broadcast channel)
+    // MARK: Applause — RLS-scoped Postgres-Changes on `applause_events`.
+    // Delivery is authorised by the table's SELECT policy (recipient only), NOT
+    // by the channel name, so no user can receive another user's applause. On
+    // any change the model fetches the new (RLS-scoped) rows — server-written,
+    // never a client-supplied payload.
 
     private var applauseChannel: RealtimeChannelV2?
     private var applauseTasks: [Task<Void, Never>] = []
 
-    /// Listen for applause addressed to ME for the duration of an online flight.
-    /// A dedicated `applause:<uid>` broadcast topic — ephemeral social pings only
-    /// (a sender alias string), no personal data and no database writes.
-    func subscribeApplause(myID: String, onApplause: @escaping @Sendable (String) -> Void) async {
+    func subscribeApplause(myID: String, onChange: @escaping @Sendable () -> Void) async {
         await unsubscribeApplause()
         guard let client else { return }
         let channel = client.channel("applause:\(myID)")
-        let stream = channel.broadcastStream(event: "applause")
+        let changes = channel.postgresChange(AnyAction.self, schema: "public", table: "applause_events")
         try? await channel.subscribe()
         applauseChannel = channel
         applauseTasks.append(Task {
-            for await message in stream {
+            for await _ in changes {
                 if Task.isCancelled { break }
-                let from: String
-                if case .string(let alias)? = message["from"] { from = alias } else { from = "A pilot" }
-                onApplause(from)
+                onChange()
             }
         })
     }
@@ -113,17 +112,6 @@ actor RealtimeService {
             await client?.removeChannel(channel)
             applauseChannel = nil
         }
-    }
-
-    /// Send one applause ping to another pilot's personal topic. Genuinely
-    /// delivered over the socket when the recipient is flying (they subscribe
-    /// for their whole online flight); best-effort otherwise.
-    func sendApplause(to recipientID: String, fromAlias: String) async {
-        guard let client else { return }
-        let channel = client.channel("applause:\(recipientID)")
-        try? await channel.subscribe()
-        try? await channel.broadcast(event: "applause", message: ["from": AnyJSON.string(fromAlias)])
-        await client.removeChannel(channel)
     }
 
     func teardown() async {

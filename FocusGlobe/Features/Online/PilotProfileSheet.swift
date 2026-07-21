@@ -35,15 +35,13 @@ struct PilotProfileSheet: View {
                     if let cc = pilot.countryCode { Text(flagEmoji(cc)) }
                 }
                 // Only REAL shared-for-this-flight metadata — clean human
-                // labels, nothing fabricated: focus category, a plain PRO badge
-                // when the pilot's client shared one, the fixed-catalog sound
-                // name when shared, and the LIVE second-exact countdown.
+                // labels, nothing fabricated: focus category and the fixed-
+                // catalog sound name when shared, plus the LIVE countdown below.
+                // (PRO is deliberately NOT shown — there is no trusted server
+                // entitlement source, so it can't be published truthfully.)
                 HStack(spacing: 8) {
                     if !pilot.focusCategory.isEmpty {
                         label(pilot.focusCategory.capitalized, icon: "target")
-                    }
-                    if pilot.isPro == true {
-                        label("PRO", icon: "crown.fill")
                     }
                     if let soundName = sharedSoundName {
                         label(soundName, icon: "music.note")
@@ -164,32 +162,52 @@ struct PilotProfileSheet: View {
     }
 
     @State private var applauded = false
+    @State private var applauding = false
 
-    /// 👏 Applaud — a genuine realtime ping to the pilot's device (the model
-    /// rate-limits per recipient; the button reflects the cooldown honestly).
+    /// 👏 Applaud — the SERVER decides (identity, co-presence, self and the 45s
+    /// cooldown are all enforced in `send_applause`). The button reflects the
+    /// real outcome; it never claims "applauded" unless the server accepted it,
+    /// and a rejection shows a friendly reason.
     private var applaudButton: some View {
         let cooling = applauded || online.applauseOnCooldown(for: pilot)
         return Button {
-            guard !cooling else { return }
+            guard !cooling, !applauding else { return }
             appModel.tapFeedback()
+            applauding = true
             Task { @MainActor in
-                if await online.applaud(pilot) {
+                let result = await online.applaud(pilot)
+                applauding = false
+                switch result {
+                case .sent:
                     applauded = true
                     appModel.haptics.rewardClaim()
+                case .cooldown:
+                    applauded = true   // reflect the server cooldown honestly
+                    note = "You recently applauded this pilot."
+                case .recipientNotFlying:
+                    note = "Pilot is no longer flying."
+                case .notFlying:
+                    note = "Try again in a moment."
+                case .unavailable:
+                    note = "Connection unavailable — try again."
                 }
             }
         } label: {
             HStack(spacing: 8) {
-                Text("👏")
-                Text(cooling ? "Applauded" : "Applaud")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                if applauding {
+                    ProgressView().tint(Color(hex: 0x2B2510))
+                } else {
+                    Text("👏")
+                    Text(cooling ? "Applauded" : "Applaud")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                }
             }
             .foregroundStyle(cooling ? AppColors.textSecondary : Color(hex: 0x2B2510))
             .frame(maxWidth: .infinity).frame(height: 50)
             .background(Capsule().fill(cooling ? Color.white.opacity(0.08) : AppColors.gold))
         }
         .buttonStyle(SoftPressStyle(scale: 0.97))
-        .disabled(cooling)
+        .disabled(cooling || applauding)
         .accessibilityLabel(cooling ? "Already applauded" : "Applaud this pilot")
     }
 

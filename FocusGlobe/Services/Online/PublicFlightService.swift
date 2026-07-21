@@ -100,7 +100,6 @@ actor PublicFlightService {
             let p_duration_seconds: Int
             let p_is_infinite: Bool
             let p_is_paused: Bool
-            let p_is_pro: Bool
             let p_sound_id: String?
         }
         struct Payload: Decodable {
@@ -116,7 +115,6 @@ actor PublicFlightService {
                                     p_duration_seconds: duration,
                                     p_is_infinite: isInfinite,
                                     p_is_paused: presence.isPaused,
-                                    p_is_pro: presence.isPro,
                                     p_sound_id: presence.soundID))
                 .execute().value
             return FlightPublishResult(serverNow: PostgresDate.parse(p.server_now),
@@ -172,7 +170,6 @@ actor PublicFlightService {
                     focusCategory: flight.focusCategory,
                     allowsFriendRequest: profile?.allowFriendRequests ?? true,
                     hasLiveSession: true,
-                    isPro: flight.isPro,
                     soundID: flight.soundID))
             }
             return pilots
@@ -208,6 +205,60 @@ actor PublicFlightService {
                            isPaused: flight.pausedAt != nil,
                            focusCategory: flight.focusCategory,
                            allowsFriendRequest: true, hasLiveSession: true,
-                           isPro: flight.isPro, soundID: flight.soundID)
+                           soundID: flight.soundID)
+    }
+
+    // MARK: Applause (server-authorized)
+
+    /// The server-authoritative outcome of a send_applause call.
+    enum ApplauseResult: Sendable {
+        case sent               // accepted + written by the server
+        case cooldown           // 45s per-pair server cooldown
+        case recipientNotFlying // recipient not a live, visible pilot anymore
+        case notFlying          // sender isn't in a live public flight
+        case unavailable        // network / unknown — never claimed as delivered
+    }
+
+    /// Ask the server to record one applause for `recipientID`. ALL authority is
+    /// server-side: auth.uid() is the sender, the alias is filled by the RPC, and
+    /// the cooldown / co-presence / self checks run in Postgres. Returns the real
+    /// outcome — never optimistically "sent" on failure.
+    func sendApplause(to recipientID: String) async -> ApplauseResult {
+        guard let client else { return .unavailable }
+        struct Params: Encodable { let p_recipient: String }
+        do {
+            _ = try await client.rpc("send_applause", params: Params(p_recipient: recipientID)).execute()
+            return .sent
+        } catch {
+            switch OnlineError.serverToken(from: error) {
+            case "applause_cooldown":                 return .cooldown
+            case "recipient_not_flying":              return .recipientNotFlying
+            case "not_flying":                        return .notFlying
+            case "applause_self", "invalid_recipient", "blocked":
+                return .recipientNotFlying   // treated as "can't applaud them"
+            default:
+                return .unavailable
+            }
+        }
+    }
+
+    /// Fetch applause addressed to ME created after `date`. RLS guarantees only
+    /// my own rows return; the alias is the server-written `sender_alias`.
+    func fetchApplause(after date: Date) async -> [(alias: String, at: Date)] {
+        guard let client else { return [] }
+        struct Row: Decodable { let sender_alias: String; let created_at: String }
+        do {
+            let rows: [Row] = try await client.from("applause_events")
+                .select("sender_alias, created_at")
+                .gt("created_at", value: PostgresDate.string(date))
+                .order("created_at", ascending: true)
+                .execute().value
+            return rows.compactMap { row in
+                guard let at = PostgresDate.parse(row.created_at) else { return nil }
+                return (row.sender_alias, at)
+            }
+        } catch {
+            return []
+        }
     }
 }

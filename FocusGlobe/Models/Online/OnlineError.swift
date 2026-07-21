@@ -52,7 +52,10 @@ enum OnlineError: Error, Sendable {
                          // session couldn't be proven yet (retryable), was empty,
                          // or its finite deadline already elapsed.
                          "no_active_global_session", "invalid_session", "session_ended",
-                         "invalid_sky"]
+                         "invalid_sky",
+                         // Server-authoritative applause outcomes.
+                         "applause_cooldown", "recipient_not_flying", "not_flying",
+                         "applause_self", "invalid_recipient"]
             for token in known where message.contains(token) { return token }
         }
         return nil

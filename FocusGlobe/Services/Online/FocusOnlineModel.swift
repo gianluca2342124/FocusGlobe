@@ -447,9 +447,9 @@ final class FocusOnlineModel: ObservableObject {
                                       startedAt: Date(), expectedEndAt: expectedEndAt,
                                       isPaused: false, focusCategory: category,
                                       balloonSkinID: profile.balloonSkinID,
-                                      // Display-level popover metadata: a plain
-                                      // PRO boolean + the fixed-catalog sound id.
-                                      isPro: appModel?.isPro ?? false,
+                                      // Display metadata: the fixed-catalog sound
+                                      // id only (validated on display). PRO is not
+                                      // shared — no trusted server entitlement.
                                       soundID: appModel?.selectedJourneyAudio.id)
         let myID = profile.publicID
         // Seed the join-toast baseline for a room flight so the first in-flight
@@ -482,10 +482,14 @@ final class FocusOnlineModel: ObservableObject {
                     }
                 }
             }
-            // Every ONLINE flight listens for applause addressed to me for its
-            // whole duration (torn down in flightDidEnd).
-            await realtimeService.subscribeApplause(myID: myID) { [weak self] alias in
-                Task { @MainActor [weak self] in self?.receiveApplause(from: alias) }
+            // Every ONLINE flight listens for applause addressed to me (RLS-
+            // scoped Postgres changes). On any change, fetch the new server-
+            // written rows — the sender + alias are authoritative, never a
+            // client payload. Seed the "seen" marker to now so we never replay
+            // history on subscribe.
+            applauseSeenAt = Date()
+            await realtimeService.subscribeApplause(myID: myID) { [weak self] in
+                Task { @MainActor [weak self] in await self?.pollApplause() }
             }
             if let room = flightRoom {
                 // The OWNER propagates the real duration to the room so every
@@ -512,40 +516,45 @@ final class FocusOnlineModel: ObservableObject {
         if isPaused { sampleOverlap(activeOthers: 0) } else { lastOverlapSample = Date() }
     }
 
-    // MARK: Applause (small positive social ping between real pilots)
+    // MARK: Applause — SERVER-AUTHORITATIVE (see send_applause / applause_events)
 
     /// The alias whose applause just arrived (one-shot toast; the flight view
     /// shows and clears it).
     @Published private(set) var applauseFrom: String?
-    /// Per-recipient send cooldown (anti-spam) + a display throttle for bursts.
+    /// The `send_applause` outcome for the pilot detail UI to reflect honestly.
+    typealias ApplauseResult = PublicFlightService.ApplauseResult
+    /// A light LOCAL echo of the server cooldown — for immediate button state
+    /// ONLY (the real 45s enforcement lives in Postgres; this never gates
+    /// security). Cleared naturally after 45 s.
     private var applauseSentAt: [String: Date] = [:]
+    /// Newest applause row already shown, so a poll never replays or dupes.
+    private var applauseSeenAt: Date = .distantPast
     private var lastApplauseShownAt: Date = .distantPast
 
-    /// Send applause to a real pilot. Returns false while that pilot is still in
-    /// the cooldown window (the UI shows a quiet "already applauded" state).
-    /// Delivery is a genuine realtime broadcast to the recipient's personal
-    /// topic — never a locally faked interaction; network failure is silent and
-    /// harmless (best-effort social ping).
-    @discardableResult
-    func applaud(_ pilot: OnlinePilot) async -> Bool {
-        if let last = applauseSentAt[pilot.id], Date().timeIntervalSince(last) < 45 { return false }
-        applauseSentAt[pilot.id] = Date()
-        let alias = profile?.displayName ?? "A pilot"
-        await realtimeService.sendApplause(to: pilot.id, fromAlias: alias)
-        return true
+    /// Applaud a real pilot. The SERVER decides: identity, co-presence, self and
+    /// cooldown are all enforced in `send_applause`. Returns the real outcome —
+    /// the UI only shows "applauded" when the server accepted it.
+    func applaud(_ pilot: OnlinePilot) async -> ApplauseResult {
+        let result = await flightService.sendApplause(to: pilot.id)
+        if result == .sent { applauseSentAt[pilot.id] = Date() }
+        return result
     }
 
-    /// Whether applauding this pilot is currently on cooldown.
+    /// Local optimistic cooldown echo (UI only; never the security boundary).
     func applauseOnCooldown(for pilot: OnlinePilot) -> Bool {
         if let last = applauseSentAt[pilot.id] { return Date().timeIntervalSince(last) < 45 }
         return false
     }
 
-    private func receiveApplause(from alias: String) {
-        // Burst throttle: at most one toast every 2 s even if several arrive.
+    /// Pull the applause rows addressed to me since the last one shown (RLS
+    /// guarantees they are mine) and surface the newest, burst-throttled.
+    private func pollApplause() async {
+        let events = await flightService.fetchApplause(after: applauseSeenAt)
+        guard let latest = events.max(by: { $0.at < $1.at }) else { return }
+        applauseSeenAt = latest.at
         guard Date().timeIntervalSince(lastApplauseShownAt) > 2 else { return }
         lastApplauseShownAt = Date()
-        applauseFrom = alias
+        applauseFrom = latest.alias
         appModel?.haptics.rewardClaim()
     }
 

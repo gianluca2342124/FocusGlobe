@@ -12,9 +12,9 @@ struct OnlinePresence: Codable, Equatable, Sendable {
     var isPaused: Bool
     var focusCategory: String
     var balloonSkinID: String
-    /// Display-level PRO badge (a plain boolean — never a product identifier).
-    var isPro: Bool = false
     /// The journey-sound id from the app's fixed catalog (display label key);
-    /// nil when nothing shareable is playing.
+    /// nil when nothing shareable is playing. PRO is intentionally NOT part of
+    /// presence — no trusted server entitlement source exists, so a self-asserted
+    /// flag would be spoofable.
     var soundID: String? = nil
 }

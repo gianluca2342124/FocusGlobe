@@ -68,7 +68,7 @@ actor SupabaseAuthService {
         if let name = credential.fullName {
             let formatted = PersonNameComponentsFormatter.localizedString(from: name, style: .default)
             if !formatted.trimmingCharacters(in: .whitespaces).isEmpty {
-                try? await client.auth.update(user: UserAttributes(data: ["full_name": .string(formatted)]))
+                _ = try? await client.auth.update(user: UserAttributes(data: ["full_name": .string(formatted)]))
             }
         }
         return session.user.id.uuidString.lowercased()

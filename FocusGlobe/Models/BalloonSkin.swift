@@ -47,9 +47,26 @@ struct BalloonSkin: Identifiable, Hashable {
     var requirementText: String {
         switch unlock {
         case .free:             return "Default"
-        case .journeys(let n):  return "\(n) expeditions"
-        case .miles(let n):     return "\(n) miles"
+        case .journeys(let n):  return "\(n) flight\(n == 1 ? "" : "s")"
+        case .miles(let n):     return "\(n) focus mile\(n == 1 ? "" : "s")"
         case .pro:              return "PRO"
+        }
+    }
+
+    /// The ONE reusable "current/required unit" progress label — numerator from
+    /// REAL user progress, denominator + unit from the item's actual rule (never
+    /// substituting one metric for another), with correct singular/plural and an
+    /// Owned/Free/PRO terminal state. Every milestone skin unlocks by completed
+    /// flights (`.journeys`); `.miles` stays unit-correct should a skin use it.
+    /// Used by both the Store card and the preview status row.
+    func progressLabel(landings: Int, focusMiles: Int) -> String {
+        switch unlock {
+        case .free:            return "Free"
+        case .pro:             return "FocusGlobe PRO"
+        case .journeys(let n):
+            return landings >= n ? "Owned" : "\(min(landings, n))/\(n) flights"
+        case .miles(let n):
+            return focusMiles >= n ? "Owned" : "\(min(focusMiles, n))/\(n) focus miles"
         }
     }
 

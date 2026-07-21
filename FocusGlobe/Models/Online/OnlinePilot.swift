@@ -18,10 +18,9 @@ struct OnlinePilot: Identifiable, Equatable, Sendable {
     /// and remaining time are REAL). False while only membership is known —
     /// then the UI omits those fields instead of fabricating them.
     let hasLiveSession: Bool
-    /// Display-level PRO badge shared by the pilot's own client. nil = unknown
-    /// (older client / pre-migration row) — the UI shows nothing, never a fake.
-    var isPro: Bool? = nil
-    /// The pilot's journey-sound id (app's fixed catalog); nil = not shared.
+    /// The pilot's journey-sound id (app's fixed catalog); nil = not shared. It
+    /// is validated against the catalog on display, so an unknown value shows
+    /// nothing. (PRO is not shared — no trusted server entitlement source.)
     var soundID: String? = nil
 
     var isStale: Bool {

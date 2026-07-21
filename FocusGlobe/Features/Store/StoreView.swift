@@ -270,13 +270,11 @@ struct StoreView: View {
 
     /// REAL current/required progress for a milestone skin — never a bare
     /// denominator, never fabricated ("12/70 flights", "340/1,000 miles").
+    /// One reusable, unit-correct progress label (delegates to the model type so
+    /// the card and the stage status row can never disagree).
     private func skinProgressText(_ skin: BalloonSkin) -> String {
-        switch skin.unlock {
-        case .free:            return "Free"
-        case .pro:             return "FocusGlobe PRO"
-        case .journeys(let n): return "\(min(appModel.progress.landings, n))/\(n) flights"
-        case .miles(let n):    return "\(min(appModel.progress.totalFocusMiles, n))/\(n) miles"
-        }
+        skin.progressLabel(landings: appModel.progress.landings,
+                           focusMiles: appModel.progress.totalFocusMiles)
     }
 
     // MARK: The fixed item panel (7C) — an immovable bottom-sheet look.
@@ -340,14 +338,22 @@ struct StoreView: View {
 
     // MARK: Balloon grid — equipped → owned → locked (stable within groups).
 
+    /// The unlocked-skin id snapshot is built HERE, on the MainActor, with a
+    /// plain loop (which inherits MainActor isolation) — the `sorted` comparison
+    /// below then reads only this immutable Set + static skin properties, so no
+    /// MainActor-isolated method is ever called from the nonisolated comparator.
     private var sortedSkins: [BalloonSkin] {
         let equippedID = appModel.selectedSkin.id
+        var unlockedIDs = Set<String>()
+        for skin in BalloonSkin.all where appModel.isSkinUnlocked(skin) {
+            unlockedIDs.insert(skin.id)
+        }
+        func rank(_ s: BalloonSkin) -> Int {
+            if s.id == equippedID { return 0 }
+            if unlockedIDs.contains(s.id) { return 1 }
+            return 2
+        }
         return BalloonSkin.all.sorted { a, b in
-            func rank(_ s: BalloonSkin) -> Int {
-                if s.id == equippedID { return 0 }
-                if appModel.isSkinUnlocked(s) { return 1 }
-                return 2
-            }
             let (ra, rb) = (rank(a), rank(b))
             return ra != rb ? ra < rb : a.sortOrder < b.sortOrder
         }
@@ -379,9 +385,16 @@ struct StoreView: View {
 
     private var sortedInteriorItems: [StoreItem] {
         let items = StoreItem.all.filter { $0.kind == .cabinDecoration || $0.kind == .charm }
+        // Snapshot placed/owned state on the MainActor before the nonisolated
+        // comparator runs (same isolation rule as `sortedSkins`).
+        var placedIDs = Set<String>(), ownedIDs = Set<String>()
+        for item in items {
+            if appModel.isCabinItemEquipped(item) { placedIDs.insert(item.id) }
+            if appModel.ownsStoreItem(item) { ownedIDs.insert(item.id) }
+        }
         func rank(_ i: StoreItem) -> Int {
-            if appModel.isCabinItemEquipped(i) { return 0 }
-            if appModel.ownsStoreItem(i) { return 1 }
+            if placedIDs.contains(i.id) { return 0 }
+            if ownedIDs.contains(i.id) { return 1 }
             return 2
         }
         return items.enumerated().sorted { a, b in
