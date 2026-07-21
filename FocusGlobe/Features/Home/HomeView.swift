@@ -45,6 +45,10 @@ struct HomeView: View {
         FocusSky.all[max(0, min(FocusSky.all.count - 1, skyIndex))]
     }
     private var currentSkyUnlocked: Bool { appModel.isSkyUnlocked(currentSky) }
+    /// The Resume tab may ONLY appear when the main CTA is the real "Start Focus"
+    /// action (an unlocked Sky). On a locked Sky the CTA is a Preview button, and
+    /// a resume tab hanging off a preview would be nonsensical — so it's hidden.
+    private var showResumeTab: Bool { appModel.resumableJourney != nil && currentSkyUnlocked }
 
     var body: some View {
         ZStack {
@@ -418,7 +422,7 @@ struct HomeView: View {
             // tab rising from BEHIND its upper edge — one attached action area,
             // both independently tappable, no stacked second card.
             ZStack(alignment: .top) {
-                if appModel.resumableJourney != nil {
+                if showResumeTab {
                     resumeTab
                         .offset(y: resumeTabIn ? -Layout.pad(34, 38) : 0)
                         .opacity(resumeTabIn ? 1 : 0)
@@ -437,9 +441,9 @@ struct HomeView: View {
                 }
                 .zIndex(1)
             }
-            .padding(.top, appModel.resumableJourney != nil ? Layout.pad(30, 34) : 0)
+            .padding(.top, showResumeTab ? Layout.pad(30, 34) : 0)
             .onAppear { riseResumeTab() }
-            .onChange(of: appModel.resumableJourney != nil) { _, has in
+            .onChange(of: showResumeTab) { _, has in
                 if has { resumeTabIn = false; riseResumeTab() } else { resumeTabIn = false }
             }
         }
@@ -448,7 +452,7 @@ struct HomeView: View {
     /// Animate the Resume tab into view once Home has settled — a short premium
     /// spring (instant under Reduce Motion), never replayed by unrelated state.
     private func riseResumeTab() {
-        guard appModel.resumableJourney != nil, !resumeTabIn else { return }
+        guard showResumeTab, !resumeTabIn else { return }
         if reduceMotion { resumeTabIn = true; return }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.82)) { resumeTabIn = true }

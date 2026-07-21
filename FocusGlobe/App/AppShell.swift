@@ -43,9 +43,9 @@ struct AppTabBar: View {
     private let items: [Item] = [
         Item(id: .passport, title: "Passport", system: "book.closed.fill"),
         Item(id: .shop,     title: "Shop",     system: "bag.fill"),
-        // A quieter, more minimal home glyph (outline, no heavy door/chimney
-        // detailing) — consistent with the rest of the icon language.
-        Item(id: .home,     title: "Home",     system: "house"),
+        // The filled house glyph — solid to match the rest of the filled tab
+        // family, still the minimal SF house (no heavy door/chimney detailing).
+        Item(id: .home,     title: "Home",     system: "house.fill"),
         Item(id: .friends,  title: "Friends",  system: "person.2.fill"),
         Item(id: .settings, title: "Settings", system: "gearshape.fill"),
     ]

@@ -425,11 +425,12 @@ struct FocusSessionView: View {
             // to ease the balloon from close-and-low up to its cruising size and
             // centre. Then an endless gentle breathe (sway + bob) and slow drift.
             withAnimation(.easeInOut(duration: 3.2)) { takeoffLift = 1 }
-            // Calm 4–7s idle rhythm: a noticeable ~10pt vertical bob with a very
-            // subtle sway/rotation and slow lateral drift — a breath, not a shake.
-            withAnimation(.easeInOut(duration: 5.0).repeatForever(autoreverses: true)) { balloonSway = 5 }
-            withAnimation(.easeInOut(duration: 4.4).repeatForever(autoreverses: true)) { balloonBob = -10 }
-            withAnimation(.easeInOut(duration: 7.5).repeatForever(autoreverses: true)) { balloonDrift = 6 }
+            // Calm 4–7s idle rhythm: a slightly fuller ~14pt vertical bob with a
+            // gentle sway/rotation and a wider lateral drift — more of a floating
+            // ride than before, but still a breath, never a shake.
+            withAnimation(.easeInOut(duration: 5.0).repeatForever(autoreverses: true)) { balloonSway = 7 }
+            withAnimation(.easeInOut(duration: 4.4).repeatForever(autoreverses: true)) { balloonBob = -14 }
+            withAnimation(.easeInOut(duration: 7.5).repeatForever(autoreverses: true)) { balloonDrift = 9 }
         }
     }
 

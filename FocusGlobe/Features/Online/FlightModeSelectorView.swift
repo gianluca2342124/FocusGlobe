@@ -115,7 +115,7 @@ struct FlightModeSelectorView: View {
                     Image(systemName: icon)
                         .font(.system(size: 34, weight: .bold))
                         .foregroundStyle(selected ? AppColors.gold : .white.opacity(0.7))
-                    if mode == .publicSky && onlineAvailable {
+                    if mode == .publicSky {
                         liveDot.offset(x: 30, y: -20)
                     }
                 }
@@ -151,11 +151,12 @@ struct FlightModeSelectorView: View {
     /// The Online card's second line: the LIVE ambient count for the selected
     /// Sky ("N pilots focusing now"), so the Global Sky reads as alive right
     /// where the choice is made. Counts come from the existing `SkyActivity`
-    /// provider (never hardcoded); when Online is unavailable the card falls
-    /// back to its quiet neutral subtitle. Solo always stays quiet/private.
+    /// provider (never hardcoded) and are shown ALWAYS — even signed out — since
+    /// the sign-in gate only fires when actually continuing into Online. Solo
+    /// always stays quiet/private with its neutral subtitle.
     @ViewBuilder
     private func cardSubtitle(mode: OnlineFlightMode, fallback: String, selected: Bool) -> some View {
-        if mode == .publicSky && onlineAvailable {
+        if mode == .publicSky {
             HStack(spacing: 5) {
                 Circle().fill(Color(hex: 0x4ADE80)).frame(width: 6, height: 6)
                 Text("\(SkyActivity.count(for: appModel.selectedSky)) pilots focusing now")

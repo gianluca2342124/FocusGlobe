@@ -27,8 +27,8 @@ struct OnlineUnavailableView: View {
     }
     private var body_: String {
         needsSignIn
-            ? "Online Flights use a private FocusGlobe account with Sign in with Apple — you appear only as an anonymous alias. Solo Flights never need an account."
-            : "Reconnect to fly with other pilots. Solo Flights always work offline."
+            ? "Online Flights use a private FocusGlobe account with Sign in with Apple — you appear only as an anonymous alias."
+            : "Reconnect to fly with other pilots."
     }
     private var icon: String {
         switch availability {
@@ -48,16 +48,10 @@ struct OnlineUnavailableView: View {
             Image(systemName: icon)
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(AppColors.textTertiary)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title)
-                    .font(.system(size: 13.5, weight: .bold, design: .rounded))
-                    .foregroundStyle(AppColors.textPrimary)
-                    .lineLimit(1).minimumScaleFactor(0.85)
-                Text("Solo Flights always work offline.")
-                    .font(AppTypography.caption)
-                    .foregroundStyle(AppColors.textTertiary)
-                    .lineLimit(1).minimumScaleFactor(0.85)
-            }
+            Text(title)
+                .font(.system(size: 13.5, weight: .bold, design: .rounded))
+                .foregroundStyle(AppColors.textPrimary)
+                .lineLimit(1).minimumScaleFactor(0.85)
             Spacer(minLength: 0)
             if needsSignIn, let onSignIn {
                 Button("Sign in") { onSignIn() }

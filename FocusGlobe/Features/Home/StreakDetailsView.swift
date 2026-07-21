@@ -80,7 +80,9 @@ struct StreakDetailsView: View {
                 .buttonStyle(SoftPressStyle())
                 .accessibilityLabel("Share your focus grid")
             }
-            FocusConsistencyGrid(history: appModel.history, weeks: 20, cellSize: 10, spacing: 2.5)
+            // The EXACT full-year grid used in Passport — same span, density,
+            // month labels, data and styling (no reduced/compact variant).
+            FocusConsistencyGrid(history: appModel.history, weeks: 53)
             Text("Every gold square is a day you truly focused. Keep the sky lit.")
                 .font(.system(size: 12, weight: .medium, design: .rounded))
                 .foregroundStyle(.white.opacity(0.55))

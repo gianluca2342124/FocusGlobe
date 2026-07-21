@@ -33,15 +33,6 @@ struct OnlineSignInView: View {
                     .foregroundStyle(AppColors.textPrimary)
                     .multilineTextAlignment(.center)
 
-                if !succeeded {
-                    Text("Focus alongside real pilots and invite friends into private flights.")
-                        .font(AppTypography.callout)
-                        .foregroundStyle(AppColors.textSecondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, AppSpacing.md)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
                 if let errorMessage {
                     Text(errorMessage)
                         .font(AppTypography.caption)
@@ -86,11 +77,6 @@ struct OnlineSignInView: View {
                     }
                     .frame(height: 52)
                     .padding(.horizontal, AppSpacing.md)
-
-                    Text("Your public alias is shown — never your email.")
-                        .font(AppTypography.caption)
-                        .foregroundStyle(AppColors.textTertiary)
-                        .multilineTextAlignment(.center)
                 }
 
                 Spacer(minLength: 0)

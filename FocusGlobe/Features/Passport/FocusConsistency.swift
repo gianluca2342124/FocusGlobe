@@ -108,7 +108,8 @@ enum FocusConsistency {
 // MARK: - The grid view (full + compact)
 
 /// The contribution-style focus grid. `weeks` controls the span (52–53 for
-/// Passport, ~20 for the compact streak popover). VoiceOver reads one summary
+/// the full grid shown in both Passport and the streak popup; a smaller span
+/// is only used by the off-screen share card). VoiceOver reads one summary
 /// instead of hundreds of cells.
 struct FocusConsistencyGrid: View {
     let history: [FocusSessionRecord]

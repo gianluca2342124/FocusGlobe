@@ -77,7 +77,6 @@ struct CoinSpinSheet: View {
             }
             .ignoresSafeArea()
             VStack(spacing: AppSpacing.sm) {
-                header
                 switch phase {
                 case .intro:    intro
                 case .spinning: spinning
@@ -86,27 +85,15 @@ struct CoinSpinSheet: View {
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, AppSpacing.screen)
+            .padding(.top, AppSpacing.lg)
             .padding(.bottom, AppSpacing.md)
             .frame(maxWidth: 460)
             .frame(maxWidth: .infinity)
         }
-        // A premium half-sheet, not full screen.
-        .presentationDetents([.fraction(0.66), .large])
+        // A premium half-sheet at the SAME height as the Streak popup. Dismissed
+        // by swipe-down or tapping outside — no redundant close chrome.
+        .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
-    }
-
-    // Just an X — the big headline lives with the artwork below.
-    private var header: some View {
-        HStack {
-            Spacer()
-            Button { appModel.tapFeedback(); dismiss() } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 28))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(AppColors.textTertiary)
-            }
-        }
-        .padding(.top, AppSpacing.sm)
     }
 
     /// The `freecoinspin` artwork if present; a soft procedural fallback otherwise
@@ -161,9 +148,6 @@ struct CoinSpinSheet: View {
                 watch()
             }
             .disabled(busy)
-            Button("No thanks") { appModel.tapFeedback(); dismiss() }
-                .font(AppTypography.callout)
-                .foregroundStyle(AppColors.textTertiary)
         }
     }
 

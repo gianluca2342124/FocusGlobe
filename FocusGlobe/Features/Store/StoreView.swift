@@ -28,6 +28,8 @@ struct StoreView: View {
     @State private var showDailyGift = false
     @State private var showGetCoins = false
     @State private var float: CGFloat = 0
+    /// Drives the sliding highlight of the Balloon/Interior segmented control.
+    @Namespace private var modeNS
 
     private var previewSkin: BalloonSkin { BalloonSkin.skin(id: previewSkinID ?? appModel.selectedSkin.id) }
     private var previewItem: StoreItem? { previewItemID.flatMap { StoreItem.byID($0) } }
@@ -315,25 +317,48 @@ struct StoreView: View {
         #endif
     }
 
+    /// Item grids show THREE per row on a standard iPhone; iPad keeps its wider
+    /// adaptive layout so the larger canvas isn't wasted on only three columns.
+    private var storeColumns: [GridItem] {
+        if hSize == .regular { return Layout.cardColumns(regular: true) }
+        return Array(repeating: GridItem(.flexible(), spacing: AppSpacing.sm), count: 3)
+    }
+
+    /// A premium segmented control: one recessed track with a single gold pill
+    /// that GLIDES between Balloon and Interior (matchedGeometryEffect), rather
+    /// than two independent buttons flipping colour.
     private var modePicker: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 0) {
             ForEach(Mode.allCases, id: \.rawValue) { m in
+                let isOn = mode == m
                 Button {
+                    guard mode != m else { return }
                     appModel.tapFeedback()
-                    withAnimation(.snappy(duration: 0.22)) { mode = m; previewItemID = nil }
+                    withAnimation(.snappy(duration: 0.28)) { mode = m; previewItemID = nil }
                 } label: {
                     Text(m.rawValue)
                         .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundStyle(mode == m ? Color(hex: 0x14120E) : AppColors.textSecondary)
+                        .foregroundStyle(isOn ? Color(hex: 0x14120E) : AppColors.textSecondary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 9)
-                        .background(Capsule().fill(mode == m ? AppColors.gold : Color.white.opacity(0.06)))
+                        .background {
+                            if isOn {
+                                Capsule()
+                                    .fill(AppColors.gold)
+                                    .shadow(color: AppColors.gold.opacity(0.35), radius: 5, y: 2)
+                                    .matchedGeometryEffect(id: "modeSelection", in: modeNS)
+                            }
+                        }
+                        .contentShape(Capsule())
                 }
                 .buttonStyle(SoftPressStyle(scale: 0.98))
                 .accessibilityLabel("\(m.rawValue) collection")
-                .accessibilityAddTraits(mode == m ? .isSelected : [])
+                .accessibilityAddTraits(isOn ? .isSelected : [])
             }
         }
+        .padding(4)
+        .background(Capsule().fill(Color.white.opacity(0.06)))
+        .overlay(Capsule().strokeBorder(.white.opacity(0.08), lineWidth: 1))
     }
 
     // MARK: Balloon grid — equipped → owned → locked (stable within groups).
@@ -360,7 +385,7 @@ struct StoreView: View {
     }
 
     private var balloonGrid: some View {
-        LazyVGrid(columns: Layout.cardColumns(regular: hSize == .regular), spacing: AppSpacing.sm) {
+        LazyVGrid(columns: storeColumns, spacing: AppSpacing.sm) {
             ForEach(sortedSkins) { skin in
                 SkinCard(skin: skin,
                          unlocked: appModel.isSkinUnlocked(skin),
@@ -381,7 +406,7 @@ struct StoreView: View {
         return skinProgressText(skin)
     }
 
-    // MARK: Interior content — Featured Today shelf + placed → owned → rest.
+    // MARK: Interior content — one grid, ordered placed → owned → rest.
 
     private var sortedInteriorItems: [StoreItem] {
         let items = StoreItem.all.filter { $0.kind == .cabinDecoration || $0.kind == .charm }
@@ -404,33 +429,12 @@ struct StoreView: View {
     }
 
     private var interiorContent: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            HStack {
-                SectionLabel(text: "Featured Today")
-                Spacer()
-                TimelineView(.periodic(from: .now, by: 60)) { ctx in
-                    Label("Refreshes in \(refreshLabel(at: ctx.date))", systemImage: "clock")
-                        .font(AppTypography.micro)
-                        .foregroundStyle(AppColors.textTertiary)
-                }
+        LazyVGrid(columns: storeColumns, spacing: AppSpacing.sm) {
+            ForEach(sortedInteriorItems) { item in
+                StoreItemCard(item: item, selected: previewItemID == item.id) { select(item) }
             }
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: AppSpacing.sm) {
-                    ForEach(StoreItem.dailyItems()) { item in
-                        StoreItemCard(item: item, featured: true,
-                                      selected: previewItemID == item.id) { select(item) }
-                    }
-                }
-                .padding(.horizontal, 2).padding(.vertical, 2)
-            }
-            SectionLabel(text: "Cabin Interior & Charms")
-            LazyVGrid(columns: Layout.cardColumns(regular: hSize == .regular), spacing: AppSpacing.sm) {
-                ForEach(sortedInteriorItems) { item in
-                    StoreItemCard(item: item, selected: previewItemID == item.id) { select(item) }
-                }
-            }
-            .padding(.bottom, AppSpacing.lg)
         }
+        .padding(.bottom, AppSpacing.lg)
     }
 
     private func select(_ item: StoreItem) {
@@ -438,12 +442,6 @@ struct StoreView: View {
         withAnimation(.snappy(duration: 0.2)) {
             previewItemID = (previewItemID == item.id) ? nil : item.id
         }
-    }
-
-    private func refreshLabel(at date: Date) -> String {
-        let secs = StoreItem.secondsUntilRefresh(from: date)
-        let h = secs / 3600, m = (secs % 3600) / 60
-        return h > 0 ? "\(h)h \(m)m" : "\(m)m"
     }
 }
 
@@ -648,15 +646,6 @@ private struct DailyGiftSheet: View {
         ZStack {
             AppBackground().ignoresSafeArea()
             VStack(spacing: AppSpacing.md) {
-                HStack {
-                    Spacer()
-                    Button { appModel.tapFeedback(); dismiss() } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 28))
-                            .symbolRenderingMode(.hierarchical)
-                            .foregroundStyle(AppColors.textTertiary)
-                    }
-                }
                 Spacer(minLength: 0)
                 giftHero
                 Text("Daily Gift")

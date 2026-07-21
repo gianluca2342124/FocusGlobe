@@ -131,7 +131,9 @@ struct SettingsView: View {
                             .textInputAutocapitalization(.words)
                             .autocorrectionDisabled()
                     }
-                    Spacer()
+                    // Clamp the (horizontally greedy) TextField so it can never
+                    // grow the row past the viewport and induce a sideways drift.
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding(.vertical, 6)
 
