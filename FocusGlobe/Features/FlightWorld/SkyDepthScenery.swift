@@ -345,8 +345,10 @@ enum SkyWorld {
                            color: Color(hex: sg.col).opacity(0.16 * pulse * k))
             }
         }
-        .frame(width: W, height: H * 0.42)
-        .position(x: W / 2, y: H - H * 0.21)
+        // Match the NEAR skyline plane's geometry EXACTLY (base 1.0, height 0.34)
+        // so the lit windows sit on the buildings, not floating above them.
+        .frame(width: W, height: H * 0.34)
+        .position(x: W / 2, y: H - H * 0.17)
         .blur(radius: 0.4)
     }
 

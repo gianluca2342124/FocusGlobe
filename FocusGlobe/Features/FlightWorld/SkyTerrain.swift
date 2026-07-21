@@ -232,20 +232,34 @@ struct IslandSilhouette: Shape {
                            control: CGPoint(x: cx + half * 0.6, y: topY + isle.h * h * 0.5))
             p.closeSubpath()
             if isle.palms {
-                // A couple of lean palm silhouettes rising off the crown.
+                // A couple of lean palm silhouettes rising off the crown. These
+                // are CLOSED filled shapes (a thin trunk sliver + small frond
+                // wedges) — the plane is filled, so open line-work would be
+                // invisible.
                 for k in [-0.18, 0.12] {
                     let px = cx + CGFloat(k) * half
                     let trunkTop = topY - isle.h * h * 0.9
                     let lean = CGFloat(k) * half * 0.5
-                    p.move(to: CGPoint(x: px, y: topY))
-                    p.addQuadCurve(to: CGPoint(x: px + lean, y: trunkTop),
-                                   control: CGPoint(x: px + lean * 0.3, y: (topY + trunkTop) / 2))
-                    // Frond fan.
-                    for a in stride(from: -0.9, through: 0.9, by: 0.45) {
-                        let fx = px + lean + CGFloat(cos(Double.pi * (0.5 + a))) * half * 0.22
-                        let fy = trunkTop - CGFloat(sin(Double.pi * (0.5 + a))) * isle.h * h * 0.16
-                        p.move(to: CGPoint(x: px + lean, y: trunkTop))
+                    let tw = max(0.6, half * 0.03)                 // trunk half-width
+                    let ctrlY = (topY + trunkTop) / 2
+                    // Trunk as a thin leaning sliver.
+                    p.move(to: CGPoint(x: px - tw, y: topY))
+                    p.addQuadCurve(to: CGPoint(x: px + lean - tw, y: trunkTop),
+                                   control: CGPoint(x: px + lean * 0.3 - tw, y: ctrlY))
+                    p.addLine(to: CGPoint(x: px + lean + tw, y: trunkTop))
+                    p.addQuadCurve(to: CGPoint(x: px + tw, y: topY),
+                                   control: CGPoint(x: px + lean * 0.3 + tw, y: ctrlY))
+                    p.closeSubpath()
+                    // Fronds as small filled wedges fanning from the crown.
+                    let hubX = px + lean, hubY = trunkTop
+                    for a in stride(from: -0.8, through: 0.8, by: 0.4) {
+                        let fx = hubX + CGFloat(cos(Double.pi * (0.5 + a))) * half * 0.24
+                        let fy = hubY - CGFloat(abs(sin(Double.pi * (0.5 + a)))) * isle.h * h * 0.2
+                        let perp = max(0.6, half * 0.02)
+                        p.move(to: CGPoint(x: hubX, y: hubY - perp))
                         p.addLine(to: CGPoint(x: fx, y: fy))
+                        p.addLine(to: CGPoint(x: hubX, y: hubY + perp))
+                        p.closeSubpath()
                     }
                 }
             }
