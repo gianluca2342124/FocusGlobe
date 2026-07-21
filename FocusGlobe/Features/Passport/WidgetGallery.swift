@@ -14,35 +14,32 @@ struct WidgetGalleryItem: Identifiable {
     let families: [String]    // e.g. ["Small", "Medium", "Large"]
     let isPro: Bool
 
+    /// The FIVE final FocusGlobe widgets — two Free, three PRO. Kept in lock-step
+    /// with the widget extension so the gallery always mirrors what a pilot can
+    /// actually add.
     static let all: [WidgetGalleryItem] = [
-        .init(id: "FGStreak", name: "Streak",
-              blurb: "Keep your focus streak alive at a glance — right on your Home or Lock Screen.",
+        // FREE
+        .init(id: "FGStreakCompanion", name: "Streak Companion",
+              blurb: "An expressive balloon, your streak flame and today's state — nothing yet, focused, at risk or a milestone.",
               systemImage: "flame.fill", glow: WGTheme.coral,
-              families: ["Small", "Medium", "Lock Screen"], isPro: false),
-        .init(id: "FGStartJourney", name: "Start Focus",
-              blurb: "Begin a focus flight in a single tap.",
+              families: ["Small", "Lock Screen"], isPro: false),
+        .init(id: "FGFocusNow", name: "Focus Now",
+              blurb: "Start a flight in a tap when idle, or watch the live time remaining on the flight you're on.",
               systemImage: "paperplane.fill", glow: WGTheme.gold,
-              families: ["Small", "Medium", "Large"], isPro: false),
-        .init(id: "FGCurrentJourney", name: "Current Flight",
-              blurb: "Resume an unfinished flight and watch the time remaining.",
-              systemImage: "location.north.line.fill", glow: WGTheme.sky,
-              families: ["Small", "Medium", "Large"], isPro: true),
-        .init(id: "FGAroundEarth", name: "Around Earth",
-              blurb: "See how far you've travelled around the planet.",
-              systemImage: "globe.europe.africa.fill", glow: WGTheme.teal,
-              families: ["Small", "Medium", "Large"], isPro: true),
-        .init(id: "FGLongestRoute", name: "Longest Route",
-              blurb: "Your longest completed flight.",
-              systemImage: "ruler.fill", glow: WGTheme.gold,
+              families: ["Medium"], isPro: false),
+        // PRO
+        .init(id: "FGFocusGrid", name: "Focus Grid",
+              blurb: "Your last six months of real focus days as a living contribution grid — tap to open your Passport.",
+              systemImage: "square.grid.3x3.fill", glow: WGTheme.teal,
               families: ["Medium", "Large"], isPro: true),
-        .init(id: "FGDailyGoals", name: "Daily Goals",
-              blurb: "Today's focus goals and your progress toward them.",
-              systemImage: "target", glow: WGTheme.indigo,
-              families: ["Small", "Medium", "Large"], isPro: true),
-        .init(id: "FGPassport", name: "Passport",
-              blurb: "Your collection, miles and focus stats at a glance.",
+        .init(id: "FGPassportStats", name: "Passport Stats",
+              blurb: "Journeys, focused time, your longest journey and your current + longest streak.",
               systemImage: "book.closed.fill", glow: WGTheme.indigo,
               families: ["Small", "Medium", "Large"], isPro: true),
+        .init(id: "FGBadgeCollection", name: "Badge Collection",
+              blurb: "Your unlocked badges, a hint at the next one to earn, and how many you've collected.",
+              systemImage: "rosette", glow: WGTheme.gold,
+              families: ["Small", "Medium"], isPro: true),
     ]
 }
 
@@ -64,13 +61,17 @@ enum WGTheme {
 
 struct WidgetsGallerySection: View {
     @EnvironmentObject private var appModel: AppModel
+    @EnvironmentObject private var router: AppRouter
     @State private var selected: WidgetGalleryItem?
+
+    /// A PRO widget the pilot hasn't unlocked yet.
+    private func locked(_ item: WidgetGalleryItem) -> Bool { item.isPro && !appModel.isPro }
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
             VStack(alignment: .leading, spacing: 2) {
                 SectionLabel(text: "Widgets")
-                Text("Add FocusGlobe to your Home & Lock Screen")
+                Text("Five widgets for your Home & Lock Screen")
                     .font(AppTypography.caption)
                     .foregroundStyle(AppColors.textTertiary)
             }
@@ -78,7 +79,7 @@ struct WidgetsGallerySection: View {
                 HStack(spacing: AppSpacing.sm) {
                     ForEach(WidgetGalleryItem.all) { item in
                         Button { appModel.tapFeedback(); selected = item } label: {
-                            WidgetPreviewTile(item: item, side: Layout.pad(150, 178))
+                            WidgetPreviewTile(item: item, locked: locked(item), side: Layout.pad(150, 178))
                         }
                         .buttonStyle(SoftPressStyle(scale: 0.98))
                     }
@@ -87,7 +88,9 @@ struct WidgetsGallerySection: View {
             }
         }
         .sheet(item: $selected) { item in
-            WidgetDetailSheet(item: item).environmentObject(appModel)
+            WidgetDetailSheet(item: item, locked: locked(item))
+                .environmentObject(appModel)
+                .environmentObject(router)
         }
     }
 }
@@ -95,6 +98,7 @@ struct WidgetsGallerySection: View {
 /// A dark, premium tile that reads as a real FocusGlobe widget.
 private struct WidgetPreviewTile: View {
     let item: WidgetGalleryItem
+    var locked: Bool = false
     var side: CGFloat = 156
 
     var body: some View {
@@ -109,16 +113,25 @@ private struct WidgetPreviewTile: View {
                 .padding(side * 0.12)
 
             VStack(alignment: .leading, spacing: 3) {
-                if item.isPro {
-                    Text("PRO")
+                HStack(spacing: 5) {
+                    Text(item.isPro ? "PRO" : "FREE")
                         .font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(0.6)
-                        .foregroundStyle(WGTheme.gold)
+                        .foregroundStyle(item.isPro ? WGTheme.gold : WGTheme.inkSoft)
                         .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(Capsule().fill(WGTheme.gold.opacity(0.18)))
+                        .background(Capsule().fill((item.isPro ? WGTheme.gold : Color.white).opacity(0.18)))
+                    if locked {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 9, weight: .heavy))
+                            .foregroundStyle(WGTheme.gold)
+                    }
                 }
                 Text(item.name)
                     .font(.system(size: side * 0.10, weight: .bold, design: .rounded))
                     .foregroundStyle(WGTheme.ink)
+                    .lineLimit(1).minimumScaleFactor(0.7)
+                Text(item.families.joined(separator: " · "))
+                    .font(.system(size: side * 0.066, weight: .semibold, design: .rounded))
+                    .foregroundStyle(WGTheme.inkSoft)
                     .lineLimit(1).minimumScaleFactor(0.7)
             }
             .padding(side * 0.11)
@@ -163,7 +176,9 @@ private struct WidgetPreviewCanvas: View {
 
 private struct WidgetDetailSheet: View {
     let item: WidgetGalleryItem
+    var locked: Bool = false
     @EnvironmentObject private var appModel: AppModel
+    @EnvironmentObject private var router: AppRouter
     @Environment(\.dismiss) private var dismiss
 
     private let steps: [(String, String)] = [
@@ -180,7 +195,7 @@ private struct WidgetDetailSheet: View {
             ScrollView {
                 VStack(spacing: AppSpacing.lg) {
                     closeRow
-                    WidgetPreviewTile(item: item, side: 210)
+                    WidgetPreviewTile(item: item, locked: locked, side: 210)
                         .padding(.top, AppSpacing.xs)
                     VStack(spacing: 6) {
                         Text(item.name)
@@ -190,6 +205,11 @@ private struct WidgetDetailSheet: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, AppSpacing.md)
                         HStack(spacing: 6) {
+                            Text(item.isPro ? "FocusGlobe PRO" : "Free")
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .foregroundStyle(item.isPro ? AppColors.gold : AppColors.success)
+                                .padding(.horizontal, 8).padding(.vertical, 4)
+                                .background(Capsule().fill((item.isPro ? AppColors.gold : AppColors.success).opacity(0.14)))
                             ForEach(item.families, id: \.self) { fam in
                                 Text(fam)
                                     .font(.system(size: 11, weight: .semibold, design: .rounded))
@@ -200,6 +220,19 @@ private struct WidgetDetailSheet: View {
                             }
                         }
                         .padding(.top, 2)
+                    }
+
+                    // A locked PRO widget leads with the contextual Widgets
+                    // paywall instead of the add-instructions.
+                    if locked {
+                        AppPrimaryButton(title: "Unlock Widgets with FocusGlobe PRO", systemImage: "crown.fill") {
+                            appModel.tapFeedback()
+                            dismiss()
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                router.presentPaywall(context: .widget)
+                            }
+                        }
+                        .padding(.horizontal, AppSpacing.xs)
                     }
 
                     AppGlassCard {
