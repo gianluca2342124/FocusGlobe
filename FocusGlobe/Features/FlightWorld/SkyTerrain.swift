@@ -251,11 +251,14 @@ struct IslandSilhouette: Shape {
                                    control: CGPoint(x: px + lean * 0.3 + tw, y: ctrlY))
                     p.closeSubpath()
                     // Fronds as small filled wedges fanning from the crown.
+                    // Explicit off-vertical angles (never exactly 0.5, which would
+                    // make cos = 0 → a collinear, zero-area wedge) give a reliable
+                    // symmetric fan.
                     let hubX = px + lean, hubY = trunkTop
-                    for a in stride(from: -0.8, through: 0.8, by: 0.4) {
+                    let perp = max(0.6, half * 0.02)
+                    for a in [-0.85, -0.5, -0.18, 0.18, 0.5, 0.85] {
                         let fx = hubX + CGFloat(cos(Double.pi * (0.5 + a))) * half * 0.24
                         let fy = hubY - CGFloat(abs(sin(Double.pi * (0.5 + a)))) * isle.h * h * 0.2
-                        let perp = max(0.6, half * 0.02)
                         p.move(to: CGPoint(x: hubX, y: hubY - perp))
                         p.addLine(to: CGPoint(x: fx, y: fy))
                         p.addLine(to: CGPoint(x: hubX, y: hubY + perp))

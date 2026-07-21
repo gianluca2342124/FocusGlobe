@@ -219,8 +219,11 @@ enum SkyWorld {
                                      W: CGFloat, H: CGFloat, t: Double, k: Double) -> some View {
         Canvas { ctx, s in
             let base = s.height
+            // Ride the SAME parallax as the TempleRoofline plane, so the warm
+            // windows stay glued to the roofs (not just vertically aligned).
+            let dx = drift(t, depth: 2, points: 10)
             for (i, r) in roofs.enumerated() {
-                let cx = r.x * s.width
+                let cx = r.x * s.width + dx
                 let flick = t == 0 ? 1.0 : 0.7 + 0.3 * Foundation.sin(t * (0.4 + Double(i) * 0.3) + Double(i) * 2.0)
                 let warm = Color(hex: 0xFFC873)
                 let y = base - r.h * s.height * 0.5
@@ -308,9 +311,12 @@ enum SkyWorld {
     private static func cityLights(W: CGFloat, H: CGFloat, t: Double, k: Double) -> some View {
         Canvas { ctx, s in
             let base = s.height
+            // Ride the SAME parallax as the near skyline plane, so lit windows
+            // and neon stay on their buildings at every frame (incl. static).
+            let dx = drift(t, depth: 1, points: 9)
             var rng = SeededRNG(seed: 0x70C_1A17)
             for b in tokyoNear {
-                let x0 = b.x * s.width, bw = b.width * s.width
+                let x0 = b.x * s.width + dx, bw = b.width * s.width
                 let topY = base - b.height * s.height
                 let cols = max(1, Int(bw / 9))
                 let rows = max(2, Int((base - topY) / 12))
@@ -334,7 +340,7 @@ enum SkyWorld {
                 (0.22, 0.62, 0xE86A9E), (0.74, 0.56, 0x6AC8E8),
             ]
             for sg in signs {
-                let x = sg.x * s.width, y0 = sg.y * s.height
+                let x = sg.x * s.width + dx, y0 = sg.y * s.height
                 let pulse = t == 0 ? 1.0 : 0.7 + 0.3 * Foundation.sin(t * 0.6 + sg.x * 10)
                 for j in 0..<3 {
                     let ry = y0 + CGFloat(j) * 10
