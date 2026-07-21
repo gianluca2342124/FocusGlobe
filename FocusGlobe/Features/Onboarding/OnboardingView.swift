@@ -29,6 +29,8 @@ struct OnboardingView: View {
     @State private var introFloat: CGFloat = 0
     /// The soundscape carousel's current index.
     @State private var soundIndex = 0
+    /// Whether a soundscape preview is currently playing on the music step.
+    @State private var isPreviewingSound = false
     /// Guards the review request so a double-tap can't fire it twice or race the
     /// transition to the premium page.
     @State private var reviewRequested = false
@@ -313,6 +315,9 @@ struct OnboardingView: View {
                     .foregroundStyle(.white.opacity(0.6))
                     .multilineTextAlignment(.center)
             }
+            // A large, always-aligned Play/Pause that previews the SELECTED
+            // soundscape immediately — one preview at a time, switching cleanly.
+            soundPreviewButton(option)
             HStack(spacing: 6) {
                 ForEach(opts.indices, id: \.self) { i in
                     Capsule()
@@ -323,9 +328,50 @@ struct OnboardingView: View {
         }
         .onAppear { soundIndex = soundOptions.firstIndex { $0.id == appModel.selectedJourneyAudio.id } ?? 0 }
         .onChange(of: soundIndex) { _, i in
-            appModel.selectJourneyAudio(soundOptions[max(0, min(soundOptions.count - 1, i))])
+            let opt = soundOptions[max(0, min(soundOptions.count - 1, i))]
+            appModel.selectJourneyAudio(opt)
             appModel.haptics.tap()
+            // Clean switching: if a preview is playing, move it to the new option
+            // (one preview at a time). Otherwise stay silent until Play is tapped.
+            if isPreviewingSound { appModel.previewJourneyAudio(opt) }
         }
+        // Stop the preview whenever the step leaves the screen (advance / back)
+        // or onboarding completes, so audio never bleeds into the first flight.
+        .onDisappear {
+            appModel.stopJourneyAudioPreview()
+            isPreviewingSound = false
+        }
+    }
+
+    /// The large Play/Pause preview control for the current soundscape.
+    private func soundPreviewButton(_ option: JourneyAudioOption) -> some View {
+        let playing = isPreviewingSound && appModel.previewingJourneyAudioID == option.id
+        return Button {
+            appModel.haptics.tap()
+            if playing {
+                appModel.stopJourneyAudioPreview()
+                isPreviewingSound = false
+            } else {
+                appModel.previewJourneyAudio(option)
+                isPreviewingSound = true
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: playing ? "pause.fill" : "play.fill")
+                    .font(.system(size: 15, weight: .heavy))
+                Text(playing ? "Pause preview" : "Play preview")
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .lineLimit(1)
+            }
+            .foregroundStyle(Color(hex: 0x14120E))
+            .frame(minWidth: 168)
+            .frame(height: 46)
+            .padding(.horizontal, AppSpacing.md)
+            .background(Capsule().fill(AppColors.gold))
+            .shadow(color: AppColors.gold.opacity(0.3), radius: 10, y: 4)
+        }
+        .buttonStyle(SoftPressStyle(scale: 0.96))
+        .accessibilityLabel(playing ? "Pause \(option.displayName) preview" : "Play \(option.displayName) preview")
     }
 
     private func carouselArrow(system: String, enabled: Bool, action: @escaping () -> Void) -> some View {

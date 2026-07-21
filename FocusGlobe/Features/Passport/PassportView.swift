@@ -84,6 +84,8 @@ struct PassportView: View {
     // the streak popover and the share card, so a day can never disagree).
 
     @State private var shareItems: [Any]? = nil
+    /// The badge whose detail sheet is open (nil = none).
+    @State private var selectedBadge: Achievement? = nil
 
     private var consistencySection: some View {
         let summary = FocusConsistency.summary(history: appModel.history)
@@ -466,38 +468,66 @@ struct PassportView: View {
         let ownsCabin = StoreItem.all.contains { $0.kind == .cabinDecoration && appModel.ownsStoreItem($0) }
         let skinsOwned = BalloonSkin.all.filter { appModel.isSkinUnlocked($0) }.count
         return [
-            Achievement("airplane.departure", "First Flight", flights >= 1, AppColors.brand),
-            Achievement("25.circle.fill", "25-Min Pilot", best >= 25, AppColors.brand),
-            Achievement("hourglass.bottomhalf.filled", "1 Hour Focused", best >= 60, AppColors.success),
-            Achievement("5.circle.fill", "5 Flights", flights >= 5, AppColors.brand),
-            Achievement("10.circle.fill", "10 Flights", flights >= 10, AppColors.gold),
-            Achievement("airplane.circle.fill", "25 Flights", flights >= 25, AppColors.gold),
-            Achievement("clock.fill", "100 Focus Minutes", mins >= 100, AppColors.teal),
-            Achievement("clock.badge.checkmark.fill", "500 Focus Minutes", mins >= 500, AppColors.teal),
-            Achievement("infinity.circle.fill", "1,000 Focus Minutes", mins >= 1000, AppColors.gold),
-            Achievement("flame.fill", "3-Day Streak", streak >= 3, AppColors.danger),
-            Achievement("bolt.heart.fill", "7-Day Streak", streak >= 7, AppColors.danger),
-            Achievement("flame.circle.fill", "14-Day Streak", streak >= 14, AppColors.danger),
-            Achievement("moon.stars.fill", "Night Owl", flewAtHour { $0 >= 22 || $0 < 4 }, AppColors.brand),
-            Achievement("sunrise.fill", "Early Bird", flewAtHour { $0 >= 4 && $0 < 8 }, AppColors.gold),
-            Achievement("cloud.rain.fill", "Tokyo Pilot", visited("Rainy Tokyo"), AppColors.terracotta),
-            Achievement("beach.umbrella.fill", "Fiji Pilot", visited("Fiji Lagoon"), AppColors.teal),
+            Achievement("airplane.departure", "First Flight", flights >= 1, AppColors.brand,
+                        "Complete your very first focus flight."),
+            Achievement("25.circle.fill", "25-Min Pilot", best >= 25, AppColors.brand,
+                        "Finish a single focus flight of 25 minutes or more.",
+                        progress: (best, 25)),
+            Achievement("hourglass.bottomhalf.filled", "1 Hour Focused", best >= 60, AppColors.success,
+                        "Focus for a full hour in one flight.", progress: (best, 60)),
+            Achievement("5.circle.fill", "5 Flights", flights >= 5, AppColors.brand,
+                        "Complete five focus flights.", progress: (flights, 5)),
+            Achievement("10.circle.fill", "10 Flights", flights >= 10, AppColors.gold,
+                        "Complete ten focus flights.", progress: (flights, 10)),
+            Achievement("airplane.circle.fill", "25 Flights", flights >= 25, AppColors.gold,
+                        "Complete twenty-five focus flights.", progress: (flights, 25)),
+            Achievement("clock.fill", "100 Focus Minutes", mins >= 100, AppColors.teal,
+                        "Reach 100 total focused minutes.", progress: (mins, 100)),
+            Achievement("clock.badge.checkmark.fill", "500 Focus Minutes", mins >= 500, AppColors.teal,
+                        "Reach 500 total focused minutes.", progress: (mins, 500)),
+            Achievement("infinity.circle.fill", "1,000 Focus Minutes", mins >= 1000, AppColors.gold,
+                        "Reach 1,000 total focused minutes.", progress: (mins, 1000)),
+            Achievement("flame.fill", "3-Day Streak", streak >= 3, AppColors.danger,
+                        "Focus on three days in a row.", progress: (min(streak, 3), 3)),
+            Achievement("bolt.heart.fill", "7-Day Streak", streak >= 7, AppColors.danger,
+                        "Keep a seven-day focus streak.", progress: (min(streak, 7), 7)),
+            Achievement("flame.circle.fill", "14-Day Streak", streak >= 14, AppColors.danger,
+                        "Keep a fourteen-day focus streak.", progress: (min(streak, 14), 14)),
+            Achievement("moon.stars.fill", "Night Owl", flewAtHour { $0 >= 22 || $0 < 4 }, AppColors.brand,
+                        "Complete a flight late at night (after 10 pm)."),
+            Achievement("sunrise.fill", "Early Bird", flewAtHour { $0 >= 4 && $0 < 8 }, AppColors.gold,
+                        "Complete a flight early in the morning (before 8 am)."),
+            Achievement("cloud.rain.fill", "Tokyo Pilot", visited("Rainy Tokyo"), AppColors.terracotta,
+                        "Focus once in the Rainy Tokyo Sky."),
+            Achievement("beach.umbrella.fill", "Fiji Pilot", visited("Fiji Lagoon"), AppColors.teal,
+                        "Focus once in the Fiji Lagoon Sky."),
             Achievement("lantern", "Kyoto Lantern",
-                        visitedAny(["Kyoto Lantern Night", "Kyoto Lanterns"]), AppColors.gold),
+                        visitedAny(["Kyoto Lantern Night", "Kyoto Lanterns"]), AppColors.gold,
+                        "Focus once in the Kyoto Lantern Night Sky."),
             Achievement("sparkles", "Aurora Explorer",
-                        visitedAny(["Northern Aurora", "Aurora Snowfield"]), AppColors.success),
+                        visitedAny(["Northern Aurora", "Aurora Snowfield"]), AppColors.success,
+                        "Focus once under the Northern Aurora."),
             Achievement("star.fill", "Desert Stargazer",
-                        visitedAny(["Desert Night", "Sahara Night", "Amber Highlands", "Golden Hour"]), AppColors.brand),
-            Achievement("mountain.2.fill", "Alpine Pilot", visited("Swiss Alps"), AppColors.brand),
-            Achievement("moon.stars.circle.fill", "Deep Space Pilot", visited("Deep Space"), AppColors.teal),
-            Achievement("circle.hexagongrid.circle.fill", "Focus Coin Saver", coins >= 100, AppColors.gold),
-            Achievement("leaf.fill", "Cabin Decorator", ownsCabin, AppColors.success),
-            Achievement("circle.grid.2x2.fill", "Skin Collector", skinsOwned >= 3, AppColors.brand),
-            Achievement("person.2.fill", "Friend Flight", friendsInvited >= 1, AppColors.success),
-            Achievement("crown.fill", "PRO Pilot", appModel.isPro, AppColors.gold),
+                        visitedAny(["Desert Night", "Sahara Night", "Amber Highlands", "Golden Hour"]), AppColors.brand,
+                        "Focus once in the Desert Night Sky."),
+            Achievement("mountain.2.fill", "Alpine Pilot", visited("Swiss Alps"), AppColors.brand,
+                        "Focus once above the Swiss Alps."),
+            Achievement("moon.stars.circle.fill", "Deep Space Pilot", visited("Deep Space"), AppColors.teal,
+                        "Focus once in the Deep Space Sky."),
+            Achievement("circle.hexagongrid.circle.fill", "Focus Coin Saver", coins >= 100, AppColors.gold,
+                        "Earn 100 Focus Coins from your flights.", progress: (coins, 100)),
+            Achievement("leaf.fill", "Cabin Decorator", ownsCabin, AppColors.success,
+                        "Own at least one cabin decoration from the Store."),
+            Achievement("circle.grid.2x2.fill", "Skin Collector", skinsOwned >= 3, AppColors.brand,
+                        "Unlock three or more balloon skins.", progress: (skinsOwned, 3)),
+            Achievement("person.2.fill", "Friend Flight", friendsInvited >= 1, AppColors.success,
+                        "Fly a Private flight with a friend who joined your invite."),
+            Achievement("crown.fill", "PRO Pilot", appModel.isPro, AppColors.gold,
+                        "Become a FocusGlobe PRO member."),
             Achievement("arrow.uturn.up.circle.fill", "Comeback Pilot",
                         progress.longestStreak > progress.currentStreak && progress.currentStreak >= 1,
-                        AppColors.terracotta),
+                        AppColors.terracotta,
+                        "Start a new streak after a longer one ended."),
         ]
     }
 
@@ -517,9 +547,16 @@ struct PassportView: View {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 88), spacing: AppSpacing.sm)],
                       spacing: AppSpacing.sm) {
                 ForEach(achievements) { badge in
-                    AchievementBadge(badge: badge)
+                    AchievementBadge(badge: badge) {
+                        appModel.tapFeedback(); selectedBadge = badge
+                    }
                 }
             }
+        }
+        // One reusable detail sheet — icon, name, how to earn, real progress and
+        // locked/earned state. No redundant X: swipe to dismiss.
+        .sheet(item: $selectedBadge) { badge in
+            BadgeDetailSheet(badge: badge)
         }
     }
 
@@ -572,51 +609,133 @@ private struct Achievement: Identifiable {
     let title: String
     let earned: Bool
     let accent: Color
-    init(_ icon: String, _ title: String, _ earned: Bool, _ accent: Color) {
+    /// One sentence on how the badge is earned (shown in the detail sheet).
+    let detail: String
+    /// REAL current/target progress toward the badge, or nil for boolean badges
+    /// (visited a Sky, owns an item …) where a bar would be meaningless. Never
+    /// fabricated.
+    let progress: (current: Int, target: Int)?
+    init(_ icon: String, _ title: String, _ earned: Bool, _ accent: Color,
+         _ detail: String, progress: (current: Int, target: Int)? = nil) {
         self.icon = icon; self.title = title; self.earned = earned; self.accent = accent
+        self.detail = detail; self.progress = progress
     }
 }
 
 /// A collectible stamp-style badge: a warm ringed disc, earned in full colour and
-/// locked as a muted seal.
+/// locked as a muted seal. Tapping opens the shared `BadgeDetailSheet`.
 private struct AchievementBadge: View {
+    let badge: Achievement
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(spacing: 8) {
+                ZStack {
+                    Circle()
+                        .fill(badge.earned ? badge.accent.opacity(0.18) : AppColors.textTertiary.opacity(0.08))
+                        .frame(width: 52, height: 52)
+                    Circle()
+                        .strokeBorder(badge.earned ? badge.accent.opacity(0.55) : AppColors.hairline,
+                                      lineWidth: badge.earned ? 1.5 : 1)
+                        .frame(width: 52, height: 52)
+                    Image(systemName: badge.earned ? badge.icon : "lock.fill")
+                        .font(.system(size: 19, weight: .bold))
+                        .foregroundStyle(badge.earned ? badge.accent : AppColors.textTertiary)
+                }
+                Text(badge.title)
+                    .font(AppTypography.micro)
+                    .foregroundStyle(badge.earned ? AppColors.textPrimary : AppColors.textTertiary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, AppSpacing.sm)
+            .glassBackground(cornerRadius: AppSpacing.cardRadius,
+                             tint: badge.earned ? badge.accent : AppColors.glassTint,
+                             tintOpacity: badge.earned ? 0.14 : 0.20,
+                             shadowRadius: 6, shadowY: 3)
+            .overlay {
+                if badge.earned {
+                    RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
+                        .strokeBorder(badge.accent.opacity(0.28), lineWidth: 1)
+                }
+            }
+            .opacity(badge.earned ? 1 : 0.7)
+        }
+        .buttonStyle(SoftPressStyle(scale: 0.95))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(badge.title). \(badge.earned ? "Earned" : "Locked"). \(badge.detail)")
+        .accessibilityAddTraits(.isButton)
+    }
+}
+
+/// The ONE reusable badge-detail sheet: a large ringed icon, the name, a
+/// locked/earned pill, one sentence on how to earn it, and a real progress bar
+/// when the badge has numeric progress. No redundant close button — swipe to
+/// dismiss.
+private struct BadgeDetailSheet: View {
     let badge: Achievement
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: AppSpacing.lg) {
             ZStack {
                 Circle()
                     .fill(badge.earned ? badge.accent.opacity(0.18) : AppColors.textTertiary.opacity(0.08))
-                    .frame(width: 52, height: 52)
                 Circle()
-                    .strokeBorder(badge.earned ? badge.accent.opacity(0.55) : AppColors.hairline,
-                                  lineWidth: badge.earned ? 1.5 : 1)
-                    .frame(width: 52, height: 52)
+                    .strokeBorder(badge.earned ? badge.accent.opacity(0.6) : AppColors.hairline,
+                                  lineWidth: badge.earned ? 2 : 1)
                 Image(systemName: badge.earned ? badge.icon : "lock.fill")
-                    .font(.system(size: 19, weight: .bold))
+                    .font(.system(size: 40, weight: .bold))
                     .foregroundStyle(badge.earned ? badge.accent : AppColors.textTertiary)
             }
-            Text(badge.title)
-                .font(AppTypography.micro)
-                .foregroundStyle(badge.earned ? AppColors.textPrimary : AppColors.textTertiary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, AppSpacing.sm)
-        .glassBackground(cornerRadius: AppSpacing.cardRadius,
-                         tint: badge.earned ? badge.accent : AppColors.glassTint,
-                         tintOpacity: badge.earned ? 0.14 : 0.20,
-                         shadowRadius: 6, shadowY: 3)
-        .overlay {
-            if badge.earned {
-                RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
-                    .strokeBorder(badge.accent.opacity(0.28), lineWidth: 1)
+            .frame(width: 100, height: 100)
+
+            VStack(spacing: 8) {
+                Text(badge.title)
+                    .font(AppTypography.serifTitle2)
+                    .foregroundStyle(AppColors.textPrimary)
+                    .multilineTextAlignment(.center)
+                Text(badge.earned ? "Earned" : "Locked")
+                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                    .foregroundStyle(badge.earned ? badge.accent : AppColors.textTertiary)
+                    .padding(.horizontal, 12).padding(.vertical, 5)
+                    .background(Capsule().fill((badge.earned ? badge.accent : AppColors.textTertiary).opacity(0.15)))
             }
+
+            Text(badge.detail)
+                .font(AppTypography.subhead)
+                .foregroundStyle(AppColors.textSecondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, AppSpacing.md)
+
+            if let p = badge.progress, !badge.earned, p.target > 0 {
+                VStack(spacing: 6) {
+                    GeometryReader { g in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(AppColors.textTertiary.opacity(0.16))
+                            Capsule().fill(badge.accent)
+                                .frame(width: max(6, g.size.width *
+                                    CGFloat(min(1, Double(p.current) / Double(p.target)))))
+                        }
+                    }
+                    .frame(height: 8)
+                    Text("\(min(p.current, p.target).formatted()) / \(p.target.formatted())")
+                        .font(.system(size: 12.5, weight: .bold, design: .rounded))
+                        .foregroundStyle(AppColors.textSecondary)
+                        .monospacedDigit()
+                }
+                .padding(.horizontal, AppSpacing.lg)
+            }
+
+            Spacer(minLength: 0)
         }
-        .opacity(badge.earned ? 1 : 0.7)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(badge.title). \(badge.earned ? "Earned" : "Locked").")
+        .padding(.top, AppSpacing.xl)
+        .padding(.horizontal, AppSpacing.lg)
+        .frame(maxWidth: .infinity)
+        .presentationDetents([.height(380), .medium])
+        .presentationDragIndicator(.visible)
     }
 }
 

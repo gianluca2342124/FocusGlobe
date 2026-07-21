@@ -93,6 +93,30 @@ final class SoundService {
         if wasMuted { setMuted(true) }
     }
 
+    // MARK: - Preview playback (onboarding / Passport soundscape tasting)
+
+    /// The option currently previewing (nil = none). Lets the UI reflect state.
+    private(set) var previewingOptionID: String?
+
+    /// Play ONE soundscape on a loop as a preview — reuses the journey loop
+    /// (bundled file or procedural fallback + gentle fade) but does NOT mark a
+    /// journey active, so the flight lifecycle is untouched. Only one preview
+    /// plays at a time. No-op when the master Sound setting is off; audio-session
+    /// failure degrades gracefully via the procedural fallback.
+    func preview(option: JourneyAudioOption) {
+        guard isEnabled else { return }
+        startJourney(option: option)   // start the loop with fade / fallback
+        isJourneyActive = false        // …but this is a preview, not a flight
+        previewingOptionID = option.id
+    }
+
+    /// Stop the soundscape preview and release the audio session.
+    func stopPreview() {
+        guard previewingOptionID != nil else { return }
+        previewingOptionID = nil
+        stop()
+    }
+
     /// Pause the ambience (journey paused, interruption, headphones removed).
     func pause() {
         player?.pause()
@@ -111,6 +135,7 @@ final class SoundService {
         isJourneyActive = false
         pausedByInterruption = false
         currentOptionID = nil
+        previewingOptionID = nil
         player?.stop()
         player = nil
         ambience?.stop()

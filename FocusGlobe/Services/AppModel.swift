@@ -840,6 +840,19 @@ final class AppModel: ObservableObject {
         tapFeedback()
     }
 
+    /// The soundscape currently previewing (onboarding / Passport), or nil.
+    var previewingJourneyAudioID: String? { sound.previewingOptionID }
+
+    /// Start a looping PREVIEW of a soundscape (no flight). One at a time.
+    func previewJourneyAudio(_ option: JourneyAudioOption) {
+        sound.preview(option: option)
+    }
+
+    /// Stop any soundscape preview.
+    func stopJourneyAudioPreview() {
+        sound.stopPreview()
+    }
+
     // MARK: - Premium reconciliation
 
     /// Re-locks premium content when Pro is inactive: a selected premium skin or
