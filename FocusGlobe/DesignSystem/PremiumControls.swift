@@ -5,8 +5,9 @@ import SwiftUI
 /// never loud.
 struct CrownButton: View {
     var size: CGFloat = 44
-    /// `true` on Home, where the whole control family is a genuine white surface
-    /// with a gold crown (matching Start Focus); elsewhere it keeps its glass.
+    /// `true` on Home, where the whole control family shares the adaptive
+    /// `homeControl` surface (warm-white by day, translucent glass by night)
+    /// with a gold crown; elsewhere it keeps its neutral glass.
     var onWhite: Bool = false
     let action: () -> Void
 
@@ -18,7 +19,7 @@ struct CrownButton: View {
                 .frame(width: size, height: size)
                 .background {
                     if onWhite {
-                        Circle().fill(AppColors.ctaFill)
+                        Circle().fill(AppColors.homeControlFill)
                             .overlay(Circle().strokeBorder(AppColors.gold.opacity(0.4), lineWidth: 1))
                             .shadow(color: .black.opacity(0.22), radius: 12, y: 6)
                     } else {

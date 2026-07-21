@@ -168,7 +168,7 @@ struct FocusSky: Identifiable, Hashable {
         desertNight,
         FocusSky(id: "fiji-lagoon", name: "Fiji Lagoon", subtitle: "Nature Sky",
                  description: "Turquoise air over a quiet lagoon, soft islands drifting far below.",
-                 category: .nature, unlockRequirement: .premium,
+                 category: .nature, unlockRequirement: .focusMinutes(100),
                  moodPalette: [0x0E3A4E, 0x1E6E7E, 0x4FB4B4, 0xBFE8D8], glowHex: 0xA8F0DC,
                  landmark: .island, accent: .none, stars: 0.05,
                  estimatedActivityRange: 60...180, soundscapeID: "ocean",
@@ -189,14 +189,14 @@ struct FocusSky: Identifiable, Hashable {
                  visualPresetID: "sky-starfield", flightOpening: 2),
         FocusSky(id: "rainy-tokyo", name: "Rainy Tokyo", subtitle: "City Sky",
                  description: "Soft rain over a muted neon skyline — cozy, blue, and quiet.",
-                 category: .city, unlockRequirement: .streakDays(3),
+                 category: .city, unlockRequirement: .streakDays(7),
                  moodPalette: [0x0C1224, 0x1A2440, 0x2E3A60, 0x50548E], glowHex: 0x8FA6D8,
                  landmark: .skyline, accent: .rain, stars: 0.2,
                  estimatedActivityRange: 100...280, soundscapeID: "rain",
                  visualPresetID: "sky-starfield", flightOpening: 0),
         FocusSky(id: "swiss-alps", name: "Swiss Alps", subtitle: "Nature Sky",
                  description: "High snowy peaks in a cold, clean sunrise glow.",
-                 category: .nature, unlockRequirement: .streakDays(7),
+                 category: .nature, unlockRequirement: .streakDays(14),
                  moodPalette: [0x1A2E44, 0x3A5C7C, 0x7C9CB8, 0xE8EEF4], glowHex: 0xF6D9B4,
                  landmark: .mountain, accent: .none, stars: 0.1,
                  estimatedActivityRange: 50...160, soundscapeID: "wind",
@@ -273,12 +273,28 @@ enum SkyUnlock {
 
     static func isUnlocked(_ sky: FocusSky, isPro: Bool, unlockedSkyIDs: Set<String>,
                            focusMinutes: Int, streakDays: Int, invites: Int) -> Bool {
+        // A Sky earned once on its free path is grandfathered permanently (see
+        // `unlockedSkyIDs`), so a later change to the requirement — or a dropped
+        // streak — never re-locks a Sky the pilot already reached.
+        if unlockedSkyIDs.contains(sky.id) { return true }
         switch sky.unlockRequirement {
         case .free:                return true
         case .premium:             return isPro
-        case .invite(let n):       return isPro || unlockedSkyIDs.contains(sky.id) || invites >= n
+        case .invite(let n):       return isPro || invites >= n
         case .focusMinutes(let n): return isPro || focusMinutes >= n
         case .streakDays(let n):   return isPro || streakDays >= n
+        }
+    }
+
+    /// Whether a Sky's FREE path is currently satisfied (independent of PRO) —
+    /// used to capture it into the permanent grandfather set.
+    static func freePathMet(_ sky: FocusSky, focusMinutes: Int, streakDays: Int, invites: Int) -> Bool {
+        switch sky.unlockRequirement {
+        case .free:                return false   // no need to persist the free Sky
+        case .premium:             return false   // PRO-only has no free path
+        case .invite(let n):       return invites >= n
+        case .focusMinutes(let n): return focusMinutes >= n
+        case .streakDays(let n):   return streakDays >= n
         }
     }
 }

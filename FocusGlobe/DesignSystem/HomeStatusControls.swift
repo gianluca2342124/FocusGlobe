@@ -6,7 +6,9 @@ import SwiftUI
 /// pills. (Focus Coins keeps a matching capsule because balances grow wide.)
 struct StatusCircleButton<Content: View>: View {
     var size: CGFloat = Layout.pad(46, 54)
-    var ring: Color = Color(hex: 0x26221D).opacity(0.08)
+    /// Pass `nil` to use the shared adaptive control ring; pass a colour for an
+    /// accent ring (e.g. the streak ember).
+    var ring: Color? = nil
     var accessibilityText: String
     let action: () -> Void
     @ViewBuilder var content: () -> Content
@@ -15,11 +17,12 @@ struct StatusCircleButton<Content: View>: View {
         Button(action: action) {
             content()
                 .frame(width: size, height: size)
-                // A genuine WHITE surface (matches the Start Focus pill), not a
-                // dim translucent glass — dark glyphs read cleanly on every Sky.
-                .background(Circle().fill(AppColors.ctaFill)
+                // The shared adaptive control surface: a warm-white disc by day
+                // (dark glyphs, matching Start Focus), a premium translucent
+                // dark-glass disc by night — never a white circle in Dark Mode.
+                .background(Circle().fill(AppColors.homeControlFill)
                     .shadow(color: .black.opacity(0.22), radius: 12, y: 6))
-                .overlay(Circle().strokeBorder(ring, lineWidth: 1))
+                .overlay(Circle().strokeBorder(ring ?? AppColors.homeControlStroke, lineWidth: 1))
                 .contentShape(Circle())
         }
         .buttonStyle(SoftPressStyle(scale: 0.94))
@@ -37,14 +40,14 @@ struct StreakCircleButton: View {
     private var alive: Bool { streak > 0 }
 
     var body: some View {
-        StatusCircleButton(ring: alive ? Color(hex: 0xF2643C).opacity(0.45) : Color(hex: 0x26221D).opacity(0.08),
+        StatusCircleButton(ring: alive ? Color(hex: 0xF2643C).opacity(0.45) : nil,
                            accessibilityText: "\(streak) day streak. Opens streak details.",
                            action: action) {
             Image(systemName: "flame.fill")
                 .font(.system(size: Layout.pad(19, 22), weight: .bold))
                 .foregroundStyle(
-                    // On the white surface the inactive flame is a warm grey
-                    // (a white flame would vanish), the active one the ember.
+                    // The inactive flame is a warm grey (reads on both the day
+                    // white disc and the night glass), the active one the ember.
                     LinearGradient(colors: alive ? [Color(hex: 0xFFB65C), Color(hex: 0xF2643C)]
                                                  : [Color(hex: 0xB6A890), Color(hex: 0x9C8E76)],
                                    startPoint: .top, endPoint: .bottom))

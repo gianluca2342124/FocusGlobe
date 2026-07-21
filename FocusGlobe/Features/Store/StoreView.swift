@@ -283,8 +283,9 @@ struct StoreView: View {
     /// One reusable, unit-correct progress label (delegates to the model type so
     /// the card and the stage status row can never disagree).
     private func skinProgressText(_ skin: BalloonSkin) -> String {
-        skin.progressLabel(landings: appModel.progress.landings,
-                           focusMiles: appModel.progress.totalFocusMiles)
+        skin.progressLabel(focusMinutes: appModel.lifetimeFocusMinutes,
+                           focusMiles: appModel.progress.totalFocusMiles,
+                           owned: appModel.isSkinGrandfathered(skin))
     }
 
     // MARK: The fixed item panel (7C) — an immovable bottom-sheet look.

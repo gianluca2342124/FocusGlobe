@@ -127,23 +127,34 @@ struct HomeView: View {
                 .opacity(handingOff ? 0 : 1)
 
             VStack(spacing: 0) {
+                // The top controls are the ONE part of the Home chrome that
+                // follows the REAL appearance: a warm-white surface + dark
+                // glyphs by day, a premium translucent glass by night — via the
+                // shared `homeControl*` tokens (no scattered scheme checks).
                 topBar
+                // Everything that sits DIRECTLY on the always-dark Sky —
+                // greeting, Sky name, the Start Focus pill — is pinned to DARK
+                // so it reads light-on-sky (and Start Focus stays the signature
+                // white pill) in both appearances. Sheets/popups are presented
+                // outside this scope and keep the user's chosen appearance.
                 greetingBlock
+                    .environment(\.colorScheme, .dark)
                 Spacer()
                 bottomCluster
                     .clusterMaxWidth()
+                    .environment(\.colorScheme, .dark)
             }
-            // Home's chrome floats over the always-dark sky artwork, so its
-            // tokens resolve in DARK in both appearances — Start Focus stays
-            // the signature white pill even in Light Mode. The sheets/popups
-            // are presented outside this scope and keep the user's appearance.
-            .environment(\.colorScheme, .dark)
             .padding(.horizontal, AppSpacing.screen)
             .padding(.bottom, AppSpacing.lg)
             .opacity(handingOff ? 0 : 1)
         }
         .animation(.easeOut(duration: 0.3), value: handingOff)
         .focusScreenChrome()
+        // Home's Sky is ALWAYS dark, so the status bar must be light content in
+        // both appearances — in Light Mode the system would otherwise draw black
+        // icons over the night sky. Screen-scoped: other tabs keep their
+        // appearance-dependent status bar.
+        .lightStatusBar()
         .onAppear {
             if !didInitSky {
                 skyIndex = FocusSky.all.firstIndex(of: appModel.selectedSky) ?? 0
@@ -323,17 +334,18 @@ struct HomeView: View {
                 Text(Formatters.miles(appModel.focusCoins))
                     .font(.system(size: Layout.pad(14, 17), weight: .heavy, design: .rounded))
                     .monospacedDigit()
-                    .foregroundStyle(Color(hex: 0x14120E))
+                    .foregroundStyle(AppColors.homeControlGlyph)
                     .lineLimit(1).minimumScaleFactor(0.7)
             }
             .padding(.leading, Layout.pad(9, 12))
             .padding(.trailing, Layout.pad(12, 15))
             .frame(height: Layout.pad(46, 54))
-            // Genuine white capsule with dark digits — matches the circular
-            // control family and the Start Focus pill (not a dim grey glass).
-            .background(Capsule().fill(AppColors.ctaFill)
+            // The shared adaptive control surface — a white capsule with dark
+            // digits by day, a premium glass capsule by night (matches the
+            // circular control family and the Start Focus pill).
+            .background(Capsule().fill(AppColors.homeControlFill)
                 .shadow(color: .black.opacity(0.22), radius: 12, y: 6))
-            .overlay(Capsule().strokeBorder(Color(hex: 0x26221D).opacity(0.08), lineWidth: 1))
+            .overlay(Capsule().strokeBorder(AppColors.homeControlStroke, lineWidth: 1))
         }
         .buttonStyle(SoftPressStyle(scale: 0.94))
         .accessibilityLabel("\(appModel.focusCoins) Focus Coins. Opens the Store.")
@@ -412,14 +424,15 @@ struct HomeView: View {
         Button(action: action) {
             Image(systemName: system)
                 .font(.system(size: Layout.pad(19, 23), weight: .bold))
-                // A genuine white disc with a dark chevron — reads as an
-                // intentional control on every Sky, not a dim grey smudge.
-                // (This sits OUTSIDE the force-dark chrome, so literal colours.)
-                .foregroundStyle(Color(hex: 0x14120E))
+                // The shared adaptive control surface: a warm-white disc + dark
+                // chevron by day, a premium translucent glass disc by night.
+                // (This sits OUTSIDE any force-dark chrome, so the `homeControl`
+                // tokens resolve to the pilot's real appearance.)
+                .foregroundStyle(AppColors.homeControlGlyph)
                 .frame(width: Layout.pad(48, 56), height: Layout.pad(48, 56))
-                .background(Circle().fill(Color(hex: 0xF4EFE4))
+                .background(Circle().fill(AppColors.homeControlFill)
                     .shadow(color: .black.opacity(0.28), radius: 12, y: 6))
-                .overlay(Circle().strokeBorder(Color(hex: 0x26221D).opacity(0.08), lineWidth: 1))
+                .overlay(Circle().strokeBorder(AppColors.homeControlStroke, lineWidth: 1))
         }
         .buttonStyle(SoftPressStyle())
         .accessibilityLabel(system == "chevron.left" ? "Previous Sky" : "Next Sky")

@@ -58,6 +58,21 @@ enum AppColors {
     /// The label colour on `ctaFill`.
     static let ctaText = Color.dynamic(light: 0xF7F1E7, dark: 0x14120E)
 
+    // MARK: Home floating controls (top-bar circles, edge arrows, coins chip)
+    /// The ONE shared surface for the Home controls that float over the always-
+    /// dark Sky. A warm-white disc by **day** (dark glyphs, matching Start
+    /// Focus) and a premium translucent dark-glass disc by **night** — never
+    /// white circles in Dark Mode, never grey opaque blocks. Driven purely by
+    /// the real appearance, so no per-control scheme checks are scattered around.
+    static let homeControlFill = Color.dynamic(light: 0xF6F1E6, lightAlpha: 1.0,
+                                               dark: 0x14131C, darkAlpha: 0.42)
+    /// Glyph / label colour on a Home floating control (dark ink by day, warm
+    /// cream by night — always legible on its own surface).
+    static let homeControlGlyph = Color.dynamic(light: 0x14120E, dark: 0xF7F1E7)
+    /// The hairline ring around a Home floating control.
+    static let homeControlStroke = Color.dynamic(light: 0x26221D, lightAlpha: 0.08,
+                                                 dark: 0xFFFFFF, darkAlpha: 0.16)
+
     // MARK: Accents / status
     /// Premium gold — Ultra, streak embers, rare moments.
     static let gold    = Color.dynamic(light: 0xD9A94F, dark: 0xD8B56D)

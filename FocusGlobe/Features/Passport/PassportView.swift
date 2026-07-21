@@ -103,11 +103,11 @@ struct PassportView: View {
                 .accessibilityLabel("Share your focus grid")
             }
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                FocusConsistencyGrid(history: appModel.history, weeks: 53)
+                FocusConsistencyGrid(history: appModel.history)
                 // Make the qualification rule legible: a day lights only with a
                 // real 5-minute focus (so a 1-minute flight lifts the streak but
                 // not the grid — deliberately different questions).
-                Text("Each square is a day with 5+ focused minutes.")
+                Text("Last 6 months · each square is a day with 5+ focused minutes.")
                     .font(.system(size: 11, weight: .medium, design: .rounded))
                     .foregroundStyle(AppColors.textTertiary)
                 HStack(spacing: AppSpacing.md) {
@@ -145,7 +145,8 @@ struct PassportView: View {
     private func shareGrid() {
         if let image = FocusGridShare.renderImage(history: appModel.history,
                                                  displayName: appModel.profile.name,
-                                                 currentStreak: progress.currentStreak) {
+                                                 currentStreak: progress.currentStreak,
+                                                 longestStreak: progress.longestStreak) {
             shareItems = [image]
         } else {
             appModel.haptics.tap()

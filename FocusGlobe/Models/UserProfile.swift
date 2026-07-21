@@ -50,6 +50,11 @@ struct UserProfile: Codable, Equatable {
     /// Per-Sky unlocks earned by invites: a Sky unlocks individually once its
     /// own 3 invites are accepted. (Premium bypasses this while active.)
     var unlockedSkyIDs: Set<String>? = nil
+    /// Balloon skins that have been earned at least once — the GRANDFATHER set.
+    /// Milestone skins are normally derived from live progress, but once a skin
+    /// is earned it is captured here so a change to the unlock RULE (e.g. flights
+    /// → focused minutes) can never re-lock a skin the pilot already owns.
+    var unlockedSkinIDs: Set<String>? = nil
     /// Accepted invites counted per Sky (the honest, backend-fed tally).
     var inviteProgressBySkyID: [String: Int]? = nil
     /// The day-ordinal on which the Shop daily gift was last collected (once/day).

@@ -152,94 +152,123 @@ enum FocusConsistency {
 
 // MARK: - The grid view (full + compact)
 
-/// The contribution-style focus grid. `weeks` controls the span (52–53 for
-/// the full grid shown in both Passport and the streak popup; a smaller span
-/// is only used by the off-screen share card). VoiceOver reads one summary
-/// instead of hundreds of cells.
+/// The contribution-style focus grid — a **fixed, non-scrolling 6-month span**
+/// (26 rolling weeks × 7 rows, newest week on the right). It sizes itself
+/// responsively to fill the available width via `GeometryReader`, so every
+/// iPhone width shows all 26 weeks with no horizontal scroll, drag or clipping.
+/// This is the ONE grid implementation reused by Passport, the streak sheet and
+/// the share card (the PRO widget renders the same 26-week data on its target).
+/// VoiceOver reads one summary instead of ~180 cells.
 struct FocusConsistencyGrid: View {
     let history: [FocusSessionRecord]
-    var weeks: Int = 53
-    var cellSize: CGFloat = 9
-    var spacing: CGFloat = 2.5
+    /// The 6-month span. Kept as a parameter for the debug self-check only; all
+    /// product surfaces use the default so they stay identical.
+    var weeks: Int = 26
+    /// When set, the grid renders at this exact square size instead of sizing to
+    /// the available width. Used only by fixed-canvas renderers that want a
+    /// specific density; nil everywhere on-screen (fully responsive).
+    var fixedCellSize: CGFloat? = nil
+    var showsMonthLabels: Bool = true
 
     @Environment(\.calendar) private var calendar
-    /// One-shot pop for today's square when it is (or has just been) lit.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// One-shot pop for today's square the moment it becomes NEWLY lit.
     @State private var pulseToday = false
+    /// Whether today was already lit at the last observation, so the pulse fires
+    /// on a genuine new activation — never merely on appear.
+    @State private var todayWasLit: Bool? = nil
+
+    private static let spacingFactor: CGFloat = 0.30   // spacing = side × this
+    private static let labelFactor: CGFloat = 1.7      // label zone height in side units
 
     private var columns: [[(date: Date, minutes: Int?)?]] {
         FocusConsistency.columns(weeks: weeks, history: history, calendar: calendar)
     }
+    private var todayLit: Bool {
+        FocusConsistency.activeDays(history: history, calendar: calendar)[
+            calendar.startOfDay(for: Date())] != nil
+    }
 
     var body: some View {
         let cols = columns
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 4) {
-                    monthLabels(cols)
-                    HStack(alignment: .top, spacing: spacing) {
-                        ForEach(Array(cols.enumerated()), id: \.offset) { index, col in
-                            VStack(spacing: spacing) {
-                                ForEach(0..<7, id: \.self) { row in
-                                    cell(col.indices.contains(row) ? col[row] : nil)
-                                }
-                            }
-                            .id(index)
-                        }
-                    }
+        let count = max(1, cols.count)
+        let sf = Self.spacingFactor
+        // width  = count·side + (count−1)·spacing  (spacing = side·sf)
+        // height = 7·side + 6·spacing + labelZone
+        let wUnits = CGFloat(count) + CGFloat(count - 1) * sf
+        let hUnits = 7 + 6 * sf + (showsMonthLabels ? Self.labelFactor : 0)
+        return Group {
+            if let side = fixedCellSize {
+                grid(cols, side: side)
+            } else {
+                GeometryReader { geo in
+                    grid(cols, side: geo.size.width / wUnits)
                 }
-                .padding(.vertical, 2)
-            }
-            .onAppear {
-                // Scroll synchronously so the common case is already pinned to
-                // the newest week before first paint, THEN correct one runloop
-                // tick later: onAppear can fire during the tab-switch / sheet
-                // presentation, before the ScrollView has final content
-                // metrics, and a purely synchronous scrollTo can land short —
-                // hiding the newest (current) week off-screen right. Both
-                // calls are idempotent.
-                proxy.scrollTo(max(0, cols.count - 1), anchor: .trailing)
-                DispatchQueue.main.async {
-                    proxy.scrollTo(max(0, cols.count - 1), anchor: .trailing)
-                    pulseTodayIfLit()
-                }
-            }
-            // A landing recorded while the grid is on screen re-pins the newest
-            // column so today's freshly lit square is always in view.
-            .onChange(of: history) { _, _ in
-                withAnimation(.easeOut(duration: 0.3)) {
-                    proxy.scrollTo(max(0, cols.count - 1), anchor: .trailing)
-                }
-                pulseTodayIfLit()
+                // A matched aspect ratio gives the width-filling grid a definite,
+                // never-clipping height at any width — no scroll, no GeometryReader
+                // collapse.
+                .aspectRatio(wUnits / hUnits, contentMode: .fit)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilitySummary)
+        .onAppear {
+            // Record today's state WITHOUT pulsing (never pulse on appear).
+            if todayWasLit == nil { todayWasLit = todayLit }
+        }
+        .onChange(of: history) { _, _ in
+            let nowLit = todayLit
+            if nowLit && todayWasLit == false { firePulse() }
+            todayWasLit = nowLit
+        }
     }
 
-    /// A brief, premium swell on today's square when it is lit — the visible
-    /// confirmation that the landing just counted.
-    private func pulseTodayIfLit() {
-        guard FocusConsistency.activeDays(history: history, calendar: calendar)[
-            calendar.startOfDay(for: Date())] != nil else { return }
+    @ViewBuilder private func grid(_ cols: [[(date: Date, minutes: Int?)?]], side: CGFloat) -> some View {
+        let spacing = side * Self.spacingFactor
+        VStack(alignment: .leading, spacing: 0) {
+            if showsMonthLabels {
+                monthLabels(cols, side: side, spacing: spacing)
+                    .frame(height: side * Self.labelFactor, alignment: .bottomLeading)
+            }
+            HStack(alignment: .top, spacing: spacing) {
+                ForEach(Array(cols.enumerated()), id: \.offset) { _, col in
+                    VStack(spacing: spacing) {
+                        ForEach(0..<7, id: \.self) { row in
+                            dayCell(col.indices.contains(row) ? col[row] : nil, side: side)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// A brief, premium swell + brightness lift on today's square when it becomes
+    /// newly lit — the visible confirmation that the landing just counted.
+    /// Immediate (no animation) under Reduce Motion.
+    private func firePulse() {
+        guard !reduceMotion else { return }
         pulseToday = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { pulseToday = false }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { pulseToday = false }
     }
 
-    @ViewBuilder private func cell(_ entry: (date: Date, minutes: Int?)?) -> some View {
+    @ViewBuilder private func dayCell(_ entry: (date: Date, minutes: Int?)?, side: CGFloat) -> some View {
         if let entry {
             let isFreshToday = entry.minutes != nil && calendar.isDateInToday(entry.date)
-            RoundedRectangle(cornerRadius: cellSize * 0.28, style: .continuous)
+            RoundedRectangle(cornerRadius: side * 0.28, style: .continuous)
                 .fill(FocusConsistency.color(level: FocusConsistency.level(minutes: entry.minutes)))
-                .frame(width: cellSize, height: cellSize)
-                .scaleEffect(isFreshToday && pulseToday ? 1.35 : 1)
+                .frame(width: side, height: side)
+                .scaleEffect(isFreshToday && pulseToday ? 1.32 : 1)
+                .brightness(isFreshToday && pulseToday ? 0.12 : 0)
                 .animation(.spring(response: 0.35, dampingFraction: 0.55), value: pulseToday)
         } else {
-            Color.clear.frame(width: cellSize, height: cellSize)
+            Color.clear.frame(width: side, height: side)
         }
     }
 
     /// Subtle month initials above the column where each month begins.
-    private func monthLabels(_ cols: [[(date: Date, minutes: Int?)?]]) -> some View {
+    private func monthLabels(_ cols: [[(date: Date, minutes: Int?)?]],
+                             side: CGFloat, spacing: CGFloat) -> some View {
         let formatter = DateFormatter()
         formatter.setLocalizedDateFormatFromTemplate("MMM")
         var lastMonth = -1
@@ -250,21 +279,21 @@ struct FocusConsistencyGrid: View {
             guard month != lastMonth else { return nil }
             return (index, formatter.string(from: first.date))
         }
-        return ZStack(alignment: .topLeading) {
-            Color.clear.frame(height: 12)
+        return ZStack(alignment: .bottomLeading) {
+            Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
             ForEach(labels, id: \.index) { label in
                 Text(label.text)
-                    .font(.system(size: 9, weight: .semibold, design: .rounded))
+                    .font(.system(size: max(7, side * 0.95), weight: .semibold, design: .rounded))
                     .foregroundStyle(AppColors.textTertiary)
-                    .offset(x: CGFloat(label.index) * (cellSize + spacing))
+                    .fixedSize()
+                    .offset(x: CGFloat(label.index) * (side + spacing))
             }
         }
-        .frame(width: CGFloat(cols.count) * (cellSize + spacing), alignment: .leading)
     }
 
     private var accessibilitySummary: String {
         let s = FocusConsistency.summary(history: history, calendar: calendar)
-        return "Focus consistency grid. \(s.activeDays) active focus days, \(s.activeDaysThisYear) this year."
+        return "Focus consistency grid, last six months. \(s.activeDays) active focus days, \(s.activeDaysThisYear) this year."
     }
 }
 
@@ -277,6 +306,12 @@ struct FocusGridShareCard: View {
     let history: [FocusSessionRecord]
     let displayName: String?
     let currentStreak: Int
+    let longestStreak: Int
+
+    /// Total real completed focused time across all history (cancelled excluded).
+    private var totalFocusedSeconds: Int {
+        history.filter { $0.completed }.reduce(0) { $0 + max(0, $1.focusedSeconds) }
+    }
 
     var body: some View {
         let summary = FocusConsistency.summary(history: history)
@@ -284,7 +319,7 @@ struct FocusGridShareCard: View {
             HStack(spacing: 10) {
                 BalloonView(height: 44, showBurner: false, showGlow: false)
                 Text("FocusGlobe")
-                    .font(.system(size: 26, weight: .semibold, design: .serif))
+                    .font(.system(size: 30, weight: .bold, design: .serif))
                     .foregroundStyle(Color(hex: 0xF7F1E7))
                 Spacer()
             }
@@ -298,18 +333,26 @@ struct FocusGridShareCard: View {
                         .foregroundStyle(Color(hex: 0xD8B56D))
                 }
             }
-            FocusConsistencyGrid(history: history, weeks: 53, cellSize: 7.6, spacing: 2.2)
+            FocusConsistencyGrid(history: history)
                 .frame(maxWidth: .infinity, alignment: .leading)
+            // Two rows of headline stats — current + longest streak, active days
+            // and total focused time. No email or account identity is ever shown.
             HStack(spacing: 26) {
                 shareStat(value: "\(currentStreak)", label: "day streak")
+                shareStat(value: "\(longestStreak)", label: "best streak")
                 shareStat(value: "\(summary.activeDays)", label: "focus days")
+                Spacer()
+            }
+            HStack(spacing: 26) {
+                shareStat(value: Formatters.durationLabel(minutes: totalFocusedSeconds / 60),
+                          label: "focused")
                 shareStat(value: "\(summary.consistencyPercent)%", label: "consistency")
                 Spacer()
             }
             Spacer(minLength: 0)
         }
         .padding(34)
-        .frame(width: 560, height: 700, alignment: .topLeading)
+        .frame(width: 560, height: 760, alignment: .topLeading)
         .background(AppColors.neutralBase)
         .environment(\.colorScheme, .dark)
     }
@@ -341,10 +384,11 @@ enum FocusGridShare {
     /// Render the share card at 3× (1680×2100 px). Returns nil on failure —
     /// callers degrade gracefully instead of crashing.
     static func renderImage(history: [FocusSessionRecord], displayName: String?,
-                            currentStreak: Int) -> UIImage? {
+                            currentStreak: Int, longestStreak: Int) -> UIImage? {
         let renderer = ImageRenderer(content: FocusGridShareCard(history: history,
                                                                  displayName: displayName,
-                                                                 currentStreak: currentStreak))
+                                                                 currentStreak: currentStreak,
+                                                                 longestStreak: longestStreak))
         renderer.scale = 3
         return renderer.uiImage
     }

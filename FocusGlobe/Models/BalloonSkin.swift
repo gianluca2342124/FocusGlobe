@@ -17,8 +17,13 @@ struct BalloonSkin: Identifiable, Hashable {
     /// How a skin is earned.
     enum Unlock: Hashable {
         case free
-        /// Unlocked after this many completed journeys (landings).
+        /// Unlocked after this many completed journeys (landings). LEGACY —
+        /// retained for decoding/migration; the five milestone skins now use
+        /// `.focusMinutes`.
         case journeys(Int)
+        /// Unlocked after this many *real completed focused minutes* (the ONE
+        /// authoritative total; cancelled sessions excluded).
+        case focusMinutes(Int)
         /// Unlocked after this many focus miles.
         case miles(Int)
         /// Requires an **active** Pro subscription (re-locks if Pro lapses).
@@ -46,27 +51,31 @@ struct BalloonSkin: Identifiable, Hashable {
     /// A short human description of how the skin is earned.
     var requirementText: String {
         switch unlock {
-        case .free:             return "Default"
-        case .journeys(let n):  return "\(n) flight\(n == 1 ? "" : "s")"
-        case .miles(let n):     return "\(n) focus mile\(n == 1 ? "" : "s")"
-        case .pro:              return "PRO"
+        case .free:               return "Default"
+        case .focusMinutes(let n): return "\(n) minutes"
+        case .journeys(let n):    return "\(n) flight\(n == 1 ? "" : "s")"
+        case .miles(let n):       return "\(n) focus mile\(n == 1 ? "" : "s")"
+        case .pro:                return "PRO"
         }
     }
 
     /// The ONE reusable "current/required unit" progress label — numerator from
     /// REAL user progress, denominator + unit from the item's actual rule (never
     /// substituting one metric for another), with correct singular/plural and an
-    /// Owned/Free/PRO terminal state. Every milestone skin unlocks by completed
-    /// flights (`.journeys`); `.miles` stays unit-correct should a skin use it.
+    /// Owned/Free/PRO terminal state. The five milestone skins unlock by real
+    /// completed focused **minutes** (`.focusMinutes`); the `owned` flag lets the
+    /// caller honour grandfathering so an already-earned skin always reads Owned.
     /// Used by both the Store card and the preview status row.
-    func progressLabel(landings: Int, focusMiles: Int) -> String {
+    func progressLabel(focusMinutes: Int, focusMiles: Int, owned: Bool = false) -> String {
         switch unlock {
         case .free:            return "Free"
-        case .pro:             return "FocusGlobe PRO"
+        case .pro:             return owned ? "Owned" : "FocusGlobe PRO"
+        case .focusMinutes(let n):
+            return (owned || focusMinutes >= n) ? "Owned" : "\(min(focusMinutes, n))/\(n) minutes"
         case .journeys(let n):
-            return landings >= n ? "Owned" : "\(min(landings, n))/\(n) flights"
+            return (owned || focusMinutes >= n) ? "Owned" : "\(min(focusMinutes, n))/\(n) minutes"
         case .miles(let n):
-            return focusMiles >= n ? "Owned" : "\(min(focusMiles, n))/\(n) focus miles"
+            return (owned || focusMiles >= n) ? "Owned" : "\(min(focusMiles, n))/\(n) focus miles"
         }
     }
 
@@ -81,19 +90,19 @@ struct BalloonSkin: Identifiable, Hashable {
                     systemImage: "balloon.fill", theme: .teal, unlock: .free, sortOrder: 0),
         BalloonSkin(id: "balloon", name: "Balloon",
                     subtitle: "Bright and bold", assetName: "BalloonSkin_Balloon1",
-                    systemImage: "balloon.2.fill", theme: .indigo, unlock: .journeys(10), sortOrder: 1),
+                    systemImage: "balloon.2.fill", theme: .indigo, unlock: .focusMinutes(300), sortOrder: 1),
         BalloonSkin(id: "marshmallow", name: "Marshmallow",
                     subtitle: "Soft and sweet", assetName: "BalloonSkin_Marshmallow1",
-                    systemImage: "cloud.fill", theme: .coral, unlock: .journeys(25), sortOrder: 2),
+                    systemImage: "cloud.fill", theme: .coral, unlock: .focusMinutes(900), sortOrder: 2),
         BalloonSkin(id: "emoji", name: "Emoji",
                     subtitle: "Say hello", assetName: "BalloonSkin_Emoji1",
-                    systemImage: "face.smiling.fill", theme: .gold, unlock: .journeys(50), sortOrder: 3),
+                    systemImage: "face.smiling.fill", theme: .gold, unlock: .focusMinutes(1800), sortOrder: 3),
         BalloonSkin(id: "hohoho", name: "Ho Ho Ho",
                     subtitle: "Festive cheer", assetName: "BalloonSkin_HoHoHo1",
-                    systemImage: "gift.fill", theme: .coral, unlock: .journeys(75), sortOrder: 4),
+                    systemImage: "gift.fill", theme: .coral, unlock: .focusMinutes(3000), sortOrder: 4),
         BalloonSkin(id: "sky-pilot", name: "Sky Pilot",
                     subtitle: "Ready for the skies", assetName: "BalloonSkin_Sky-Pilot1",
-                    systemImage: "airplane", theme: .mint, unlock: .journeys(100), sortOrder: 5),
+                    systemImage: "airplane", theme: .mint, unlock: .focusMinutes(5000), sortOrder: 5),
         BalloonSkin(id: "moon", name: "Moon",
                     subtitle: "Lunar glow", assetName: "BalloonSkin_Moon1",
                     systemImage: "moon.stars.fill", theme: .indigo, unlock: .pro, sortOrder: 6),

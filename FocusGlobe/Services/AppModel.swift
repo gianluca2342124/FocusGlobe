@@ -109,6 +109,35 @@ final class AppModel: ObservableObject {
             loadedProfile.selectedSkyID = FocusSky.defaultFree.id
             persistence.save(loadedProfile, for: .profile)
         }
+        // Balloon-skin migration (flight milestones → focused minutes): the five
+        // milestone skins now unlock at 300/900/1800/3000/5000 focused minutes.
+        // Grandfather any skin a pilot already earned under the OLD flight
+        // thresholds so the new rule can NEVER re-lock an owned skin. Runs once
+        // (guarded on the set being absent), then the live capture keeps it fresh.
+        if loadedProfile.unlockedSkinIDs == nil {
+            let legacyFlightThresholds: [(id: String, flights: Int)] = [
+                ("balloon", 10), ("marshmallow", 25), ("emoji", 50), ("hohoho", 75), ("sky-pilot", 100)
+            ]
+            var owned = Set<String>()
+            for t in legacyFlightThresholds where loadedProgress.landings >= t.flights {
+                owned.insert(t.id)
+            }
+            loadedProfile.unlockedSkinIDs = owned
+
+            // Sky-threshold preservation (Rainy Tokyo 3→7 days, Swiss Alps 7→14
+            // days): grandfather any streak Sky the pilot already satisfies under
+            // the OLD threshold, so raising the bar never re-locks a Sky they had.
+            // Runs in this same one-time block, so a NEW pilot (streak 0) captures
+            // nothing and must reach the new thresholds. Fiji (was PRO-only, now
+            // 100 min) needs no migration: PRO still bypasses and no free user
+            // could have "owned" it before.
+            var unlockedSkies = loadedProfile.unlockedSkyIDs ?? []
+            if loadedProgress.currentStreak >= 3 { unlockedSkies.insert("rainy-tokyo") }
+            if loadedProgress.currentStreak >= 7 { unlockedSkies.insert("swiss-alps") }
+            loadedProfile.unlockedSkyIDs = unlockedSkies
+
+            persistence.save(loadedProfile, for: .profile)
+        }
         self.profile = loadedProfile
         LaunchLog.mark("AppModel.init persistence loaded")
 
@@ -716,22 +745,69 @@ final class AppModel: ObservableObject {
     }
 
     func isSkinUnlocked(_ skin: BalloonSkin) -> Bool {
+        // Grandfathering: a skin the pilot has ever earned is owned forever, so a
+        // change to the unlock RULE can never re-lock it.
+        if (profile.unlockedSkinIDs ?? []).contains(skin.id) { return true }
         switch skin.unlock {
-        case .free:            return true
-        case .journeys(let n): return progress.landings >= n        // completed journeys
-        case .miles(let n):    return progress.totalFocusMiles >= n
-        case .pro:             return isPro   // active subscription only — re-locks if Pro lapses
+        case .free:                return true
+        case .focusMinutes(let n): return lifetimeFocusMinutes >= n   // real completed focused minutes
+        case .journeys(let n):     return progress.landings >= n
+        case .miles(let n):        return progress.totalFocusMiles >= n
+        case .pro:                 return isPro   // active subscription only — re-locks if Pro lapses
         }
+    }
+
+    /// Whether a milestone skin is grandfathered (owned regardless of the rule).
+    func isSkinGrandfathered(_ skin: BalloonSkin) -> Bool {
+        (profile.unlockedSkinIDs ?? []).contains(skin.id)
     }
 
     /// 0…1 progress toward a milestone skin; `nil` for free, Pro, or already-unlocked.
     func unlockProgress(for skin: BalloonSkin) -> Double? {
         guard !isSkinUnlocked(skin) else { return nil }
         switch skin.unlock {
-        case .journeys(let n): return n <= 0 ? 1 : min(1, Double(progress.landings) / Double(n))
-        case .miles(let n):    return n <= 0 ? 1 : min(1, Double(progress.totalFocusMiles) / Double(n))
-        case .free, .pro:      return nil
+        case .focusMinutes(let n): return n <= 0 ? 1 : min(1, Double(lifetimeFocusMinutes) / Double(n))
+        case .journeys(let n):     return n <= 0 ? 1 : min(1, Double(progress.landings) / Double(n))
+        case .miles(let n):        return n <= 0 ? 1 : min(1, Double(progress.totalFocusMiles) / Double(n))
+        case .free, .pro:          return nil
         }
+    }
+
+    /// Persist any newly-earned (non-PRO) milestone skin into the grandfather
+    /// set, so future rule changes never re-lock it. Cheap and idempotent.
+    private func captureEarnedSkins() {
+        var owned = profile.unlockedSkinIDs ?? []
+        var changed = false
+        for skin in BalloonSkin.all {
+            guard !skin.unlock.isPremium, !owned.contains(skin.id) else { continue }
+            let earned: Bool
+            switch skin.unlock {
+            case .focusMinutes(let n): earned = lifetimeFocusMinutes >= n
+            case .journeys(let n):     earned = progress.landings >= n
+            case .miles(let n):        earned = progress.totalFocusMiles >= n
+            case .free, .pro:          earned = false
+            }
+            if earned { owned.insert(skin.id); changed = true }
+        }
+        if changed { profile.unlockedSkinIDs = owned }
+    }
+
+    /// Persist any Sky whose FREE path is now satisfied into the permanent
+    /// grandfather set, so a later requirement change (or a dropped streak) can
+    /// never re-lock a Sky the pilot already earned. Never captures PRO-only or
+    /// the free Sky. Idempotent.
+    private func captureUnlockedSkies() {
+        var unlocked = profile.unlockedSkyIDs ?? []
+        var changed = false
+        let minutes = lifetimeFocusMinutes
+        let streak = progress.currentStreak
+        for sky in FocusSky.all where !unlocked.contains(sky.id) {
+            let invites = rawInviteCount(for: sky)
+            if SkyUnlock.freePathMet(sky, focusMinutes: minutes, streakDays: streak, invites: invites) {
+                unlocked.insert(sky.id); changed = true
+            }
+        }
+        if changed { profile.unlockedSkyIDs = unlocked }
     }
 
     func selectSkin(_ skin: BalloonSkin) {
@@ -896,9 +972,10 @@ final class AppModel: ObservableObject {
     func completeJourney(origin: JourneyOrigin, route: Route,
                          focusedSeconds: Int, intention: String?,
                          onlineSessionID: String? = nil) -> LandingSummary {
-        // Distance (and miles) reflect the *real* journey: the user's live
-        // location → the chosen destination.
-        let distanceKm = GeoMath.distanceKm(from: origin.coordinate, to: route.destination)
+        // Canonical focus distance: the balloon drifts at 15 km/h, so distance
+        // comes purely from REAL focused time (never geography). This path only
+        // records COMPLETED sessions, so cancelled time can never inflate it.
+        let distanceKm = FocusMetrics.distanceKm(focusedSeconds: focusedSeconds)
         // Focus Coins scale with *actual completed focus minutes* (never distance
         // or planned time), so infinity/short sessions can't be farmed for coins.
         let baseMiles = FocusEconomy.coins(forFocusedSeconds: focusedSeconds)
@@ -959,6 +1036,10 @@ final class AppModel: ObservableObject {
         applyStreak(to: &p, landingDate: record.date)
         let streakIncreased = p.currentStreak > previousStreak
         progress = p
+        // Capture any skin or Sky just earned into the grandfather sets, so a
+        // later rule change (or a dropped streak) can never re-lock them.
+        captureEarnedSkins()
+        captureUnlockedSkies()
 
         // Remember where we came from so the next screen can offer a return trip,
         // then make the destination the next origin (travelling the world).
@@ -997,8 +1078,9 @@ final class AppModel: ObservableObject {
     func cancelJourney(origin: JourneyOrigin, route: Route, focusedSeconds: Int, intention: String?) {
         let trimmed = intention?.trimmingCharacters(in: .whitespacesAndNewlines)
         let finalIntention = (trimmed?.isEmpty == false) ? trimmed : nil
-        let progressFraction = min(1, Double(focusedSeconds) / route.duration)
-        let distanceKm = GeoMath.distanceKm(from: origin.coordinate, to: route.destination)
+        // Focus distance from the REAL partial focused time — the cancelled
+        // session's own effort, never a fraction of a geographic route.
+        let distanceKm = FocusMetrics.distanceKm(focusedSeconds: focusedSeconds)
 
         let record = FocusSessionRecord(
             routeID: route.id,
@@ -1009,7 +1091,7 @@ final class AppModel: ObservableObject {
             theme: route.colorTheme,
             plannedMinutes: route.durationMinutes,
             focusedSeconds: focusedSeconds,
-            distanceKm: distanceKm * progressFraction,
+            distanceKm: distanceKm,
             focusMiles: 0,
             intention: finalIntention,
             completed: false
@@ -1230,10 +1312,10 @@ final class AppModel: ObservableObject {
             snap.resumeProgress = min(1, Double(r.elapsedSeconds) / Double(total))
         }
 
-        if let longest = history.filter({ $0.completed }).max(by: { $0.distanceKm < $1.distanceKm }) {
+        if let longest = history.filter({ $0.completed }).max(by: { $0.focusDistanceKm < $1.focusDistanceKm }) {
             snap.longestRouteOrigin = longest.originName
             snap.longestRouteDestination = longest.destinationName
-            snap.longestRouteKm = Int(longest.distanceKm.rounded())
+            snap.longestRouteKm = Int(longest.focusDistanceKm.rounded())
             snap.longestRouteDurationMinutes = longest.plannedMinutes
         }
 

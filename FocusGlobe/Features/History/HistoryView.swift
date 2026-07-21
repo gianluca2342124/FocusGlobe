@@ -70,7 +70,7 @@ private struct HistoryRow: View {
 
                 HStack(spacing: AppSpacing.md) {
                     metric(systemImage: "clock", text: "\(record.focusedMinutes) min")
-                    metric(systemImage: "ruler", text: Formatters.distance(km: record.distanceKm))
+                    metric(systemImage: "ruler", text: Formatters.distance(km: record.focusDistanceKm))
                     if record.completed {
                         metric(systemImage: "point.topleft.down.to.point.bottomright.curvepath",
                                text: Formatters.miles(record.focusMiles))

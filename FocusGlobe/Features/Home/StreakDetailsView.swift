@@ -71,7 +71,8 @@ struct StreakDetailsView: View {
                     appModel.tapFeedback()
                     if let image = FocusGridShare.renderImage(history: appModel.history,
                                                               displayName: appModel.profile.name,
-                                                              currentStreak: streak) {
+                                                              currentStreak: streak,
+                                                              longestStreak: appModel.progress.longestStreak) {
                         shareItems = [image]
                     } else {
                         appModel.haptics.tap()
@@ -84,9 +85,9 @@ struct StreakDetailsView: View {
                 .buttonStyle(SoftPressStyle())
                 .accessibilityLabel("Share your focus grid")
             }
-            // The EXACT full-year grid used in Passport — same span, density,
+            // The EXACT 6-month grid used in Passport — same span, density,
             // month labels, data and styling (no reduced/compact variant).
-            FocusConsistencyGrid(history: appModel.history, weeks: 53)
+            FocusConsistencyGrid(history: appModel.history)
             Text("Every gold square is a day you truly focused. Keep the sky lit.")
                 .font(.system(size: 12, weight: .medium, design: .rounded))
                 .foregroundStyle(AppColors.textSecondary)
