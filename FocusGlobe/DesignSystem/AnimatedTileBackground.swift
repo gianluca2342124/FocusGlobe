@@ -17,21 +17,38 @@ struct AnimatedTileBackground: View {
     let assetName: String
     /// Upward speed in points per second (a calm ~20–35 s visual loop).
     var speed: CGFloat = 22
-    /// Tile size multiplier (1 = the asset's native size).
-    var scale: CGFloat = 1.0
     /// Strength of the readability scrim above the pattern (0…1).
     var overlayOpacity: Double = 0.55
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Drives the single compositor-side scroll (see below) — no per-frame CPU.
+    @State private var phase = false
 
     var body: some View {
         ZStack {
             #if canImport(UIKit)
             if let ui = UIImage(named: assetName) {
-                TimelineView(.animation(minimumInterval: reduceMotion ? 8 : 1.0 / 30.0)) { ctx in
-                    let t = reduceMotion ? 0 : ctx.date.timeIntervalSinceReferenceDate
-                    tiled(ui: ui, t: t)
+                // One pre-tiled layer moved by a single repeatForever offset:
+                // the render server animates it, so the pattern costs ZERO
+                // main-thread work per frame (the old Canvas re-tiled at 30 fps
+                // the whole time the page was open — a constant drag on every
+                // interaction). Sliding exactly one tile height and repeating
+                // from the start is seamless because the pattern repeats with
+                // that same period (tiles render at the asset's native size).
+                GeometryReader { geo in
+                    let th = max(1, ui.size.height)
+                    Image(uiImage: ui)
+                        .resizable(resizingMode: .tile)
+                        .frame(width: geo.size.width, height: geo.size.height + th)
+                        .offset(y: phase ? -th : 0)
+                        .onAppear {
+                            guard !reduceMotion else { return }
+                            withAnimation(.linear(duration: Double(th / speed))
+                                .repeatForever(autoreverses: false)) { phase = true }
+                        }
                 }
+                .clipped()
+                .allowsHitTesting(false)
                 LinearGradient(colors: [.black.opacity(overlayOpacity * 0.42), .black.opacity(overlayOpacity)],
                                startPoint: .top, endPoint: .bottom)
                     .allowsHitTesting(false)
@@ -44,34 +61,6 @@ struct AnimatedTileBackground: View {
         }
         .ignoresSafeArea()
     }
-
-    #if canImport(UIKit)
-    private func tiled(ui: UIImage, t: Double) -> some View {
-        Canvas { c, size in
-            let tw = max(1, ui.size.width * scale)
-            let th = max(1, ui.size.height * scale)
-            let img = Image(uiImage: ui)
-            // Wrapped upward offset kept inside [-th, 0] so the seam always sits
-            // one full tile above the visible top edge.
-            var yShift = (-CGFloat(t) * speed).truncatingRemainder(dividingBy: th)
-            if yShift > 0 { yShift -= th }
-            let cols = Int((size.width / tw).rounded(.up)) + 1
-            let rows = Int((size.height / th).rounded(.up)) + 2
-            var r = -1
-            while r < rows {
-                var col = 0
-                while col < cols {
-                    let x = CGFloat(col) * tw
-                    let y = CGFloat(r) * th + yShift
-                    c.draw(img, in: CGRect(x: x, y: y, width: tw, height: th))
-                    col += 1
-                }
-                r += 1
-            }
-        }
-        .allowsHitTesting(false)
-    }
-    #endif
 }
 
 /// The branded in-app loading state — a full-bleed portrait/landscape image shown

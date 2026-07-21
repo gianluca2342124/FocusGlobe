@@ -66,6 +66,17 @@ enum BalloonSkinImage {
         if let resolved { cache[assetName] = resolved }
         return resolved
     }
+
+    /// Warm the trim cache off the main thread at launch, so the Store's first
+    /// frame never pays the decode + alpha-trim cost for every skin inside the
+    /// tab tap's transaction. Safe: the cache is lock-guarded and
+    /// `UIImage(named:)` is thread-safe.
+    static func warmUp() {
+        Task.detached(priority: .utility) {
+            _ = BrandBalloon.image
+            for skin in BalloonSkin.all { _ = image(named: skin.assetName) }
+        }
+    }
 }
 
 extension UIImage {

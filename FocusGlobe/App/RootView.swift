@@ -47,13 +47,17 @@ struct RootView: View {
                 .environmentObject(appModel)
                 .environmentObject(router)
         }
-        // The take-off curtain: an opaque neutral cover raised the instant the
-        // Boarding Pass is cut, so Home can never flash between the setup
-        // cover's dismissal and the journey cover's presentation. The journey
+        // The take-off curtain: an opaque cover raised the instant the Boarding
+        // Pass is cut, so Home can never flash between the setup cover's
+        // dismissal and the journey cover's presentation. It is painted with
+        // the destination Sky's OWN first-frame gradient, so the hand-off reads
+        // as one continuous sky — never a black interstitial. The journey
         // container lowers it on mount (plus the router's own 3 s watchdog).
         .overlay {
             if router.takeoffCurtain {
-                LinearGradient(colors: [AppColors.neutralBase, AppColors.neutralDeep],
+                LinearGradient(colors: router.takeoffCurtainSkyID
+                                   .map { SkyGradientTimeline.stops(skyID: $0, at: 0) }
+                                   ?? [AppColors.neutralBase, AppColors.neutralDeep],
                                startPoint: .top, endPoint: .bottom)
                     .ignoresSafeArea()
                     .transition(.opacity)

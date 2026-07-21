@@ -17,6 +17,9 @@ struct AppPrimaryButton: View {
     var systemImage: String? = nil
     var isEnabled: Bool = true
     var isLoading: Bool = false
+    /// Render the symbol AFTER the title. The app rule: directional arrows
+    /// always trail their text ("Continue →", never "→ Continue").
+    var iconTrailing: Bool = false
     let action: () -> Void
 
     var body: some View {
@@ -26,13 +29,17 @@ struct AppPrimaryButton: View {
                     ProgressView()
                         .tint(.white)
                 } else {
-                    if let systemImage {
+                    if let systemImage, !iconTrailing {
                         Image(systemName: systemImage)
                             .font(.system(size: Layout.pad(17, 20), weight: .semibold))
                     }
                     // Scales up on iPad/Mac; identical to AppTypography.headline on iPhone.
                     Text(title)
                         .font(.system(size: Layout.pad(18, 21), weight: .semibold, design: .rounded))
+                    if let systemImage, iconTrailing {
+                        Image(systemName: systemImage)
+                            .font(.system(size: Layout.pad(17, 20), weight: .semibold))
+                    }
                 }
             }
             .foregroundStyle(AppColors.ctaText)

@@ -188,7 +188,7 @@ struct BoardingView: View {
         if !reduceMotion { shakePage() }
         // Then begin the expedition through the exact same code path as before.
         DispatchQueue.main.asyncAfter(deadline: .now() + (reduceMotion ? 0.2 : 0.85)) {
-            router.raiseTakeoffCurtain()
+            router.raiseTakeoffCurtain(skyID: FocusSky.matching(routeID: route.id)?.id)
             router.startJourney(origin: origin, route: route, intention: selectedPreset?.title)
         }
     }

@@ -174,7 +174,7 @@ struct FriendsView: View {
         // the shared clock — exact, skew-immune, no rounding. The curtain keeps
         // Friends from flashing while the journey cover rises; the container
         // then shows the private joining moment over the already-active flight.
-        router.raiseTakeoffCurtain()
+        router.raiseTakeoffCurtain(skyID: sky.id)
         router.startJourney(origin: origin, route: route, intention: nil,
                             sharedEndsAt: room.endsAt)
     }

@@ -67,7 +67,9 @@ struct LandingView: View {
     private var successCard: some View {
         VStack(spacing: AppSpacing.lg) {
             Text("Success!")
-                .font(AppTypography.serifHero)
+                // The app's modern display language (bold rounded, like every
+                // page title) — not the old serif treatment.
+                .font(.system(size: Layout.pad(32, 38), weight: .bold, design: .rounded))
                 .foregroundStyle(AppColors.textPrimary)
 
             HStack(spacing: 0) {
@@ -85,7 +87,9 @@ struct LandingView: View {
             .glassBackground(cornerRadius: AppSpacing.cardRadius, tintOpacity: 0.2, shadowRadius: 12, shadowY: 6)
 
             VStack(spacing: AppSpacing.sm) {
-                ExpeditionButton(title: "Continue", systemImage: "arrow.right") {
+                // The app's signature capsule CTA — arrow AFTER the text, no
+                // wax-seal dot, same button language as everywhere else.
+                AppPrimaryButton(title: "Continue", systemImage: "arrow.right", iconTrailing: true) {
                     appModel.uiSound.play(.claim)
                     withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) { phase = .streak }
                 }
@@ -101,7 +105,7 @@ struct LandingView: View {
         VStack(spacing: 3) {
             FocusCoinIcon(size: 22)
             Text(Formatters.miles(earnedMiles))
-                .font(.system(size: 19, weight: .bold, design: .rounded))
+                .font(.system(size: 19 * Layout.fontScale, weight: .bold, design: .rounded))
                 .foregroundStyle(AppColors.textPrimary)
                 .contentTransition(.numericText())
             Text(adState == .doubled ? "Coins ×2" : "Focus Coins")
@@ -114,7 +118,7 @@ struct LandingView: View {
         VStack(spacing: 3) {
             Image(systemName: icon).font(.system(size: 18, weight: .semibold)).foregroundStyle(tint)
             Text(value)
-                .font(.system(size: 19, weight: .bold, design: .rounded))
+                .font(.system(size: 19 * Layout.fontScale, weight: .bold, design: .rounded))
                 .foregroundStyle(AppColors.textPrimary)
                 .lineLimit(1).minimumScaleFactor(0.6)
             Text(label).font(AppTypography.micro).foregroundStyle(AppColors.textTertiary)
@@ -176,35 +180,51 @@ struct LandingView: View {
                                              center: .center, startRadius: 2, endRadius: 80))
                     .frame(width: 140, height: 140)
                 Image(systemName: "flame.fill")
-                    .font(.system(size: 66, weight: .bold))
+                    .font(.system(size: Layout.pad(60, 74), weight: .bold))
                     .foregroundStyle(LinearGradient(colors: [Color(hex: 0xFFB65C), Color(hex: 0xF2643C)],
                                                     startPoint: .top, endPoint: .bottom))
                     .shadow(color: Color(hex: 0xF2643C).opacity(0.5), radius: 16)
             }
-            VStack(spacing: 6) {
-                Text("\(summary.streak)-day streak")
-                    .font(AppTypography.serifTitle2)
-                    .foregroundStyle(AppColors.textPrimary)
-                Text(streakQuote)
-                    .font(AppTypography.callout)
+            Text("\(summary.streak)-day streak")
+                .font(.system(size: Layout.pad(26, 30), weight: .bold, design: .rounded))
+                .foregroundStyle(AppColors.textPrimary)
+            // The recent week at a glance — the SAME strip as the Streak popup,
+            // so the day just landed glows here immediately.
+            StreakWeekStrip(history: appModel.history)
+            VStack(spacing: 5) {
+                Text("“\(streakQuote.text)”")
+                    .font(AppTypography.serifBody)
                     .foregroundStyle(AppColors.textSecondary)
                     .multilineTextAlignment(.center)
-                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("— \(streakQuote.author)")
+                    .font(AppTypography.caption)
+                    .foregroundStyle(AppColors.textTertiary)
             }
-            ExpeditionButton(title: "Continue", systemImage: "checkmark") { finish() }
+            .padding(.horizontal, AppSpacing.xs)
+            AppPrimaryButton(title: "Continue", systemImage: "arrow.right", iconTrailing: true) {
+                finish()
+            }
         }
         .padding(AppSpacing.lg)
         .glassBackground(cornerRadius: 28, tint: AppColors.goldFoil, tintOpacity: 0.1,
                          shadowRadius: 26, shadowY: 14)
     }
 
-    private var streakQuote: String {
-        let quotes = [
-            "Small steps, every day.",
-            "Consistency is the quiet superpower.",
-            "You showed up — that's the hard part.",
-            "Discipline is choosing what you want most.",
-            "One calm flight at a time.",
+    /// Real, properly attributed words — rotated deterministically by streak
+    /// length, so the card stays fresh without ever inventing an author.
+    private var streakQuote: (text: String, author: String) {
+        let quotes: [(String, String)] = [
+            ("We are what we repeatedly do. Excellence, then, is not an act, but a habit.",
+             "Will Durant"),
+            ("Success is the sum of small efforts, repeated day in and day out.",
+             "Robert Collier"),
+            ("Habit is a cable; we weave a thread of it every day, and at last we cannot break it.",
+             "Horace Mann"),
+            ("Rivers know this: there is no hurry. We shall get there some day.",
+             "A. A. Milne"),
+            ("It does not matter how slowly you go as long as you do not stop.",
+             "Confucius"),
         ]
         return quotes[max(0, summary.streak) % quotes.count]
     }

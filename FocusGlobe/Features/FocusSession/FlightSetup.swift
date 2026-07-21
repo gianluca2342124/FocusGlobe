@@ -305,7 +305,7 @@ struct DurationDialView: View {
             distancePreview
             Spacer(minLength: 0)
             presetRow
-            AppPrimaryButton(title: "Continue", systemImage: "arrow.right") {
+            AppPrimaryButton(title: "Continue", systemImage: "arrow.right", iconTrailing: true) {
                 onContinue()
             }
             .padding(.horizontal, AppSpacing.screen)

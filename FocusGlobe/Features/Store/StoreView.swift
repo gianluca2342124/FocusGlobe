@@ -511,9 +511,22 @@ private struct StoreItemCard: View {
         .frame(maxWidth: .infinity)
     }
 
+    #if canImport(UIKit)
+    /// One lookup per asset name for the LIFETIME of the app (MainActor-only,
+    /// so no lock). Also caches misses: without this, permanently-missing
+    /// imagesets make UIKit re-search the bundle on EVERY render pass.
+    private static var artCache: [String: UIImage?] = [:]
+    private var artImage: UIImage? {
+        if let hit = Self.artCache[item.bestAssetName] { return hit }
+        let ui = UIImage(named: item.bestAssetName)
+        Self.artCache[item.bestAssetName] = ui
+        return ui
+    }
+    #endif
+
     private var hasArt: Bool {
         #if canImport(UIKit)
-        return UIImage(named: item.bestAssetName) != nil
+        return artImage != nil
         #else
         return false
         #endif
@@ -521,7 +534,7 @@ private struct StoreItemCard: View {
 
     @ViewBuilder private var artContent: some View {
         #if canImport(UIKit)
-        if let ui = UIImage(named: item.bestAssetName) {
+        if let ui = artImage {
             Image(uiImage: ui).resizable().scaledToFit()
         } else {
             Image(systemName: item.systemImage)

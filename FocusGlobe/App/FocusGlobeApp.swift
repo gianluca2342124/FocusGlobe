@@ -12,6 +12,9 @@ struct FocusGlobeApp: App {
 
     init() {
         LaunchLog.mark("FocusGlobeApp.init")
+        // Decode + trim every balloon-skin image in the background NOW, so the
+        // first Shop tap never stalls on synchronous image work.
+        BalloonSkinImage.warmUp()
         // Google Maps is the temporary MVP provider. Keep all business logic
         // provider-independent so we can migrate to Apple Maps / MapKit later.
         #if canImport(GoogleMaps)

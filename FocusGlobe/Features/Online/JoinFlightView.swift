@@ -57,7 +57,7 @@ struct JoinFlightView: View {
                 }
                 Spacer()
                 VStack(spacing: AppSpacing.sm) {
-                    AppPrimaryButton(title: "Join Flight", systemImage: "arrow.up") {
+                    AppPrimaryButton(title: "Join Flight", systemImage: "arrow.up", iconTrailing: true) {
                         appModel.tapFeedback(); onJoin()
                     }
                     Button("Not now") { appModel.tapFeedback(); onDecline() }

@@ -60,6 +60,9 @@ struct AppTabBar: View {
                 tab(item)
             }
         }
+        // The gold pill still glides between tabs — but only the bar animates,
+        // never the whole two-tab tree (see the instant `tab` handler below).
+        .animation(.easeInOut(duration: 0.22), value: router.selectedTab)
         .padding(.top, Layout.pad(9, 11))
         .padding(.bottom, Layout.pad(4, 6))
         .padding(.horizontal, Layout.pad(6, 12))
@@ -67,8 +70,10 @@ struct AppTabBar: View {
         .frame(maxWidth: .infinity)
         .background(
             Rectangle()
-                .fill(AppColors.neutralBase.opacity(0.98))
-                .overlay(alignment: .top) { Rectangle().fill(.white.opacity(0.08)).frame(height: 1) }
+                // #181721 by night, clean warm white by day; the hairline is
+                // the adaptive token so it reads in both modes.
+                .fill(AppColors.tabBarFill.opacity(0.98))
+                .overlay(alignment: .top) { Rectangle().fill(AppColors.hairline).frame(height: 1) }
                 .ignoresSafeArea(edges: .bottom)
         )
     }
@@ -78,7 +83,11 @@ struct AppTabBar: View {
         return Button {
             guard !active else { return }
             appModel.tapFeedback()
-            withAnimation(.easeInOut(duration: 0.22)) { router.select(item.id) }
+            // NO withAnimation around the tab switch: animating it forces
+            // SwiftUI to render BOTH tab trees for a 0.22 s crossfade inside
+            // the tap's transaction — the exact "menu lag" being fixed. The
+            // content swaps in one frame; only the bar's pill glides.
+            router.select(item.id)
         } label: {
             VStack(spacing: 3) {
                 Image(systemName: item.system)
@@ -87,7 +96,9 @@ struct AppTabBar: View {
                 Text(item.title)
                     .font(.system(size: Layout.pad(10, 11.5), weight: .semibold, design: .rounded))
             }
-            .foregroundStyle(active ? AppColors.gold : .white.opacity(0.68))
+            .foregroundStyle(active ? AppColors.gold
+                             : Color.dynamic(light: 0x26221D, lightAlpha: 0.55,
+                                             dark: 0xFFFFFF, darkAlpha: 0.68))
             .frame(maxWidth: .infinity)
             .padding(.vertical, 3)
             .background {

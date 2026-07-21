@@ -66,6 +66,10 @@ final class AppRouter: ObservableObject {
     /// Home can never flash between the two presentation layers. The journey
     /// container lowers it the moment it is mounted (plus a watchdog fallback).
     @Published var takeoffCurtain = false
+    /// The Sky id the curtain should match (nil → neutral fallback). Colouring
+    /// the curtain with the flight's OWN first-frame sky makes the setup →
+    /// flight hand-off read as one continuous sky instead of a dark flash.
+    @Published var takeoffCurtainSkyID: String? = nil
     /// Set when the Landing screen asks for a fresh flight; Home observes it and
     /// opens the flight setup as soon as the journey cover has dismissed.
     @Published var pendingNewFlight = false
@@ -103,7 +107,8 @@ final class AppRouter: ObservableObject {
 
     /// Raise the take-off curtain (with a 3 s watchdog so an interrupted
     /// hand-off can never leave the app stuck behind an opaque cover).
-    func raiseTakeoffCurtain() {
+    func raiseTakeoffCurtain(skyID: String? = nil) {
+        takeoffCurtainSkyID = skyID
         takeoffCurtain = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
             self?.takeoffCurtain = false

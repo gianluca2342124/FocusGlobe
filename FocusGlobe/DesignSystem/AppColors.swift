@@ -21,6 +21,8 @@ enum AppColors {
     static let neutralDeep = Color(hex: 0x100F16)
     /// A slightly lifted shade of the same hue for elevated surfaces.
     static let neutralRaised = Color(hex: 0x1E1D29)
+    /// The tab-bar surface: the same #181721 by night, clean warm white by day.
+    static let tabBarFill = Color.dynamic(light: 0xFCF7EC, dark: 0x181721)
 
     // MARK: Backgrounds  (the #181721 neutral by night / soft warm paper by day)
     static let backgroundTop    = Color.dynamic(light: 0xF7F0E4, dark: 0x181721)

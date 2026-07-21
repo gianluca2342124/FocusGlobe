@@ -50,6 +50,20 @@ struct HomeView: View {
     /// a resume tab hanging off a preview would be nonsensical — so it's hidden.
     private var showResumeTab: Bool { appModel.resumableJourney != nil && currentSkyUnlocked }
 
+    /// Whether a pager page (including the two sentinels) should run its living
+    /// animation: the selected page and its CIRCULAR neighbours. Sentinels share
+    /// liveness with their twins (identical content), so the wrap normalisation
+    /// swaps between two frames on the same live clock — never a visible snap.
+    private func pageIsLive(_ index: Int) -> Bool {
+        guard !reduceMotion else { return false }
+        let n = FocusSky.all.count
+        guard n > 0 else { return false }
+        let a = ((index % n) + n) % n
+        let b = ((skyIndex % n) + n) % n
+        let d = abs(a - b)
+        return min(d, n - d) <= 1
+    }
+
     var body: some View {
         ZStack {
             // The Sky pager IS the background: swiping travels between Skies.
@@ -58,19 +72,24 @@ struct HomeView: View {
             // CIRCULAR: swiping past either end lands on identical content, then
             // the selection is silently normalised with animations disabled — no
             // visible jump, flash or reset, and the dots stay in step.
+            // Only the visible page AND its circular neighbours animate — any
+            // page that can slide on screen mid-swipe shares the same live
+            // clock (so nothing ever snaps in view), while far pages render a
+            // still frame and never steal frame budget from taps. Far pages
+            // only switch modes while fully off screen.
             TabView(selection: $skyIndex) {
                 if let last = FocusSky.all.last {
-                    SkyPreviewView(sky: last, animated: !reduceMotion)
+                    SkyPreviewView(sky: last, animated: pageIsLive(-1))
                         .tag(-1)
                         .ignoresSafeArea()
                 }
                 ForEach(Array(FocusSky.all.enumerated()), id: \.element.id) { index, sky in
-                    SkyPreviewView(sky: sky, animated: !reduceMotion)
+                    SkyPreviewView(sky: sky, animated: pageIsLive(index))
                         .tag(index)
                         .ignoresSafeArea()
                 }
                 if let first = FocusSky.all.first {
-                    SkyPreviewView(sky: first, animated: !reduceMotion)
+                    SkyPreviewView(sky: first, animated: pageIsLive(FocusSky.all.count))
                         .tag(FocusSky.all.count)
                         .ignoresSafeArea()
                 }
@@ -114,6 +133,11 @@ struct HomeView: View {
                 bottomCluster
                     .clusterMaxWidth()
             }
+            // Home's chrome floats over the always-dark sky artwork, so its
+            // tokens resolve in DARK in both appearances — Start Focus stays
+            // the signature white pill even in Light Mode. The sheets/popups
+            // are presented outside this scope and keep the user's appearance.
+            .environment(\.colorScheme, .dark)
             .padding(.horizontal, AppSpacing.screen)
             .padding(.bottom, AppSpacing.lg)
             .opacity(handingOff ? 0 : 1)
@@ -125,9 +149,8 @@ struct HomeView: View {
                 skyIndex = FocusSky.all.firstIndex(of: appModel.selectedSky) ?? 0
                 didInitSky = true
             }
-            maybeShowPremiumIntro()
+            presentHomeAutoPopup()
             maybeRequestReview()
-            maybeOfferBoost()
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 3.4).repeatForever(autoreverses: true)) { balloonFloat = -10 }
             if appModel.progress.currentStreak > 0 {
@@ -200,8 +223,9 @@ struct HomeView: View {
         pendingTakeoff = (route, intention)
         handingOff = true
         // Raise the opaque curtain BEFORE the setup cover dismisses: the gap
-        // between the two presentation layers shows the curtain, never Home.
-        router.raiseTakeoffCurtain()
+        // between the two presentation layers shows the flight's own sky —
+        // never Home, never a dark interstitial.
+        router.raiseTakeoffCurtain(skyID: FocusSky.matching(routeID: route.id)?.id)
         showSetup = false
     }
 
@@ -219,7 +243,7 @@ struct HomeView: View {
 
     private func continueResumableJourney() {
         guard let journey = appModel.makeResumeJourney() else { return }
-        router.raiseTakeoffCurtain()
+        router.raiseTakeoffCurtain(skyID: FocusSky.matching(routeID: journey.route.id)?.id)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
             router.activeJourney = journey
         }
@@ -240,23 +264,29 @@ struct HomeView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { requestReview() }
     }
 
-    /// Occasionally gift a Coins Boost on Home — never on a brand-new account,
-    /// never stacked on the onboarding paywall or an active/resumable flight, and
-    /// at most every ~3 days (the throttle lives in `AppModel`).
-    private func maybeOfferBoost() {
-        guard appModel.shouldOfferCoinBoost else { return }
-        guard !router.showPaywall, !appModel.shouldShowPremiumIntro,
-              appModel.resumableJourney == nil else { return }
-        appModel.markCoinBoostOffered()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { showBoostGift = true }
-    }
-
-    private func maybeShowPremiumIntro() {
-        guard appModel.resumableJourney == nil else { return }
-        guard appModel.shouldShowPremiumIntro, !router.showPaywall else { return }
-        appModel.markPremiumIntroSeen()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-            router.presentPaywall()
+    /// Home auto-presents AT MOST ONE popup per appearance, decided in a single
+    /// synchronous pass with a strict priority (launch paywall > Coins Boost
+    /// gift), so the paywall sheet and the boost sheet can never contend for
+    /// the one presentation slot (the old flash-then-swap flicker: the intro
+    /// marked itself "seen" immediately but presented 0.6 s later, which let
+    /// the boost's guard pass and its 1.0 s sheet tear the paywall down
+    /// mid-animation). A boost skipped in favour of the paywall is NOT
+    /// throttled away — it simply waits for the next eligible Home visit. The
+    /// boost also re-checks at fire time in case another path (deep link,
+    /// locked-Sky tap) raised the paywall during its delay.
+    private func presentHomeAutoPopup() {
+        guard appModel.resumableJourney == nil, !router.showPaywall else { return }
+        if appModel.shouldShowPremiumIntro {
+            appModel.markPremiumIntroSeen()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                router.presentPaywall()
+            }
+        } else if appModel.shouldOfferCoinBoost {
+            appModel.markCoinBoostOffered()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                guard !router.showPaywall, router.activeJourney == nil else { return }
+                showBoostGift = true
+            }
         }
     }
 
@@ -430,7 +460,7 @@ struct HomeView: View {
                 }
                 Group {
                     if currentSkyUnlocked {
-                        AppPrimaryButton(title: "Start Focus", systemImage: "arrow.up") {
+                        AppPrimaryButton(title: "Start Focus", systemImage: "arrow.up", iconTrailing: true) {
                             appModel.tapFeedback()
                             appModel.selectSky(currentSky)
                             showSetup = true
@@ -798,7 +828,7 @@ private struct ResumeJourneySheet: View {
                 .multilineTextAlignment(.center)
                 Spacer()
                 VStack(spacing: AppSpacing.sm) {
-                    AppPrimaryButton(title: "Continue flight", systemImage: "arrow.up") { onContinue() }
+                    AppPrimaryButton(title: "Continue flight", systemImage: "arrow.up", iconTrailing: true) { onContinue() }
                     Button(action: onStartNew) {
                         Text("Start a new Focus")
                             .font(AppTypography.headline)

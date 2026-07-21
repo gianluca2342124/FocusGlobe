@@ -47,8 +47,13 @@ struct FocusSessionContainerView: View {
                 joining = online.flightMode.isOnline
             }
             // The journey surface is mounted — the take-off curtain (raised at
-            // the Boarding cut so Home can never flash) comes down beneath us.
-            router.lowerTakeoffCurtain()
+            // the Boarding cut so Home can never flash) comes down once the
+            // cover's slide-up has finished, so nothing behind the rising cover
+            // can peek through. The router's 3 s watchdog still guarantees the
+            // curtain can never stick.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                router.lowerTakeoffCurtain()
+            }
         }
         .onDisappear { vm.tearDown() }
     }

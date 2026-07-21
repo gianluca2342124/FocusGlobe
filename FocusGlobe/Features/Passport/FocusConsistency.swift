@@ -44,13 +44,19 @@ enum FocusConsistency {
     }
 
     /// The restrained FocusGlobe scale: neutral → cream → gold → amber ember.
+    /// Level 0/1 are mode-adaptive: a raw white cell is invisible on a light
+    /// card, so Light Mode uses faint gold / soft ink instead (Dark unchanged
+    /// apart from a slightly clearer level 1 — a single 5-minute day must
+    /// read at 9 pt). The share card is unaffected: it forces a dark scheme.
     static func color(level: Int) -> Color {
         switch level {
-        case 1:  return Color(hex: 0xF4EFE4).opacity(0.28)
+        case 1:  return Color.dynamic(light: 0xE9C07A, lightAlpha: 0.40,
+                                      dark: 0xF4EFE4, darkAlpha: 0.38)
         case 2:  return Color(hex: 0xE9C07A).opacity(0.55)
         case 3:  return Color(hex: 0xD8B56D).opacity(0.85)
         case 4:  return Color(hex: 0xE8A54B)
-        default: return Color.white.opacity(0.07)
+        default: return Color.dynamic(light: 0x26221D, lightAlpha: 0.07,
+                                      dark: 0xFFFFFF, darkAlpha: 0.07)
         }
     }
 
@@ -118,6 +124,8 @@ struct FocusConsistencyGrid: View {
     var spacing: CGFloat = 2.5
 
     @Environment(\.calendar) private var calendar
+    /// One-shot pop for today's square when it is (or has just been) lit.
+    @State private var pulseToday = false
 
     private var columns: [[(date: Date, minutes: Int?)?]] {
         FocusConsistency.columns(weeks: weeks, history: history, calendar: calendar)
@@ -142,17 +150,50 @@ struct FocusConsistencyGrid: View {
                 }
                 .padding(.vertical, 2)
             }
-            .onAppear { proxy.scrollTo(max(0, cols.count - 1), anchor: .trailing) }
+            .onAppear {
+                // Scroll synchronously so the common case is already pinned to
+                // the newest week before first paint, THEN correct one runloop
+                // tick later: onAppear can fire during the tab-switch / sheet
+                // presentation, before the ScrollView has final content
+                // metrics, and a purely synchronous scrollTo can land short —
+                // hiding the newest (current) week off-screen right. Both
+                // calls are idempotent.
+                proxy.scrollTo(max(0, cols.count - 1), anchor: .trailing)
+                DispatchQueue.main.async {
+                    proxy.scrollTo(max(0, cols.count - 1), anchor: .trailing)
+                    pulseTodayIfLit()
+                }
+            }
+            // A landing recorded while the grid is on screen re-pins the newest
+            // column so today's freshly lit square is always in view.
+            .onChange(of: history) { _, _ in
+                withAnimation(.easeOut(duration: 0.3)) {
+                    proxy.scrollTo(max(0, cols.count - 1), anchor: .trailing)
+                }
+                pulseTodayIfLit()
+            }
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilitySummary)
     }
 
+    /// A brief, premium swell on today's square when it is lit — the visible
+    /// confirmation that the landing just counted.
+    private func pulseTodayIfLit() {
+        guard FocusConsistency.activeDays(history: history, calendar: calendar)[
+            calendar.startOfDay(for: Date())] != nil else { return }
+        pulseToday = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { pulseToday = false }
+    }
+
     @ViewBuilder private func cell(_ entry: (date: Date, minutes: Int?)?) -> some View {
         if let entry {
+            let isFreshToday = entry.minutes != nil && calendar.isDateInToday(entry.date)
             RoundedRectangle(cornerRadius: cellSize * 0.28, style: .continuous)
                 .fill(FocusConsistency.color(level: FocusConsistency.level(minutes: entry.minutes)))
                 .frame(width: cellSize, height: cellSize)
+                .scaleEffect(isFreshToday && pulseToday ? 1.35 : 1)
+                .animation(.spring(response: 0.35, dampingFraction: 0.55), value: pulseToday)
         } else {
             Color.clear.frame(width: cellSize, height: cellSize)
         }

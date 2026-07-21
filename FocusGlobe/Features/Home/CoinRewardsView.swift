@@ -54,6 +54,7 @@ struct CoinSpinButton: View {
 struct CoinSpinSheet: View {
     @EnvironmentObject private var appModel: AppModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var scheme
 
     private enum Phase { case intro, spinning, result }
     @State private var phase: Phase = .intro
@@ -66,13 +67,14 @@ struct CoinSpinSheet: View {
 
     var body: some View {
         ZStack {
-            // A calm premium half-sheet: deep dark base with a gold bloom and a
-            // restrained turquoise accent — static, never a moving tile.
+            // A calm premium half-sheet: deep dark base by night, the app's
+            // clean warm paper by day — a gold bloom and a restrained turquoise
+            // accent in both. Static, never a moving tile.
             ZStack {
-                Color(hex: 0x0D100E)
-                RadialGradient(colors: [AppColors.gold.opacity(0.16), .clear],
+                (scheme == .dark ? Color(hex: 0x0D100E) : AppColors.backgroundTop)
+                RadialGradient(colors: [AppColors.gold.opacity(scheme == .dark ? 0.16 : 0.10), .clear],
                                center: UnitPoint(x: 0.5, y: 0.22), startRadius: 4, endRadius: 320)
-                RadialGradient(colors: [Color(hex: 0x2AC8B0).opacity(0.07), .clear],
+                RadialGradient(colors: [Color(hex: 0x2AC8B0).opacity(scheme == .dark ? 0.07 : 0.05), .clear],
                                center: UnitPoint(x: 0.85, y: 0.9), startRadius: 4, endRadius: 300)
             }
             .ignoresSafeArea()

@@ -155,7 +155,7 @@ struct OnboardingView: View {
                     .padding(.horizontal, AppSpacing.md)
             }
             Spacer()
-            AppPrimaryButton(title: "Begin", systemImage: "arrow.right") { advance() }
+            AppPrimaryButton(title: "Begin", systemImage: "arrow.right", iconTrailing: true) { advance() }
                 .padding(.bottom, AppSpacing.xl)
         }
         .onAppear {
@@ -762,7 +762,7 @@ struct OnboardingView: View {
 
     private func continueRow(skippable: Bool) -> some View {
         VStack(spacing: AppSpacing.sm) {
-            AppPrimaryButton(title: "Continue", systemImage: "arrow.right") { advance() }
+            AppPrimaryButton(title: "Continue", systemImage: "arrow.right", iconTrailing: true) { advance() }
             if skippable {
                 Button("Skip") { advance() }
                     .font(AppTypography.callout)

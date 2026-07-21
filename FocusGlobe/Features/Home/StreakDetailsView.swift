@@ -11,6 +11,7 @@ import UIKit
 struct StreakDetailsView: View {
     @EnvironmentObject private var appModel: AppModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var scheme
 
     @State private var breathe = false
     @State private var appeared = false
@@ -20,12 +21,15 @@ struct StreakDetailsView: View {
 
     var body: some View {
         ZStack {
-            // A warm static streak backdrop: dark charcoal into burgundy with a
-            // soft ember glow behind the fire — no moving tile.
+            // A warm static streak backdrop — dark charcoal into burgundy by
+            // night, the app's clean warm paper by day — with a soft ember glow
+            // behind the fire in both. No moving tile.
             ZStack {
-                LinearGradient(colors: [Color(hex: 0x17110F), Color(hex: 0x261016)],
+                LinearGradient(colors: scheme == .dark
+                                ? [Color(hex: 0x17110F), Color(hex: 0x261016)]
+                                : [AppColors.backgroundTop, AppColors.backgroundBottom],
                                startPoint: .top, endPoint: .bottom)
-                RadialGradient(colors: [Color(hex: 0xF2643C).opacity(0.16), .clear],
+                RadialGradient(colors: [Color(hex: 0xF2643C).opacity(scheme == .dark ? 0.16 : 0.10), .clear],
                                center: UnitPoint(x: 0.5, y: 0.24), startRadius: 4, endRadius: 340)
             }
             .ignoresSafeArea()
@@ -61,7 +65,7 @@ struct StreakDetailsView: View {
                 Text("YOUR FOCUS JOURNEY")
                     .font(.system(size: 10.5, weight: .heavy, design: .rounded))
                     .tracking(1.4)
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(AppColors.textSecondary)
                 Spacer()
                 Button {
                     appModel.tapFeedback()
@@ -85,13 +89,13 @@ struct StreakDetailsView: View {
             FocusConsistencyGrid(history: appModel.history, weeks: 53)
             Text("Every gold square is a day you truly focused. Keep the sky lit.")
                 .font(.system(size: 12, weight: .medium, design: .rounded))
-                .foregroundStyle(.white.opacity(0.55))
+                .foregroundStyle(AppColors.textSecondary)
         }
         .padding(AppSpacing.md)
         .background(RoundedRectangle(cornerRadius: 18, style: .continuous)
-            .fill(Color.white.opacity(0.06)))
+            .fill(AppColors.textPrimary.opacity(0.06)))
         .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
-            .strokeBorder(.white.opacity(0.10), lineWidth: 1))
+            .strokeBorder(AppColors.glassStroke, lineWidth: 1))
         .sheet(isPresented: Binding(get: { shareItems != nil },
                                     set: { if !$0 { shareItems = nil } })) {
             if let shareItems { ActivityShareSheet(items: shareItems) }
@@ -201,94 +205,16 @@ struct StreakDetailsView: View {
     // MARK: This week
 
     private var weekRow: some View {
-        let days = weekDays()
-        return GlassCard {
+        GlassCard {
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
                 Text("THIS WEEK")
                     .font(.system(size: 12, weight: .bold, design: .rounded)).tracking(0.6)
                     .foregroundStyle(AppColors.textTertiary)
-                weekStrip(days)
+                // The ONE shared weekly strip (also shown on the post-flight
+                // streak card), so both surfaces always agree about a day.
+                StreakWeekStrip(history: appModel.history)
             }
         }
-    }
-
-    private func weekStrip(_ days: [Day]) -> some View {
-        let disc = Layout.pad(CGFloat(36), CGFloat(44))
-        return VStack(spacing: AppSpacing.xs) {
-            HStack(spacing: 0) {
-                ForEach(days, id: \.date) { day in
-                    Text(day.label)
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundStyle(day.active ? AppColors.gold : AppColors.textTertiary)
-                        .frame(maxWidth: .infinity)
-                }
-            }
-            ZStack {
-                trail(days)
-                HStack(spacing: 0) {
-                    ForEach(days, id: \.date) { day in
-                        dayDisc(day, size: disc)
-                            .frame(maxWidth: .infinity)
-                    }
-                }
-            }
-            .frame(height: disc)
-        }
-    }
-
-    /// A soft luminous "flight trail" drawn behind consecutive active days.
-    private func trail(_ days: [Day]) -> some View {
-        Canvas { ctx, size in
-            let n = days.count
-            guard n > 1 else { return }
-            let cy = size.height / 2
-            var path = Path()
-            for i in 0..<(n - 1) where days[i].active && days[i + 1].active {
-                let x1 = size.width * CGFloat(Double(i) + 0.5) / CGFloat(n)
-                let x2 = size.width * CGFloat(Double(i) + 1.5) / CGFloat(n)
-                path.move(to: CGPoint(x: x1, y: cy))
-                path.addLine(to: CGPoint(x: x2, y: cy))
-            }
-            ctx.stroke(path,
-                       with: .color(Color(hex: 0xFFB13C).opacity(0.22)),
-                       style: StrokeStyle(lineWidth: 10, lineCap: .round))
-            ctx.stroke(path,
-                       with: .linearGradient(
-                        Gradient(colors: [Color(hex: 0xFFC24B), Color(hex: 0xF2643C)]),
-                        startPoint: CGPoint(x: 0, y: cy),
-                        endPoint: CGPoint(x: size.width, y: cy)),
-                       style: StrokeStyle(lineWidth: 4, lineCap: .round))
-        }
-        .allowsHitTesting(false)
-    }
-
-    private func dayDisc(_ day: Day, size: CGFloat) -> some View {
-        ZStack {
-            if day.active {
-                Circle()
-                    .fill(LinearGradient(
-                        colors: [Color(hex: 0xFFC24B), Color(hex: 0xF2643C)],
-                        startPoint: .top, endPoint: .bottom))
-                    .overlay(Circle().strokeBorder(.white.opacity(0.35), lineWidth: 1))
-                    .shadow(color: Color(hex: 0xF2643C).opacity(0.45), radius: 6, y: 2)
-                Image(systemName: "flame.fill")
-                    .font(.system(size: size * 0.42, weight: .bold))
-                    .foregroundStyle(.white)
-            } else if day.isToday {
-                Circle().fill(AppColors.gold.opacity(0.10))
-                Circle().strokeBorder(AppColors.gold.opacity(0.7), lineWidth: 2)
-            } else if day.isPast {
-                // A clearly missed day: a quiet grey ✕ (shown for new users too).
-                Circle().fill(AppColors.textPrimary.opacity(0.06))
-                Image(systemName: "xmark")
-                    .font(.system(size: size * 0.34, weight: .bold))
-                    .foregroundStyle(AppColors.textTertiary.opacity(0.75))
-            } else {
-                // A future day: empty and subtle.
-                Circle().fill(AppColors.textPrimary.opacity(0.06))
-            }
-        }
-        .frame(width: size, height: size)
     }
 
     // MARK: Today status
@@ -364,28 +290,4 @@ struct StreakDetailsView: View {
         }
     }
 
-    // MARK: Helpers
-
-    private struct Day {
-        let date: Date; let label: String; let active: Bool
-        let isToday: Bool; let isPast: Bool; let isFuture: Bool
-    }
-
-    /// The current calendar week (respects the locale's first weekday): completed
-    /// days flame, today is ringed, missed *past* days get a grey ✕, and future
-    /// days stay empty/subtle.
-    private func weekDays() -> [Day] {
-        let cal = Calendar.current
-        let today = cal.startOfDay(for: Date())
-        let landedDays = Set(appModel.history.filter { $0.completed }.map { cal.startOfDay(for: $0.date) })
-        let fmt = DateFormatter(); fmt.dateFormat = "EEEEE"   // single-letter weekday
-        let startOfWeek = cal.dateInterval(of: .weekOfYear, for: today)?.start ?? today
-        return (0..<7).map { offset in
-            let d = cal.startOfDay(for: cal.date(byAdding: .day, value: offset, to: startOfWeek) ?? today)
-            return Day(date: d, label: fmt.string(from: d),
-                       active: landedDays.contains(d),
-                       isToday: cal.isDate(d, inSameDayAs: today),
-                       isPast: d < today, isFuture: d > today)
-        }
-    }
 }

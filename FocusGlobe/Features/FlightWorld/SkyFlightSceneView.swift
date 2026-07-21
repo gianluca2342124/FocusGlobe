@@ -51,6 +51,9 @@ struct SkyFlightSceneView: View {
                     atmosphere(W: W, H: H, t: t)
                     celestial(W: W, H: H, t: t)
                     effects(W: W, H: H, t: t)
+                    // Layered silhouette planes with glacial parallax — the
+                    // depth between the vast sky above and the Ground below.
+                    SkyDepthScenery(sky: sky, t: t, horizon: 0.82, intensity: 0.9)
                     weather(W: W, H: H, t: t)
                     groundLayer(W: W, H: H)
                     #if DEBUG
@@ -92,6 +95,18 @@ struct SkyFlightSceneView: View {
             RadialGradient(colors: [stops[1].opacity(0.10 + 0.04 * Foundation.sin(t * 0.026 + 3.1)), .clear],
                            center: UnitPoint(x: 0.78 - 0.06 * Foundation.sin(t * 0.017), y: 0.4),
                            startRadius: 2, endRadius: W * 0.85)
+            // Zenith depth: the top of the sky deepens gently, so looking up
+            // reads as looking into vastness rather than at a flat wall.
+            LinearGradient(stops: [
+                .init(color: stops[0].opacity(0.55), location: 0),
+                .init(color: stops[0].opacity(0), location: 0.30),
+                .init(color: .clear, location: 1),
+            ], startPoint: .top, endPoint: .bottom)
+            // Horizon bloom: light accumulating in the thick air low in the
+            // frame — the classic "big world" cue, breathing very slowly.
+            RadialGradient(colors: [sky.glowColor.opacity(0.11 + 0.04 * breathe), .clear],
+                           center: UnitPoint(x: 0.5, y: 0.82),
+                           startRadius: 4, endRadius: W * 0.95)
         }
     }
 
@@ -102,18 +117,37 @@ struct SkyFlightSceneView: View {
         switch sky.id {
         case "fiji-lagoon":
             groundShimmer(W: W, H: H, t: t, tint: Color(hex: 0xBFF2E0))
+            seaGlow(W: W, H: H, t: t)
         case "rainy-tokyo":
             neonShimmer(W: W, H: H, t: t)
         case "paris-sunset":
             groundShimmer(W: W, H: H, t: t, tint: Color(hex: 0xF6C88A))
         case "sahara-night":
             milkyWay(W: W, H: H, t: t)
+        case "galaxy-drift", "deep-space":
+            // The great diagonal star-river gives the cosmos its sense of
+            // immense, structured depth — the emptiest Skies feel the largest.
+            milkyWay(W: W, H: H, t: t)
         default:
             EmptyView()
         }
     }
 
-    /// Stars twinkle **in place** — the world does not scroll.
+    /// Fiji — a luminous aqua band where sea light saturates the low air,
+    /// breathing on a long period. Pure light, no boundary.
+    private func seaGlow(W: CGFloat, H: CGFloat, t: Double) -> some View {
+        let breathe = 0.8 + 0.2 * Foundation.sin(t * 0.045)
+        return LinearGradient(colors: [Color(hex: 0x8DE8D0).opacity(0),
+                                       Color(hex: 0x8DE8D0).opacity(0.12 * breathe),
+                                       Color(hex: 0x8DE8D0).opacity(0)],
+                              startPoint: .top, endPoint: .bottom)
+            .frame(height: H * 0.22)
+            .position(x: W / 2, y: H * 0.76)
+    }
+
+    /// Stars twinkle **in place** — the world does not scroll. Star-heavy Skies
+    /// gain a second plane of fine background dust (depth through density) and
+    /// a handful of hero stars with soft cross glints (depth through hierarchy).
     private func starField(W: CGFloat, H: CGFloat, t: Double) -> some View {
         Canvas { ctx, s in
             var rng = SeededRNG(seed: skySeed &+ 0x57A2)
@@ -129,6 +163,26 @@ struct SkyFlightSceneView: View {
                          with: .color(.white.opacity(a)))
                 if u > 0.93 && sky.stars > 0.5 {
                     softGlow(&ctx, x: x, y: y, r: r * 3.4, color: .white.opacity(a * 0.4))
+                }
+                // Hero stars: rare, brighter, with a delicate 4-point glint that
+                // swells and fades with the twinkle — never a hard sparkle.
+                if u > 0.972 && sky.stars > 0.4 {
+                    let glint = CGFloat(6 + u * 5) * CGFloat(0.6 + 0.4 * tw)
+                    var cross = Path()
+                    cross.move(to: CGPoint(x: x - glint, y: y)); cross.addLine(to: CGPoint(x: x + glint, y: y))
+                    cross.move(to: CGPoint(x: x, y: y - glint)); cross.addLine(to: CGPoint(x: x, y: y + glint))
+                    ctx.stroke(cross, with: .color(.white.opacity(a * 0.35)), lineWidth: 0.7)
+                }
+            }
+            // The dust plane: dense micro-stars for the deep cosmic Skies only.
+            if sky.stars > 0.75 {
+                var dustRNG = SeededRNG(seed: skySeed &+ 0xD0_57A2)
+                for _ in 0..<110 {
+                    let x = CGFloat(dustRNG.unit()) * s.width
+                    let y = CGFloat(dustRNG.unit()) * s.height
+                    let a = 0.05 + dustRNG.unit() * 0.12
+                    ctx.fill(Path(ellipseIn: CGRect(x: x, y: y, width: 0.7, height: 0.7)),
+                             with: .color(.white.opacity(a)))
                 }
             }
         }
@@ -509,7 +563,9 @@ struct SkyFlightSceneView: View {
     }
 
     /// Full-width organic aurora curtains, deforming slowly. Pure gradient fill
-    /// inside a hand-wavy path — no geometric edge.
+    /// inside a hand-wavy path — no geometric edge. Each ribbon carries faint
+    /// vertical curtain rays that breathe independently, so the light reads as
+    /// a true hanging curtain rather than a coloured band.
     private func auroraCurtains(W: CGFloat, H: CGFloat, t: Double) -> some View {
         Canvas { ctx, s in
             let colors = [Color(hex: 0x54E0A8), Color(hex: 0x4FC9DD), Color(hex: 0x8F7BE8)]
@@ -521,12 +577,34 @@ struct SkyFlightSceneView: View {
                 let path = flightAuroraRibbon(width: s.width, baseY: baseY,
                                               amp: amp, thickness: thick, phase: phase)
                 let c = colors[band]
-                let g = Gradient(colors: [c.opacity(0), c.opacity(0.3), c.opacity(0)])
+                let g = Gradient(colors: [c.opacity(0), c.opacity(0.38), c.opacity(0)])
                 ctx.fill(path, with: .linearGradient(
                     g, startPoint: CGPoint(x: 0, y: baseY - amp),
                     endPoint: CGPoint(x: 0, y: baseY + thick + amp)))
+                // Curtain rays: soft luminous columns hanging inside the ribbon,
+                // each swelling on its own slow rhythm.
+                for k in 0..<7 {
+                    let fx = (Double(k) + 0.5) / 7.0
+                    let sway = Foundation.sin(t * 0.05 + Double(k) * 1.7 + Double(band)) * 0.03
+                    let x = CGFloat(fx + sway) * s.width
+                    let wave = Foundation.sin(Double(x) / 120.0 + phase)
+                        + 0.4 * Foundation.sin(Double(x) / 51.0 + phase * 1.6)
+                    let topY = baseY + CGFloat(wave) * amp
+                    let pulse = 0.5 + 0.5 * Foundation.sin(t * (0.16 + Double(k) * 0.04) + Double(k) * 2.3 + Double(band) * 1.1)
+                    let rayA = 0.10 * pulse
+                    guard rayA > 0.015 else { continue }
+                    var ray = Path()
+                    ray.move(to: CGPoint(x: x, y: topY))
+                    ray.addLine(to: CGPoint(x: x, y: topY + thick * CGFloat(0.7 + 0.3 * pulse)))
+                    ctx.stroke(ray, with: .linearGradient(
+                        Gradient(colors: [c.opacity(rayA), c.opacity(0)]),
+                        startPoint: CGPoint(x: x, y: topY),
+                        endPoint: CGPoint(x: x, y: topY + thick)),
+                        lineWidth: s.width * 0.02)
+                }
             }
         }
+        .blur(radius: 3)
     }
 
     /// A rare, restrained vertical light pillar (~every 70 s), fully diffused.
