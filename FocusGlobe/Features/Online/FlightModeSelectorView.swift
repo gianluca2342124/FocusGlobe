@@ -16,7 +16,9 @@ struct FlightModeSelectorView: View {
 
     @State private var selection: OnlineFlightMode = OnlineCache.lastFlightMode == .solo ? .solo : .publicSky
     @State private var showDisclosure = false
-    @State private var showSignIn = false
+    /// Set when a PRO pilot presses Continue while signed out — after Sign in with
+    /// Apple succeeds we continue exactly once (never a second time).
+    @State private var pendingOnlineContinue = false
 
     private var onlineAvailable: Bool { online.availability.isAvailable }
     private var canSignIn: Bool {
@@ -41,9 +43,11 @@ struct FlightModeSelectorView: View {
             .frame(maxWidth: hSize == .regular ? 540 : .infinity)
 
             // The ONLY thing under the cards: sign in when Online needs it — and
-            // only for PRO pilots. A free pilot sees the Online card + live count
-            // but is taken to the Online paywall on Continue (no sign-in first).
-            if onlineSelected && canSignIn && appModel.isPro {
+            // only for a confirmed PRO pilot. A free pilot sees the Online card +
+            // live count but is taken to the Online paywall on Continue (never
+            // sign-in first). While the entitlement is still loading, nothing is
+            // shown (we don't presume Free).
+            if onlineSelected && canSignIn && appModel.entitlement == .premium {
                 signInPrompt
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
@@ -63,13 +67,15 @@ struct FlightModeSelectorView: View {
             // Fall back to Solo only for a genuine outage — signed-out still
             // offers Sign in on the Online card.
             if !now.isAvailable && !canSignIn && selection.isOnline { selection = .solo }
-        }
-        .sheet(isPresented: $showSignIn) {
-            OnlineSignInView {
-                withAnimation(.snappy(duration: 0.2)) { selection = .publicSky }
+            // A PRO pilot who pressed Continue while signed out: once sign-in
+            // makes Online available, continue exactly once.
+            if now.isAvailable && pendingOnlineContinue {
+                pendingOnlineContinue = false
+                continueTapped()
             }
-            .environmentObject(online).environmentObject(appModel)
         }
+        // Sign in with Apple presents through the app-wide modal coordinator
+        // (never a competing local sheet).
         .alert("Fly in Public Skies?", isPresented: $showDisclosure) {
             Button("Continue Online") {
                 OnlineCache.disclosureSeen = true
@@ -85,18 +91,29 @@ struct FlightModeSelectorView: View {
     private func continueTapped() {
         let mode = selection
         guard mode.isOnline else { finish(.solo); return }
-        // Online is a FocusGlobe PRO feature. A free pilot gets the contextual
-        // Online paywall on Continue — NO auth, NO presence, NO room is created
-        // first (the entitlement is the real RevenueCat/StoreKit `isPro`, never a
-        // client flag). Signed-out PRO users still get Sign in with Apple below.
-        guard appModel.isPro else {
+        // Online is a FocusGlobe PRO feature, gated on the REAL entitlement.
+        switch appModel.entitlement {
+        case .free:
+            // Free pilot: the Online paywall ONLY — NO auth, NO presence, NO room.
             appModel.tapFeedback()
-            router.presentPaywall(context: .online)
+            router.present(.paywall(.online))
             return
+        case .loading:
+            // Entitlement still resolving — never flash a paywall at a possibly
+            // PRO/Lifetime owner. Nudge a refresh; they can Continue once resolved.
+            appModel.tapFeedback()
+            appModel.refreshSubscriptionStatus()
+            return
+        case .premium:
+            break   // PRO / Lifetime — proceed.
         }
-        // Online requires a session first.
+        // PRO from here. Online requires a signed-in session first.
         if !onlineAvailable {
-            if canSignIn { showSignIn = true }
+            if canSignIn {
+                pendingOnlineContinue = true          // continue once after auth
+                appModel.tapFeedback()
+                router.present(.onlineSignIn)
+            }
             return
         }
         // A one-time public-sky consent, then every future Online flight is
@@ -116,11 +133,8 @@ struct FlightModeSelectorView: View {
                           subtitle: String) -> some View {
         let selected = selection == mode || (mode == .publicSky && selection.isOnline)
         return Button {
-            // Only PRO pilots get the sign-in shortcut from the Online card; a
-            // free pilot simply selects Online and meets the paywall on Continue.
-            if mode == .publicSky && appModel.isPro && !onlineAvailable && canSignIn {
-                appModel.tapFeedback(); showSignIn = true; return
-            }
+            // Tapping a card only SELECTS it. Sign-in (PRO) or the paywall (Free)
+            // is decided on Continue — never from a card tap.
             appModel.tapFeedback()
             withAnimation(.snappy(duration: 0.2)) { selection = mode }
         } label: {
@@ -205,7 +219,7 @@ struct FlightModeSelectorView: View {
 
     private var signInPrompt: some View {
         Button {
-            appModel.tapFeedback(); showSignIn = true
+            appModel.tapFeedback(); router.present(.onlineSignIn)
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "applelogo").font(.system(size: 15, weight: .bold))

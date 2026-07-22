@@ -83,8 +83,8 @@ struct PassportView: View {
     // MARK: Focus Consistency — the shared contribution grid (one model with
     // the streak popover and the share card, so a day can never disagree).
 
-    @State private var shareItems: [Any]? = nil
-    /// The badge whose detail sheet is open (nil = none).
+    /// The badge whose detail sheet is open (nil = none). Presented locally on
+    /// Passport — never competes with a global modal (you're deep in a tab).
     @State private var selectedBadge: Achievement? = nil
 
     private var consistencySection: some View {
@@ -124,10 +124,7 @@ struct PassportView: View {
             .glassBackground(cornerRadius: AppSpacing.cardRadius, tintOpacity: 0.20,
                              shadowRadius: 10, shadowY: 5)
         }
-        .sheet(isPresented: Binding(get: { shareItems != nil },
-                                    set: { if !$0 { shareItems = nil } })) {
-            if let shareItems { ActivityShareSheet(items: shareItems) }
-        }
+        // The share sheet presents through the app-wide modal coordinator.
     }
 
     private func consistencyStat(_ value: String, _ label: String) -> some View {
@@ -149,7 +146,7 @@ struct PassportView: View {
                                                  displayName: appModel.profile.name,
                                                  currentStreak: progress.currentStreak,
                                                  longestStreak: progress.longestStreak) {
-            shareItems = [image]
+            router.present(.share([image]))
         } else {
             appModel.haptics.tap()
         }

@@ -58,10 +58,29 @@ final class AppRouter: ObservableObject {
 
     @Published var path: [Destination] = []
     @Published var activeJourney: Journey?
-    @Published var showPaywall = false
-    /// WHY the paywall is being shown — drives the contextual hero/headline of
-    /// the ONE reusable paywall (never a duplicated paywall view per source).
-    @Published var paywallContext: PaywallContext = .general
+
+    /// The ONE app-wide modal presented over the shell. Every cross-screen sheet
+    /// (paywall, Online sign-in, Coin Spin, Coins Boost, Streak, Daily Gift,
+    /// share) routes through this single coordinator so SwiftUI never has two
+    /// sheets contending ("Currently, only presenting a single sheet is
+    /// supported"). Setting it replaces whatever was up — one modal at a time.
+    @Published var activeModal: AppModal?
+
+    /// Present a coordinated modal (replaces any current one).
+    func present(_ modal: AppModal) { activeModal = modal }
+    /// Dismiss the coordinated modal.
+    func dismissModal() { activeModal = nil }
+
+    /// Read-only compatibility: `true` while the coordinated paywall is up.
+    var showPaywall: Bool {
+        if case .paywall = activeModal { return true }
+        return false
+    }
+    /// The context of the currently presented paywall (or `.general`).
+    var paywallContext: PaywallContext {
+        if case .paywall(let ctx) = activeModal { return ctx }
+        return .general
+    }
     /// An opaque root curtain raised for the Boarding-cut → journey hand-off so
     /// Home can never flash between the two presentation layers. The journey
     /// container lowers it the moment it is mounted (plus a watchdog fallback).
@@ -101,8 +120,7 @@ final class AppRouter: ObservableObject {
     func openHistory() { path.append(.history) }
     func openSettings() { select(.settings) }
     func presentPaywall(context: PaywallContext = .general) {
-        paywallContext = context
-        showPaywall = true
+        present(.paywall(context))
     }
 
     /// Raise the take-off curtain (with a 3 s watchdog so an interrupted
@@ -181,6 +199,31 @@ final class AppRouter: ObservableObject {
     }
 }
 
+
+/// The ONE coordinated modal shown over the shell. `.sheet(item:)` at the root
+/// renders exactly one at a time (see `AppRouter.activeModal`).
+enum AppModal: Identifiable {
+    case paywall(PaywallContext)
+    case onlineSignIn
+    case coinSpin
+    case coinBoostGift
+    case streak
+    case dailyGift
+    /// A native share sheet — carries the items (e.g. a rendered UIImage).
+    case share([Any])
+
+    var id: String {
+        switch self {
+        case .paywall(let ctx): return "paywall.\(String(describing: ctx))"
+        case .onlineSignIn:     return "onlineSignIn"
+        case .coinSpin:         return "coinSpin"
+        case .coinBoostGift:    return "coinBoostGift"
+        case .streak:           return "streak"
+        case .dailyGift:        return "dailyGift"
+        case .share:            return "share"
+        }
+    }
+}
 
 /// The reason a FocusGlobe PRO paywall was opened — one reusable paywall view
 /// renders a context-appropriate headline + hero from this, so a balloon-skin

@@ -451,10 +451,17 @@ struct DurationDialView: View {
             ForEach(presets, id: \.label) { p in
                 let selected = (p.infinite && infinite) || (!p.infinite && !infinite && minutes == p.minutes)
                 Button {
-                    // Infinite is PRO-only: a free tap opens the Infinite paywall
-                    // and leaves the current finite choice untouched (no silent swap).
-                    if p.infinite && !appModel.isPro {
-                        appModel.tapFeedback(); router.presentPaywall(context: .infinite); return
+                    // Infinite is PRO-only. A free tap opens the Infinite paywall
+                    // and leaves the current finite choice untouched (no silent
+                    // finite swap); loading never flashes a paywall.
+                    if p.infinite {
+                        switch appModel.entitlement {
+                        case .premium: break
+                        case .free:
+                            appModel.tapFeedback(); router.present(.paywall(.infinite)); return
+                        case .loading:
+                            appModel.tapFeedback(); appModel.refreshSubscriptionStatus(); return
+                        }
                     }
                     appModel.haptics.tap()
                     infinite = p.infinite
@@ -496,17 +503,23 @@ struct DurationDialView: View {
     }
 
     private func setIndex(_ newIndex: Int) {
-        var target = newIndex
-        // Infinite is visible on the dial but PRO-locked: reaching it opens the
-        // Infinite paywall and caps the knob at the last finite stop — never a
-        // silent finite swap of a chosen infinite flight.
-        if DurationScale.value(at: target).infinite && !appModel.isPro {
-            if !router.showPaywall { appModel.tapFeedback(); router.presentPaywall(context: .infinite) }
-            target = max(0, DurationScale.infinityIndex - 1)
+        // Infinite is visible on the dial but PRO-locked. Reaching it as a free
+        // pilot opens the Infinite paywall and leaves the current selection
+        // untouched — the knob never lands on a fake finite value, and never on
+        // ∞ without entitlement. Loading never flashes a paywall.
+        if DurationScale.value(at: newIndex).infinite {
+            switch appModel.entitlement {
+            case .premium: break
+            case .free:
+                if !router.showPaywall { appModel.tapFeedback(); router.present(.paywall(.infinite)) }
+                return
+            case .loading:
+                appModel.refreshSubscriptionStatus(); return
+            }
         }
-        guard target != index else { return }
-        index = target
-        let v = DurationScale.value(at: target)
+        guard newIndex != index else { return }
+        index = newIndex
+        let v = DurationScale.value(at: newIndex)
         minutes = v.minutes
         infinite = v.infinite
         appModel.haptics.tap()

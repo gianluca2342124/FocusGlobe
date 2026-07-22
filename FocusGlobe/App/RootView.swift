@@ -5,6 +5,7 @@ import SwiftUI
 struct RootView: View {
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var appModel: AppModel
+    @EnvironmentObject private var online: FocusOnlineModel
     @State private var ready = false
 
     var body: some View {
@@ -38,14 +39,13 @@ struct RootView: View {
                 .environmentObject(appModel)
                 .environmentObject(router)
         }
-        // iPhone: a sheet. iPad/Mac: a large centred premium panel (not a tiny
-        // compressed form-sheet). Env objects are injected explicitly so the
-        // modal never crashes on Mac.
-        .adaptiveModal(isPresented: $router.showPaywall,
-                       width: Layout.paywallPanelWidth, height: Layout.paywallPanelHeight) {
-            PaywallView(context: router.paywallContext)
-                .environmentObject(appModel)
-                .environmentObject(router)
+        // The ONE coordinated modal presenter for the whole app: exactly one
+        // sheet at a time (paywall, Online sign-in, Coin Spin, Coins Boost,
+        // Streak, Daily Gift, share). This is what removes the "only presenting a
+        // single sheet is supported" console conflicts — no view owns its own
+        // competing global sheet anymore. Env objects injected explicitly.
+        .sheet(item: $router.activeModal) { modal in
+            coordinatedModal(modal)
         }
         // The take-off curtain: an opaque cover raised the instant the Boarding
         // Pass is cut, so Home can never flash between the setup cover's
@@ -74,5 +74,33 @@ struct RootView: View {
             }
         }
         .task { withAnimation(.easeInOut(duration: 0.5)) { ready = true } }
+    }
+
+    /// Renders the single coordinated modal. Every case injects the environment
+    /// objects it needs explicitly (a presented sheet does not always inherit
+    /// them on all platforms).
+    @ViewBuilder private func coordinatedModal(_ modal: AppModal) -> some View {
+        switch modal {
+        case .paywall(let ctx):
+            PaywallView(context: ctx)
+                .environmentObject(appModel)
+                .environmentObject(router)
+                .paywallMaxWidth()
+        case .onlineSignIn:
+            OnlineSignInView { }
+                .environmentObject(online)
+                .environmentObject(appModel)
+        case .coinSpin:
+            CoinSpinSheet().environmentObject(appModel)
+        case .coinBoostGift:
+            CoinsBoostPopup(onAccept: { appModel.armCoinBoost() })
+                .environmentObject(appModel)
+        case .streak:
+            StreakDetailsView().environmentObject(appModel)
+        case .dailyGift:
+            DailyGiftSheet().environmentObject(appModel)
+        case .share(let items):
+            ActivityShareSheet(items: items)
+        }
     }
 }

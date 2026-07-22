@@ -102,6 +102,10 @@ final class SubscriptionManager: ObservableObject {
     @Published private(set) var isPro = false
     @Published private(set) var isAvailable = false      // RC configured
     @Published private(set) var isLoading = false        // loading offerings
+    /// True once RevenueCat has delivered CustomerInfo at least once, so callers
+    /// can tell "still resolving the entitlement" apart from "confirmed not Pro"
+    /// — the distinction that stops a paywall flashing at a PRO/Lifetime owner.
+    @Published private(set) var hasResolvedEntitlement = false
     @Published private(set) var isPurchasing = false
     @Published private(set) var errorMessage: String?
     @Published private(set) var plans: [PlanOption] = SubscriptionManager.fallbackPlans
@@ -339,6 +343,7 @@ final class SubscriptionManager: ObservableObject {
     }
 
     private func apply(_ info: CustomerInfo) {
+        hasResolvedEntitlement = true
         if let entitlement = info.entitlements[Self.entitlementID] {
             isPro = entitlement.isActive
         } else {

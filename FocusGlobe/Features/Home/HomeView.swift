@@ -18,11 +18,8 @@ struct HomeView: View {
     /// genuine return to Home we may ask Apple to show its review prompt.
     @AppStorage("home.visitCount") private var homeVisitCount = 0
     @AppStorage("home.lastReviewPromptAt") private var lastReviewPromptAt = 0.0
-    @State private var showStreak = false
     @State private var showSetup = false
     @State private var showPreview = false
-    @State private var showCoinSpin = false
-    @State private var showBoostGift = false
     @State private var balloonFloat: CGFloat = 0
     @State private var streakPulse = false
     /// True while an arrow tap is animating into a sentinel wrap page (the tap
@@ -212,17 +209,9 @@ struct HomeView: View {
                 .environmentObject(appModel).environmentObject(router)
                 .environmentObject(online)
         }
-        .adaptiveModal(isPresented: $showStreak,
-                       width: Layout.streakPanelWidth, height: Layout.streakPanelHeight) {
-            StreakDetailsView().environmentObject(appModel)
-        }
-        .sheet(isPresented: $showCoinSpin) {
-            CoinSpinSheet().environmentObject(appModel)
-        }
-        .sheet(isPresented: $showBoostGift) {
-            CoinsBoostPopup(onAccept: { appModel.armCoinBoost() })
-                .environmentObject(appModel)
-        }
+        // Streak, Coin Spin and the Coins Boost gift now present through the ONE
+        // app-wide modal coordinator (see `AppRouter.activeModal`) so Home never
+        // owns competing sheets.
     }
 
     // MARK: Ticket → flight hand-off (no Home flash)
@@ -295,8 +284,8 @@ struct HomeView: View {
         } else if appModel.shouldOfferCoinBoost {
             appModel.markCoinBoostOffered()
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                guard !router.showPaywall, router.activeJourney == nil else { return }
-                showBoostGift = true
+                guard router.activeModal == nil, router.activeJourney == nil else { return }
+                router.present(.coinBoostGift)
             }
         }
     }
@@ -309,9 +298,9 @@ struct HomeView: View {
     private var topBar: some View {
         HStack(alignment: .center, spacing: AppSpacing.xs) {
             StreakCircleButton(streak: appModel.progress.currentStreak, pulsing: streakPulse) {
-                appModel.tapFeedback(); showStreak = true
+                appModel.tapFeedback(); router.present(.streak)
             }
-            CoinSpinCircleButton { appModel.tapFeedback(); showCoinSpin = true }
+            CoinSpinCircleButton { appModel.tapFeedback(); router.present(.coinSpin) }
             Spacer()
             coinsChip
             if appModel.isPro {

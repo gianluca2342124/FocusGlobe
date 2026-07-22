@@ -670,8 +670,14 @@ struct FocusSessionView: View {
                     // Pausing is FocusGlobe PRO. A free tap opens the Pause paywall
                     // and the timer KEEPS running — we never pause to present it.
                     // Resuming is always allowed (only a PRO pilot could have paused).
-                    if !vm.isPaused && !appModel.isPro {
-                        appModel.tapFeedback(); router.presentPaywall(context: .pause); return
+                    if !vm.isPaused {
+                        switch appModel.entitlement {
+                        case .premium: break
+                        case .free:
+                            appModel.tapFeedback(); router.presentPaywall(context: .pause); return
+                        case .loading:
+                            appModel.tapFeedback(); appModel.refreshSubscriptionStatus(); return
+                        }
                     }
                     vm.togglePause()
                 }

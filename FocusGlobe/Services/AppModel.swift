@@ -47,6 +47,21 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// The premium entitlement as a tri-state. Monthly / Annual / Lifetime all
+    /// resolve to `.premium` through the SAME authority (`isPro`, driven by
+    /// RevenueCat's single entitlement / the persisted mirror). `.loading` is only
+    /// ever reported while RevenueCat is still resolving CustomerInfo for a pilot
+    /// who isn't already Pro — so a gate must NEVER treat `.loading` as Free and
+    /// flash a paywall at a PRO/Lifetime owner whose entitlement hasn't arrived.
+    enum Entitlement { case loading, free, premium }
+    var entitlement: Entitlement {
+        if isPro { return .premium }
+        if subscriptions.isAvailable && !subscriptions.hasResolvedEntitlement { return .loading }
+        return .free
+    }
+    /// `true` only when we can be sure the pilot is NOT premium (never during load).
+    var isConfirmedFree: Bool { entitlement == .free }
+
     /// A lightweight snapshot of an unfinished journey, offered for resume on Home.
     @Published private(set) var resumableJourney: ResumableJourney?
 

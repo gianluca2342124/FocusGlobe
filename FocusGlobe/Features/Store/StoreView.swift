@@ -25,8 +25,6 @@ struct StoreView: View {
     @State private var previewSkinID: String? = nil
     /// The interior item highlighted in Interior mode (nil = just your cabin).
     @State private var previewItemID: String? = nil
-    @State private var showDailyGift = false
-    @State private var showGetCoins = false
     @State private var float: CGFloat = 0
     /// Drives the sliding highlight of the Balloon/Interior segmented control.
     @Namespace private var modeNS
@@ -71,13 +69,14 @@ struct StoreView: View {
         .onAppear {
             if previewSkinID == nil { previewSkinID = appModel.selectedSkin.id }
             if appModel.canClaimDailyGift {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { showDailyGift = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                    if router.activeModal == nil { router.present(.dailyGift) }
+                }
             }
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 3.6).repeatForever(autoreverses: true)) { float = -8 }
         }
-        .sheet(isPresented: $showDailyGift) { DailyGiftSheet().environmentObject(appModel) }
-        .sheet(isPresented: $showGetCoins) { CoinSpinSheet().environmentObject(appModel) }
+        // Daily Gift + Coin Spin present through the app-wide modal coordinator.
         .animation(.snappy(duration: 0.24), value: mode)
     }
 
@@ -105,7 +104,7 @@ struct StoreView: View {
             // No coin IAP exists — this opens the REAL coin source (the
             // rewarded Coin Spin), honestly labelled, never a dead button.
             Button {
-                appModel.tapFeedback(); showGetCoins = true
+                appModel.tapFeedback(); router.present(.coinSpin)
             } label: {
                 Text("Get Coins")
                     .font(.system(size: 13.5, weight: .bold, design: .rounded))
