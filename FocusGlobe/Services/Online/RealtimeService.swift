@@ -16,6 +16,18 @@ actor RealtimeService {
     private var skyChannel: RealtimeChannelV2?
     private var skyTasks: [Task<Void, Never>] = []
 
+    /// Subscribe a channel, surfacing errors explicitly. Uses the non-deprecated
+    /// `subscribeWithError()` (the deprecated `subscribe()` swallowed failures and
+    /// was flagged by the compiler). A failed subscribe is logged, not fatal —
+    /// the polling fallback keeps the feature working if the socket can't attach.
+    private func subscribe(_ channel: RealtimeChannelV2) async {
+        do {
+            try await channel.subscribeWithError()
+        } catch {
+            NSLog("[Realtime] subscribe failed: \(error.localizedDescription)")
+        }
+    }
+
     // MARK: Room lobby
 
     /// Subscribe to a room's live changes. `onChange` fires on ANY member or
@@ -26,7 +38,7 @@ actor RealtimeService {
         let channel = client.channel("room:\(roomID)")
         let memberChanges = channel.postgresChange(AnyAction.self, schema: "public", table: "room_members")
         let roomChanges = channel.postgresChange(AnyAction.self, schema: "public", table: "focus_rooms")
-        try? await channel.subscribe()
+        await subscribe(channel)
         roomChannel = channel
         roomTasks.append(Task {
             for await _ in memberChanges {
@@ -60,7 +72,7 @@ actor RealtimeService {
         guard let client else { return }
         let channel = client.channel("sky:\(skyID)")
         let presence = channel.presenceChange()
-        try? await channel.subscribe()
+        await subscribe(channel)
         skyChannel = channel
         try? await channel.track(["user_id": AnyJSON.string(myID)])
         skyTasks.append(Task {
@@ -95,7 +107,7 @@ actor RealtimeService {
         guard let client else { return }
         let channel = client.channel("applause:\(myID)")
         let changes = channel.postgresChange(AnyAction.self, schema: "public", table: "applause_events")
-        try? await channel.subscribe()
+        await subscribe(channel)
         applauseChannel = channel
         applauseTasks.append(Task {
             for await _ in changes {

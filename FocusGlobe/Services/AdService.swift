@@ -80,33 +80,21 @@ final class AdService: NSObject, ObservableObject {
         started = true
         analytics?.log(.admobConsentRequested)
         #if canImport(UserMessagingPlatform)
-        let params = RequestParameters()
-        ConsentInformation.shared.requestConsentInfoUpdate(with: params) { [weak self] error in
-            // Hop back to the main actor before touching MainActor-isolated
-            // state; extract the Sendable error string first.
-            let errorDesc = error?.localizedDescription
-            Task { @MainActor in
-                guard let self else { return }
-                if let errorDesc {
-                    self.analytics?.log(.admobConsentFailed, ["error": errorDesc])
-                    self.finishConsent()       // fail-safe: proceed with whatever is allowed
-                    return
-                }
+        // Use the async UMP API (the completion-handler form the compiler flagged
+        // with "consider an asynchronous alternative"). Fail-safe: any error still
+        // calls `finishConsent()`, so the SDK initialises and ads proceed with
+        // whatever consent allows — never a permanent blackout.
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                try await ConsentInformation.shared.requestConsentInfoUpdate(with: RequestParameters())
                 if let vc = Self.topViewController() {
-                    ConsentForm.loadAndPresentIfRequired(from: vc) { [weak self] formError in
-                        let formDesc = formError?.localizedDescription
-                        Task { @MainActor in
-                            guard let self else { return }
-                            if let formDesc {
-                                self.analytics?.log(.admobConsentFailed, ["error": formDesc])
-                            }
-                            self.finishConsent()
-                        }
-                    }
-                } else {
-                    self.finishConsent()
+                    try await ConsentForm.loadAndPresentIfRequired(from: vc)
                 }
+            } catch {
+                self.analytics?.log(.admobConsentFailed, ["error": error.localizedDescription])
             }
+            self.finishConsent()
         }
         #else
         finishConsent()
@@ -159,17 +147,15 @@ final class AdService: NSObject, ObservableObject {
     /// `privacyOptionsRequired`). Safe no-op otherwise.
     func presentPrivacyOptions() {
         #if canImport(UserMessagingPlatform)
-        guard let vc = Self.topViewController() else { return }
-        ConsentForm.presentPrivacyOptionsForm(from: vc) { [weak self] _ in
+        Task { @MainActor [weak self] in
+            guard let self, let vc = Self.topViewController() else { return }
+            try? await ConsentForm.presentPrivacyOptionsForm(from: vc)
             // Consent may have just changed — refresh the flag and, if ads are
             // now allowed, preload immediately (the SDK is already initialised).
-            Task { @MainActor in
-                guard let self else { return }
-                self.canRequestAds = ConsentInformation.shared.canRequestAds
-                #if canImport(GoogleMobileAds)
-                self.preloadIfAllowed()
-                #endif
-            }
+            self.canRequestAds = ConsentInformation.shared.canRequestAds
+            #if canImport(GoogleMobileAds)
+            self.preloadIfAllowed()
+            #endif
         }
         #endif
     }

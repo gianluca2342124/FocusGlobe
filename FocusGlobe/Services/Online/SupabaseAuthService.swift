@@ -35,9 +35,12 @@ actor SupabaseAuthService {
 
     // MARK: Session
 
-    /// The signed-in Supabase user id (UUID string), if a session exists.
+    /// The signed-in Supabase user id (UUID string) — only for a session that is
+    /// not expired. An expired cached session is never reported as authenticated
+    /// (important now that the client emits the local session as the initial one).
     var currentUserID: String? {
-        client?.auth.currentSession?.user.id.uuidString.lowercased()
+        guard let session = client?.auth.currentSession, !session.isExpired else { return nil }
+        return session.user.id.uuidString.lowercased()
     }
 
     /// Restore + refresh the stored session. Returns the user id, or nil when

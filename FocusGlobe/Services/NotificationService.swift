@@ -66,15 +66,12 @@ final class NotificationService {
     /// → Reminders toggle). Requests once, when undecided.
     func requestAuthorizationIfNeeded(state: NotificationState) {
         guard isEnabled else { return }
-        center.getNotificationSettings { [weak self] settings in
-            let undecided = settings.authorizationStatus == .notDetermined
-            Task { @MainActor in
-                guard let self, undecided else { return }
-                self.center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
-                    guard granted else { return }
-                    Task { @MainActor in self.reschedule(state: state) }
-                }
-            }
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let settings = await self.center.notificationSettings()
+            guard settings.authorizationStatus == .notDetermined else { return }
+            let granted = (try? await self.center.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
+            if granted { self.reschedule(state: state) }
         }
     }
 
@@ -84,15 +81,12 @@ final class NotificationService {
     /// undecided, so it never prompts twice. Graceful if denied (nothing schedules).
     func requestProvisionalAuthorizationIfNeeded(state: NotificationState) {
         guard isEnabled else { return }
-        center.getNotificationSettings { [weak self] settings in
-            let undecided = settings.authorizationStatus == .notDetermined
-            Task { @MainActor in
-                guard let self, undecided else { return }
-                self.center.requestAuthorization(options: [.alert, .sound, .badge, .provisional]) { granted, _ in
-                    guard granted else { return }
-                    Task { @MainActor in self.reschedule(state: state) }
-                }
-            }
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let settings = await self.center.notificationSettings()
+            guard settings.authorizationStatus == .notDetermined else { return }
+            let granted = (try? await self.center.requestAuthorization(options: [.alert, .sound, .badge, .provisional])) ?? false
+            if granted { self.reschedule(state: state) }
         }
     }
 
@@ -101,14 +95,13 @@ final class NotificationService {
     /// and when settings change.
     func refresh(state: NotificationState) {
         guard isEnabled else { center.removeAllPendingNotificationRequests(); return }
-        center.getNotificationSettings { [weak self] settings in
+        Task { @MainActor [weak self] in
             guard let self else { return }
+            let settings = await self.center.notificationSettings()
             let ok = settings.authorizationStatus == .authorized
                   || settings.authorizationStatus == .provisional
-            Task { @MainActor in
-                if ok { self.reschedule(state: state) }
-                else { self.center.removeAllPendingNotificationRequests() }
-            }
+            if ok { self.reschedule(state: state) }
+            else { self.center.removeAllPendingNotificationRequests() }
         }
     }
 
@@ -165,7 +158,8 @@ final class NotificationService {
         content.body = body
         content.sound = .default
         let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
-        center.add(UNNotificationRequest(identifier: id, content: content, trigger: trigger))
+        let request = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
+        Task { try? await center.add(request) }
         log("scheduled \(id) — \"\(title)\"")
     }
 

@@ -15,7 +15,20 @@ enum SupabaseService {
             log.error("Supabase configuration missing/invalid — online disabled (Solo unaffected)")
             return nil
         }
-        return SupabaseClient(supabaseURL: url, supabaseKey: SupabaseConfig.publishableKey)
+        // Opt into the forward-compatible auth behaviour the SDK warns about:
+        // emit the locally-stored session as the initial session instead of
+        // refreshing it first (this becomes the default in the next major). Safe
+        // here because the app never treats the emitted `.initialSession` as
+        // proof of auth — every auth decision flows through `client.auth.session`
+        // (SupabaseAuthService.restoreSession), which refreshes and rejects an
+        // expired session.
+        return SupabaseClient(
+            supabaseURL: url,
+            supabaseKey: SupabaseConfig.publishableKey,
+            options: SupabaseClientOptions(
+                auth: SupabaseClientOptions.AuthOptions(emitLocalSessionAsInitialSession: true)
+            )
+        )
     }()
 }
 
