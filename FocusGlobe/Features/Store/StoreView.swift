@@ -674,8 +674,9 @@ private struct SkinCard: View {
 
 /// The once-a-day welcome-back gift: a friendly balloon, a warm line, and a
 /// Collect button that grants Focus Coins. Shown at most once per calendar
-/// day (persisted); PRO pilots receive it too.
-private struct DailyGiftSheet: View {
+/// day (persisted); PRO pilots receive it too. Internal (not `private`) so the
+/// app-wide `AppModal` coordinator in RootView can present it.
+struct DailyGiftSheet: View {
     @EnvironmentObject private var appModel: AppModel
     @Environment(\.dismiss) private var dismiss
     @State private var bob: CGFloat = 0
