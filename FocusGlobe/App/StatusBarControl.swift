@@ -1,6 +1,7 @@
 import SwiftUI
 #if canImport(UIKit)
 import UIKit
+import ObjectiveC   // class_getInstanceMethod / method_exchangeImplementations
 
 // MARK: - Screen-scoped status-bar style (no private API)
 
