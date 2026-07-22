@@ -34,16 +34,6 @@ struct AmbientPilotsLayer: View {
     var onBlock: ((OnlinePilot) -> Void)? = nil
     var onReport: ((OnlinePilot) -> Void)? = nil
 
-    @State private var selectedPilot: Int? = nil
-
-    private struct Pilot {
-        let preferredSlot: Int // seeded starting index into `skySlots`
-        let phase: Double
-        let minutesLeft: Int
-        let profileIndex: Int // into PilotDirectory (unique per flight)
-        let skin: BalloonSkin
-    }
-
     /// How many fellow balloons share the Sky — a lively population (every
     /// pilot renders at the user balloon's exact size; spacing rules below keep
     /// them from clumping or crowding the user).
@@ -60,26 +50,67 @@ struct AmbientPilotsLayer: View {
         return bag.isEmpty ? [BalloonSkin.default] : bag
     }()
 
-    private var pilots: [Pilot] {
-        var h: UInt64 = 0xB111
-        for u in skyID.unicodeScalars { h = (h &* 31) &+ UInt64(u.value) }
-        var rng = SeededRNG(seed: h)
-        // Unique profiles this flight: shuffle the directory deterministically.
-        var indices = Array(0..<PilotDirectory.all.count)
-        for i in stride(from: indices.count - 1, to: 0, by: -1) {
-            let j = Int(rng.unit() * Double(i + 1))
-            indices.swapAt(i, min(i, max(0, j)))
+    /// One ambient (decorative) pilot currently visible in a slot, resolved from
+    /// the `AmbientPilotPool` timeline at time `t`.
+    private struct AmbientRender: Identifiable {
+        let id: Int          // the slot index it occupies (stable identity/position)
+        let slot: CGPoint
+        let alias: String
+        let remaining: Int?  // nil = Infinite
+        let skin: BalloonSkin
+        let phase: Double
+    }
+
+    /// Deterministic seed for one ambient slot in a Sky.
+    private static func slotSeed(skyID: String, slot: Int) -> UInt64 {
+        var h: UInt64 = 0xA13C
+        for u in (skyID + "#\(slot)").unicodeScalars { h = (h &* 31) &+ UInt64(u.value) }
+        return h
+    }
+
+    /// The pilot occupying a slot at time `t`, or nil during the calm gap after a
+    /// finite pilot retires. Pure + deterministic, so identity and remaining time
+    /// are stable across polls and only advance with `t`. A finite pilot occupies
+    /// its slot for its initial remaining, then a short calm gap, then the next
+    /// pool member takes the slot; an Infinite pilot holds the slot for the
+    /// session (∞ never expires).
+    private static func ambientAt(slotSeed: UInt64, t: Double) -> (index: Int, remaining: Int?)? {
+        var rng = SeededRNG(seed: slotSeed)
+        var cursor = 0.0
+        let poolCount = AmbientPilotPool.all.count
+        for _ in 0..<256 {                          // safety bound (never reached in practice)
+            let idx = Int(rng.unit() * Double(poolCount)) % poolCount
+            let entry = AmbientPilotPool.all[idx]
+            guard let secs = entry.seconds else { return (idx, nil) }   // Infinite: holds forever
+            let dur = Double(secs)
+            if t < cursor + dur {
+                return (idx, max(0, Int((cursor + dur - t).rounded())))
+            }
+            cursor += dur
+            let gap = 9.0 + rng.unit() * 14.0       // a calm delay before the next pilot appears
+            if t < cursor + gap { return nil }
+            cursor += gap
         }
-        var list: [Pilot] = []
-        for k in 0..<min(Self.count, indices.count) {
-            let skin = Self.skinBag[Int(rng.unit() * Double(Self.skinBag.count)) % Self.skinBag.count]
-            list.append(Pilot(preferredSlot: Int(rng.unit() * Double(Self.skySlots.count)),
-                              phase: rng.unit() * 6.28,
-                              minutesLeft: 3 + Int(rng.unit() * 55),
-                              profileIndex: indices[k],
-                              skin: skin))
+        return nil
+    }
+
+    /// The ambient pilots visible right now — at most one per free slot, deduped
+    /// by identity, ~8–14 total (never all 100 at once).
+    private func ambientRenders(t: Double, slotIndices: [Int]) -> [AmbientRender] {
+        var usedIdentities = Set<Int>()
+        var out: [AmbientRender] = []
+        for si in slotIndices {
+            let seed = Self.slotSeed(skyID: skyID, slot: si)
+            guard let member = Self.ambientAt(slotSeed: seed, t: t) else { continue }
+            guard !usedIdentities.contains(member.index) else { continue }   // no duplicate identities
+            usedIdentities.insert(member.index)
+            out.append(AmbientRender(id: si, slot: Self.skySlots[si],
+                                     alias: AmbientPilotPool.all[member.index].alias,
+                                     remaining: member.remaining,
+                                     skin: Self.skinBag[member.index % Self.skinBag.count],
+                                     phase: Double((seed >> 6) % 628) / 100.0))
         }
-        return list
+        return out
     }
 
     // MARK: - Sky-wide slot placement (collision-free by construction)
@@ -107,13 +138,13 @@ struct AmbientPilotsLayer: View {
     ]
 
     /// Deterministic slot assignment: REAL pilots (sorted by stable id) claim
-    /// slots first, each scanning forward from its seed-preferred slot; the
-    /// decorative fill then takes remaining slots in its own seeded order. The
+    /// slots first, each scanning forward from its seed-preferred slot. Returns
+    /// the real→slot map AND the ordered list of slot indices left free for
+    /// ambient fill (capped so real + ambient never exceeds the capacity). The
     /// same participant set therefore always produces the SAME layout (poll
-    /// refreshes never shuffle anyone); only a genuine join/leave can shift the
-    /// few pilots it displaced.
-    private func assignedSlots(real: [OnlinePilot], fill: [Pilot])
-        -> (real: [String: CGPoint], fill: [CGPoint]) {
+    /// refreshes never shuffle anyone); only a genuine join/leave shifts anyone.
+    private func assignRealSlots(real: [OnlinePilot], capacity: Int)
+        -> (real: [String: CGPoint], freeAmbient: [Int]) {
         var taken = Set<Int>()
         func claim(from preferred: Int) -> Int {
             var i = preferred % Self.skySlots.count
@@ -126,11 +157,13 @@ struct AmbientPilotsLayer: View {
             let preferred = Int(stablePilotSeed(for: pilot) % UInt64(Self.skySlots.count))
             realSlots[pilot.id] = Self.skySlots[claim(from: preferred)]
         }
-        var fillSlots: [CGPoint] = []
-        for pilot in fill {
-            fillSlots.append(Self.skySlots[claim(from: pilot.preferredSlot)])
+        let ambientBudget = max(0, capacity - real.count)
+        var free: [Int] = []
+        for i in 0..<Self.skySlots.count where !taken.contains(i) {
+            free.append(i)
+            if free.count >= ambientBudget { break }
         }
-        return (realSlots, fillSlots)
+        return (realSlots, free)
     }
 
     /// The gentle per-pilot idle motion around a slot — small enough that the
@@ -145,45 +178,79 @@ struct AmbientPilotsLayer: View {
         GeometryReader { geo in
             let W = geo.size.width
             let H = geo.size.height
-            // Visual capacity: real pilots first, then decorative fill. A Private
-            // Flight renders invited pilots ONLY — never a fabricated stranger.
-            // Capacity never exceeds the collision-free slot count.
+            // Visual capacity: real pilots first, then ambient fill. A Private
+            // Flight renders invited pilots ONLY — never a fabricated stranger;
+            // Solo never mounts this layer at all. Capacity never exceeds the
+            // collision-free slot count (≈8–14 balloons, never all 100 at once).
             let capacity = min(Self.skySlots.count, min(H, W) > 700 ? 14 : Self.count)
             let real = Array(realPilots.prefix(capacity))
-            let fill = isPrivate ? [] : Array(pilots.prefix(max(0, capacity - real.count)))
-            let slots = assignedSlots(real: real, fill: fill)
+            let assign = assignRealSlots(real: real, capacity: capacity)
+            let ambientSlots = isPrivate ? [] : assign.freeAmbient
             TimelineView(.animation(minimumInterval: animated ? 1.0 / 20.0 : 5.0)) { _ in
-                let t = animated ? elapsed() : 0
+                // Static frame (Reduce Motion) freezes the timeline at a settled
+                // moment, so labels/positions are stable and legible.
+                let t = animated ? max(0, elapsed()) : 24
                 ZStack {
                     ForEach(Array(real.enumerated()), id: \.element.id) { _, pilot in
-                        realPilotView(pilot, slot: slots.real[pilot.id] ?? Self.skySlots[0],
+                        realPilotView(pilot, slot: assign.real[pilot.id] ?? Self.skySlots[0],
                                       W: W, H: H, t: t)
                     }
-                    ForEach(Array(fill.enumerated()), id: \.offset) { index, pilot in
-                        pilotView(pilot, slot: slots.fill[index], W: W, H: H, t: t)
+                    ForEach(ambientRenders(t: t, slotIndices: ambientSlots)) { a in
+                        ambientPilotView(a, W: W, H: H, t: t)
                     }
                 }
             }
         }
-        // Bubbles fade themselves out after ~3 seconds.
-        .task(id: selectedPilot) {
-            guard selectedPilot != nil else { return }
-            try? await Task.sleep(nanoseconds: 3_000_000_000)
-            withAnimation(.easeOut(duration: 0.3)) { selectedPilot = nil }
-        }
     }
 
+    /// A single ambient (decorative) pilot: the shared balloon size + gentle
+    /// bob/sway, and a PERSISTENT alias + remaining-time label — exactly like a
+    /// real pilot — but purely decorative: no tap, no social actions, never
+    /// presented as a real account.
     @ViewBuilder
-    private func pilotView(_ p: Pilot, slot: CGPoint, W: CGFloat, H: CGFloat, t: Double) -> some View {
-        // A stable patch of sky (see `skySlots`) with a gentle bob + sway.
-        // EXACT same size + full opacity as every other balloon — only position
-        // differs; NO artificial outer glow, so fellow balloons feel naturally
-        // present in the environment rather than highlighted. Decorative pilots
-        // are purely ambient: no bubble, no tap.
-        let (sway, bob) = Self.drift(phase: p.phase, t: t)
-        BalloonView(height: Self.balloonSize(H), showBurner: false, showGlow: false, skin: p.skin)
-            .position(x: slot.x * W + sway, y: slot.y * H + bob)
-            .allowsHitTesting(false)
+    private func ambientPilotView(_ a: AmbientRender, W: CGFloat, H: CGFloat, t: Double) -> some View {
+        let (sway, bob) = Self.drift(phase: a.phase, t: t)
+        let size = Self.balloonSize(H)
+        VStack(spacing: 3) {
+            // Labels track the SAME switch as real pilots (`roomMode` = social
+            // labels on), so Clean Mode hides every label uniformly.
+            if roomMode {
+                ambientBubble(alias: a.alias, remaining: a.remaining)
+            }
+            BalloonView(height: size, showBurner: false, showGlow: false, skin: a.skin)
+        }
+        .position(x: a.slot.x * W + sway, y: a.slot.y * H + bob)
+        .allowsHitTesting(false)
+    }
+
+    /// The persistent ambient label: alias (full Unicode) + a decrementing
+    /// MM:SS remaining, or ∞ for an Infinite pilot. Short names are never
+    /// truncated; only exceptionally wide names truncate gracefully.
+    private func ambientBubble(alias: String, remaining: Int?) -> some View {
+        VStack(spacing: 1) {
+            Text(alias)
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: 118)
+            Text(remaining == nil ? "∞" : Self.clock(remaining!))
+                .font(.system(size: 10.5, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.72))
+                .monospacedDigit()
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Capsule().fill(.ultraThinMaterial))
+        .overlay(Capsule().fill(Color.black.opacity(0.25)))
+        .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 1))
+        .fixedSize()
+    }
+
+    /// MM:SS from seconds (used by ambient labels).
+    static func clock(_ s: Int) -> String {
+        let v = max(0, s)
+        return String(format: "%d:%02d", v / 60, v % 60)
     }
 
     /// The ONE balloon size token every pilot (and the hero) shares.
@@ -267,138 +334,57 @@ struct AmbientPilotsLayer: View {
         .fixedSize()
     }
 
-    private func appTapSelect(_ index: Int) {
-        withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
-            selectedPilot = (selectedPilot == index) ? nil : index
-        }
-    }
-
-    private func pilotBubble(_ p: Pilot) -> some View {
-        let profile = PilotDirectory.all[p.profileIndex % PilotDirectory.all.count]
-        return VStack(spacing: 2) {
-            Text("\(profile.handle) \(profile.flag)")
-                .font(.system(size: 12, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-            Text("\(p.minutesLeft) min left")
-                .font(.system(size: 10.5, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.7))
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 7)
-        .background(Capsule().fill(.ultraThinMaterial))
-        .overlay(Capsule().fill(Color.black.opacity(0.25)))
-        .overlay(Capsule().strokeBorder(.white.opacity(0.2), lineWidth: 1))
-        .fixedSize()
-    }
 }
 
-/// A local, **mock** directory of fellow pilots (handle + country flag). Clearly
-/// placeholder data for ambient presence until the real backend lands — never
-/// claimed as verified online users.
-enum PilotDirectory {
-    struct Profile { let handle: String; let flag: String; let country: String }
+/// The EXACT ambient pilot pool (Part 9A): 100 aliases with an initial remaining
+/// time (∞ = Infinite). Purely decorative seed data — NEVER presented as a
+/// verified account. Aliases are full Unicode (emoji / Japanese / Korean /
+/// Chinese / Arabic / Cyrillic / accented Latin / symbols) and rendered as-is.
+enum AmbientPilotPool {
+    struct Entry { let alias: String; let seconds: Int? }   // seconds == nil → Infinite
 
-    static let all: [Profile] = [
-        Profile(handle: "lina", flag: "🇸🇪", country: "Sweden"),
-        Profile(handle: "mateo", flag: "🇦🇷", country: "Argentina"),
-        Profile(handle: "noah_studies", flag: "🇺🇸", country: "USA"),
-        Profile(handle: "sofia", flag: "🇪🇸", country: "Spain"),
-        Profile(handle: "julia_focus", flag: "🇧🇷", country: "Brazil"),
-        Profile(handle: "kenji", flag: "🇯🇵", country: "Japan"),
-        Profile(handle: "amara", flag: "🇳🇬", country: "Nigeria"),
-        Profile(handle: "leo", flag: "🇫🇷", country: "France"),
-        Profile(handle: "clara", flag: "🇩🇪", country: "Germany"),
-        Profile(handle: "nora", flag: "🇳🇴", country: "Norway"),
-        Profile(handle: "studywithleo", flag: "🇮🇹", country: "Italy"),
-        Profile(handle: "yuki", flag: "🇯🇵", country: "Japan"),
-        Profile(handle: "ines", flag: "🇵🇹", country: "Portugal"),
-        Profile(handle: "valen", flag: "🇨🇱", country: "Chile"),
-        Profile(handle: "theo", flag: "🇬🇷", country: "Greece"),
-        Profile(handle: "mia_reads", flag: "🇬🇧", country: "UK"),
-        Profile(handle: "ari_focus", flag: "🇮🇱", country: "Israel"),
-        Profile(handle: "hana", flag: "🇰🇷", country: "Korea"),
-        Profile(handle: "diego", flag: "🇲🇽", country: "Mexico"),
-        Profile(handle: "emma", flag: "🇨🇦", country: "Canada"),
-        Profile(handle: "luca", flag: "🇮🇹", country: "Italy"),
-        Profile(handle: "aya", flag: "🇪🇬", country: "Egypt"),
-        Profile(handle: "finn", flag: "🇫🇮", country: "Finland"),
-        Profile(handle: "priya", flag: "🇮🇳", country: "India"),
-        Profile(handle: "oskar", flag: "🇵🇱", country: "Poland"),
-        Profile(handle: "maya_studies", flag: "🇦🇺", country: "Australia"),
-        Profile(handle: "tomas", flag: "🇨🇿", country: "Czechia"),
-        Profile(handle: "sara", flag: "🇩🇰", country: "Denmark"),
-        Profile(handle: "ravi", flag: "🇮🇳", country: "India"),
-        Profile(handle: "elif", flag: "🇹🇷", country: "Türkiye"),
-        Profile(handle: "bruno", flag: "🇧🇷", country: "Brazil"),
-        Profile(handle: "nina", flag: "🇷🇸", country: "Serbia"),
-        Profile(handle: "kai", flag: "🇳🇿", country: "New Zealand"),
-        Profile(handle: "lea", flag: "🇨🇭", country: "Switzerland"),
-        Profile(handle: "omar", flag: "🇦🇪", country: "UAE"),
-        Profile(handle: "zoe", flag: "🇬🇷", country: "Greece"),
-        Profile(handle: "matteo", flag: "🇮🇹", country: "Italy"),
-        Profile(handle: "freya", flag: "🇮🇸", country: "Iceland"),
-        Profile(handle: "santiago", flag: "🇨🇴", country: "Colombia"),
-        Profile(handle: "ada", flag: "🇬🇧", country: "UK"),
-        Profile(handle: "niko", flag: "🇬🇷", country: "Greece"),
-        Profile(handle: "chiara", flag: "🇮🇹", country: "Italy"),
-        Profile(handle: "hugo", flag: "🇫🇷", country: "France"),
-        Profile(handle: "mei", flag: "🇸🇬", country: "Singapore"),
-        Profile(handle: "jonas", flag: "🇩🇪", country: "Germany"),
-        Profile(handle: "aria_focus", flag: "🇺🇸", country: "USA"),
-        Profile(handle: "pablo", flag: "🇪🇸", country: "Spain"),
-        Profile(handle: "isla", flag: "🇮🇪", country: "Ireland"),
-        Profile(handle: "ryo", flag: "🇯🇵", country: "Japan"),
-        Profile(handle: "vera", flag: "🇳🇱", country: "Netherlands"),
-        Profile(handle: "andres", flag: "🇵🇪", country: "Peru"),
-        Profile(handle: "lotte", flag: "🇳🇱", country: "Netherlands"),
-        Profile(handle: "sami", flag: "🇫🇮", country: "Finland"),
-        Profile(handle: "gabriela", flag: "🇧🇷", country: "Brazil"),
-        Profile(handle: "erik", flag: "🇸🇪", country: "Sweden"),
-        Profile(handle: "noor", flag: "🇲🇦", country: "Morocco"),
-        Profile(handle: "dani", flag: "🇪🇸", country: "Spain"),
-        Profile(handle: "keira", flag: "🇮🇪", country: "Ireland"),
-        Profile(handle: "tobias", flag: "🇦🇹", country: "Austria"),
-        Profile(handle: "lucia", flag: "🇮🇹", country: "Italy"),
-        Profile(handle: "wei", flag: "🇨🇳", country: "China"),
-        Profile(handle: "marta", flag: "🇵🇱", country: "Poland"),
-        Profile(handle: "ben_reads", flag: "🇺🇸", country: "USA"),
-        Profile(handle: "sena", flag: "🇹🇷", country: "Türkiye"),
-        Profile(handle: "olivia", flag: "🇨🇦", country: "Canada"),
-        Profile(handle: "rafa", flag: "🇪🇸", country: "Spain"),
-        Profile(handle: "anya", flag: "🇺🇦", country: "Ukraine"),
-        Profile(handle: "milo", flag: "🇧🇪", country: "Belgium"),
-        Profile(handle: "sol", flag: "🇦🇷", country: "Argentina"),
-        Profile(handle: "haru", flag: "🇯🇵", country: "Japan"),
-        Profile(handle: "eva", flag: "🇸🇰", country: "Slovakia"),
-        Profile(handle: "arjun", flag: "🇮🇳", country: "India"),
-        Profile(handle: "lily_focus", flag: "🇬🇧", country: "UK"),
-        Profile(handle: "cem", flag: "🇹🇷", country: "Türkiye"),
-        Profile(handle: "romy", flag: "🇳🇱", country: "Netherlands"),
-        Profile(handle: "nael", flag: "🇫🇷", country: "France"),
-        Profile(handle: "june", flag: "🇰🇷", country: "Korea"),
-        Profile(handle: "paula", flag: "🇩🇪", country: "Germany"),
-        Profile(handle: "kofi", flag: "🇬🇭", country: "Ghana"),
-        Profile(handle: "alba", flag: "🇪🇸", country: "Spain"),
-        Profile(handle: "tom_studies", flag: "🇬🇧", country: "UK"),
-        Profile(handle: "linnea", flag: "🇸🇪", country: "Sweden"),
-        Profile(handle: "youssef", flag: "🇹🇳", country: "Tunisia"),
-        Profile(handle: "carmen", flag: "🇪🇸", country: "Spain"),
-        Profile(handle: "dean", flag: "🇺🇸", country: "USA"),
-        Profile(handle: "asel", flag: "🇰🇿", country: "Kazakhstan"),
-        Profile(handle: "bea", flag: "🇵🇹", country: "Portugal"),
-        Profile(handle: "kian", flag: "🇮🇷", country: "Iran"),
-        Profile(handle: "sofie", flag: "🇩🇰", country: "Denmark"),
-        Profile(handle: "marco", flag: "🇮🇹", country: "Italy"),
-        Profile(handle: "nadia", flag: "🇷🇴", country: "Romania"),
-        Profile(handle: "liam", flag: "🇮🇪", country: "Ireland"),
-        Profile(handle: "yara", flag: "🇱🇧", country: "Lebanon"),
-        Profile(handle: "felix", flag: "🇩🇪", country: "Germany"),
-        Profile(handle: "ivy", flag: "🇺🇸", country: "USA"),
-        Profile(handle: "tariq", flag: "🇯🇴", country: "Jordan"),
-        Profile(handle: "elsa", flag: "🇫🇮", country: "Finland"),
-        Profile(handle: "gio", flag: "🇮🇹", country: "Italy"),
-        Profile(handle: "mina", flag: "🇰🇷", country: "Korea"),
-        Profile(handle: "adam_focus", flag: "🇵🇱", country: "Poland"),
-        Profile(handle: "rosa", flag: "🇲🇽", country: "Mexico"),
+    /// Build an entry, parsing "MM:SS" → seconds, "∞" → Infinite.
+    private static func e(_ alias: String, _ time: String) -> Entry {
+        if time == "∞" { return Entry(alias: alias, seconds: nil) }
+        let parts = time.split(separator: ":")
+        let secs = parts.count == 2 ? (Int(parts[0]) ?? 0) * 60 + (Int(parts[1]) ?? 0) : 0
+        return Entry(alias: alias, seconds: secs)
+    }
+
+    static let all: [Entry] = [
+        e("NovaFocus", "24:18"), e("sofia.estudia", "42:07"), e("LiamWorks", "18:44"),
+        e("hikari_光", "∞"), e("DiegoZen", "33:12"), e("maya.exe", "12:09"),
+        e("ルナ", "27:50"), e("MinJun민준", "45:03"), e("Noor.Focus", "∞"),
+        e("alex_404", "08:36"), e("CamilaFlow", "51:21"), e("EthanStudy", "19:17"),
+        e("星野Hoshi", "36:40"), e("Valen.mp3", "14:55"), e("yuki_yuki", "∞"),
+        e("JoãoFocus", "22:11"), e("AishaReads", "39:48"), e("N1ghtOwl", "01:59"),
+        e("ClaraPomodoro", "47:05"), e("zzzStudyzzz", "16:34"), e("🌙milo", "∞"),
+        e("Elena.Works", "29:42"), e("KaiFocus", "11:08"), e("lucasito_07", "54:16"),
+        e("Sora空", "31:33"), e("NinaNoNoise", "07:45"), e("OmarDeepWork", "∞"),
+        e("maría_🪐", "26:20"), e("TheoWrites", "44:02"), e("K!M", "13:39"),
+        e("ひなた", "35:11"), e("FocusFox", "21:56"), e("EmmaOnTask", "49:30"),
+        e("xXStudyCatXx", "09:27"), e("Pablo_90", "28:04"), e("Wei伟", "∞"),
+        e("AnaCalma", "17:50"), e("r0bin", "41:13"), e("MeiMei", "23:37"),
+        e("Sam.exe", "05:18"), e("IkerFocus", "52:49"), e("✦Luna✦", "∞"),
+        e("HugoWorks", "30:25"), e("Aya_Study", "15:44"), e("MateoFlow", "38:02"),
+        e("仕事中", "20:19"), e("ChloeQuiet", "46:33"), e("BcnDreamer", "10:52"),
+        e("SeoulFocus", "∞"), e("Theo_∞", "∞"), e("LunaRossa", "34:21"),
+        e("NereaStudy", "18:05"), e("Haru春", "43:17"), e("MaxNoScroll", "06:48"),
+        e("JoséDeep", "25:59"), e("IvyFocus", "50:40"), e("ξFocusξ", "12:33"),
+        e("MiaReads", "37:24"), e("DaniZen", "∞"), e("АняFocus", "22:46"),
+        e("rafa.pm", "14:12"), e("Kaito海", "48:58"), e("sara<3", "09:41"),
+        e("AdamInFlow", "32:15"), e("GemmaWorks", "27:03"), e("𝙉𝙤𝙫𝙖", "∞"),
+        e("TomFocus", "16:28"), e("ليان", "40:06"), e("NikoStudy", "21:17"),
+        e("MaeveQuiet", "53:11"), e("BlueBalloon", "08:59"), e("Carlos.M", "29:30"),
+        e("さくらFocus", "∞"), e("JessOnTrack", "11:46"), e("LeoNoPause", "45:22"),
+        e("Zeynep", "19:03"), e("FOCUS_99", "36:07"), e("Inés🌿", "24:49"),
+        e("Momo桃", "13:14"), e("RayanReads", "∞"), e("PixelPilot", "31:45"),
+        e("AlmaCalma", "17:09"), e("Joon준", "42:38"), e("lost_in_notes", "05:56"),
+        e("FedeFocus", "49:12"), e("✨Ari✨", "∞"), e("NeilWorks", "20:42"),
+        e("Sara_Sun", "33:57"), e("Taro太郎", "15:20"), e("M∆X", "28:31"),
+        e("olivia.study", "44:45"), e("Nox", "07:13"), e("Yasmine", "∞"),
+        e("PolFocus", "23:18"), e("Kira_きら", "51:07"), e("BenjiFlow", "10:04"),
+        e("∞Focus∞", "∞"), e("LuciaZen", "35:26"), e("Aiden.pm", "18:52"),
+        e("m00nchild", "47:39"),
     ]
 }
