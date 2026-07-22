@@ -197,7 +197,7 @@ struct MapCodeTag: View {
             Image(systemName: highlighted ? "mappin" : "circle.fill")
                 .font(.system(size: highlighted ? 9 : 6, weight: .bold))
             Text(code)
-                .font(.system(size: 12, weight: .heavy, design: .rounded))
+                .font(.system(size: 12, weight: .heavy, design: .default))
         }
         .foregroundStyle(highlighted ? Color(hex: 0x2B2620) : .white)
         .padding(.horizontal, 9)

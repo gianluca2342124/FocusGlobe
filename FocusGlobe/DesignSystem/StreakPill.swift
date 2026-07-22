@@ -10,7 +10,7 @@ struct StreakPill: View {
             Image(systemName: "flame.fill")
                 .font(.system(size: 12, weight: .bold))
             Text("\(days)-day streak")
-                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .font(.system(size: 13, weight: .bold, design: .default))
         }
         .foregroundStyle(.white)
         .padding(.horizontal, 11)

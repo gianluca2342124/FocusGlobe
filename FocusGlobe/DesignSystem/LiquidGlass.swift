@@ -41,7 +41,7 @@ struct GlassSection<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xs) {
             Text(title.uppercased())
-                .font(.system(size: 12, weight: .bold, design: .rounded)).tracking(0.6)
+                .font(.system(size: 12, weight: .bold, design: .default)).tracking(0.6)
                 .foregroundStyle(AppColors.textSecondary)
                 .padding(.leading, 4)
             VStack(spacing: AppSpacing.sm) { content() }
@@ -136,7 +136,7 @@ struct GlassTextButton: View {
     var body: some View {
         Button(action: action) {
             Text(text)
-                .font(.system(size: 15, weight: .heavy, design: .rounded))
+                .font(.system(size: 15, weight: .heavy, design: .default))
                 .foregroundStyle(AppColors.textPrimary)
                 .frame(width: size, height: size)
                 .background { liquidGlassCircle(active: active) }

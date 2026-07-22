@@ -93,6 +93,11 @@ struct FocusSessionView: View {
     @State private var showLobby = false
     /// In-flight guard so a double tap can't mint two links / two rooms.
     @State private var invitePreparing = false
+    /// The journey's OWN paywall (Pause / Invite). The flight is a full-screen
+    /// cover, so its paywalls MUST present from inside it — routing them through
+    /// the app-wide `router` coordinator would collapse the flight cover and
+    /// strand `activeModal`. One at a time; dismiss returns to the flight.
+    @State private var journeyPaywall: JourneyPaywall?
     /// The single compact flight-controls panel (replaces the old button cluster).
     @State private var showControlsPanel = false
     /// Clean mode: hide chrome down to a tiny timer + a reveal button.
@@ -146,7 +151,7 @@ struct FocusSessionView: View {
         // (Online is already PRO-gated, so this is defence-in-depth. The Kyoto
         // referral share is a separate, still-free flow and is untouched.)
         guard appModel.isPro else {
-            appModel.tapFeedback(); router.presentPaywall(context: .invite); return
+            appModel.tapFeedback(); journeyPaywall = JourneyPaywall(context: .invite); return
         }
         invitePreparing = true
         let skyID = (matchedSky ?? appModel.selectedSky).id
@@ -321,7 +326,7 @@ struct FocusSessionView: View {
         .overlay(alignment: .top) {
             if online.reconnecting && online.flightMode.isOnline {
                 Text("Reconnecting…")
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .font(.system(size: 12, weight: .semibold, design: .default))
                     .foregroundStyle(.white.opacity(0.8))
                     .padding(.horizontal, 12).padding(.vertical, 6)
                     .background(Capsule().fill(.ultraThinMaterial))
@@ -337,7 +342,7 @@ struct FocusSessionView: View {
                     Image(systemName: "person.fill.badge.plus")
                         .font(.system(size: 12, weight: .bold)).foregroundStyle(AppColors.gold)
                     Text("\(alias) joined")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .font(.system(size: 13, weight: .bold, design: .default))
                         .foregroundStyle(.white)
                 }
                 .padding(.horizontal, 13).padding(.vertical, 8)
@@ -354,7 +359,7 @@ struct FocusSessionView: View {
         .overlay(alignment: .bottom) {
             if let socialNote {
                 Text(socialNote)
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .font(.system(size: 13, weight: .semibold, design: .default))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 14).padding(.vertical, 8)
                     .background(Capsule().fill(.ultraThinMaterial))
@@ -376,7 +381,7 @@ struct FocusSessionView: View {
                 HStack(spacing: 8) {
                     Text("👏")
                     Text("\(from) applauds your focus")
-                        .font(.system(size: 13.5, weight: .bold, design: .rounded))
+                        .font(.system(size: 13.5, weight: .bold, design: .default))
                         .foregroundStyle(.white)
                 }
                 .padding(.horizontal, 16).padding(.vertical, 10)
@@ -405,6 +410,12 @@ struct FocusSessionView: View {
                 OnlineLobbyView(room: room, asParticipants: true)
                     .environmentObject(online).environmentObject(appModel)
             }
+        }
+        // The flight's OWN paywall (Pause / Invite) — presented from inside the
+        // flight cover so it can't collapse it (never via the router coordinator).
+        .sheet(item: $journeyPaywall) { pw in
+            PaywallView(context: pw.context)
+                .environmentObject(appModel).environmentObject(router).paywallMaxWidth()
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
@@ -479,7 +490,7 @@ struct FocusSessionView: View {
                 // never their alias. Hidden in Clean Mode and until take-off.
                 if roomBubbleMode && takeoffLift > 0.9 {
                     Text("YOU")
-                        .font(.system(size: 11, weight: .heavy, design: .rounded))
+                        .font(.system(size: 11, weight: .heavy, design: .default))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 11).padding(.vertical, 5)
                         .background(Capsule().fill(.ultraThinMaterial))
@@ -627,7 +638,7 @@ struct FocusSessionView: View {
         let secs = isInfinity ? Int(elapsed.rounded(.down)) : remainingSecs
         let value = secs >= 3600 ? Formatters.countdown(secs) : Formatters.flightClock(secs)
         return Text(value)
-            .font(.system(size: Layout.pad(30, 40), weight: .semibold, design: .rounded))
+            .font(.system(size: Layout.pad(30, 40), weight: .semibold, design: .default))
             .monospacedDigit()
             .foregroundStyle(.white.opacity(0.85))
             .contentTransition(.numericText(countsDown: !isInfinity))
@@ -647,11 +658,11 @@ struct FocusSessionView: View {
         return VStack(spacing: Layout.pad(16, 24)) {
             VStack(spacing: 4) {
                 Text(label.uppercased())
-                    .font(.system(size: Layout.pad(12, 15), weight: .semibold, design: .rounded))
+                    .font(.system(size: Layout.pad(12, 15), weight: .semibold, design: .default))
                     .tracking(2.5)
                     .foregroundStyle(.white.opacity(0.55))
                 Text(value)
-                    .font(.system(size: Layout.pad(66, 108), weight: .bold, design: .rounded))
+                    .font(.system(size: Layout.pad(66, 108), weight: .bold, design: .default))
                     .monospacedDigit()
                     .foregroundStyle(.white)
                     .contentTransition(.numericText(countsDown: !isInfinity))
@@ -674,7 +685,7 @@ struct FocusSessionView: View {
                         switch appModel.entitlement {
                         case .premium: break
                         case .free:
-                            appModel.tapFeedback(); router.presentPaywall(context: .pause); return
+                            appModel.tapFeedback(); journeyPaywall = JourneyPaywall(context: .pause); return
                         case .loading:
                             appModel.tapFeedback(); appModel.refreshSubscriptionStatus(); return
                         }
@@ -702,11 +713,11 @@ struct FocusSessionView: View {
                     }
                     VStack(alignment: .leading, spacing: 1) {
                         Text("PLAYING")
-                            .font(.system(size: 9.5, weight: .heavy, design: .rounded))
+                            .font(.system(size: 9.5, weight: .heavy, design: .default))
                             .tracking(1.6)
                             .foregroundStyle(.white.opacity(0.6))
                         Text(appModel.selectedJourneyAudio.displayName)
-                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                            .font(.system(size: 17, weight: .bold, design: .default))
                             .foregroundStyle(.white)
                     }
                 }
@@ -731,7 +742,7 @@ struct FocusSessionView: View {
         Button(action: action) {
             HStack(spacing: 8) {
                 Image(systemName: icon).font(.system(size: Layout.pad(14, 17), weight: .bold))
-                Text(title).font(.system(size: Layout.pad(15, 18), weight: .semibold, design: .rounded))
+                Text(title).font(.system(size: Layout.pad(15, 18), weight: .semibold, design: .default))
             }
             .foregroundStyle(.white.opacity(0.9))
             .padding(.horizontal, Layout.pad(22, 28))
@@ -825,7 +836,7 @@ private struct HoldToGiveUpButton: View {
                     .frame(width: size, height: size)
                 if holding {
                     Text("Hold to leave")
-                        .font(.system(size: size * 0.30, weight: .bold, design: .rounded))
+                        .font(.system(size: size * 0.30, weight: .bold, design: .default))
                         .foregroundStyle(.white)
                         .fixedSize()
                         .padding(.trailing, 14)
@@ -883,7 +894,7 @@ private struct FlightControlsPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
             Text("FLIGHT CONTROLS")
-                .font(.system(size: 10.5, weight: .heavy, design: .rounded))
+                .font(.system(size: 10.5, weight: .heavy, design: .default))
                 .tracking(1.4)
                 .foregroundStyle(.white.opacity(0.5))
 
@@ -935,10 +946,10 @@ private struct FlightControlsPanel: View {
                     .frame(width: 24)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(title)
-                        .font(.system(size: 14.5, weight: .semibold, design: .rounded))
+                        .font(.system(size: 14.5, weight: .semibold, design: .default))
                         .foregroundStyle(.white)
                     Text(subtitle)
-                        .font(.system(size: 11.5, weight: .regular, design: .rounded))
+                        .font(.system(size: 11.5, weight: .regular, design: .default))
                         .foregroundStyle(.white.opacity(0.6))
                         .lineLimit(1).minimumScaleFactor(0.8)
                 }
@@ -962,7 +973,7 @@ private struct FlightControlsPanel: View {
                     } label: {
                         HStack(spacing: 5) {
                             Image(systemName: option.systemImage).font(.system(size: 11, weight: .bold))
-                            Text(option.displayName).font(.system(size: 12, weight: .bold, design: .rounded))
+                            Text(option.displayName).font(.system(size: 12, weight: .bold, design: .default))
                         }
                         .foregroundStyle(selected ? Color(hex: 0x14120E) : .white)
                         .padding(.horizontal, 10).frame(height: 32)
@@ -982,7 +993,12 @@ private struct FlightControlsPanel: View {
                 Image(systemName: preparingInvite ? "hourglass" : "person.badge.plus")
                     .font(.system(size: 14, weight: .bold))
                 Text(preparingInvite ? "Preparing…" : "Invite Friends")
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .font(.system(size: 14, weight: .bold, design: .default))
+                // Inviting friends into a Private Flight is FocusGlobe PRO — a
+                // small crown marks the gate for a non-premium pilot.
+                if !preparingInvite && appModel.entitlement != .premium {
+                    Image(systemName: "crown.fill").font(.system(size: 10, weight: .black))
+                }
                 Spacer()
                 if !preparingInvite {
                     Image(systemName: "chevron.right").font(.system(size: 11, weight: .bold)).opacity(0.6)
@@ -1001,4 +1017,11 @@ private struct FlightControlsPanel: View {
 private struct FlightShareURL: Identifiable {
     let url: URL
     var id: String { url.absoluteString }
+}
+
+/// Identifiable wrapper so a `PaywallContext` can drive the flight's OWN
+/// `.sheet(item:)` — presented from inside the flight cover, never via router.
+private struct JourneyPaywall: Identifiable {
+    let context: PaywallContext
+    var id: String { String(describing: context) }
 }

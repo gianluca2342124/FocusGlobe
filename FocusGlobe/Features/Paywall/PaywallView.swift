@@ -52,7 +52,7 @@ struct PaywallView: View {
                         contextShowcase
                         if context != .general {
                             Text("+ Unlock so much more with PRO")
-                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .font(.system(size: 13, weight: .semibold, design: .default))
                                 .foregroundStyle(.white.opacity(0.65))
                         }
                         PaywallComparisonTable(highlighted: context.comparisonHighlight)
@@ -122,7 +122,7 @@ struct PaywallView: View {
                             .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
                                 .strokeBorder(.white.opacity(0.16), lineWidth: 1))
                         Text(sky.name)
-                            .font(.system(size: 11.5, weight: .bold, design: .rounded))
+                            .font(.system(size: 11.5, weight: .bold, design: .default))
                             .foregroundStyle(.white.opacity(0.85))
                             .lineLimit(1).minimumScaleFactor(0.7)
                     }
@@ -135,7 +135,7 @@ struct PaywallView: View {
                     VStack(spacing: 5) {
                         BalloonView(height: 72, showBurner: false, showGlow: false, skin: skin)
                         Text(skin.name)
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .font(.system(size: 11, weight: .bold, design: .default))
                             .foregroundStyle(.white.opacity(0.85))
                     }
                 }
@@ -156,7 +156,7 @@ struct PaywallView: View {
                         }
                         .frame(width: 74, height: 74)
                         Text(item.name)
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .font(.system(size: 11, weight: .bold, design: .default))
                             .foregroundStyle(.white.opacity(0.85))
                             .lineLimit(1).minimumScaleFactor(0.7)
                     }
@@ -167,7 +167,7 @@ struct PaywallView: View {
             HStack(spacing: AppSpacing.sm) {
                 ForEach(JourneyAudioOption.all.filter { $0.isPremium }.prefix(3)) { option in
                     Label(option.displayName, systemImage: "music.note")
-                        .font(.system(size: 12.5, weight: .bold, design: .rounded))
+                        .font(.system(size: 12.5, weight: .bold, design: .default))
                         .foregroundStyle(.white.opacity(0.9))
                         .padding(.horizontal, 12).padding(.vertical, 8)
                         .background(Capsule().fill(.white.opacity(0.08)))
@@ -307,7 +307,7 @@ struct PaywallView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
                         Text(kind.title)
-                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                            .font(.system(size: 17, weight: .bold, design: .default))
                             .foregroundStyle(.white)
                         if kind == .annual { discountBadge }
                     }
@@ -319,7 +319,7 @@ struct PaywallView: View {
                 }
                 Spacer()
                 Text(plan?.localizedPrice ?? "—")
-                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .font(.system(size: 17, weight: .bold, design: .default))
                     .foregroundStyle(.white)
             }
             .padding(.vertical, AppSpacing.sm)
@@ -352,7 +352,7 @@ struct PaywallView: View {
 
     private var discountBadge: some View {
         Text("-60%")
-            .font(.system(size: 10, weight: .heavy, design: .rounded))
+            .font(.system(size: 10, weight: .heavy, design: .default))
             .foregroundStyle(Color(hex: 0x2B2620))
             .padding(.horizontal, 6).padding(.vertical, 2)
             .background(Capsule().fill(AppColors.gold))
@@ -477,94 +477,95 @@ struct PaywallView: View {
 
 // MARK: - Shared Free-vs-PRO comparison
 
-/// The ONE Free-vs-PRO comparison used by every paywall context. Exactly eight
-/// benefit rows in a fixed order (No Ads is deliberately second), checkmark /
-/// dash values only, PRO in subtle gold. The row that matches the opening
-/// context is gently highlighted. Conversion-focused: Free includes only Solo
-/// Focus; every other benefit is a PRO unlock, so the PRO column is a full
-/// column of gold checks. No "What you get" header, no spreadsheet feel.
+/// The ONE Free-vs-PRO comparison used by every paywall context. Eight direct,
+/// benefit-led rows (No Ads deliberately second), checkmark / dash values only.
+/// It is NOT a boxed table card: it sits straight on the paywall background, and
+/// the PRO column is a full-height GOLD bar behind its checkmarks — the strong,
+/// conversion-focused emphasis (mirrors the reference layout). The row matching
+/// the opening context is highlighted in gold. Free includes only Solo Focus;
+/// every other benefit is a PRO unlock, so the PRO column is all checks.
 struct PaywallComparisonTable: View {
     /// The benefit row to spotlight (nil = broad entry → nothing highlighted).
     var highlighted: String? = nil
 
-    /// (title, includedInFree). Order is fixed and must not change. PRO includes
-    /// everything, so its column is always a gold check.
+    /// (title, includedInFree). Order is fixed. PRO includes everything.
     private static let rows: [(title: String, free: Bool)] = [
-        ("Solo Focus",        true),
-        ("No Ads",            false),
-        ("Online Mode",       false),
-        ("Invite Friends",    false),
-        ("Infinite Focus",    false),
-        ("Pause Anytime",     false),
-        ("PRO Widgets",       false),
-        ("Exclusive Content", false),
+        ("Solo Focus",      true),
+        ("No Ads",          false),
+        ("Online Mode",     false),
+        ("Invite Friends",  false),
+        ("Infinite Focus",  false),
+        ("Exclusive Skies", false),
+        ("Premium Items",   false),
+        ("Smart Widgets",   false),
     ]
 
-    private var freeWidth: CGFloat { Layout.pad(52, 64) }
-    private var proWidth: CGFloat { Layout.pad(56, 70) }
+    private var freeWidth: CGFloat { Layout.pad(56, 68) }
+    private var proWidth: CGFloat { Layout.pad(76, 92) }
+    /// Dark ink that reads crisply on the gold PRO column.
+    private let proInk = Color(hex: 0x2B2510)
 
     var body: some View {
         VStack(spacing: 0) {
-            // Column captions only — deliberately no "What you get" header.
+            // Column captions — no boxed header, no "What you get".
             HStack(spacing: 0) {
                 Spacer(minLength: 0)
-                Text("Free")
-                    .font(.system(size: 11.5, weight: .heavy, design: .rounded))
+                Text("FREE")
+                    .font(.system(size: 12, weight: .heavy, design: .default)).tracking(0.5)
                     .foregroundStyle(.white.opacity(0.5))
                     .frame(width: freeWidth)
                 Text("PRO")
-                    .font(.system(size: 11.5, weight: .heavy, design: .rounded))
-                    .foregroundStyle(AppColors.gold)
+                    .font(.system(size: 13, weight: .heavy, design: .default)).tracking(0.5)
+                    .foregroundStyle(proInk)
                     .frame(width: proWidth)
             }
-            .padding(.bottom, 6)
-            .padding(.horizontal, 8)
+            .padding(.top, Layout.pad(12, 15))
+            .padding(.bottom, Layout.pad(8, 10))
 
-            ForEach(Array(Self.rows.enumerated()), id: \.offset) { _, row in
-                let isHighlighted = row.title == highlighted
+            ForEach(Array(Self.rows.enumerated()), id: \.offset) { idx, row in
+                let isHi = row.title == highlighted
                 HStack(spacing: 0) {
                     Text(row.title)
-                        .font(.system(size: Layout.pad(15, 17),
-                                      weight: isHighlighted ? .bold : .medium, design: .rounded))
-                        .foregroundStyle(isHighlighted ? .white : .white.opacity(0.9))
-                        .lineLimit(1).minimumScaleFactor(0.75)
+                        .font(.system(size: Layout.pad(16.5, 19),
+                                      weight: isHi ? .heavy : .semibold, design: .default))
+                        .foregroundStyle(isHi ? AppColors.gold : .white)
+                        .lineLimit(1).minimumScaleFactor(0.7)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    mark(included: row.free, gold: false).frame(width: freeWidth)
-                    mark(included: true, gold: true).frame(width: proWidth)
+                    // Free — a dash for everything except Solo Focus.
+                    Image(systemName: row.free ? "checkmark" : "minus")
+                        .font(.system(size: Layout.pad(16, 18), weight: .heavy))
+                        .foregroundStyle(row.free ? .white.opacity(0.55) : .white.opacity(0.22))
+                        .frame(width: freeWidth)
+                    // PRO — a crisp dark check over the gold column.
+                    Image(systemName: "checkmark")
+                        .font(.system(size: Layout.pad(17, 20), weight: .heavy))
+                        .foregroundStyle(proInk)
+                        .frame(width: proWidth)
                 }
-                .padding(.vertical, Layout.pad(9, 11))
-                .padding(.horizontal, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 11, style: .continuous)
-                        .fill(AppColors.gold.opacity(isHighlighted ? 0.15 : 0))
-                        .overlay(alignment: .leading) {
-                            if isHighlighted {
-                                RoundedRectangle(cornerRadius: 2, style: .continuous)
-                                    .fill(AppColors.gold)
-                                    .frame(width: 3)
-                                    .padding(.vertical, 7)
-                            }
+                .padding(.vertical, Layout.pad(11, 13))
+                // A hairline between rows, only across the label + Free region
+                // (the gold column stays clean).
+                .overlay(alignment: .bottom) {
+                    if idx < Self.rows.count - 1 {
+                        HStack(spacing: 0) {
+                            Rectangle().fill(.white.opacity(0.10)).frame(height: 1)
+                                .frame(maxWidth: .infinity)
+                            Color.clear.frame(width: proWidth)
                         }
-                )
+                    }
+                }
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("\(row.title). \(row.free ? "Included in Free and PRO" : "PRO only").")
             }
         }
-        .padding(Layout.pad(14, 18))
-        .background(
-            RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
-                    .fill(Color.black.opacity(0.22)))
-                .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
-                    .strokeBorder(AppColors.gold.opacity(0.28), lineWidth: 1))
-        )
-    }
-
-    @ViewBuilder private func mark(included: Bool, gold: Bool) -> some View {
-        Image(systemName: included ? "checkmark" : "minus")
-            .font(.system(size: 13, weight: .heavy))
-            .foregroundStyle(included ? (gold ? AppColors.gold : .white.opacity(0.62))
-                                      : .white.opacity(0.26))
+        // The full-height gold PRO column, trailing-aligned behind the checks —
+        // the conversion emphasis, integrated onto the paywall (no table card).
+        .background(alignment: .trailing) {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(LinearGradient(colors: [Color(hex: 0xF3D79A), AppColors.gold, Color(hex: 0xE4BE7E)],
+                                     startPoint: .top, endPoint: .bottom))
+                .frame(width: proWidth)
+                .shadow(color: AppColors.gold.opacity(0.4), radius: 20, y: 8)
+        }
     }
 }

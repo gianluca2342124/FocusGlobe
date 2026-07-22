@@ -9,8 +9,14 @@ import SwiftUI
 struct FlightModeSelectorView: View {
     @EnvironmentObject private var online: FocusOnlineModel
     @EnvironmentObject private var appModel: AppModel
-    @EnvironmentObject private var router: AppRouter
     @Environment(\.horizontalSizeClass) private var hSize
+    /// Free pilot chose Online → open the ritual's Online paywall. Presented by
+    /// the setup ritual itself (a local sheet), never via the app-wide router
+    /// coordinator — presenting a router sheet from inside the full-screen cover
+    /// collapses the cover and strands the modal state.
+    var onNeedOnlinePaywall: () -> Void = {}
+    /// PRO pilot signed out → open Sign in with Apple (also ritual-local).
+    var onNeedSignIn: () -> Void = {}
     /// Called with the chosen mode when the user continues.
     var onContinue: (OnlineFlightMode) -> Void
 
@@ -29,7 +35,7 @@ struct FlightModeSelectorView: View {
     var body: some View {
         VStack(spacing: AppSpacing.lg) {
             Text("Choose your Flight")
-                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .font(.system(size: 28, weight: .bold, design: .default))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
 
@@ -74,8 +80,9 @@ struct FlightModeSelectorView: View {
                 continueTapped()
             }
         }
-        // Sign in with Apple presents through the app-wide modal coordinator
-        // (never a competing local sheet).
+        // Online paywall + Sign in with Apple present through the setup ritual's
+        // OWN local coordinator (see FlightSetupView) — never the app-wide router,
+        // which would collapse this full-screen cover.
         .alert("Fly in Public Skies?", isPresented: $showDisclosure) {
             Button("Continue Online") {
                 OnlineCache.disclosureSeen = true
@@ -96,7 +103,7 @@ struct FlightModeSelectorView: View {
         case .free:
             // Free pilot: the Online paywall ONLY — NO auth, NO presence, NO room.
             appModel.tapFeedback()
-            router.present(.paywall(.online))
+            onNeedOnlinePaywall()
             return
         case .loading:
             // Entitlement still resolving — never flash a paywall at a possibly
@@ -112,7 +119,7 @@ struct FlightModeSelectorView: View {
             if canSignIn {
                 pendingOnlineContinue = true          // continue once after auth
                 appModel.tapFeedback()
-                router.present(.onlineSignIn)
+                onNeedSignIn()
             }
             return
         }
@@ -149,7 +156,7 @@ struct FlightModeSelectorView: View {
                 }
                 .frame(height: 40)
                 Text(title)
-                    .font(.system(size: 23, weight: .bold, design: .rounded))
+                    .font(.system(size: 23, weight: .bold, design: .default))
                     .foregroundStyle(.white)
                     .lineLimit(1).minimumScaleFactor(0.7)
                 cardSubtitle(mode: mode, fallback: subtitle, selected: selected)
@@ -172,6 +179,19 @@ struct FlightModeSelectorView: View {
                         .transition(.scale.combined(with: .opacity))
                 }
             }
+            // Online is a FocusGlobe PRO feature — a subtle gold PRO badge marks
+            // it while the pilot isn't premium (never shown once PRO).
+            .overlay(alignment: .topLeading) {
+                if mode == .publicSky && appModel.entitlement != .premium {
+                    Text("PRO")
+                        .font(.system(size: 10, weight: .heavy, design: .default))
+                        .tracking(0.6)
+                        .foregroundStyle(Color(hex: 0x2B2510))
+                        .padding(.horizontal, 7).padding(.vertical, 3)
+                        .background(Capsule().fill(AppColors.gold))
+                        .padding(10)
+                }
+            }
         }
         .buttonStyle(SoftPressStyle(scale: 0.97))
     }
@@ -188,7 +208,7 @@ struct FlightModeSelectorView: View {
             HStack(spacing: 5) {
                 Circle().fill(Color(hex: 0x4ADE80)).frame(width: 6, height: 6)
                 Text("\(SkyActivity.count(for: appModel.selectedSky)) focusing now")
-                    .font(.system(size: 12.5, weight: .semibold, design: .rounded))
+                    .font(.system(size: 12.5, weight: .semibold, design: .default))
                     // Always clearly readable — the live count is information,
                     // not decoration, so it never sinks into the card tint.
                     .foregroundStyle(selected ? AppColors.textSecondary : .white.opacity(0.72))
@@ -199,7 +219,7 @@ struct FlightModeSelectorView: View {
             .accessibilityLabel("Live. \(SkyActivity.count(for: appModel.selectedSky)) focusing now")
         } else {
             Text(fallback)
-                .font(.system(size: 12.5, weight: .semibold, design: .rounded))
+                .font(.system(size: 12.5, weight: .semibold, design: .default))
                 .foregroundStyle(selected ? AppColors.textSecondary : AppColors.textTertiary)
                 .lineLimit(1).minimumScaleFactor(0.8)
         }
@@ -208,7 +228,7 @@ struct FlightModeSelectorView: View {
     private var liveDot: some View {
         HStack(spacing: 4) {
             Circle().fill(Color(hex: 0x4ADE80)).frame(width: 7, height: 7)
-            Text("Live").font(.system(size: 10, weight: .heavy, design: .rounded))
+            Text("Live").font(.system(size: 10, weight: .heavy, design: .default))
                 .foregroundStyle(Color(hex: 0x4ADE80))
         }
         .padding(.horizontal, 6).padding(.vertical, 3)
@@ -219,12 +239,12 @@ struct FlightModeSelectorView: View {
 
     private var signInPrompt: some View {
         Button {
-            appModel.tapFeedback(); router.present(.onlineSignIn)
+            appModel.tapFeedback(); onNeedSignIn()
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "applelogo").font(.system(size: 15, weight: .bold))
                 Text("Sign in with Apple")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .font(.system(size: 15, weight: .bold, design: .default))
                 Spacer()
                 Image(systemName: "chevron.right").font(.system(size: 12, weight: .bold))
                     .foregroundStyle(AppColors.textTertiary)

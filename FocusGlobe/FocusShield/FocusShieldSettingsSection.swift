@@ -121,7 +121,7 @@ struct FocusShieldSettingsSection: View {
                     }
                     Spacer(minLength: 0)
                     Text("SOON")
-                        .font(.system(size: 10, weight: .heavy, design: .rounded)).tracking(0.6)
+                        .font(.system(size: 10, weight: .heavy, design: .default)).tracking(0.6)
                         .foregroundStyle(AppColors.gold)
                         .padding(.horizontal, 8).padding(.vertical, 4)
                         .background(Capsule().fill(AppColors.gold.opacity(0.15)))

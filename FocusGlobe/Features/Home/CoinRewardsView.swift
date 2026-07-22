@@ -138,10 +138,10 @@ struct CoinSpinSheet: View {
         VStack(spacing: AppSpacing.sm) {
             heroImage.frame(height: 138)
             Text("Free Coin Spin")
-                .font(.system(size: 27, weight: .heavy, design: .rounded))
+                .font(.system(size: 27, weight: .heavy, design: .default))
                 .foregroundStyle(AppColors.textPrimary)
             Text("WIN UP TO 25 COINS!")
-                .font(.system(size: 15, weight: .heavy, design: .rounded))
+                .font(.system(size: 15, weight: .heavy, design: .default))
                 .tracking(0.5)
                 .foregroundStyle(AppColors.gold)
             Text("Watch a short video and spin for a reward.")
@@ -149,7 +149,7 @@ struct CoinSpinSheet: View {
                 .foregroundStyle(AppColors.textSecondary)
                 .multilineTextAlignment(.center)
             Text("1 · 2 · 3 · 5 · 10 · 15 · 20 · 25")
-                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .font(.system(size: 13, weight: .bold, design: .default))
                 .foregroundStyle(AppColors.textTertiary)
             if let note {
                 Text(note)
@@ -190,7 +190,7 @@ struct CoinSpinSheet: View {
                 .font(AppTypography.callout)
                 .foregroundStyle(AppColors.textSecondary)
             Text("\(prize ?? 0) FocusCoins")
-                .font(.system(size: 36, weight: .heavy, design: .rounded))
+                .font(.system(size: 36, weight: .heavy, design: .default))
                 .foregroundStyle(AppColors.gold)
             AppPrimaryButton(title: "Awesome", systemImage: "checkmark") {
                 appModel.tapFeedback(); dismiss()
@@ -274,7 +274,7 @@ private struct SpinWheel: View {
         VStack(spacing: 1) {
             FocusCoinIcon(size: 17)
             Text("\(value)")
-                .font(.system(size: 13, weight: .heavy, design: .rounded))
+                .font(.system(size: 13, weight: .heavy, design: .default))
                 .foregroundStyle(.white)
             Spacer(minLength: 0)
         }
@@ -353,7 +353,7 @@ struct CoinsBoostPopup: View {
 
                 TimelineView(.periodic(from: .now, by: 1)) { ctx in
                     Text("Gift expires in \(countdown(now: ctx.date))")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .font(.system(size: 13, weight: .bold, design: .default))
                         .foregroundStyle(AppColors.textSecondary)
                         .monospacedDigit()
                 }
@@ -383,10 +383,10 @@ struct CoinsBoostPopup: View {
         HStack(spacing: AppSpacing.md) {
             VStack(spacing: 0) {
                 Text("2×")
-                    .font(.system(size: 44, weight: .heavy, design: .rounded))
+                    .font(.system(size: 44, weight: .heavy, design: .default))
                     .foregroundStyle(AppColors.gold)
                 Text("EARNINGS")
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .font(.system(size: 11, weight: .bold, design: .default))
                     .tracking(1)
                     .foregroundStyle(AppColors.textSecondary)
             }
@@ -396,7 +396,7 @@ struct CoinsBoostPopup: View {
                     .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(AppColors.brand)
                 Text("1h Max Duration")
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .font(.system(size: 12, weight: .bold, design: .default))
                     .foregroundStyle(AppColors.textPrimary)
             }
         }
@@ -427,13 +427,13 @@ struct CoinBoostTag: View {
             HStack(spacing: 5) {
                 FocusCoinIcon(size: 15)
                 Text("2×")
-                    .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    .font(.system(size: 13, weight: .heavy, design: .default))
                     .foregroundStyle(AppColors.gold)
                 Image(systemName: "clock")
                     .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(.white.opacity(0.7))
                 Text(short(appModel.coinBoostRemaining))
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .font(.system(size: 12, weight: .bold, design: .default))
                     .foregroundStyle(.white)
                     .monospacedDigit()
             }

@@ -127,6 +127,22 @@ enum DurationScale {
 /// in* — and the validated boarding pass launches the flight directly. It ends
 /// by calling the *exact same* `router.startJourney(origin:route:intention:)`
 /// as always, so nothing downstream changes.
+/// The setup ritual's own modal destinations — presented from INSIDE the
+/// full-screen cover (never via the app-wide router), so a paywall or sign-in
+/// can't collapse the cover or leave the router's `activeModal` stuck.
+enum SetupModal: Identifiable {
+    case infinitePaywall
+    case onlinePaywall
+    case onlineSignIn
+    var id: String {
+        switch self {
+        case .infinitePaywall: return "infinite"
+        case .onlinePaywall:   return "online"
+        case .onlineSignIn:    return "signin"
+        }
+    }
+}
+
 struct FlightSetupView: View {
     /// The Sky chosen on Home — carried through the whole ritual: the backdrop
     /// matches its mood, the ticket names it, and the flight is biased to it.
@@ -138,6 +154,7 @@ struct FlightSetupView: View {
 
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var online: FocusOnlineModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -146,6 +163,13 @@ struct FlightSetupView: View {
     @State private var minutes = 25
     @State private var infinite = false
     @State private var focus: FocusPreset?
+    /// The ritual's OWN modal coordinator. The setup ritual is a full-screen
+    /// cover, so any paywall / sign-in it needs MUST present from inside the
+    /// cover — never through the app-wide `router` coordinator (a RootView sheet
+    /// cannot present while this cover is up: it tears the cover down, dropping
+    /// the user back onto Home's sky pager, and leaves a stuck `activeModal` that
+    /// re-fires on the next tap). One at a time; dismiss returns here cleanly.
+    @State private var setupModal: SetupModal?
     /// The pre-flight "Flight Mode" intent — whether the user wants distracting
     /// apps grounded for this journey. (Real enforcement rides the parked Focus
     /// Shield infrastructure; this is the premium pre-flight control for it.)
@@ -173,7 +197,10 @@ struct FlightSetupView: View {
                         // only if it can't fit on a very short screen.
                         GeometryReader { proxy in
                             ScrollView(showsIndicators: false) {
-                                FlightModeSelectorView { _ in
+                                FlightModeSelectorView(
+                                    onNeedOnlinePaywall: { present(.onlinePaywall) },
+                                    onNeedSignIn: { present(.onlineSignIn) }
+                                ) { _ in
                                     appModel.uiSound.play(.transition)
                                     withAnimation(AppMotion.soft) { step = .duration }
                                 }
@@ -185,7 +212,8 @@ struct FlightSetupView: View {
                         }
                         .transition(stepTransition)
                     case .duration:
-                        DurationDialView(minutes: $minutes, infinite: $infinite) {
+                        DurationDialView(minutes: $minutes, infinite: $infinite,
+                                         onNeedInfinitePaywall: { present(.infinitePaywall) }) {
                             appModel.tapFeedback()
                             appModel.uiSound.play(.transition)
                             withAnimation(AppMotion.soft) { step = .pack }
@@ -211,6 +239,29 @@ struct FlightSetupView: View {
             }
         }
         .preferredColorScheme(.dark)   // the ritual is always a night-cinema moment
+        // The ritual's OWN sheet — presented from INSIDE the full-screen cover,
+        // so it never conflicts with the app-wide router coordinator and always
+        // returns cleanly to the current step.
+        .sheet(item: $setupModal) { modal in
+            switch modal {
+            case .infinitePaywall:
+                PaywallView(context: .infinite)
+                    .environmentObject(appModel).environmentObject(router).paywallMaxWidth()
+            case .onlinePaywall:
+                PaywallView(context: .online)
+                    .environmentObject(appModel).environmentObject(router).paywallMaxWidth()
+            case .onlineSignIn:
+                OnlineSignInView { }
+                    .environmentObject(online).environmentObject(appModel)
+            }
+        }
+    }
+
+    /// Present a ritual-scoped modal (idempotent — ignores a second request while
+    /// one is already up, so a rapid double-tap can't stack sheets).
+    private func present(_ modal: SetupModal) {
+        guard setupModal == nil else { return }
+        setupModal = modal
     }
 
     /// A soft, deep step change: the outgoing step sinks away as the incoming
@@ -275,9 +326,11 @@ struct FlightSetupView: View {
 struct DurationDialView: View {
     @Binding var minutes: Int
     @Binding var infinite: Bool
+    /// Free pilot reached ∞ (preset OR dial) → open the ritual's Infinite paywall.
+    /// Presented by the ritual itself, never via the app-wide router coordinator.
+    var onNeedInfinitePaywall: () -> Void = {}
     let onContinue: () -> Void
     @EnvironmentObject private var appModel: AppModel
-    @EnvironmentObject private var router: AppRouter
 
     @State private var index = 0
     @State private var didInit = false
@@ -408,7 +461,7 @@ struct DurationDialView: View {
     private var centerValue: some View {
         VStack(spacing: 3) {
             Text(centerBig)
-                .font(.system(size: hSize == .regular ? 108 : 78, weight: .bold, design: .rounded))
+                .font(.system(size: hSize == .regular ? 108 : 78, weight: .bold, design: .default))
                 .foregroundStyle(.white)
                 .monospacedDigit()
                 .contentTransition(.numericText())
@@ -440,7 +493,7 @@ struct DurationDialView: View {
         Text(infinite
              ? "Endless flight"
              : "Estimated flight · \(Formatters.distance(km: FlightRouteFactory.symbolicKm(minutes: minutes)))")
-            .font(.system(size: 14, weight: .medium, design: .rounded))
+            .font(.system(size: 14, weight: .medium, design: .default))
             .foregroundStyle(.white.opacity(0.72))
             .contentTransition(.opacity)
             .animation(.easeInOut(duration: 0.2), value: infinite)
@@ -450,6 +503,10 @@ struct DurationDialView: View {
         HStack(spacing: 6) {
             ForEach(presets, id: \.label) { p in
                 let selected = (p.infinite && infinite) || (!p.infinite && !infinite && minutes == p.minutes)
+                // The ∞ preset is a FocusGlobe PRO feature — mark it with a gold
+                // ring + crown while the pilot isn't premium, so it clearly reads
+                // as a locked premium option (never a plain free choice).
+                let proLocked = p.infinite && appModel.entitlement != .premium
                 Button {
                     // Infinite is PRO-only. A free tap opens the Infinite paywall
                     // and leaves the current finite choice untouched (no silent
@@ -458,7 +515,7 @@ struct DurationDialView: View {
                         switch appModel.entitlement {
                         case .premium: break
                         case .free:
-                            appModel.tapFeedback(); router.present(.paywall(.infinite)); return
+                            appModel.tapFeedback(); onNeedInfinitePaywall(); return
                         case .loading:
                             appModel.tapFeedback(); appModel.refreshSubscriptionStatus(); return
                         }
@@ -469,17 +526,30 @@ struct DurationDialView: View {
                     index = DurationScale.index(forMinutes: p.minutes, infinite: p.infinite)
                 } label: {
                     Text(p.label)
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                        .foregroundStyle(selected ? Color(hex: 0x14120E) : .white)
+                        .font(.system(size: proLocked ? 17 : 15, weight: .bold, design: .default))
+                        .foregroundStyle(selected ? Color(hex: 0x14120E)
+                                         : (proLocked ? AppColors.gold : .white))
                         .frame(maxWidth: .infinity)
                         .frame(height: 42)
                         .background(RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(selected ? Color(hex: 0xF4EFE4) : Color.white.opacity(0.08)))
+                            .fill(selected ? Color(hex: 0xF4EFE4)
+                                  : (proLocked ? AppColors.gold.opacity(0.12) : Color.white.opacity(0.08))))
                         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .strokeBorder(.white.opacity(selected ? 0 : 0.12), lineWidth: 1))
+                            .strokeBorder(proLocked ? AppColors.gold.opacity(0.75)
+                                          : .white.opacity(selected ? 0 : 0.12),
+                                          lineWidth: proLocked ? 1.5 : 1))
+                        .overlay(alignment: .topTrailing) {
+                            if proLocked {
+                                Image(systemName: "crown.fill")
+                                    .font(.system(size: 8, weight: .black))
+                                    .foregroundStyle(AppColors.gold)
+                                    .padding(3)
+                            }
+                        }
                 }
                 .buttonStyle(SoftPressStyle())
-                .accessibilityLabel(p.infinite ? "Infinity" : "\(p.minutes) minutes")
+                .accessibilityLabel(p.infinite ? (proLocked ? "Infinity, FocusGlobe PRO" : "Infinity")
+                                                : "\(p.minutes) minutes")
             }
         }
         .padding(.horizontal, AppSpacing.screen)
@@ -511,8 +581,7 @@ struct DurationDialView: View {
             switch appModel.entitlement {
             case .premium: break
             case .free:
-                if !router.showPaywall { appModel.tapFeedback(); router.present(.paywall(.infinite)) }
-                return
+                appModel.tapFeedback(); onNeedInfinitePaywall(); return
             case .loading:
                 appModel.refreshSubscriptionStatus(); return
             }
@@ -810,7 +879,7 @@ struct PackFocusView: View {
                 .font(.system(size: Layout.pad(19, 24), weight: .bold))
                 .foregroundStyle(.white)
             Text(preset.title)
-                .font(.system(size: Layout.pad(12, 15), weight: .bold, design: .rounded))
+                .font(.system(size: Layout.pad(12, 15), weight: .bold, design: .default))
                 .foregroundStyle(.white)
                 .lineLimit(1).minimumScaleFactor(0.7)
         }
@@ -987,7 +1056,7 @@ struct FlightModeSheet: View {
                     if blockApps { scopeRow }
                     soundscapeRow
                     Text("Protected flights ground your chosen apps for the whole journey, so the sky stays yours.")
-                        .font(.system(size: 12.5, weight: .regular, design: .rounded))
+                        .font(.system(size: 12.5, weight: .regular, design: .default))
                         .foregroundStyle(.white.opacity(0.55))
                         .fixedSize(horizontal: false, vertical: true)
                     AppPrimaryButton(title: "Done", systemImage: "checkmark") {
@@ -1075,7 +1144,7 @@ struct FlightModeSheet: View {
     private var soundscapeRow: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xs) {
             Text("SOUNDSCAPE")
-                .font(.system(size: 11, weight: .heavy, design: .rounded))
+                .font(.system(size: 11, weight: .heavy, design: .default))
                 .tracking(1.2)
                 .foregroundStyle(.white.opacity(0.5))
             ScrollView(.horizontal, showsIndicators: false) {
@@ -1097,7 +1166,7 @@ struct FlightModeSheet: View {
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: option.systemImage).font(.system(size: 13, weight: .bold))
-                Text(option.displayName).font(.system(size: 13.5, weight: .bold, design: .rounded))
+                Text(option.displayName).font(.system(size: 13.5, weight: .bold, design: .default))
             }
             .foregroundStyle(selected ? Color(hex: 0x14120E) : .white)
             .padding(.horizontal, AppSpacing.sm)
@@ -1125,10 +1194,10 @@ struct FlightModeSheet: View {
     private func rowText(_ title: String, _ subtitle: String) -> some View {
         VStack(alignment: .leading, spacing: 1) {
             Text(title)
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .font(.system(size: 16, weight: .semibold, design: .default))
                 .foregroundStyle(.white)
             Text(subtitle)
-                .font(.system(size: 12.5, weight: .regular, design: .rounded))
+                .font(.system(size: 12.5, weight: .regular, design: .default))
                 .foregroundStyle(.white.opacity(0.6))
                 .lineLimit(1).minimumScaleFactor(0.8)
         }
@@ -1245,16 +1314,16 @@ struct CheckInTicketView: View {
                     .rotationEffect(.degrees(-45))
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Flight Mode")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .font(.system(size: 13, weight: .bold, design: .default))
                         .foregroundStyle(.white)
                     Text(flightModeSummary)
-                        .font(.system(size: 11.5, weight: .medium, design: .rounded))
+                        .font(.system(size: 11.5, weight: .medium, design: .default))
                         .foregroundStyle(.white.opacity(0.62))
                         .lineLimit(1)
                 }
                 Spacer()
                 Text("Edit")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .font(.system(size: 13, weight: .bold, design: .default))
                     .foregroundStyle(AppColors.gold)
                     .padding(.horizontal, 12).padding(.vertical, 6)
                     .background(Capsule().fill(.white.opacity(0.1)))
@@ -1288,7 +1357,7 @@ struct CheckInTicketView: View {
         if !checked {
             VStack(spacing: AppSpacing.sm) {
                 Label("Tear the barcode across to board", systemImage: "hand.draw")
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .font(.system(size: 14, weight: .medium, design: .default))
                     .foregroundStyle(.white.opacity(0.72))
                 if reduceMotion || voiceOver {
                     AppPrimaryButton(title: "Check in", systemImage: "checkmark.seal") { commitTear() }
@@ -1299,7 +1368,7 @@ struct CheckInTicketView: View {
             .transition(.opacity)
         } else {
             Text("Ready to fly")
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .font(.system(size: 14, weight: .semibold, design: .default))
                 .foregroundStyle(AppColors.gold)
                 .transition(.opacity)
         }
@@ -1417,7 +1486,7 @@ struct CheckInTicketView: View {
                 VStack(alignment: .leading, spacing: 1) {
                     fieldLabel("DURATION")
                     Text(durationBig)
-                        .font(.system(size: 50, weight: .heavy, design: .rounded))
+                        .font(.system(size: 50, weight: .heavy, design: .default))
                         .foregroundStyle(ink)
                         .minimumScaleFactor(0.5)
                         .lineLimit(1)
@@ -1437,7 +1506,7 @@ struct CheckInTicketView: View {
             VStack(alignment: .leading, spacing: 1) {
                 fieldLabel("FOCUS")
                 Text((focus?.title ?? "Focus").uppercased())
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .font(.system(size: 30, weight: .bold, design: .default))
                     .foregroundStyle(skyAccent)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)

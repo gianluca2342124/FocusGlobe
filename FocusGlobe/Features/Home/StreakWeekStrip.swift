@@ -19,7 +19,7 @@ struct StreakWeekStrip: View {
             HStack(spacing: 0) {
                 ForEach(days, id: \.date) { day in
                     Text(day.label)
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .font(.system(size: 11, weight: .semibold, design: .default))
                         .foregroundStyle(day.active ? AppColors.gold : AppColors.textTertiary)
                         .frame(maxWidth: .infinity)
                 }

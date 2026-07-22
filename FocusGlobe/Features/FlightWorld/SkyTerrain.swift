@@ -12,44 +12,73 @@ import SwiftUI
 // All shapes are pure/deterministic (no per-frame randomness), so SwiftUI
 // caches them and only re-rasterises when the frame actually changes.
 
-// MARK: Desert dunes — one continuous, wind-shaped sand ridge (never humps)
+// MARK: Desert dunes — ONE broad, smooth, asymmetric ridge per layer
 
-/// A continuous wind-shaped dune ridge drawn as a smooth spline through authored
-/// top-edge anchor points — crests and the RAISED saddles between them — so the
-/// sand-line sweeps across the whole width as one flowing mass. It never returns
-/// to the base between crests (that is what made the old field read as a row of
-/// separate semicircular humps), and it is not a sine wave: asymmetry — a long,
-/// shallow windward rise and a shorter, steeper leeward fall — comes from where
-/// each saddle sits relative to its crest. Fills solidly down to the base.
-struct SandDune: Shape {
-    /// Top-edge anchors, left→right, as (x, height) fractions of the rect
-    /// (height 0 = base, 1 = top). Author a saddle just past each edge so the
-    /// mass never reveals a vertical side as it drifts with parallax.
-    let anchors: [(x: CGFloat, y: CGFloat)]
+/// The shared smooth dune ridge: a long, gentle windward rise sweeping up to a
+/// single crest, then a shorter, smooth leeward settle — one elegant sand ridge
+/// spanning the WHOLE width. Not a row of bumps, not a sine wave, not a
+/// symmetric hill: the asymmetry (long approach, short far side) is what reads as
+/// a real dune. Appends the top-edge curve to `p` (already positioned at the
+/// left-edge start). Each depth layer uses a different crest, so no two ridges
+/// share a contour.
+func fgDuneRidge(_ p: inout Path, minX: CGFloat, maxX: CGFloat,
+                 cx: CGFloat, cy: CGFloat, lY: CGFloat, rY: CGFloat) {
+    // Windward: long, gentle, faintly convex rise from the left edge to the crest.
+    p.addCurve(to: CGPoint(x: cx, y: cy),
+               control1: CGPoint(x: minX + (cx - minX) * 0.46, y: lY - (lY - cy) * 0.06),
+               control2: CGPoint(x: cx - (cx - minX) * 0.22, y: cy + (lY - cy) * 0.16))
+    // Leeward: shorter, smooth settle down to the right edge (never a cliff).
+    p.addCurve(to: CGPoint(x: maxX + 6, y: rY),
+               control1: CGPoint(x: cx + (maxX - cx) * 0.24, y: cy + (rY - cy) * 0.55),
+               control2: CGPoint(x: cx + (maxX - cx) * 0.66, y: rY - (rY - cy) * 0.10))
+}
+
+/// A single broad dune, filled to the base (surface-shaded by the caller's
+/// gradient so it reads as a 3-D sand slope, never a flat cut-out silhouette).
+struct DuneBand: Shape {
+    /// Crest x (fraction) and crest height (fraction of rect). `leftFrac` /
+    /// `rightFrac` set the ridge height at each far edge (× crestH), so the ridge
+    /// enters and leaves the frame partway up — never at the base (no hard humps).
+    var crestX: CGFloat
+    var crestH: CGFloat
+    var leftFrac: CGFloat = 0.28
+    var rightFrac: CGFloat = 0.46
     var parallax: CGFloat = 0
 
     func path(in rect: CGRect) -> Path {
         let w = rect.width, h = rect.height, base = rect.maxY
-        guard anchors.count > 1 else { return Path() }
-        func pt(_ i: Int) -> CGPoint {
-            let a = anchors[min(max(0, i), anchors.count - 1)]
-            return CGPoint(x: rect.minX + a.x * w + parallax, y: base - a.y * h)
-        }
+        let cx = rect.minX + crestX * w + parallax
+        let cy = base - crestH * h
+        let lY = base - crestH * h * leftFrac
+        let rY = base - crestH * h * rightFrac
         var p = Path()
-        let start = pt(0)
-        p.move(to: CGPoint(x: start.x, y: base))
-        p.addLine(to: start)
-        // A Catmull-Rom → Bézier pass gives a single flowing crest-line through
-        // every anchor (smooth, non-repeating, no hard hump seams).
-        for i in 0..<(anchors.count - 1) {
-            let p0 = pt(i - 1), p1 = pt(i), p2 = pt(i + 1), p3 = pt(i + 2)
-            let c1 = CGPoint(x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6)
-            let c2 = CGPoint(x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6)
-            p.addCurve(to: p2, control1: c1, control2: c2)
-        }
-        let end = pt(anchors.count - 1)
-        p.addLine(to: CGPoint(x: end.x, y: base))
+        p.move(to: CGPoint(x: rect.minX - 6, y: base))
+        p.addLine(to: CGPoint(x: rect.minX - 6, y: lY))
+        fgDuneRidge(&p, minX: rect.minX, maxX: rect.maxX, cx: cx, cy: cy, lY: lY, rY: rY)
+        p.addLine(to: CGPoint(x: rect.maxX + 6, y: base))
         p.closeSubpath()
+        return p
+    }
+}
+
+/// The bright moonlit crest LINE — the SAME ridge as `DuneBand` but left open,
+/// so it can be stroked as the crisp silver edge that catches the moon.
+struct DuneCrestLine: Shape {
+    var crestX: CGFloat
+    var crestH: CGFloat
+    var leftFrac: CGFloat = 0.28
+    var rightFrac: CGFloat = 0.46
+    var parallax: CGFloat = 0
+
+    func path(in rect: CGRect) -> Path {
+        let w = rect.width, h = rect.height, base = rect.maxY
+        let cx = rect.minX + crestX * w + parallax
+        let cy = base - crestH * h
+        let lY = base - crestH * h * leftFrac
+        let rY = base - crestH * h * rightFrac
+        var p = Path()
+        p.move(to: CGPoint(x: rect.minX - 6, y: lY))
+        fgDuneRidge(&p, minX: rect.minX, maxX: rect.maxX, cx: cx, cy: cy, lY: lY, rY: rY)
         return p
     }
 }

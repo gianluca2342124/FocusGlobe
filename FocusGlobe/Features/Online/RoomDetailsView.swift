@@ -19,7 +19,7 @@ struct RoomDetailsView: View {
                 .background(Circle().fill(AppColors.gold.opacity(0.14)))
             VStack(alignment: .leading, spacing: 1) {
                 Text(room.title)
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .font(.system(size: 15, weight: .bold, design: .default))
                     .foregroundStyle(AppColors.textPrimary)
                 Text("\(sky.name) · \(room.isOwned ? "your room" : "invited") · \(room.status == .active ? "in flight" : "lobby")")
                     .font(AppTypography.caption)
@@ -31,7 +31,7 @@ struct RoomDetailsView: View {
                 onOpenLobby(room)
             } label: {
                 Text("Open")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .font(.system(size: 13, weight: .bold, design: .default))
                     .foregroundStyle(Color(hex: 0x14120E))
                     .padding(.horizontal, 14).padding(.vertical, 8)
                     .background(Capsule().fill(AppColors.gold))

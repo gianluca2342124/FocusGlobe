@@ -54,7 +54,7 @@ struct StreakCircleButton: View {
         }
         .overlay(alignment: .top) {
             Text("\(min(streak, 999))")
-                .font(.system(size: 11, weight: .heavy, design: .rounded))
+                .font(.system(size: 11, weight: .heavy, design: .default))
                 .monospacedDigit()
                 .foregroundStyle(alive ? .white : Color(hex: 0x2B2510))
                 .padding(.horizontal, 6).padding(.vertical, 2)

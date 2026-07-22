@@ -81,7 +81,7 @@ struct VisitedPlacesSection: View {
                 Spacer()
                 if !places.isEmpty {
                     Text("\(places.count)")
-                        .font(.system(size: 13, weight: .heavy, design: .rounded))
+                        .font(.system(size: 13, weight: .heavy, design: .default))
                         .foregroundStyle(AppColors.brand)
                         .padding(.horizontal, 10).padding(.vertical, 5)
                         .background(Capsule().fill(AppColors.brand.opacity(0.14)))
@@ -167,7 +167,7 @@ private struct VisitedPlaceRow: View {
             Spacer()
             if place.visitCount > 1 {
                 Text("×\(place.visitCount)")
-                    .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    .font(.system(size: 13, weight: .heavy, design: .default))
                     .foregroundStyle(place.theme.accent)
             }
         }

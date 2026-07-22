@@ -184,7 +184,7 @@ struct RouteSelectionView: View {
                 if journey.isReturn {
                     HStack(spacing: 5) {
                         Image(systemName: "arrow.uturn.backward").font(.system(size: 10, weight: .bold))
-                        Text("RETURN").font(.system(size: 10, weight: .heavy, design: .rounded)).tracking(1.2)
+                        Text("RETURN").font(.system(size: 10, weight: .heavy, design: .default)).tracking(1.2)
                     }
                     .foregroundStyle(AppColors.brand)
                 }

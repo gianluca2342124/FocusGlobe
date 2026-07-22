@@ -51,7 +51,7 @@ struct AppLogo: View {
                 if showGlyph { BrandGlyph(size: size) }
                 (Text("Focus").foregroundStyle(AppColors.textPrimary)
                     + Text("Globe").foregroundStyle(AppColors.brand))
-                    .font(.system(size: size * 0.6, weight: .bold, design: .rounded))
+                    .font(.system(size: size * 0.6, weight: .bold, design: .default))
             }
             .accessibilityElement()
             .accessibilityLabel("FocusGlobe")

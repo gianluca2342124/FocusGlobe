@@ -17,7 +17,7 @@ struct CreateRoomView: View {
             VStack(spacing: AppSpacing.md) {
                 Capsule().fill(.white.opacity(0.2)).frame(width: 40, height: 4).padding(.top, 10)
                 Text("Create Private Flight")
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .font(.system(size: 24, weight: .bold, design: .default))
                     .foregroundStyle(AppColors.textPrimary)
                 TextField("e.g. Study sprint", text: $title)
                     .font(AppTypography.body)

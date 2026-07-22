@@ -96,7 +96,7 @@ struct OnlineDiagnosticsView: View {
             Task { await action() }
         } label: {
             Text(title)
-                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .font(.system(size: 14, weight: .bold, design: .default))
                 .foregroundStyle(AppColors.gold)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)

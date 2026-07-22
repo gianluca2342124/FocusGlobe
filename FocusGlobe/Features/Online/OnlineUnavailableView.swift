@@ -49,13 +49,13 @@ struct OnlineUnavailableView: View {
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(AppColors.textTertiary)
             Text(title)
-                .font(.system(size: 13.5, weight: .bold, design: .rounded))
+                .font(.system(size: 13.5, weight: .bold, design: .default))
                 .foregroundStyle(AppColors.textPrimary)
                 .lineLimit(1).minimumScaleFactor(0.85)
             Spacer(minLength: 0)
             if needsSignIn, let onSignIn {
                 Button("Sign in") { onSignIn() }
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .font(.system(size: 13, weight: .bold, design: .default))
                     .foregroundStyle(AppColors.gold)
             }
         }
@@ -71,7 +71,7 @@ struct OnlineUnavailableView: View {
                 .foregroundStyle(AppColors.textTertiary)
                 .padding(.bottom, 4)
             Text(title)
-                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .font(.system(size: 16, weight: .bold, design: .default))
                 .foregroundStyle(AppColors.textPrimary)
                 .multilineTextAlignment(.center)
             Text(body_)
@@ -81,17 +81,17 @@ struct OnlineUnavailableView: View {
             HStack(spacing: AppSpacing.md) {
                 if needsSignIn, let onSignIn {
                     Button("Sign in with Apple") { onSignIn() }
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.system(size: 15, weight: .bold, design: .default))
                         .foregroundStyle(AppColors.gold)
                 }
                 if let onSolo {
                     Button("Continue Solo") { onSolo() }
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.system(size: 15, weight: .bold, design: .default))
                         .foregroundStyle(needsSignIn && onSignIn != nil ? AppColors.textSecondary : AppColors.gold)
                 }
                 if let onLearnHow {
                     Button("Learn how") { onLearnHow() }
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .font(.system(size: 15, weight: .semibold, design: .default))
                         .foregroundStyle(AppColors.textSecondary)
                 }
             }

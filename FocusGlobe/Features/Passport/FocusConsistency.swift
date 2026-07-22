@@ -400,7 +400,7 @@ struct FocusConsistencyGrid: View {
             Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
             ForEach(labels, id: \.index) { label in
                 Text(label.text)
-                    .font(.system(size: max(7, side * 0.95), weight: .semibold, design: .rounded))
+                    .font(.system(size: max(7, side * 0.95), weight: .semibold, design: .default))
                     .foregroundStyle(AppColors.textTertiary)
                     .fixedSize()
                     .offset(x: CGFloat(label.index) * (side + spacing))
@@ -446,7 +446,7 @@ struct FocusGridShareCard: View {
                     .foregroundStyle(Color(hex: 0xF7F1E7))
                 if let displayName, !displayName.isEmpty {
                     Text(displayName)
-                        .font(.system(size: 17, weight: .semibold, design: .rounded))
+                        .font(.system(size: 17, weight: .semibold, design: .default))
                         .foregroundStyle(Color(hex: 0xD8B56D))
                 }
             }
@@ -477,10 +477,10 @@ struct FocusGridShareCard: View {
     private func shareStat(value: String, label: String) -> some View {
         VStack(alignment: .leading, spacing: 1) {
             Text(value)
-                .font(.system(size: 26, weight: .heavy, design: .rounded))
+                .font(.system(size: 26, weight: .heavy, design: .default))
                 .foregroundStyle(Color(hex: 0xE8A54B))
             Text(label)
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .font(.system(size: 12, weight: .semibold, design: .default))
                 .foregroundStyle(Color(hex: 0xA89D8C))
         }
     }

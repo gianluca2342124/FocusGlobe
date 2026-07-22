@@ -201,7 +201,7 @@ struct FriendsView: View {
                         skin: BalloonSkin.skin(id: request.senderBalloonSkinID))
             VStack(alignment: .leading, spacing: 1) {
                 Text(request.senderDisplayName)
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .font(.system(size: 15, weight: .bold, design: .default))
                     .foregroundStyle(AppColors.textPrimary)
                 Text("wants to join your Crew")
                     .font(AppTypography.caption)
@@ -244,7 +244,7 @@ struct FriendsView: View {
                 .frame(width: 40)
             VStack(alignment: .leading, spacing: 1) {
                 Text("Request sent")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .font(.system(size: 15, weight: .bold, design: .default))
                     .foregroundStyle(AppColors.textPrimary)
                 Text("Waiting for the pilot to accept")
                     .font(AppTypography.caption)
@@ -255,7 +255,7 @@ struct FriendsView: View {
                 appModel.tapFeedback()
                 Task { await online.cancelRequest(request) }
             }
-            .font(.system(size: 13, weight: .bold, design: .rounded))
+            .font(.system(size: 13, weight: .bold, design: .default))
             .foregroundStyle(AppColors.textSecondary)
         }
         .padding(.horizontal, AppSpacing.md)
@@ -283,7 +283,7 @@ struct FriendsView: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 5) {
                     Text(friend.displayName)
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.system(size: 15, weight: .bold, design: .default))
                         .foregroundStyle(AppColors.textPrimary)
                     if let cc = friend.countryCode { Text(flagEmoji(cc)).font(.system(size: 13)) }
                 }
@@ -339,7 +339,7 @@ struct FriendsView: View {
                 .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(AppColors.gold)
             Text(title)
-                .font(.system(size: 19, weight: .bold, design: .rounded))
+                .font(.system(size: 19, weight: .bold, design: .default))
                 .foregroundStyle(AppColors.textPrimary)
         }
     }
@@ -351,7 +351,7 @@ struct FriendsView: View {
         VStack(spacing: AppSpacing.sm) {
             crewHero
             Text("No crew yet")
-                .font(.system(size: 25, weight: .bold, design: .rounded))
+                .font(.system(size: 25, weight: .bold, design: .default))
                 .foregroundStyle(AppColors.textPrimary)
             Text("Invite a friend and your next flight can feel less lonely.")
                 .font(AppTypography.callout)
@@ -432,7 +432,7 @@ struct FriendsView: View {
     private var howItWorks: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
             Text("How it works")
-                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .font(.system(size: 20, weight: .bold, design: .default))
                 .foregroundStyle(AppColors.textPrimary)
             VStack(spacing: 0) {
                 stepNode(1, icon: "square.and.arrow.up", title: "Share your invite",
@@ -453,7 +453,7 @@ struct FriendsView: View {
                 ZStack {
                     Circle().fill(AppColors.gold).frame(width: 40, height: 40)
                     Text("\(n)")
-                        .font(.system(size: 18, weight: .heavy, design: .rounded))
+                        .font(.system(size: 18, weight: .heavy, design: .default))
                         .foregroundStyle(Color(hex: 0x2B2510))
                 }
                 if connector {
@@ -466,7 +466,7 @@ struct FriendsView: View {
                         .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(AppColors.gold)
                     Text(title)
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .font(.system(size: 16, weight: .bold, design: .default))
                         .foregroundStyle(AppColors.textPrimary)
                 }
                 Text(subtitle)

@@ -36,7 +36,7 @@ struct BadgeCollectionView: View {
                     WHeader(icon: "rosette", title: "Badges", tint: WTheme.gold)
                     Spacer()
                     Text("\(snapshot.badgeUnlockedCount)/\(max(snapshot.badgeTotal, snapshot.badges.count))")
-                        .font(.system(size: 12, weight: .heavy, design: .rounded))
+                        .font(.system(size: 12, weight: .heavy, design: .default))
                         .foregroundStyle(WTheme.ink)
                 }
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: columns),
@@ -50,7 +50,7 @@ struct BadgeCollectionView: View {
                 }
                 if family != .systemSmall, let next {
                     Text("Next: \(next.name)")
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .font(.system(size: 11, weight: .semibold, design: .default))
                         .foregroundStyle(WTheme.inkSoft)
                         .lineLimit(1).minimumScaleFactor(0.7)
                 }

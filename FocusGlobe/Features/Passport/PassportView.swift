@@ -98,7 +98,7 @@ struct PassportView: View {
                     shareGrid()
                 } label: {
                     Label("Share", systemImage: "square.and.arrow.up")
-                        .font(.system(size: 12.5, weight: .bold, design: .rounded))
+                        .font(.system(size: 12.5, weight: .bold, design: .default))
                         .foregroundStyle(AppColors.gold)
                 }
                 .buttonStyle(SoftPressStyle())
@@ -110,7 +110,7 @@ struct PassportView: View {
                 // real 5-minute focus (so a 1-minute flight lifts the streak but
                 // not the grid — deliberately different questions).
                 Text("Last 6 months · each square is a day with 5+ focused minutes.")
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .font(.system(size: 11, weight: .medium, design: .default))
                     .foregroundStyle(AppColors.textTertiary)
                 HStack(spacing: AppSpacing.md) {
                     consistencyStat("\(summary.activeDays)", "focus days")
@@ -130,7 +130,7 @@ struct PassportView: View {
     private func consistencyStat(_ value: String, _ label: String) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(value)
-                .font(.system(size: 17, weight: .heavy, design: .rounded))
+                .font(.system(size: 17, weight: .heavy, design: .default))
                 .foregroundStyle(AppColors.gold)
                 .monospacedDigit()
             Text(label)
@@ -178,7 +178,7 @@ struct PassportView: View {
         return VStack(alignment: .leading, spacing: AppSpacing.md) {
             HStack {
                 Label(pilotLine, systemImage: "book.closed.fill")
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .font(.system(size: 12, weight: .bold, design: .default))
                     .foregroundStyle(AppColors.gold)
                     .lineLimit(1)
                 Spacer()
@@ -228,7 +228,7 @@ struct PassportView: View {
                 .foregroundStyle(tint)
             VStack(alignment: .leading, spacing: 0) {
                 Text(value)
-                    .font(.system(size: 15, weight: .heavy, design: .rounded))
+                    .font(.system(size: 15, weight: .heavy, design: .default))
                     .foregroundStyle(AppColors.textPrimary)
                     .lineLimit(1).minimumScaleFactor(0.7)
                 Text(label)
@@ -407,7 +407,7 @@ struct PassportView: View {
                 Spacer()
                 if !progress.postcards.isEmpty {
                     Text("\(progress.postcards.count)")
-                        .font(.system(size: 13, weight: .heavy, design: .rounded))
+                        .font(.system(size: 13, weight: .heavy, design: .default))
                         .foregroundStyle(AppColors.gold)
                         .padding(.horizontal, 10).padding(.vertical, 5)
                         .background(Capsule().fill(AppColors.gold.opacity(0.14)))
@@ -535,7 +535,7 @@ struct PassportView: View {
                 SectionLabel(text: "Badges")
                 Spacer()
                 Text("\(earned)/\(achievements.count)")
-                    .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    .font(.system(size: 13, weight: .heavy, design: .default))
                     .foregroundStyle(AppColors.gold)
                     .padding(.horizontal, 10).padding(.vertical, 5)
                     .background(Capsule().fill(AppColors.gold.opacity(0.16)))
@@ -694,7 +694,7 @@ private struct BadgeDetailSheet: View {
                     .foregroundStyle(AppColors.textPrimary)
                     .multilineTextAlignment(.center)
                 Text(badge.earned ? "Earned" : "Locked")
-                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                    .font(.system(size: 12, weight: .heavy, design: .default))
                     .foregroundStyle(badge.earned ? badge.accent : AppColors.textTertiary)
                     .padding(.horizontal, 12).padding(.vertical, 5)
                     .background(Capsule().fill((badge.earned ? badge.accent : AppColors.textTertiary).opacity(0.15)))
@@ -719,7 +719,7 @@ private struct BadgeDetailSheet: View {
                     }
                     .frame(height: 8)
                     Text("\(min(p.current, p.target).formatted()) / \(p.target.formatted())")
-                        .font(.system(size: 12.5, weight: .bold, design: .rounded))
+                        .font(.system(size: 12.5, weight: .bold, design: .default))
                         .foregroundStyle(AppColors.textSecondary)
                         .monospacedDigit()
                 }
@@ -752,7 +752,7 @@ private struct CategoryBar: View {
                     .foregroundStyle(AppColors.textPrimary)
                 Spacer()
                 Text("\(count)")
-                    .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    .font(.system(size: 13, weight: .heavy, design: .default))
                     .foregroundStyle(accent)
             }
             MissionProgressBar(fraction: fraction, color: accent)
@@ -780,7 +780,7 @@ private struct MissionObjectiveCard: View {
             VStack(alignment: .leading, spacing: 7) {
                 HStack {
                     Text(mission.title)
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .font(.system(size: 15, weight: .semibold, design: .default))
                         .foregroundStyle(AppColors.textPrimary)
                         .lineLimit(1)
                     Spacer()
@@ -790,7 +790,7 @@ private struct MissionObjectiveCard: View {
                             .foregroundStyle(AppColors.gold)
                     } else {
                         Text(mission.progressText)
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .font(.system(size: 12, weight: .bold, design: .default))
                             .foregroundStyle(AppColors.textTertiary)
                     }
                 }
@@ -863,7 +863,7 @@ private struct JourneySoundCard: View {
                 }
                 Spacer(minLength: AppSpacing.sm)
                 Text(option.displayName)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 16, weight: .bold, design: .default))
                     .foregroundStyle(.white)
                     .lineLimit(1)
                 Text(statusText)

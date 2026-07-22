@@ -35,7 +35,7 @@ struct AppPrimaryButton: View {
                     }
                     // Scales up on iPad/Mac; identical to AppTypography.headline on iPhone.
                     Text(title)
-                        .font(.system(size: Layout.pad(18, 21), weight: .semibold, design: .rounded))
+                        .font(.system(size: Layout.pad(18, 21), weight: .semibold, design: .default))
                     if let systemImage, iconTrailing {
                         Image(systemName: systemImage)
                             .font(.system(size: Layout.pad(17, 20), weight: .semibold))
@@ -80,7 +80,7 @@ struct AppSecondaryButton: View {
                         .font(.system(size: Layout.pad(16, 18), weight: .semibold))
                 }
                 Text(title)
-                    .font(.system(size: Layout.pad(15, 17), weight: .medium, design: .rounded))
+                    .font(.system(size: Layout.pad(15, 17), weight: .medium, design: .default))
             }
             .foregroundStyle(AppColors.textPrimary)
             .frame(maxWidth: .infinity)

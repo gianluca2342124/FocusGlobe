@@ -63,22 +63,22 @@ struct FocusNowView: View {
             Spacer(minLength: 0)
             if snapshot.activeInfinite || snapshot.activeEndDate == nil {
                 Text("∞")
-                    .font(.system(size: 46, weight: .black, design: .rounded))
+                    .font(.system(size: 46, weight: .black, design: .default))
                     .foregroundStyle(WTheme.ink)
             } else if let end = snapshot.activeEndDate {
                 Text(timerInterval: Date()...max(Date(), end), countsDown: true)
-                    .font(.system(size: 40, weight: .black, design: .rounded))
+                    .font(.system(size: 40, weight: .black, design: .default))
                     .foregroundStyle(WTheme.ink)
                     .monospacedDigit()
                     .minimumScaleFactor(0.6).lineLimit(1)
             }
             HStack(spacing: 6) {
                 Text(snapshot.activeSkyName ?? snapshot.selectedSkyName ?? "Focus")
-                    .font(.system(size: 12.5, weight: .bold, design: .rounded))
+                    .font(.system(size: 12.5, weight: .bold, design: .default))
                     .foregroundStyle(WTheme.ink)
                 if let cat = snapshot.activeCategory {
                     Text("· \(cat)")
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .font(.system(size: 12, weight: .semibold, design: .default))
                         .foregroundStyle(WTheme.inkSoft)
                 }
                 Spacer(minLength: 0)
@@ -94,7 +94,7 @@ struct FocusNowView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(snapshot.selectedSkyName ?? "Ready to focus")
-                    .font(.system(size: 15, weight: .heavy, design: .rounded))
+                    .font(.system(size: 15, weight: .heavy, design: .default))
                     .foregroundStyle(WTheme.ink)
                     .lineLimit(1).minimumScaleFactor(0.7)
                 Spacer()
@@ -107,7 +107,7 @@ struct FocusNowView: View {
                 Image(systemName: snapshot.hasResumable ? "arrow.uturn.up" : "arrow.up")
                     .font(.system(size: 13, weight: .heavy))
                 Text(snapshot.hasResumable ? "Resume flight" : "Start Focus")
-                    .font(.system(size: 14, weight: .heavy, design: .rounded))
+                    .font(.system(size: 14, weight: .heavy, design: .default))
             }
             .foregroundStyle(Color(red: 0.08, green: 0.07, blue: 0.05))
             .padding(.horizontal, 14).padding(.vertical, 9)

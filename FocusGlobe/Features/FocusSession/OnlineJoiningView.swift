@@ -52,7 +52,7 @@ struct OnlineJoiningView: View {
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
                     Text(subline)
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .font(.system(size: 14, weight: .semibold, design: .default))
                         .foregroundStyle(.white.opacity(0.72))
                         .contentTransition(.numericText())
                 }
@@ -94,13 +94,13 @@ struct OnlineJoiningView: View {
                         BalloonView(height: 30, showBurner: false, showGlow: false,
                                     skin: BalloonSkin.skin(id: pilot.balloonSkinID))
                         Text(pilot.displayName + (pilot.countryCode.map { " " + flagEmoji($0) } ?? ""))
-                            .font(.system(size: 14.5, weight: .bold, design: .rounded))
+                            .font(.system(size: 14.5, weight: .bold, design: .default))
                             .foregroundStyle(.white)
                             .lineLimit(1)
                         Spacer()
                         if !pilot.focusCategory.isEmpty {
                             Text(pilot.focusCategory)
-                                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                .font(.system(size: 12, weight: .semibold, design: .default))
                                 .foregroundStyle(.white.opacity(0.65))
                         }
                     }

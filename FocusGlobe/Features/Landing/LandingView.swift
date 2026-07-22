@@ -69,7 +69,7 @@ struct LandingView: View {
             Text("Success!")
                 // The app's modern display language (bold rounded, like every
                 // page title) — not the old serif treatment.
-                .font(.system(size: Layout.pad(32, 38), weight: .bold, design: .rounded))
+                .font(.system(size: Layout.pad(32, 38), weight: .bold, design: .default))
                 .foregroundStyle(AppColors.textPrimary)
 
             HStack(spacing: 0) {
@@ -105,7 +105,7 @@ struct LandingView: View {
         VStack(spacing: 3) {
             FocusCoinIcon(size: 22)
             Text(Formatters.miles(earnedMiles))
-                .font(.system(size: 19 * Layout.fontScale, weight: .bold, design: .rounded))
+                .font(.system(size: 19 * Layout.fontScale, weight: .bold, design: .default))
                 .foregroundStyle(AppColors.textPrimary)
                 .contentTransition(.numericText())
             Text(adState == .doubled ? "Coins ×2" : "Focus Coins")
@@ -118,7 +118,7 @@ struct LandingView: View {
         VStack(spacing: 3) {
             Image(systemName: icon).font(.system(size: 18, weight: .semibold)).foregroundStyle(tint)
             Text(value)
-                .font(.system(size: 19 * Layout.fontScale, weight: .bold, design: .rounded))
+                .font(.system(size: 19 * Layout.fontScale, weight: .bold, design: .default))
                 .foregroundStyle(AppColors.textPrimary)
                 .lineLimit(1).minimumScaleFactor(0.6)
             Text(label).font(AppTypography.micro).foregroundStyle(AppColors.textTertiary)
@@ -164,7 +164,7 @@ struct LandingView: View {
 
     private var adBadge: some View {
         Text("AD")
-            .font(.system(size: 9, weight: .heavy, design: .rounded))
+            .font(.system(size: 9, weight: .heavy, design: .default))
             .foregroundStyle(AppColors.textTertiary)
             .padding(.horizontal, 5).padding(.vertical, 2)
             .overlay(RoundedRectangle(cornerRadius: 4)
@@ -186,7 +186,7 @@ struct LandingView: View {
                     .shadow(color: Color(hex: 0xF2643C).opacity(0.5), radius: 16)
             }
             Text("\(summary.streak)-day streak")
-                .font(.system(size: Layout.pad(26, 30), weight: .bold, design: .rounded))
+                .font(.system(size: Layout.pad(26, 30), weight: .bold, design: .default))
                 .foregroundStyle(AppColors.textPrimary)
             // The recent week at a glance — the SAME strip as the Streak popup,
             // so the day just landed glows here immediately.

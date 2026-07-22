@@ -60,7 +60,7 @@ struct StreakCompanionView: View {
             HStack(spacing: 8) {
                 Image(systemName: "flame.fill").foregroundStyle(.orange)
                 Text("\(snapshot.currentStreak)-day streak")
-                    .font(.system(size: 15, weight: .heavy, design: .rounded))
+                    .font(.system(size: 15, weight: .heavy, design: .default))
                 Spacer()
             }
         } else {
@@ -71,17 +71,17 @@ struct StreakCompanionView: View {
                     Spacer()
                     VStack(alignment: .trailing, spacing: -2) {
                         Text("\(snapshot.currentStreak)")
-                            .font(.system(size: 40, weight: .black, design: .rounded))
+                            .font(.system(size: 40, weight: .black, design: .default))
                             .foregroundStyle(WTheme.ink)
                             .minimumScaleFactor(0.6).lineLimit(1)
                         Text(snapshot.currentStreak == 1 ? "DAY" : "DAYS")
-                            .font(.system(size: 11, weight: .heavy, design: .rounded)).tracking(1)
+                            .font(.system(size: 11, weight: .heavy, design: .default)).tracking(1)
                             .foregroundStyle(WTheme.inkSoft)
                     }
                 }
                 Spacer(minLength: 0)
                 Text(state.line)
-                    .font(.system(size: 12.5, weight: .bold, design: .rounded))
+                    .font(.system(size: 12.5, weight: .bold, design: .default))
                     .foregroundStyle(state.tint)
                     .lineLimit(1).minimumScaleFactor(0.7)
             }

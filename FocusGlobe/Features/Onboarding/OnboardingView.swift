@@ -209,7 +209,7 @@ struct OnboardingView: View {
             TextField("e.g. Alex", text: $name)
                 .focused($textFocused)
                 .textInputAutocapitalization(.words)
-                .font(.system(size: 22, weight: .semibold, design: .rounded))
+                .font(.system(size: 22, weight: .semibold, design: .default))
                 .foregroundStyle(Color(hex: 0x26221D))
                 .tint(AppColors.gold)
                 .multilineTextAlignment(.center)
@@ -315,9 +315,9 @@ struct OnboardingView: View {
                     .foregroundStyle(.white.opacity(0.6))
                     .multilineTextAlignment(.center)
             }
-            // A large, always-aligned Play/Pause that previews the SELECTED
-            // soundscape immediately — one preview at a time, switching cleanly.
-            soundPreviewButton(option)
+            // No Play button: the selected soundscape auto-plays on this step.
+            // A minimal equalizer indicator confirms audio is playing.
+            nowPlayingIndicator
             HStack(spacing: 6) {
                 ForEach(opts.indices, id: \.self) { i in
                     Capsule()
@@ -326,14 +326,22 @@ struct OnboardingView: View {
                 }
             }
         }
-        .onAppear { soundIndex = soundOptions.firstIndex { $0.id == appModel.selectedJourneyAudio.id } ?? 0 }
+        .onAppear {
+            let idx = soundOptions.firstIndex { $0.id == appModel.selectedJourneyAudio.id } ?? 0
+            soundIndex = idx
+            // Auto-play the selected soundscape the moment the step appears.
+            let opt = soundOptions[max(0, min(soundOptions.count - 1, idx))]
+            appModel.previewJourneyAudio(opt)
+            isPreviewingSound = true
+        }
         .onChange(of: soundIndex) { _, i in
             let opt = soundOptions[max(0, min(soundOptions.count - 1, i))]
             appModel.selectJourneyAudio(opt)
             appModel.haptics.tap()
-            // Clean switching: if a preview is playing, move it to the new option
-            // (one preview at a time). Otherwise stay silent until Play is tapped.
-            if isPreviewingSound { appModel.previewJourneyAudio(opt) }
+            // Swiping to a new soundscape switches the preview instantly (one at
+            // a time) — always playing, never a silent step.
+            appModel.previewJourneyAudio(opt)
+            isPreviewingSound = true
         }
         // Stop the preview whenever the step leaves the screen (advance / back)
         // or onboarding completes, so audio never bleeds into the first flight.
@@ -343,35 +351,19 @@ struct OnboardingView: View {
         }
     }
 
-    /// The large Play/Pause preview control for the current soundscape.
-    private func soundPreviewButton(_ option: JourneyAudioOption) -> some View {
-        let playing = isPreviewingSound && appModel.previewingJourneyAudioID == option.id
-        return Button {
-            appModel.haptics.tap()
-            if playing {
-                appModel.stopJourneyAudioPreview()
-                isPreviewingSound = false
-            } else {
-                appModel.previewJourneyAudio(option)
-                isPreviewingSound = true
-            }
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: playing ? "pause.fill" : "play.fill")
-                    .font(.system(size: 15, weight: .heavy))
-                Text(playing ? "Pause preview" : "Play preview")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .lineLimit(1)
-            }
-            .foregroundStyle(Color(hex: 0x14120E))
-            .frame(minWidth: 168)
-            .frame(height: 46)
-            .padding(.horizontal, AppSpacing.md)
-            .background(Capsule().fill(AppColors.gold))
-            .shadow(color: AppColors.gold.opacity(0.3), radius: 10, y: 4)
+    /// A minimal "now playing" indicator (animated equalizer) — the music step
+    /// auto-plays the selected soundscape, so there is no Play/Pause button.
+    private var nowPlayingIndicator: some View {
+        HStack(spacing: 8) {
+            EqualizerBars()
+            Text("Now playing")
+                .font(.system(size: 13.5, weight: .semibold, design: .default))
+                .foregroundStyle(.white.opacity(0.72))
         }
-        .buttonStyle(SoftPressStyle(scale: 0.96))
-        .accessibilityLabel(playing ? "Pause \(option.displayName) preview" : "Play \(option.displayName) preview")
+        .padding(.horizontal, 15).padding(.vertical, 9)
+        .background(Capsule().fill(.white.opacity(0.08)))
+        .overlay(Capsule().strokeBorder(AppColors.gold.opacity(0.28), lineWidth: 1))
+        .accessibilityLabel("Now playing a preview")
     }
 
     private func carouselArrow(system: String, enabled: Bool, action: @escaping () -> Void) -> some View {
@@ -454,8 +446,11 @@ struct OnboardingView: View {
         if let ui = UIImage(named: "focusshield")
             ?? UIImage(named: "protectyourflight")
             ?? UIImage(named: "OnboardingHero_FocusShield") {
+            // Slightly smaller + centred so it breathes inside the card.
             Image(uiImage: ui).resizable().scaledToFit()
-                .frame(maxHeight: 190)
+                .frame(maxHeight: 158)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 6)
                 .shadow(color: AppColors.gold.opacity(0.35), radius: 24)
         } else {
             shieldGlyph
@@ -559,17 +554,34 @@ struct OnboardingView: View {
         .frame(maxWidth: .infinity)
     }
 
-    /// A small procedural "app icon" for the permission card (balloon on gold).
+    /// The REAL FocusGlobe app icon (the `AppLogo` asset) inside the Apple-style
+    /// permission card, so the branding is correct — never a procedural mock.
+    /// Falls back to the balloon mark only if the asset is somehow missing.
     private var appIconMark: some View {
+        Group {
+            #if canImport(UIKit)
+            if let ui = UIImage(named: "AppLogo") {
+                Image(uiImage: ui).resizable().scaledToFill()
+            } else {
+                appIconFallback
+            }
+            #else
+            appIconFallback
+            #endif
+        }
+        .frame(width: 58, height: 58)
+        .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous)
+            .strokeBorder(.black.opacity(0.12), lineWidth: 1))
+    }
+
+    private var appIconFallback: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 13, style: .continuous)
                 .fill(LinearGradient(colors: [Color(hex: 0x2E2350), Color(hex: 0x0B1024)],
                                      startPoint: .top, endPoint: .bottom))
-                .frame(width: 58, height: 58)
             MiniBalloonView(size: 34, showGlow: false)
         }
-        .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous)
-            .strokeBorder(.white.opacity(0.2), lineWidth: 1))
     }
 
     // MARK: Step 10 — A little favour ❤️
@@ -591,20 +603,26 @@ struct OnboardingView: View {
             }
         } footer: {
             VStack(spacing: AppSpacing.sm) {
-                AppPrimaryButton(title: "Leave a review", systemImage: "heart.fill") {
-                    guard !reviewRequested else { return }
-                    reviewRequested = true
-                    appModel.tapFeedback()
-                    // Request the review while THIS page is still visible, so the
-                    // system sheet appears here — not over the next screen — then
-                    // move on after a short beat. Apple decides if it shows.
-                    requestReview()
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { advance() }
+                if reviewRequested {
+                    // The Apple prompt was requested over THIS screen (an
+                    // intentional tap). We do NOT auto-advance: Continue moves on
+                    // only after the user is done, so the system sheet can never
+                    // appear stacked over the next ("Focus, elevated") screen.
+                    AppPrimaryButton(title: "Continue", systemImage: "arrow.right", iconTrailing: true) {
+                        appModel.tapFeedback(); advance()
+                    }
+                } else {
+                    AppPrimaryButton(title: "Leave a review", systemImage: "heart.fill") {
+                        reviewRequested = true
+                        appModel.tapFeedback()
+                        // Requested here, over the favour screen — Apple decides if
+                        // it shows; either way the user then taps Continue.
+                        requestReview()
+                    }
+                    Button("Maybe later") { advance() }
+                        .font(AppTypography.callout)
+                        .foregroundStyle(.white.opacity(0.65))
                 }
-                .disabled(reviewRequested)
-                Button("Maybe later") { advance() }
-                    .font(AppTypography.callout)
-                    .foregroundStyle(.white.opacity(0.65))
             }
             .padding(.bottom, AppSpacing.xl)
         }
@@ -615,9 +633,14 @@ struct OnboardingView: View {
     @ViewBuilder private var favourHero: some View {
         #if canImport(UIKit)
         if let ui = UIImage(named: "alittlefavour") {
-            // A large, warm emotional hero sitting below the reviews.
+            // A large, editorial emotional hero — bigger, with soft rounded edges
+            // + a shadow so it reads as immersive, never a tiny boxed thumbnail.
+            // (The step scrolls, so the extra height is fine on any screen.)
             Image(uiImage: ui).resizable().scaledToFit()
-                .frame(maxHeight: Layout.pad(260, 320))
+                .frame(maxWidth: .infinity)
+                .frame(maxHeight: Layout.pad(360, 440))
+                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .shadow(color: .black.opacity(0.4), radius: 22, y: 10)
         } else {
             Image(systemName: "heart.fill")
                 .font(.system(size: 64, weight: .bold))
@@ -852,7 +875,7 @@ struct OnboardingView: View {
             action()
         } label: {
             Text(title)
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .font(.system(size: 16, weight: .semibold, design: .default))
                 .foregroundStyle(isSelected ? Color(hex: 0x14120E) : .white)
                 .lineLimit(1).minimumScaleFactor(0.75)
                 .frame(maxWidth: .infinity)
@@ -914,6 +937,31 @@ private struct SoundCoverCard: View {
     }
 }
 
+/// A minimal animated equalizer — four gold bars gently pulsing — the "audio is
+/// playing" cue on the auto-playing soundscape step (no Play button). Static
+/// under Reduce Motion.
+private struct EqualizerBars: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var animate = false
+    /// (rest, peak) heights per bar, so the four bars never move in lock-step.
+    private let bars: [(CGFloat, CGFloat)] = [(6, 16), (13, 5), (8, 18), (11, 7)]
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 3) {
+            ForEach(bars.indices, id: \.self) { i in
+                Capsule()
+                    .fill(AppColors.gold)
+                    .frame(width: 3, height: animate ? bars[i].1 : bars[i].0)
+                    .animation(reduceMotion ? nil
+                               : .easeInOut(duration: 0.5).repeatForever(autoreverses: true).delay(Double(i) * 0.11),
+                               value: animate)
+            }
+        }
+        .frame(height: 18)
+        .onAppear { if !reduceMotion { animate = true } }
+    }
+}
+
 /// A static, illustrative 5-star review card for the onboarding "favour" step —
 /// App Store-style copy, never presented as live data.
 private struct OnboardingReviewCard: View {
@@ -931,7 +979,7 @@ private struct OnboardingReviewCard: View {
                 }
             }
             Text(quote)
-                .font(.system(size: 13.5, weight: .medium, design: .rounded))
+                .font(.system(size: 13.5, weight: .medium, design: .default))
                 .foregroundStyle(.white.opacity(0.9))
                 .fixedSize(horizontal: false, vertical: true)
             Text("— \(name)")

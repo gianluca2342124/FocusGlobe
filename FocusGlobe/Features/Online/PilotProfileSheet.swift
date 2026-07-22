@@ -30,7 +30,7 @@ struct PilotProfileSheet: View {
                     .padding(.top, AppSpacing.sm)
                 HStack(spacing: 6) {
                     Text(pilot.displayName)
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .font(.system(size: 22, weight: .bold, design: .default))
                         .foregroundStyle(AppColors.textPrimary)
                     if let cc = pilot.countryCode { Text(flagEmoji(cc)) }
                 }
@@ -66,14 +66,14 @@ struct PilotProfileSheet: View {
                     if isSelf {
                         // Never offer a friend action on yourself.
                         Text("That's you")
-                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .font(.system(size: 15, weight: .bold, design: .default))
                             .foregroundStyle(AppColors.textSecondary)
                             .frame(maxWidth: .infinity).frame(height: 50)
                             .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.14,
                                              shadowRadius: 4, shadowY: 2)
                     } else if let status = online.requestStatus(for: pilot.id) {
                         Text(status)   // "Crew member" / "Request sent"
-                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .font(.system(size: 15, weight: .bold, design: .default))
                             .foregroundStyle(AppColors.gold)
                             .frame(maxWidth: .infinity).frame(height: 50)
                             .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.18,
@@ -199,7 +199,7 @@ struct PilotProfileSheet: View {
                 } else {
                     Text("👏")
                     Text(cooling ? "Applauded" : "Applaud")
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .font(.system(size: 16, weight: .bold, design: .default))
                 }
             }
             .foregroundStyle(cooling ? AppColors.textSecondary : Color(hex: 0x2B2510))
@@ -214,7 +214,7 @@ struct PilotProfileSheet: View {
     private func label(_ text: String, icon: String) -> some View {
         HStack(spacing: 5) {
             Image(systemName: icon).font(.system(size: 11, weight: .bold))
-            Text(text).font(.system(size: 12.5, weight: .semibold, design: .rounded))
+            Text(text).font(.system(size: 12.5, weight: .semibold, design: .default))
         }
         .foregroundStyle(AppColors.textSecondary)
         .padding(.horizontal, 10).padding(.vertical, 6)

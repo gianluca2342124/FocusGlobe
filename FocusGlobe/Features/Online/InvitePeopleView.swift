@@ -128,7 +128,7 @@ struct InvitePeopleView: View {
         VStack(spacing: 6) {
             Capsule().fill(.white.opacity(0.2)).frame(width: 40, height: 4).padding(.top, 10)
             Text("Invite Friends")
-                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .font(.system(size: 24, weight: .bold, design: .default))
                 .foregroundStyle(AppColors.textPrimary)
             Text(isAppContext
                  ? "Share FocusGlobe with someone who needs calmer focus."
@@ -148,7 +148,7 @@ struct InvitePeopleView: View {
                 .foregroundStyle(AppColors.textTertiary)
                 .padding(.bottom, 2)
             Text("Couldn't create your private room")
-                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .font(.system(size: 16, weight: .bold, design: .default))
                 .foregroundStyle(AppColors.textPrimary)
                 .multilineTextAlignment(.center)
             Text("Please try again in a moment.")
@@ -160,7 +160,7 @@ struct InvitePeopleView: View {
                 loading = true
                 Task { await prepare() }
             }
-            .font(.system(size: 15, weight: .bold, design: .rounded))
+            .font(.system(size: 15, weight: .bold, design: .default))
             .foregroundStyle(AppColors.gold)
             .padding(.top, 4)
         }
@@ -176,7 +176,7 @@ struct InvitePeopleView: View {
                 .foregroundStyle(AppColors.textTertiary)
                 .padding(.bottom, 2)
             Text("The sky is busy")
-                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .font(.system(size: 16, weight: .bold, design: .default))
                 .foregroundStyle(AppColors.textPrimary)
                 .multilineTextAlignment(.center)
             Text("Please wait before creating another private flight.")
@@ -185,7 +185,7 @@ struct InvitePeopleView: View {
                 .multilineTextAlignment(.center)
             TimelineView(.periodic(from: .now, by: 1)) { ctx in
                 Text("Try again in \(FlightModeSelectorView.countdown(to: until, now: ctx.date))")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .font(.system(size: 15, weight: .bold, design: .default))
                     .foregroundStyle(AppColors.gold)
                     .monospacedDigit()
                     .padding(.top, 4)
@@ -203,7 +203,7 @@ struct InvitePeopleView: View {
                 .foregroundStyle(AppColors.textTertiary)
                 .padding(.bottom, 2)
             Text("Private room unavailable")
-                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .font(.system(size: 16, weight: .bold, design: .default))
                 .foregroundStyle(AppColors.textPrimary)
                 .multilineTextAlignment(.center)
             Text(message)
@@ -215,7 +215,7 @@ struct InvitePeopleView: View {
                 loading = true
                 Task { await prepare() }
             }
-            .font(.system(size: 15, weight: .bold, design: .rounded))
+            .font(.system(size: 15, weight: .bold, design: .default))
             .foregroundStyle(AppColors.gold)
             .padding(.top, 4)
         }
@@ -323,7 +323,7 @@ struct InviteMethodRow: View {
                 .background(Circle().fill(AppColors.gold.opacity(0.14)))
             VStack(alignment: .leading, spacing: 1) {
                 Text(title)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 16, weight: .bold, design: .default))
                     .foregroundStyle(AppColors.textPrimary)
                 Text(subtitle)
                     .font(AppTypography.caption)

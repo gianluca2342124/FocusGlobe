@@ -321,7 +321,7 @@ struct HomeView: View {
             HStack(spacing: 5) {
                 FocusCoinIcon(size: Layout.pad(22, 25))
                 Text(Formatters.miles(appModel.focusCoins))
-                    .font(.system(size: Layout.pad(14, 17), weight: .heavy, design: .rounded))
+                    .font(.system(size: Layout.pad(14, 17), weight: .heavy, design: .default))
                     .monospacedDigit()
                     .foregroundStyle(AppColors.homeControlGlyph)
                     .lineLimit(1).minimumScaleFactor(0.7)
@@ -505,7 +505,7 @@ struct HomeView: View {
                 Image(systemName: "arrow.uturn.up")
                     .font(.system(size: 11, weight: .heavy))
                 Text("Resume your flight")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .font(.system(size: 13, weight: .bold, design: .default))
                 Image(systemName: "chevron.right")
                     .font(.system(size: 10, weight: .bold))
                     .opacity(0.7)
@@ -555,7 +555,7 @@ struct HomeView: View {
                 Image(systemName: "eye.fill")
                     .font(.system(size: 16, weight: .bold))
                 Text("Preview")
-                    .font(.system(size: Layout.pad(17, 19), weight: .bold, design: .rounded))
+                    .font(.system(size: Layout.pad(17, 19), weight: .bold, design: .default))
                     .lineLimit(1).minimumScaleFactor(0.7)
             }
             .foregroundStyle(Color(hex: 0x14120E))
@@ -661,7 +661,7 @@ private struct SkyPreviewFlightView: View {
                 .padding(.top, AppSpacing.xl)
 
             Text(subtitle)
-                .font(.system(size: Layout.pad(14, 16), weight: .medium, design: .rounded))
+                .font(.system(size: Layout.pad(14, 16), weight: .medium, design: .default))
                 .foregroundStyle(.white.opacity(0.82))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, AppSpacing.xl)
@@ -699,7 +699,7 @@ private struct SkyPreviewFlightView: View {
                     softSecondary(title: "Maybe later") { dismiss() }
                 } else {
                     Text("or")
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .font(.system(size: 13, weight: .semibold, design: .default))
                         .foregroundStyle(.white.opacity(0.6))
                     secondaryButton
                 }
@@ -753,7 +753,7 @@ private struct SkyPreviewFlightView: View {
     private func softSecondary(title: String, action: @escaping () -> Void) -> some View {
         Button { appModel.tapFeedback(); action() } label: {
             Text(title)
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .font(.system(size: 15, weight: .semibold, design: .default))
                 .foregroundStyle(.white.opacity(0.85))
                 .frame(maxWidth: .infinity).frame(height: 50)
                 .background(Capsule().fill(.white.opacity(0.12)))
@@ -768,7 +768,7 @@ private struct SkyPreviewFlightView: View {
         VStack(spacing: 7) {
             HStack(spacing: 8) {
                 Image(systemName: icon).font(.system(size: 15, weight: .bold))
-                Text(title).font(.system(size: 15, weight: .bold, design: .rounded))
+                Text(title).font(.system(size: 15, weight: .bold, design: .default))
                 Spacer(minLength: 0)
             }
             .foregroundStyle(.white)

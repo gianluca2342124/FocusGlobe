@@ -29,7 +29,7 @@ struct OnlineSignInView: View {
                     .contentTransition(.symbolEffect(.replace))
 
                 Text(succeeded ? "Online profile ready" : "Fly with others")
-                    .font(.system(size: 27, weight: .bold, design: .rounded))
+                    .font(.system(size: 27, weight: .bold, design: .default))
                     .foregroundStyle(AppColors.textPrimary)
                     .multilineTextAlignment(.center)
 

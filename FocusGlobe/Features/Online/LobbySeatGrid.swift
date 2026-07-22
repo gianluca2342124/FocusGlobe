@@ -64,11 +64,11 @@ struct LobbySeatGrid: View {
                 }
             }
             Text(p.displayName.isEmpty ? "Sky Pilot" : p.displayName)
-                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .font(.system(size: 12, weight: .bold, design: .default))
                 .foregroundStyle(.white)
                 .lineLimit(1).minimumScaleFactor(0.8)
             Text(ready ? "Ready" : "Not ready")
-                .font(.system(size: 10.5, weight: .semibold, design: .rounded))
+                .font(.system(size: 10.5, weight: .semibold, design: .default))
                 .foregroundStyle(ready ? Color(hex: 0x4ADE80) : .white.opacity(0.5))
         }
         .padding(10)
@@ -88,7 +88,7 @@ struct LobbySeatGrid: View {
                     .foregroundStyle(.white.opacity(0.6))
                     .frame(height: balloonH)
                 Text("Invite")
-                    .font(.system(size: 11.5, weight: .semibold, design: .rounded))
+                    .font(.system(size: 11.5, weight: .semibold, design: .default))
                     .foregroundStyle(.white.opacity(0.6))
                 Text(" ").font(.system(size: 10.5))   // height parity with occupied
             }

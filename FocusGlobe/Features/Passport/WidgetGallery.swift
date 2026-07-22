@@ -122,7 +122,7 @@ private struct WidgetPreviewTile: View {
             // labels) — the identity + families live in the detail sheet.
             HStack(spacing: 5) {
                 Text(item.isPro ? "PRO" : "FREE")
-                    .font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(0.6)
+                    .font(.system(size: 9, weight: .heavy, design: .default)).tracking(0.6)
                     .foregroundStyle(item.isPro ? WGTheme.gold : WGTheme.inkSoft)
                     .padding(.horizontal, 6).padding(.vertical, 2)
                     .background(Capsule().fill((item.isPro ? WGTheme.gold : Color.white).opacity(0.18)))
@@ -204,13 +204,13 @@ private struct WidgetDetailSheet: View {
                             .padding(.horizontal, AppSpacing.md)
                         HStack(spacing: 6) {
                             Text(item.isPro ? "FocusGlobe PRO" : "Free")
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .font(.system(size: 11, weight: .bold, design: .default))
                                 .foregroundStyle(item.isPro ? AppColors.gold : AppColors.success)
                                 .padding(.horizontal, 8).padding(.vertical, 4)
                                 .background(Capsule().fill((item.isPro ? AppColors.gold : AppColors.success).opacity(0.14)))
                             ForEach(item.families, id: \.self) { fam in
                                 Text(fam)
-                                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                    .font(.system(size: 11, weight: .semibold, design: .default))
                                     .foregroundStyle(AppColors.textSecondary)
                                     .padding(.horizontal, 8).padding(.vertical, 4)
                                     .background(Capsule().fill(AppColors.textPrimary.opacity(0.06)))
@@ -242,7 +242,7 @@ private struct WidgetDetailSheet: View {
                                     ZStack {
                                         Circle().fill(AppColors.brand.opacity(0.14)).frame(width: 30, height: 30)
                                         Text("\(idx + 1)")
-                                            .font(.system(size: 14, weight: .heavy, design: .rounded))
+                                            .font(.system(size: 14, weight: .heavy, design: .default))
                                             .foregroundStyle(AppColors.brand)
                                     }
                                     Text(step.1)

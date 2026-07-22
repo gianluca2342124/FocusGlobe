@@ -320,7 +320,7 @@ struct PreBoardingFocusView: View {
                 .font(.system(size: Layout.pad(19, 24), weight: .bold))
                 .foregroundStyle(.white)
             Text(preset.title)
-                .font(.system(size: Layout.pad(12, 15), weight: .bold, design: .rounded))
+                .font(.system(size: Layout.pad(12, 15), weight: .bold, design: .default))
                 .foregroundStyle(.white)
                 .lineLimit(1).minimumScaleFactor(0.7)
         }

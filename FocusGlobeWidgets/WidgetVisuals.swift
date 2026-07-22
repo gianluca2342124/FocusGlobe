@@ -100,7 +100,7 @@ struct WFlame: View {
                 .shadow(color: active ? WTheme.coral.opacity(0.6) : .clear, radius: size * 0.18, y: 2)
             if showNumber {
                 Text("\(streak)")
-                    .font(.system(size: size * 0.42, weight: .heavy, design: .rounded))
+                    .font(.system(size: size * 0.42, weight: .heavy, design: .default))
                     .foregroundStyle(.white)
                     .shadow(color: .black.opacity(0.55), radius: 2, y: 1)
                     .offset(y: size * 0.12)
@@ -319,7 +319,7 @@ struct WPill: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: icon).font(.system(size: 12, weight: .bold))
-            Text(title).font(.system(size: 13, weight: .bold, design: .rounded)).lineLimit(1)
+            Text(title).font(.system(size: 13, weight: .bold, design: .default)).lineLimit(1)
         }
         .foregroundStyle(fg)
         .padding(.horizontal, 12).padding(.vertical, 8)

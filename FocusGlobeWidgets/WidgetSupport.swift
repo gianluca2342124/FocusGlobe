@@ -102,7 +102,7 @@ struct WHeader: View {
         HStack(spacing: 5) {
             Image(systemName: icon).font(.system(size: 11, weight: .bold)).foregroundStyle(tint)
             Text(title.uppercased())
-                .font(.system(size: 11, weight: .heavy, design: .rounded))
+                .font(.system(size: 11, weight: .heavy, design: .default))
                 .tracking(0.6)
                 .foregroundStyle(WTheme.inkSoft)
         }
@@ -149,11 +149,11 @@ struct WStat: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
             Text(value)
-                .font(.system(size: 19, weight: .heavy, design: .rounded))
+                .font(.system(size: 19, weight: .heavy, design: .default))
                 .foregroundStyle(tint)
                 .minimumScaleFactor(0.7).lineLimit(1)
             Text(caption.uppercased())
-                .font(.system(size: 9, weight: .bold, design: .rounded)).tracking(0.4)
+                .font(.system(size: 9, weight: .bold, design: .default)).tracking(0.4)
                 .foregroundStyle(WTheme.inkSoft)
                 .lineLimit(1).minimumScaleFactor(0.8)
         }
@@ -200,10 +200,10 @@ struct LockedTeaser: View {
             }
             Spacer(minLength: 0)
             Text(title)
-                .font(.system(size: 16, weight: .heavy, design: .rounded))
+                .font(.system(size: 16, weight: .heavy, design: .default))
                 .foregroundStyle(WTheme.ink)
             Text("Unlock with FocusGlobe Pro")
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .font(.system(size: 11, weight: .semibold, design: .default))
                 .foregroundStyle(WTheme.inkSoft)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)

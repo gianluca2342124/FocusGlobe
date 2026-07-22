@@ -229,13 +229,13 @@ struct AmbientPilotsLayer: View {
     private func ambientBubble(alias: String, remaining: Int?) -> some View {
         VStack(spacing: 1) {
             Text(alias)
-                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .font(.system(size: 12, weight: .bold, design: .default))
                 .foregroundStyle(.white)
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .frame(maxWidth: 118)
             Text(remaining == nil ? "∞" : Self.clock(remaining!))
-                .font(.system(size: 10.5, weight: .semibold, design: .rounded))
+                .font(.system(size: 10.5, weight: .semibold, design: .default))
                 .foregroundStyle(.white.opacity(0.72))
                 .monospacedDigit()
         }
@@ -315,12 +315,12 @@ struct AmbientPilotsLayer: View {
         // live session — never a fabricated pill. Ticks once per second.
         VStack(spacing: 2) {
             Text("\(pilot.displayName)\(pilot.countryCode.map { " " + flagEmoji($0) } ?? "")")
-                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .font(.system(size: 12, weight: .bold, design: .default))
                 .foregroundStyle(.white)
             if pilot.hasLiveSession {
                 TimelineView(.periodic(from: .now, by: 1)) { ctx in
                     Text(pilot.liveCountdown(at: ctx.date))
-                        .font(.system(size: 10.5, weight: .semibold, design: .rounded))
+                        .font(.system(size: 10.5, weight: .semibold, design: .default))
                         .foregroundStyle(.white.opacity(0.72))
                         .monospacedDigit()
                 }

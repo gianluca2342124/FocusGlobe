@@ -94,7 +94,7 @@ struct FocusGridWidgetView: View {
                         Image(systemName: "flame.fill").font(.system(size: 11, weight: .bold))
                             .foregroundStyle(WTheme.coral)
                         Text("\(snapshot.currentStreak)")
-                            .font(.system(size: 13, weight: .heavy, design: .rounded))
+                            .font(.system(size: 13, weight: .heavy, design: .default))
                             .foregroundStyle(WTheme.ink)
                     }
                 }
@@ -103,11 +103,11 @@ struct FocusGridWidgetView: View {
                     .frame(maxWidth: .infinity)
                 HStack(spacing: 12) {
                     Text("\(snapshot.activeFocusDays) focus days")
-                        .font(.system(size: 10.5, weight: .bold, design: .rounded))
+                        .font(.system(size: 10.5, weight: .bold, design: .default))
                         .foregroundStyle(WTheme.inkSoft)
                     Spacer()
                     Text("FocusGlobe")
-                        .font(.system(size: 10.5, weight: .heavy, design: .rounded))
+                        .font(.system(size: 10.5, weight: .heavy, design: .default))
                         .foregroundStyle(WTheme.gold)
                 }
             }

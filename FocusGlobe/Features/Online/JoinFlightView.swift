@@ -40,7 +40,7 @@ struct JoinFlightView: View {
                             skin: BalloonSkin.skin(id: preview.hostSkin))
                 VStack(spacing: 6) {
                     Text("Join \(preview.hostAlias)'s Flight")
-                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                        .font(.system(size: 26, weight: .bold, design: .default))
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
                         .lineLimit(2).minimumScaleFactor(0.7)
@@ -76,7 +76,7 @@ struct JoinFlightView: View {
     private func infoPill(_ text: String, icon: String) -> some View {
         HStack(spacing: 5) {
             Image(systemName: icon).font(.system(size: 11, weight: .bold))
-            Text(text).font(.system(size: 12.5, weight: .semibold, design: .rounded)).monospacedDigit()
+            Text(text).font(.system(size: 12.5, weight: .semibold, design: .default)).monospacedDigit()
         }
         .foregroundStyle(.white.opacity(0.85))
         .padding(.horizontal, 10).padding(.vertical, 6)

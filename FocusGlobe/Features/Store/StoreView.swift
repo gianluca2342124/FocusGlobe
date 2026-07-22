@@ -93,7 +93,7 @@ struct StoreView: View {
             HStack(spacing: 5) {
                 FocusCoinIcon(size: 18)
                 Text(Formatters.miles(appModel.focusCoins))
-                    .font(.system(size: 15, weight: .heavy, design: .rounded))
+                    .font(.system(size: 15, weight: .heavy, design: .default))
                     .monospacedDigit()
                     .foregroundStyle(AppColors.textPrimary)
                     .lineLimit(1).minimumScaleFactor(0.7)
@@ -108,7 +108,7 @@ struct StoreView: View {
                 appModel.tapFeedback(); router.present(.coinSpin)
             } label: {
                 Text("Get Coins")
-                    .font(.system(size: 13.5, weight: .bold, design: .rounded))
+                    .font(.system(size: 13.5, weight: .bold, design: .default))
                     .foregroundStyle(Color(hex: 0x2B2510))
                     .padding(.horizontal, 13).padding(.vertical, 8)
                     .background(Capsule().fill(AppColors.gold))
@@ -196,19 +196,19 @@ struct StoreView: View {
         return HStack(spacing: AppSpacing.sm) {
             VStack(alignment: .leading, spacing: 1) {
                 Text(skin.name)
-                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .font(.system(size: 17, weight: .bold, design: .default))
                     .foregroundStyle(.white)
                     .lineLimit(1).minimumScaleFactor(0.8)
                 Text(equipped ? "Equipped" : unlocked ? "Owned"
                      : skin.isPremium ? "FocusGlobe PRO" : skinProgressText(skin))
-                    .font(.system(size: 12.5, weight: .semibold, design: .rounded))
+                    .font(.system(size: 12.5, weight: .semibold, design: .default))
                     .foregroundStyle(equipped ? AppColors.success : .white.opacity(0.7))
                     .lineLimit(1).minimumScaleFactor(0.8)
             }
             Spacer()
             if equipped {
                 Label("Flying", systemImage: "checkmark.seal.fill")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .font(.system(size: 13, weight: .bold, design: .default))
                     .foregroundStyle(AppColors.gold)
             } else if unlocked {
                 goldAction("Equip") { appModel.selectSkin(skin); appModel.tapFeedback() }
@@ -228,12 +228,12 @@ struct StoreView: View {
             HStack(spacing: AppSpacing.sm) {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(item.name)
-                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                        .font(.system(size: 17, weight: .bold, design: .default))
                         .foregroundStyle(.white)
                         .lineLimit(1).minimumScaleFactor(0.8)
                     Text(placed ? "In your cabin" : owned ? "Owned"
                          : item.isPremium ? "FocusGlobe PRO" : "Previewing")
-                        .font(.system(size: 12.5, weight: .semibold, design: .rounded))
+                        .font(.system(size: 12.5, weight: .semibold, design: .default))
                         .foregroundStyle(placed ? AppColors.success : .white.opacity(0.7))
                 }
                 Spacer()
@@ -243,7 +243,7 @@ struct StoreView: View {
                     }
                 } else if owned {
                     Label("Owned", systemImage: "checkmark.circle.fill")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .font(.system(size: 13, weight: .bold, design: .default))
                         .foregroundStyle(AppColors.success)
                 } else if item.isPremium && !appModel.isPro {
                     goldAction("Unlock with FocusGlobe PRO") {
@@ -256,7 +256,7 @@ struct StoreView: View {
                         HStack(spacing: 5) {
                             FocusCoinIcon(size: 13)
                             Text("\(item.price)")
-                                .font(.system(size: 14, weight: .heavy, design: .rounded))
+                                .font(.system(size: 14, weight: .heavy, design: .default))
                         }
                         .foregroundStyle(Color(hex: 0x2B2510))
                         .padding(.horizontal, 14).padding(.vertical, 8)
@@ -270,11 +270,11 @@ struct StoreView: View {
         } else {
             HStack {
                 Text("Your cabin")
-                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .font(.system(size: 17, weight: .bold, design: .default))
                     .foregroundStyle(.white)
                 Spacer()
                 Text("Tap an item to preview it")
-                    .font(.system(size: 12.5, weight: .semibold, design: .rounded))
+                    .font(.system(size: 12.5, weight: .semibold, design: .default))
                     .foregroundStyle(.white.opacity(0.6))
             }
             .shadow(color: .black.opacity(0.4), radius: 6, y: 1)
@@ -284,7 +284,7 @@ struct StoreView: View {
     private func goldAction(_ title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 13.5, weight: .bold, design: .rounded))
+                .font(.system(size: 13.5, weight: .bold, design: .default))
                 .lineLimit(1).minimumScaleFactor(0.75)
                 .foregroundStyle(Color(hex: 0x2B2510))
                 .padding(.horizontal, 15).padding(.vertical, 8)
@@ -361,7 +361,7 @@ struct StoreView: View {
                     withAnimation(.snappy(duration: 0.28)) { mode = m; previewItemID = nil }
                 } label: {
                     Text(m.rawValue)
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .font(.system(size: 14, weight: .bold, design: .default))
                         .foregroundStyle(isOn ? Color(hex: 0x14120E) : AppColors.textSecondary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 9)
@@ -493,7 +493,7 @@ private struct StoreItemCard: View {
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 art
                 Text(item.name)
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .font(.system(size: 14, weight: .bold, design: .default))
                     .foregroundStyle(AppColors.textPrimary)
                     .lineLimit(1).minimumScaleFactor(0.75)
                 priceRow
@@ -577,21 +577,21 @@ private struct StoreItemCard: View {
         if equipped {
             Label(item.kind == .cabinDecoration ? "In your cabin" : "Owned",
                   systemImage: "checkmark.seal.fill")
-                .font(.system(size: 11.5, weight: .bold, design: .rounded))
+                .font(.system(size: 11.5, weight: .bold, design: .default))
                 .foregroundStyle(AppColors.gold)
         } else if owned {
             Label("Owned", systemImage: "checkmark.circle.fill")
-                .font(.system(size: 11.5, weight: .bold, design: .rounded))
+                .font(.system(size: 11.5, weight: .bold, design: .default))
                 .foregroundStyle(AppColors.success)
         } else if item.isPremium {
             Label("PRO", systemImage: "crown.fill")
-                .font(.system(size: 11.5, weight: .bold, design: .rounded))
+                .font(.system(size: 11.5, weight: .bold, design: .default))
                 .foregroundStyle(AppColors.gold)
         } else {
             HStack(spacing: 4) {
                 FocusCoinIcon(size: 12)
                 Text("\(item.price)")
-                    .font(.system(size: 12.5, weight: .heavy, design: .rounded))
+                    .font(.system(size: 12.5, weight: .heavy, design: .default))
                     .foregroundStyle(affordable ? AppColors.gold : AppColors.textTertiary)
             }
         }
@@ -637,11 +637,11 @@ private struct SkinCard: View {
                 .frame(height: Layout.pad(104, 150))
                 VStack(spacing: 1) {
                     Text(skin.name)
-                        .font(.system(size: 14.5, weight: .bold, design: .rounded))
+                        .font(.system(size: 14.5, weight: .bold, design: .default))
                         .foregroundStyle(AppColors.textPrimary)
                         .lineLimit(1).minimumScaleFactor(0.8)
                     Text(statusText)
-                        .font(.system(size: 11.5, weight: .semibold, design: .rounded))
+                        .font(.system(size: 11.5, weight: .semibold, design: .default))
                         .foregroundStyle(equipped ? AppColors.success : AppColors.textTertiary)
                         .monospacedDigit()
                         .lineLimit(1).minimumScaleFactor(0.8)
@@ -688,7 +688,7 @@ struct DailyGiftSheet: View {
                 Spacer(minLength: 0)
                 giftHero
                 Text("Daily Gift")
-                    .font(.system(size: 28, weight: .heavy, design: .rounded))
+                    .font(.system(size: 28, weight: .heavy, design: .default))
                     .foregroundStyle(AppColors.textPrimary)
                 Text("Welcome back — your focus coins are ready.")
                     .font(AppTypography.callout)
@@ -697,7 +697,7 @@ struct DailyGiftSheet: View {
                 HStack(spacing: 9) {
                     FocusCoinIcon(size: 30)
                     Text("+\(AppModel.dailyGiftCoins) FocusCoins")
-                        .font(.system(size: 24, weight: .heavy, design: .rounded))
+                        .font(.system(size: 24, weight: .heavy, design: .default))
                         .foregroundStyle(AppColors.gold)
                 }
                 .padding(.vertical, 4)

@@ -63,7 +63,7 @@ struct StreakDetailsView: View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
             HStack {
                 Text("YOUR FOCUS JOURNEY")
-                    .font(.system(size: 10.5, weight: .heavy, design: .rounded))
+                    .font(.system(size: 10.5, weight: .heavy, design: .default))
                     .tracking(1.4)
                     .foregroundStyle(AppColors.textSecondary)
                 Spacer()
@@ -79,7 +79,7 @@ struct StreakDetailsView: View {
                     }
                 } label: {
                     Label("Share", systemImage: "square.and.arrow.up")
-                        .font(.system(size: 12.5, weight: .bold, design: .rounded))
+                        .font(.system(size: 12.5, weight: .bold, design: .default))
                         .foregroundStyle(AppColors.gold)
                 }
                 .buttonStyle(SoftPressStyle())
@@ -89,7 +89,7 @@ struct StreakDetailsView: View {
             // month labels, data and styling (no reduced/compact variant).
             FocusConsistencyGrid(history: appModel.history)
             Text("Every gold square is a day you truly focused. Keep the sky lit.")
-                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .font(.system(size: 12, weight: .medium, design: .default))
                 .foregroundStyle(AppColors.textSecondary)
         }
         .padding(AppSpacing.md)
@@ -121,7 +121,7 @@ struct StreakDetailsView: View {
             ember
             Text("\(streak)")
                 .font(.system(size: Layout.pad(CGFloat(66), CGFloat(88)),
-                              weight: .heavy, design: .rounded))
+                              weight: .heavy, design: .default))
                 .foregroundStyle(AppColors.textPrimary)
             Text("day streak")
                 .font(AppTypography.headline)
@@ -184,7 +184,7 @@ struct StreakDetailsView: View {
             Image(systemName: "flame.fill")
                 .font(.system(size: 13, weight: .bold))
             Text("Best \(best) days")
-                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .font(.system(size: 14, weight: .bold, design: .default))
         }
         .foregroundStyle(AppColors.gold)
         .padding(.horizontal, AppSpacing.md)
@@ -209,7 +209,7 @@ struct StreakDetailsView: View {
         GlassCard {
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
                 Text("THIS WEEK")
-                    .font(.system(size: 12, weight: .bold, design: .rounded)).tracking(0.6)
+                    .font(.system(size: 12, weight: .bold, design: .default)).tracking(0.6)
                     .foregroundStyle(AppColors.textTertiary)
                 // The ONE shared weekly strip (also shown on the post-flight
                 // streak card), so both surfaces always agree about a day.
@@ -230,7 +230,7 @@ struct StreakDetailsView: View {
                 Text(landed
                      ? "Landed today — your streak is safe"
                      : "Land a flight today to keep the streak alive")
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .font(.system(size: 14, weight: .semibold, design: .default))
                     .foregroundStyle(AppColors.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
@@ -252,11 +252,11 @@ struct StreakDetailsView: View {
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
                 HStack {
                     Text("TODAY'S GOALS")
-                        .font(.system(size: 12, weight: .bold, design: .rounded)).tracking(0.6)
+                        .font(.system(size: 12, weight: .bold, design: .default)).tracking(0.6)
                         .foregroundStyle(AppColors.textTertiary)
                     Spacer()
                     Text("\(missions.filter { $0.isComplete }.count)/\(missions.count)")
-                        .font(.system(size: 12, weight: .heavy, design: .rounded))
+                        .font(.system(size: 12, weight: .heavy, design: .default))
                         .foregroundStyle(AppColors.gold)
                 }
                 ForEach(missions) { mission in
@@ -274,7 +274,7 @@ struct StreakDetailsView: View {
                 .frame(width: 22)
             VStack(alignment: .leading, spacing: 4) {
                 Text(mission.title)
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .font(.system(size: 13, weight: .semibold, design: .default))
                     .foregroundStyle(AppColors.textPrimary)
                 GeometryReader { g in
                     ZStack(alignment: .leading) {
@@ -286,7 +286,7 @@ struct StreakDetailsView: View {
                 .frame(height: 5)
             }
             Text(mission.progressText)
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .font(.system(size: 11, weight: .semibold, design: .default))
                 .foregroundStyle(AppColors.textTertiary)
         }
     }

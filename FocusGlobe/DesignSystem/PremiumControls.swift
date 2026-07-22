@@ -45,7 +45,7 @@ struct PremiumBadge: View {
                 .font(.system(size: compact ? 8 : 9, weight: .bold))
             if !compact {
                 Text("PRO")
-                    .font(.system(size: 10, weight: .heavy, design: .rounded))
+                    .font(.system(size: 10, weight: .heavy, design: .default))
             }
         }
         .foregroundStyle(Color(hex: 0x2B2620))

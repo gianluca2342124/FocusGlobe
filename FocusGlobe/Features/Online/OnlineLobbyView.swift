@@ -52,7 +52,7 @@ struct OnlineLobbyView: View {
         VStack(spacing: 6) {
             HStack {
                 Text("Flight Participants")
-                    .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    .font(.system(size: 13, weight: .heavy, design: .default))
                     .tracking(1).foregroundStyle(.white.opacity(0.6))
                 Spacer()
                 Button { appModel.tapFeedback(); dismiss() } label: {
@@ -63,7 +63,7 @@ struct OnlineLobbyView: View {
                 }
             }
             Text(sky.name)
-                .font(.system(size: 26, weight: .bold, design: .rounded))
+                .font(.system(size: 26, weight: .bold, design: .default))
                 .foregroundStyle(.white)
             HStack(spacing: 8) {
                 pill(durationLabel, icon: "clock")
@@ -75,7 +75,7 @@ struct OnlineLobbyView: View {
     private func pill(_ text: String, icon: String) -> some View {
         HStack(spacing: 5) {
             Image(systemName: icon).font(.system(size: 11, weight: .bold))
-            Text(text).font(.system(size: 13, weight: .semibold, design: .rounded)).monospacedDigit()
+            Text(text).font(.system(size: 13, weight: .semibold, design: .default)).monospacedDigit()
         }
         .foregroundStyle(.white.opacity(0.85))
         .padding(.horizontal, 11).padding(.vertical, 6)
@@ -115,7 +115,7 @@ struct OnlineLobbyView: View {
         } else {
             VStack(spacing: AppSpacing.sm) {
                 Button("Done") { appModel.tapFeedback(); dismiss() }
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 16, weight: .bold, design: .default))
                     .foregroundStyle(.white)
                 Button("Leave Flight") {
                     appModel.tapFeedback()
