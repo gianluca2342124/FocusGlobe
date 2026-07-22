@@ -13,12 +13,23 @@ struct CoinSpinButton: View {
 
     var body: some View {
         Button(action: action) {
-            ZStack {
-                Image(systemName: "play.rectangle.fill")
-                    .font(.system(size: Layout.pad(15, 17), weight: .semibold))
-                    .foregroundStyle(AppColors.gold)
-                FocusCoinIcon(size: Layout.pad(13, 15))
-                    .offset(x: Layout.pad(9, 10), y: -Layout.pad(8, 9))
+            // The real Free Coin Spin artwork, scaled to fit the chip (never
+            // clipped). A procedural video+coin glyph is kept only as a fallback
+            // if the asset is ever missing, so the button is never blank.
+            Group {
+                if let ui = UIImage(named: "freecoinspin") {
+                    Image(uiImage: ui)
+                        .resizable()
+                        .scaledToFit()
+                } else {
+                    ZStack {
+                        Image(systemName: "play.rectangle.fill")
+                            .font(.system(size: Layout.pad(15, 17), weight: .semibold))
+                            .foregroundStyle(AppColors.gold)
+                        FocusCoinIcon(size: Layout.pad(13, 15))
+                            .offset(x: Layout.pad(9, 10), y: -Layout.pad(8, 9))
+                    }
+                }
             }
             .frame(width: Layout.pad(26, 30), height: Layout.pad(24, 27))
             .padding(.horizontal, Layout.pad(10, 12))

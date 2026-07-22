@@ -34,15 +34,16 @@ struct StoreView: View {
 
     var body: some View {
         ZStack {
-            // The Store's open-air stage sits over the free Desert Night Sky —
-            // never the retired Amber Highlands tile, never the pilot's randomly
-            // selected Sky — so the balloon and the real Cabin float over the
-            // same calm desert night in both preview modes. A static settled
-            // frame keeps the shop smooth (the balloon still floats on its own).
-            SkyFlightSceneView(sky: .desertNight, elapsed: { 24 }, animated: false)
+            // The Store's open-air stage sits over a calm, Store-ONLY daytime
+            // sky — a tranquil blue gradient with a few soft clouds, no stars,
+            // mountains, pilots or motion — so the balloon and the real Cabin
+            // both float over the same bright afternoon in either preview mode.
+            StoreDaytimeSky()
                 .ignoresSafeArea()
-            // A soft top/bottom scrim so the header and status text stay readable.
-            LinearGradient(colors: [.black.opacity(0.38), .clear, .black.opacity(0.28)],
+            // A soft top/bottom scrim so the header and status text (white) stay
+            // readable over the bright sky; the middle stays clear so the preview
+            // zone shows the full daytime blue.
+            LinearGradient(colors: [.black.opacity(0.30), .clear, .black.opacity(0.22)],
                            startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
@@ -145,9 +146,13 @@ struct StoreView: View {
             // The REAL CabinView (the pilot's actual placed decorations, plus
             // the highlighted item) inside a coherent soft viewport.
             ZStack {
+                // The pilot's real cabin, looking out through the window on the
+                // SAME calm daytime sky as the balloon stage (never the dark night
+                // world, which showed as a grey pane).
                 CabinView(elapsed: { 0 }, seed: 0xC0FFEE, animated: false,
-                          focusSky: .desertNight, showPilots: false,
-                          equippedItemIDs: previewCabinIDs)
+                          focusSky: nil, showPilots: false,
+                          equippedItemIDs: previewCabinIDs,
+                          windowBackdrop: AnyView(StoreDaytimeSky()))
                     .allowsHitTesting(false)
                 if let item = previewItem, !appModel.ownsStoreItem(item) {
                     VStack { HStack { Spacer(); lockBadge(premium: item.isPremium).padding(12) }; Spacer() }
@@ -772,5 +777,48 @@ private struct SmileArc: Shape {
         p.addQuadCurve(to: CGPoint(x: rect.maxX, y: rect.minY),
                        control: CGPoint(x: rect.midX, y: rect.maxY))
         return p
+    }
+}
+
+// MARK: - Store-only calm daytime sky
+
+/// A tranquil daytime sky used ONLY in the Store preview stage — a soft blue
+/// gradient, a high sun bloom and a few static, fluffy white clouds. Deliberately
+/// simple: no stars, mountains, terrain, pilots or motion, so the shop reads as a
+/// calm, bright afternoon behind both the balloon and the cabin-window preview.
+/// Pure vector (no assets), so it composites cleanly behind the transparent
+/// cabin window where the dark night world previously showed as a grey pane.
+struct StoreDaytimeSky: View {
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [Color(hex: 0x4F9BEA), Color(hex: 0x7FC0F4),
+                         Color(hex: 0xBFE2FA), Color(hex: 0xE9F5FD)],
+                startPoint: .top, endPoint: .bottom)
+            // A gentle sun bloom, high on the right.
+            RadialGradient(colors: [Color.white.opacity(0.55), .clear],
+                           center: UnitPoint(x: 0.78, y: 0.15), startRadius: 4, endRadius: 240)
+            GeometryReader { g in
+                let w = g.size.width, h = g.size.height
+                cloud(w * 0.44).position(x: w * 0.26, y: h * 0.28)
+                cloud(w * 0.30).position(x: w * 0.74, y: h * 0.42)
+                cloud(w * 0.38).position(x: w * 0.50, y: h * 0.64)
+                cloud(w * 0.24).position(x: w * 0.13, y: h * 0.56)
+            }
+            .allowsHitTesting(false)
+        }
+    }
+
+    /// A soft cluster of overlapping white blobs → a fluffy, edge-free cloud.
+    private func cloud(_ w: CGFloat) -> some View {
+        ZStack {
+            Capsule().fill(.white).frame(width: w, height: w * 0.34)
+            Circle().fill(.white).frame(width: w * 0.50, height: w * 0.50).offset(x: -w * 0.16, y: -w * 0.08)
+            Circle().fill(.white).frame(width: w * 0.62, height: w * 0.62).offset(x:  w * 0.10, y: -w * 0.10)
+            Circle().fill(.white).frame(width: w * 0.44, height: w * 0.44).offset(x:  w * 0.28, y: -w * 0.02)
+        }
+        .opacity(0.92)
+        .blur(radius: 3)
+        .shadow(color: Color(hex: 0x3E6E9E).opacity(0.12), radius: 8, y: 4)
     }
 }

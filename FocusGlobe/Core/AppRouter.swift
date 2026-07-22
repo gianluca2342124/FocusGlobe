@@ -256,4 +256,19 @@ enum PaywallContext: Equatable {
         case .pause:       return "Pause Your Flight with PRO"
         }
     }
+
+    /// The single comparison-table benefit row to spotlight for this entry point
+    /// (nil for broad / general entries). Titles match `PaywallComparisonTable`
+    /// exactly. Sky / balloon / cabin / sound all map to "Exclusive Content".
+    var comparisonHighlight: String? {
+        switch self {
+        case .online:   return "Online Mode"
+        case .invite:   return "Invite Friends"
+        case .infinite: return "Infinite Focus"
+        case .pause:    return "Pause Anytime"
+        case .widget:   return "PRO Widgets"
+        case .sky, .balloonSkin, .interior, .sound: return "Exclusive Content"
+        case .general, .rewards: return nil
+        }
+    }
 }

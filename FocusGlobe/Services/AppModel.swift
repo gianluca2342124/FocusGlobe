@@ -1004,23 +1004,31 @@ final class AppModel: ObservableObject {
     func completeJourney(origin: JourneyOrigin, route: Route,
                          focusedSeconds: Int, intention: String?,
                          onlineSessionID: String? = nil) -> LandingSummary {
+        // CANONICAL five-minute eligibility (the ONE rule): a journey only counts
+        // when it banks >= 300 real focused seconds. A shorter completion earns
+        // NOTHING and touches NO stat — coins, journeys, streak, best, routes,
+        // postcards, Sky/skin unlocks, the consistency grid, totals, distance and
+        // widgets — and is recorded as a non-qualifying (uncredited) session so
+        // every `completed`-filtered surface excludes it. Infinite flights qualify
+        // only when ended after >= 300 focused seconds (same gate). Duplicate
+        // completions are prevented upstream by the session's `didLand` guard.
+        let qualifies = focusedSeconds >= FocusConsistency.qualifyingSeconds
+
         // Canonical focus distance: the balloon drifts at 15 km/h, so distance
-        // comes purely from REAL focused time (never geography). This path only
-        // records COMPLETED sessions, so cancelled time can never inflate it.
+        // comes purely from REAL focused time (never geography).
         let distanceKm = FocusMetrics.distanceKm(focusedSeconds: focusedSeconds)
-        // Focus Coins scale with *actual completed focus minutes* (never distance
-        // or planned time), so infinity/short sessions can't be farmed for coins.
-        let baseMiles = FocusEconomy.coins(forFocusedSeconds: focusedSeconds)
-        // An equipped Coins Boost doubles the coins for up to the first hour, once
-        // (then it's consumed). Applied to the *final* amount so a later rewarded
-        // double — if the pilot also watches an ad — doubles the boosted total.
-        let boostBonus = consumeCoinBoostIfArmed()
+        // Focus Coins scale with *actual completed focus minutes* — and only for a
+        // qualifying journey, so a short flight can never be farmed for coins.
+        let baseMiles = qualifies ? FocusEconomy.coins(forFocusedSeconds: focusedSeconds) : 0
+        // An equipped Coins Boost is consumed + doubles the coins for up to the
+        // first hour — only on a qualifying journey (a short flight never burns it).
+        let boostBonus = (qualifies && consumeCoinBoostIfArmed())
             ? FocusEconomy.coins(forFocusedSeconds: min(focusedSeconds, 3600)) : 0
         // Friend-flight bonus: a VERIFIED private-room flight with ≥5 minutes of
         // real overlap doubles the coins — once per session (idempotent), never
         // for decorative pilots or public strangers, capped globally.
         var friendMultiplier = 1
-        if let sessionID = onlineSessionID,
+        if qualifies, let sessionID = onlineSessionID,
            onlineRef?.friendBonusEligible(sessionID: sessionID) == true,
            !(profile.rewardedFriendSessionIDs ?? []).contains(sessionID) {
             friendMultiplier = 2
@@ -1029,10 +1037,11 @@ final class AppModel: ObservableObject {
             if rewarded.count > 60 { rewarded.removeFirst(rewarded.count - 60) }
             profile.rewardedFriendSessionIDs = rewarded
         }
-        let awardedMiles = min(Self.maximumCoinsPerJourneyAfterMultipliers,
-                               (baseMiles + boostBonus) * friendMultiplier)
-        let isNewRoute = !progress.completedRouteIDs.contains(route.id)
-        let isNewBest = focusedSeconds > progress.bestFocusSeconds
+        let awardedMiles = qualifies
+            ? min(Self.maximumCoinsPerJourneyAfterMultipliers, (baseMiles + boostBonus) * friendMultiplier)
+            : 0
+        let isNewRoute = qualifies && !progress.completedRouteIDs.contains(route.id)
+        let isNewBest = qualifies && focusedSeconds > progress.bestFocusSeconds
 
         let trimmedIntention = intention?.trimmingCharacters(in: .whitespacesAndNewlines)
         let finalIntention = (trimmedIntention?.isEmpty == false) ? trimmedIntention : nil
@@ -1049,39 +1058,46 @@ final class AppModel: ObservableObject {
             distanceKm: distanceKm,
             focusMiles: awardedMiles,
             intention: finalIntention,
-            completed: true
+            completed: qualifies      // uncredited when < 300 s → excluded everywhere
         )
 
         history.insert(record, at: 0)
 
-        var p = progress
-        p.totalFocusMiles += awardedMiles
-        p.landings += 1
-        p.bestFocusSeconds = max(p.bestFocusSeconds, focusedSeconds)
-        p.completedRouteIDs.insert(route.id)
-
         let postcard = Postcard(route: route)
-        if !p.postcards.contains(where: { $0.id == postcard.id }) {
-            p.postcards.insert(postcard, at: 0)
-        }
-        let previousStreak = progress.currentStreak
-        applyStreak(to: &p, landingDate: record.date)
-        let streakIncreased = p.currentStreak > previousStreak
-        progress = p
-        // Capture any skin or Sky just earned into the grandfather sets, so a
-        // later rule change (or a dropped streak) can never re-lock them.
-        captureEarnedSkins()
-        captureUnlockedSkies()
+        var streakIncreased = false
+        var landedStreak = progress.currentStreak
 
-        // Remember where we came from so the next screen can offer a return trip,
-        // then make the destination the next origin (travelling the world).
-        settings.previousOrigin = origin
-        arrive(at: JourneyOrigin(city: route.destinationName, country: "",
-                                 coordinate: route.destination, code: route.destinationCode))
+        if qualifies {
+            var p = progress
+            p.totalFocusMiles += awardedMiles
+            p.landings += 1
+            p.bestFocusSeconds = max(p.bestFocusSeconds, focusedSeconds)
+            p.completedRouteIDs.insert(route.id)
+            if !p.postcards.contains(where: { $0.id == postcard.id }) {
+                p.postcards.insert(postcard, at: 0)
+            }
+            let previousStreak = progress.currentStreak
+            applyStreak(to: &p, landingDate: record.date)
+            streakIncreased = p.currentStreak > previousStreak
+            progress = p
+            landedStreak = p.currentStreak
+            // Capture any skin or Sky just earned into the grandfather sets, so a
+            // later rule change (or a dropped streak) can never re-lock them.
+            captureEarnedSkins()
+            captureUnlockedSkies()
+
+            // Remember where we came from so the next screen can offer a return
+            // trip, then make the destination the next origin. Only a qualifying
+            // journey moves the pilot across the world.
+            settings.previousOrigin = origin
+            arrive(at: JourneyOrigin(city: route.destinationName, country: "",
+                                     coordinate: route.destination, code: route.destinationCode))
+        }
 
         persistAll()
         analytics.log(.journeyCompleted, [
-            "route": route.id, "minutes": focusedSeconds / 60, "miles": baseMiles
+            "route": route.id, "minutes": focusedSeconds / 60, "miles": baseMiles,
+            "qualified": qualifies
         ])
 
         // Re-engagement: reschedule reminders from the new progress. Permission
@@ -1099,7 +1115,7 @@ final class AppModel: ObservableObject {
             distanceKm: distanceKm,
             baseMiles: awardedMiles,
             postcard: postcard,
-            streak: p.currentStreak,
+            streak: landedStreak,
             isNewRoute: isNewRoute,
             isNewBest: isNewBest,
             streakIncreased: streakIncreased
@@ -1372,9 +1388,16 @@ final class AppModel: ObservableObject {
         snap.focusedToday = activeDays[today] != nil
         // Only the last ~26 weeks are needed for the grid; keep the payload small.
         let cutoff = today.addingTimeInterval(-Double(26 * 7 + 2) * 86_400)
-        snap.activeDayOrdinals = activeDays.keys
-            .filter { $0 >= cutoff }
-            .map { Int((cal.startOfDay(for: $0).timeIntervalSince1970 / 86_400).rounded()) }
+        func ordinal(_ day: Date) -> Int {
+            Int((cal.startOfDay(for: day).timeIntervalSince1970 / 86_400).rounded())
+        }
+        snap.activeDayOrdinals = activeDays.keys.filter { $0 >= cutoff }.map(ordinal)
+        // Per-day focus category (latest qualifying journey), keyed by the SAME
+        // ordinal, so the widget grid tints each lit day exactly like Passport.
+        let dayCats = FocusConsistency.dayCategories(history: history, calendar: cal)
+        var catByOrdinal: [Int: String] = [:]
+        for (day, key) in dayCats where day >= cutoff { catByOrdinal[ordinal(day)] = key }
+        snap.activeDayCategories = catByOrdinal
         // The selected Sky's identity + gradient for the idle Focus Now backdrop.
         let sky = selectedSky
         snap.selectedSkyName = sky.name

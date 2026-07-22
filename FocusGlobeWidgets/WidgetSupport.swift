@@ -18,6 +18,23 @@ enum WTheme {
     static let teal     = Color(red: 0.20, green: 0.78, blue: 0.62)
     static let coral    = Color(red: 0.96, green: 0.47, blue: 0.36)
     static let sky      = Color(red: 0.36, green: 0.56, blue: 0.95)
+
+    /// Vivid focus-category hue for the widget Focus Grid — the EXACT palette the
+    /// app uses in `FocusConsistency.categoryColor` (kept in sync by hand; the
+    /// widget can't import the app's design system). Unknown / "" → signature gold.
+    static func category(_ key: String?) -> Color {
+        switch key {
+        case "fly":      return Color(red: 0.392, green: 0.380, blue: 0.941)  // 0x6461F0 blue/violet
+        case "work":     return Color(red: 0.125, green: 0.580, blue: 0.902)  // 0x2094E6 azure
+        case "study":    return Color(red: 0.949, green: 0.690, blue: 0.118)  // 0xF2B01E golden yellow
+        case "meditate": return Color(red: 0.125, green: 0.761, blue: 0.459)  // 0x20C275 green
+        case "exercise": return Color(red: 0.984, green: 0.478, blue: 0.141)  // 0xFB7A24 orange
+        case "read":     return Color(red: 0.635, green: 0.294, blue: 0.878)  // 0xA24BE0 purple
+        case "create":   return Color(red: 0.925, green: 0.357, blue: 0.608)  // 0xEC5B9B pink
+        case "reflect":  return Color(red: 0.173, green: 0.733, blue: 0.831)  // 0x2CBBD4 cyan
+        default:         return Color(red: 0.910, green: 0.647, blue: 0.294)  // 0xE8A54B amber
+        }
+    }
 }
 
 extension View {

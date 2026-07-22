@@ -12,37 +12,43 @@ import SwiftUI
 // All shapes are pure/deterministic (no per-frame randomness), so SwiftUI
 // caches them and only re-rasterises when the frame actually changes.
 
-// MARK: Desert dunes — long windward slope, short steep leeward face
+// MARK: Desert dunes — one continuous, wind-shaped sand ridge (never humps)
 
-/// A field of wind-shaped dunes. Crests are authored as
-/// (peakX, peakHeight, windwardReach, leewardReach) fractions, so no two
-/// crests share a contour and the profile is believably asymmetric.
-struct DuneField: Shape {
-    /// Authored crests, left→right. All values are fractions of the rect.
-    let crests: [(x: CGFloat, h: CGFloat, wind: CGFloat, lee: CGFloat)]
+/// A continuous wind-shaped dune ridge drawn as a smooth spline through authored
+/// top-edge anchor points — crests and the RAISED saddles between them — so the
+/// sand-line sweeps across the whole width as one flowing mass. It never returns
+/// to the base between crests (that is what made the old field read as a row of
+/// separate semicircular humps), and it is not a sine wave: asymmetry — a long,
+/// shallow windward rise and a shorter, steeper leeward fall — comes from where
+/// each saddle sits relative to its crest. Fills solidly down to the base.
+struct SandDune: Shape {
+    /// Top-edge anchors, left→right, as (x, height) fractions of the rect
+    /// (height 0 = base, 1 = top). Author a saddle just past each edge so the
+    /// mass never reveals a vertical side as it drifts with parallax.
+    let anchors: [(x: CGFloat, y: CGFloat)]
     var parallax: CGFloat = 0
 
     func path(in rect: CGRect) -> Path {
         let w = rect.width, h = rect.height, base = rect.maxY
-        var p = Path()
-        p.move(to: CGPoint(x: rect.minX - 4, y: base))
-        // Trace the sky-line left→right as a chain of asymmetric dune humps.
-        for (i, c) in crests.enumerated() {
-            let peakX = rect.minX + (c.x * w) + parallax
-            let peakY = base - c.h * h
-            let windX = peakX - c.wind * w
-            let leeX = peakX + c.lee * w
-            if i == 0 { p.addLine(to: CGPoint(x: windX, y: base)) }
-            // Windward: long, gentle, slightly convex rise.
-            p.addCurve(to: CGPoint(x: peakX, y: peakY),
-                       control1: CGPoint(x: windX + c.wind * w * 0.55, y: base - c.h * h * 0.12),
-                       control2: CGPoint(x: peakX - c.wind * w * 0.30, y: peakY - c.h * h * 0.06))
-            // Leeward: short, steep, concave drop back to the sand floor.
-            p.addCurve(to: CGPoint(x: leeX, y: base),
-                       control1: CGPoint(x: peakX + c.lee * w * 0.24, y: peakY + c.h * h * 0.10),
-                       control2: CGPoint(x: leeX - c.lee * w * 0.30, y: base - c.h * h * 0.04))
+        guard anchors.count > 1 else { return Path() }
+        func pt(_ i: Int) -> CGPoint {
+            let a = anchors[min(max(0, i), anchors.count - 1)]
+            return CGPoint(x: rect.minX + a.x * w + parallax, y: base - a.y * h)
         }
-        p.addLine(to: CGPoint(x: rect.maxX + 4, y: base))
+        var p = Path()
+        let start = pt(0)
+        p.move(to: CGPoint(x: start.x, y: base))
+        p.addLine(to: start)
+        // A Catmull-Rom → Bézier pass gives a single flowing crest-line through
+        // every anchor (smooth, non-repeating, no hard hump seams).
+        for i in 0..<(anchors.count - 1) {
+            let p0 = pt(i - 1), p1 = pt(i), p2 = pt(i + 1), p3 = pt(i + 2)
+            let c1 = CGPoint(x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6)
+            let c2 = CGPoint(x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6)
+            p.addCurve(to: p2, control1: c1, control2: c2)
+        }
+        let end = pt(anchors.count - 1)
+        p.addLine(to: CGPoint(x: end.x, y: base))
         p.closeSubpath()
         return p
     }

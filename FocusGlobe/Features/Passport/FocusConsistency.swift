@@ -18,6 +18,73 @@ enum FocusConsistency {
     /// Minimum focused seconds for a session to qualify a day.
     static let qualifyingSeconds = 300
 
+    // MARK: - Focus category → vivid grid colour
+
+    /// The eight focus categories a journey can carry (its chosen FocusPreset).
+    /// The grid tints each lit day by *what* the pilot focused on, in vivid,
+    /// saturated hues — a premium spectrum rather than a single gold.
+    static let categoryKeys = ["fly", "work", "study", "meditate", "exercise", "read", "create", "reflect"]
+
+    /// Normalised category key for a record's intention, or `nil` if it matches no
+    /// known focus preset (free-text / legacy intentions → uncategorised amber).
+    static func categoryKey(for intention: String?) -> String? {
+        guard let raw = intention?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+              categoryKeys.contains(raw) else { return nil }
+        return raw
+    }
+
+    /// The vivid, premium hue for a focus category. `nil` / unknown / "" falls
+    /// back to the FocusGlobe signature amber so legacy days still read warmly.
+    /// This is the ONE palette shared by Passport, the streak sheet, the share
+    /// card and the widget (mirrored in `WTheme.category`).
+    static func categoryColor(_ key: String?) -> Color {
+        switch key {
+        case "fly":      return Color(hex: 0x6461F0)   // blue / violet
+        case "work":     return Color(hex: 0x2094E6)   // azure
+        case "study":    return Color(hex: 0xF2B01E)   // golden yellow
+        case "meditate": return Color(hex: 0x20C275)   // green
+        case "exercise": return Color(hex: 0xFB7A24)   // orange
+        case "read":     return Color(hex: 0xA24BE0)   // purple
+        case "create":   return Color(hex: 0xEC5B9B)   // pink
+        case "reflect":  return Color(hex: 0x2CBBD4)   // cyan
+        default:         return Color(hex: 0xE8A54B)   // uncategorised → signature amber
+        }
+    }
+
+    /// startOfDay → the category key ("" when the latest journey matches no
+    /// preset) of the **most recently completed** qualifying (≥ 300 s) session
+    /// that day. One entry per active day → one square; when several qualifying
+    /// journeys land the same local day, the LATEST-completed one's colour wins.
+    static func dayCategories(history: [FocusSessionRecord],
+                              calendar: Calendar = .current) -> [Date: String] {
+        var latest: [Date: Date] = [:]     // day → latest qualifying completion time seen
+        var out: [Date: String] = [:]
+        for record in history where record.completed && record.focusedSeconds >= qualifyingSeconds {
+            let day = calendar.startOfDay(for: record.date)
+            if let seen = latest[day], seen >= record.date { continue }
+            latest[day] = record.date
+            out[day] = categoryKey(for: record.intention) ?? ""
+        }
+        return out
+    }
+
+    /// A gentle intensity ramp kept as a subtle *opacity* lift on the category
+    /// hue, so longer days read a touch richer without ever washing the colour
+    /// out (the floor stays saturated). Level 0 is the empty-cell neutral.
+    static func intensityOpacity(level: Int) -> Double {
+        switch level {
+        case 1:  return 0.82
+        case 2:  return 0.90
+        case 3:  return 0.95
+        default: return 1.0
+        }
+    }
+
+    /// The neutral fill for a day with no qualifying session (mode-adaptive so a
+    /// raw white cell is never invisible on a light share card).
+    static let emptyCellColor = Color.dynamic(light: 0x26221D, lightAlpha: 0.07,
+                                              dark: 0xFFFFFF, darkAlpha: 0.07)
+
     /// startOfDay → total focused minutes, ONLY for days with ≥1 qualifying
     /// completed session. Derived purely from the real on-device history.
     static func activeDays(history: [FocusSessionRecord],
@@ -145,6 +212,44 @@ enum FocusConsistency {
         if activeDays(history: [rec(600, daysAgo: 0, completed: false)], calendar: calendar)[today] != nil {
             return "cancelled session should NOT qualify"
         }
+
+        // MARK: category colouring (Item 12)
+        // Anchor synthetic records to fixed hours TODAY (never near a midnight
+        // boundary), so "same local day" holds no matter when the check runs.
+        func catRec(_ intention: String, hour: Int, seconds: Int = 600, completed: Bool = true) -> FocusSessionRecord {
+            let d = calendar.date(byAdding: .hour, value: hour, to: today) ?? today
+            return FocusSessionRecord(routeID: "t", routeName: "t", originName: "t",
+                                      destinationName: "t", mood: .sunset, theme: .gold,
+                                      date: d, plannedMinutes: 25, focusedSeconds: seconds,
+                                      distanceKm: 1, focusMiles: 1, intention: intention,
+                                      completed: completed)
+        }
+        let flyEarlier = catRec("Fly", hour: 9)
+        let studyLater = catRec("Study", hour: 15)
+        // Two qualifying journeys, one local day → ONE square.
+        let cats = dayCategories(history: [studyLater, flyEarlier], calendar: calendar)
+        if cats.count != 1 { return "two journeys one day should be one grid square" }
+        // …coloured by the MOST RECENTLY completed journey (order-independent).
+        if cats[today] != "study" { return "latest journey's category colour should win" }
+        if dayCategories(history: [flyEarlier, studyLater], calendar: calendar)[today] != "study" {
+            return "latest category must win regardless of history order"
+        }
+        // A known preset resolves to its key; 300 s exactly still qualifies.
+        if dayCategories(history: [catRec("Meditate", hour: 12, seconds: 300)], calendar: calendar)[today] != "meditate" {
+            return "300 s Meditate should colour the day meditate"
+        }
+        // 299 s (finite OR infinite ended early) contributes no colour at all.
+        if !dayCategories(history: [catRec("Exercise", hour: 12, seconds: 299)], calendar: calendar).isEmpty {
+            return "sub-300 s session should not colour a day"
+        }
+        // A cancelled qualifying-length session contributes no colour either.
+        if !dayCategories(history: [catRec("Create", hour: 12, completed: false)], calendar: calendar).isEmpty {
+            return "cancelled session should not colour a day"
+        }
+        // An unknown / free-text intention maps to the neutral amber bucket ("").
+        if dayCategories(history: [catRec("Ship the release", hour: 12)], calendar: calendar)[today] != "" {
+            return "unknown intention should map to the neutral bucket"
+        }
         return nil
     }
     #endif
@@ -191,6 +296,7 @@ struct FocusConsistencyGrid: View {
 
     var body: some View {
         let cols = columns
+        let cats = FocusConsistency.dayCategories(history: history, calendar: calendar)
         let count = max(1, cols.count)
         let sf = Self.spacingFactor
         // width  = count·side + (count−1)·spacing  (spacing = side·sf)
@@ -199,10 +305,10 @@ struct FocusConsistencyGrid: View {
         let hUnits = 7 + 6 * sf + (showsMonthLabels ? Self.labelFactor : 0)
         return Group {
             if let side = fixedCellSize {
-                grid(cols, side: side)
+                grid(cols, categories: cats, side: side)
             } else {
                 GeometryReader { geo in
-                    grid(cols, side: geo.size.width / wUnits)
+                    grid(cols, categories: cats, side: geo.size.width / wUnits)
                 }
                 // A matched aspect ratio gives the width-filling grid a definite,
                 // never-clipping height at any width — no scroll, no GeometryReader
@@ -224,7 +330,8 @@ struct FocusConsistencyGrid: View {
         }
     }
 
-    @ViewBuilder private func grid(_ cols: [[(date: Date, minutes: Int?)?]], side: CGFloat) -> some View {
+    @ViewBuilder private func grid(_ cols: [[(date: Date, minutes: Int?)?]],
+                                   categories: [Date: String], side: CGFloat) -> some View {
         let spacing = side * Self.spacingFactor
         VStack(alignment: .leading, spacing: 0) {
             if showsMonthLabels {
@@ -235,7 +342,8 @@ struct FocusConsistencyGrid: View {
                 ForEach(Array(cols.enumerated()), id: \.offset) { _, col in
                     VStack(spacing: spacing) {
                         ForEach(0..<7, id: \.self) { row in
-                            dayCell(col.indices.contains(row) ? col[row] : nil, side: side)
+                            dayCell(col.indices.contains(row) ? col[row] : nil,
+                                    categories: categories, side: side)
                         }
                     }
                 }
@@ -252,11 +360,20 @@ struct FocusConsistencyGrid: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { pulseToday = false }
     }
 
-    @ViewBuilder private func dayCell(_ entry: (date: Date, minutes: Int?)?, side: CGFloat) -> some View {
+    @ViewBuilder private func dayCell(_ entry: (date: Date, minutes: Int?)?,
+                                      categories: [Date: String], side: CGFloat) -> some View {
         if let entry {
+            let level = FocusConsistency.level(minutes: entry.minutes)
             let isFreshToday = entry.minutes != nil && calendar.isDateInToday(entry.date)
+            // A lit day takes the vivid hue of the MOST RECENTLY completed
+            // qualifying journey that day (subtle opacity ramp for intensity);
+            // an empty day stays the faint neutral.
+            let fill: Color = level > 0
+                ? FocusConsistency.categoryColor(categories[calendar.startOfDay(for: entry.date)])
+                    .opacity(FocusConsistency.intensityOpacity(level: level))
+                : FocusConsistency.emptyCellColor
             RoundedRectangle(cornerRadius: side * 0.28, style: .continuous)
-                .fill(FocusConsistency.color(level: FocusConsistency.level(minutes: entry.minutes)))
+                .fill(fill)
                 .frame(width: side, height: side)
                 .scaleEffect(isFreshToday && pulseToday ? 1.32 : 1)
                 .brightness(isFreshToday && pulseToday ? 0.12 : 0)

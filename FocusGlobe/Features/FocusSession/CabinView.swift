@@ -37,6 +37,11 @@ struct CabinView: View {
     /// Owned Store cabin decorations the pilot has placed (`StoreItem` ids) —
     /// purely additive dressing; the cabin stands alone without any of them.
     var equippedItemIDs: Set<String> = []
+    /// An optional custom backdrop shown *through the window* instead of the live
+    /// flight world. The Store passes its calm daytime sky here so the cabin
+    /// preview looks out on a bright afternoon (never the dark night world, which
+    /// read as a grey pane). `nil` everywhere else → the real journey world.
+    var windowBackdrop: AnyView? = nil
 
     var body: some View {
         GeometryReader { geo in
@@ -105,9 +110,13 @@ struct CabinView: View {
     private func assetCabin(asset: String, W: CGFloat, H: CGFloat, t: Double) -> some View {
         ZStack {
             Color(hex: 0x120C08)
-            ActiveFlightJourneyWorldView(elapsed: elapsed, seed: seed,
-                                         animated: animated, focusSky: focusSky)
-                .frame(width: W, height: H).clipped()
+            if let windowBackdrop {
+                windowBackdrop.frame(width: W, height: H).clipped()
+            } else {
+                ActiveFlightJourneyWorldView(elapsed: elapsed, seed: seed,
+                                             animated: animated, focusSky: focusSky)
+                    .frame(width: W, height: H).clipped()
+            }
             // The SAME fellow pilots as the exterior, drifting behind the cabin
             // art so they read *through the window* (non-interactive in here).
             if showPilots {
@@ -221,11 +230,18 @@ struct CabinView: View {
         let wood = LinearGradient(colors: [Color(hex: 0x6B4A2E), Color(hex: 0x3A2617)],
                                   startPoint: .top, endPoint: .bottom)
         return ZStack {
-            // The SAME live world as the exterior, seen through the glass.
-            ActiveFlightJourneyWorldView(elapsed: elapsed, seed: seed,
-                                         animated: animated, focusSky: focusSky)
-                .frame(width: winW, height: winH)
-                .clipShape(shape)
+            // The SAME live world as the exterior, seen through the glass — or a
+            // custom backdrop (the Store's daytime sky) when one is provided.
+            Group {
+                if let windowBackdrop {
+                    windowBackdrop
+                } else {
+                    ActiveFlightJourneyWorldView(elapsed: elapsed, seed: seed,
+                                                 animated: animated, focusSky: focusSky)
+                }
+            }
+            .frame(width: winW, height: winH)
+            .clipShape(shape)
             // The same fellow pilots drifting past, clipped inside the glass.
             if showPilots {
                 AmbientPilotsLayer(skyID: focusSky?.id ?? "classic",

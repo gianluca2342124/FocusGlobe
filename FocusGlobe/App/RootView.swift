@@ -66,6 +66,9 @@ struct RootView: View {
         }
         .animation(.easeOut(duration: 0.25), value: router.takeoffCurtain)
         .preferredColorScheme(appModel.settings.appearance.colorScheme)
+        // Install the supported status-bar container once (reparents the window
+        // root on first layout; zero-size, no lifecycle impact).
+        .installStatusBarContainer()
         // The branded in-app loading state covers the very first launch frame,
         // then crossfades away. No artificial delay — it is only ever briefly up.
         .overlay {

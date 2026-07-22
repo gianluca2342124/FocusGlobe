@@ -94,6 +94,9 @@ struct WidgetSnapshot: Codable, Hashable {
     var activeFocusDays = 0
     var focusedToday = false
     var activeDayOrdinals: [Int] = []
+    /// Local day-ordinal → focus-category key ("" = uncategorised) of the MOST
+    /// RECENTLY completed qualifying journey that day (parity with Passport).
+    var activeDayCategories: [Int: String] = [:]
     var selectedSkyName: String?
     var skyTopHex = 0
     var skyBottomHex = 0
@@ -199,6 +202,7 @@ extension WidgetSnapshot {
         activeFocusDays = v(.activeFocusDays, activeFocusDays)
         focusedToday = v(.focusedToday, focusedToday)
         activeDayOrdinals = v(.activeDayOrdinals, activeDayOrdinals)
+        activeDayCategories = v(.activeDayCategories, activeDayCategories)
         selectedSkyName = v(.selectedSkyName, selectedSkyName)
         skyTopHex = v(.skyTopHex, skyTopHex)
         skyBottomHex = v(.skyBottomHex, skyBottomHex)

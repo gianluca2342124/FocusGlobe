@@ -82,6 +82,11 @@ struct WidgetsGallerySection: View {
                             WidgetPreviewTile(item: item, locked: locked(item), side: Layout.pad(150, 178))
                         }
                         .buttonStyle(SoftPressStyle(scale: 0.98))
+                        // The name is no longer drawn on the tile, so carry the full
+                        // identity + lock state as the VoiceOver label.
+                        .accessibilityLabel(
+                            "\(item.name)\(item.isPro ? ", FocusGlobe PRO" : ", free")\(locked(item) ? ", locked" : "")")
+                        .accessibilityHint("Opens preview and how to add")
                     }
                 }
                 .padding(.vertical, 4)
@@ -112,27 +117,20 @@ private struct WidgetPreviewTile: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                 .padding(side * 0.12)
 
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 5) {
-                    Text(item.isPro ? "PRO" : "FREE")
-                        .font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(0.6)
-                        .foregroundStyle(item.isPro ? WGTheme.gold : WGTheme.inkSoft)
-                        .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(Capsule().fill((item.isPro ? WGTheme.gold : Color.white).opacity(0.18)))
-                    if locked {
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 9, weight: .heavy))
-                            .foregroundStyle(WGTheme.gold)
-                    }
+            // Image-only preview: the card + signature glyph read as the widget
+            // itself. Only the PRO/lock affordance remains (no name, no size
+            // labels) — the identity + families live in the detail sheet.
+            HStack(spacing: 5) {
+                Text(item.isPro ? "PRO" : "FREE")
+                    .font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(0.6)
+                    .foregroundStyle(item.isPro ? WGTheme.gold : WGTheme.inkSoft)
+                    .padding(.horizontal, 6).padding(.vertical, 2)
+                    .background(Capsule().fill((item.isPro ? WGTheme.gold : Color.white).opacity(0.18)))
+                if locked {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 9, weight: .heavy))
+                        .foregroundStyle(WGTheme.gold)
                 }
-                Text(item.name)
-                    .font(.system(size: side * 0.10, weight: .bold, design: .rounded))
-                    .foregroundStyle(WGTheme.ink)
-                    .lineLimit(1).minimumScaleFactor(0.7)
-                Text(item.families.joined(separator: " · "))
-                    .font(.system(size: side * 0.066, weight: .semibold, design: .rounded))
-                    .foregroundStyle(WGTheme.inkSoft)
-                    .lineLimit(1).minimumScaleFactor(0.7)
             }
             .padding(side * 0.11)
         }

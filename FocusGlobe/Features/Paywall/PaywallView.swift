@@ -26,27 +26,6 @@ struct PaywallView: View {
     // Privacy / Terms links are centralised and configurable in `LegalLinks`
     // (replace the placeholder URLs there before release — see APP_STORE_READINESS.md).
 
-    /// One cell of the Free-vs-PRO comparison table.
-    private enum PaywallCell { case yes, no, text(String) }
-
-    /// The REAL Free vs FocusGlobe PRO breakdown — actual functionality, not a
-    /// row of identical checkmarks. Mirrors the live gates (Online, invites,
-    /// Infinite, pause, widgets, ads).
-    private let comparisonRows: [(feature: String, free: PaywallCell, pro: PaywallCell)] = [
-        ("Solo focus flights",        .yes,             .yes),
-        ("Skies",                     .text("Limited"), .text("All")),
-        ("Balloons & cabin items",    .text("Starter"), .text("All")),
-        ("Focus together (Online)",   .no,              .yes),
-        ("Private flights & invites", .no,              .yes),
-        ("Set focus durations",       .yes,             .yes),
-        ("Infinite duration",         .no,              .yes),
-        ("Pause a flight",            .no,              .yes),
-        ("Focus sounds & music",      .text("Wind"),    .text("All")),
-        ("Home & Lock widgets",       .text("2"),       .text("All")),
-        ("Ads",                       .text("Shown"),   .text("None")),
-        ("Rewards",                   .text("1×"),      .text("2×")),
-    ]
-
     /// The paywall hero uses the premium **King** balloon via the BalloonSkin
     /// model mapping (so a future asset rename stays safe). Falls back to the
     /// default skin / vector balloon if the image is missing.
@@ -76,7 +55,7 @@ struct PaywallView: View {
                                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                                 .foregroundStyle(.white.opacity(0.65))
                         }
-                        comparisonTable
+                        PaywallComparisonTable(highlighted: context.comparisonHighlight)
                     }
                     .padding(.bottom, AppSpacing.xs)
                 }
@@ -253,71 +232,6 @@ struct PaywallView: View {
         }
         .frame(height: h * 1.08)
         .frame(maxWidth: .infinity)
-    }
-
-    /// The Free vs FocusGlobe PRO comparison table — the honest breakdown that
-    /// replaces the old identical-checkmark list.
-    private var comparisonTable: some View {
-        VStack(spacing: 0) {
-            // Header row.
-            HStack(spacing: 0) {
-                Text("What you get")
-                    .font(.system(size: Layout.pad(12.5, 15), weight: .heavy, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.9))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Text("Free")
-                    .font(.system(size: 12, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.55))
-                    .frame(width: Layout.pad(58, 70))
-                Text("PRO")
-                    .font(.system(size: 12, weight: .heavy, design: .rounded))
-                    .foregroundStyle(AppColors.gold)
-                    .frame(width: Layout.pad(64, 78))
-            }
-            .padding(.bottom, 8)
-            ForEach(Array(comparisonRows.enumerated()), id: \.offset) { idx, row in
-                if idx > 0 {
-                    Rectangle().fill(.white.opacity(0.08)).frame(height: 1)
-                }
-                HStack(spacing: 0) {
-                    Text(row.feature)
-                        .font(.system(size: Layout.pad(13.5, 16), weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.92))
-                        .lineLimit(1).minimumScaleFactor(0.7)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    comparisonCell(row.free, gold: false).frame(width: Layout.pad(58, 70))
-                    comparisonCell(row.pro, gold: true).frame(width: Layout.pad(64, 78))
-                }
-                .padding(.vertical, 8)
-            }
-        }
-        .padding(AppSpacing.md)
-        .background(
-            RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
-                    .fill(Color.black.opacity(0.22)))
-                .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
-                    .strokeBorder(AppColors.gold.opacity(0.25), lineWidth: 1))
-        )
-    }
-
-    @ViewBuilder private func comparisonCell(_ cell: PaywallCell, gold: Bool) -> some View {
-        switch cell {
-        case .yes:
-            Image(systemName: "checkmark")
-                .font(.system(size: 12, weight: .heavy))
-                .foregroundStyle(gold ? AppColors.gold : .white.opacity(0.6))
-        case .no:
-            Image(systemName: "minus")
-                .font(.system(size: 12, weight: .heavy))
-                .foregroundStyle(.white.opacity(0.28))
-        case .text(let s):
-            Text(s)
-                .font(.system(size: Layout.pad(11.5, 13.5), weight: .bold, design: .rounded))
-                .foregroundStyle(gold ? AppColors.gold : .white.opacity(0.62))
-                .lineLimit(1).minimumScaleFactor(0.7)
-        }
     }
 
     // MARK: Already Pro
@@ -558,5 +472,99 @@ struct PaywallView: View {
             let ok = await appModel.restorePurchases()
             if ok { dismiss() }
         }
+    }
+}
+
+// MARK: - Shared Free-vs-PRO comparison
+
+/// The ONE Free-vs-PRO comparison used by every paywall context. Exactly eight
+/// benefit rows in a fixed order (No Ads is deliberately second), checkmark /
+/// dash values only, PRO in subtle gold. The row that matches the opening
+/// context is gently highlighted. Conversion-focused: Free includes only Solo
+/// Focus; every other benefit is a PRO unlock, so the PRO column is a full
+/// column of gold checks. No "What you get" header, no spreadsheet feel.
+struct PaywallComparisonTable: View {
+    /// The benefit row to spotlight (nil = broad entry → nothing highlighted).
+    var highlighted: String? = nil
+
+    /// (title, includedInFree). Order is fixed and must not change. PRO includes
+    /// everything, so its column is always a gold check.
+    private static let rows: [(title: String, free: Bool)] = [
+        ("Solo Focus",        true),
+        ("No Ads",            false),
+        ("Online Mode",       false),
+        ("Invite Friends",    false),
+        ("Infinite Focus",    false),
+        ("Pause Anytime",     false),
+        ("PRO Widgets",       false),
+        ("Exclusive Content", false),
+    ]
+
+    private var freeWidth: CGFloat { Layout.pad(52, 64) }
+    private var proWidth: CGFloat { Layout.pad(56, 70) }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Column captions only — deliberately no "What you get" header.
+            HStack(spacing: 0) {
+                Spacer(minLength: 0)
+                Text("Free")
+                    .font(.system(size: 11.5, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.5))
+                    .frame(width: freeWidth)
+                Text("PRO")
+                    .font(.system(size: 11.5, weight: .heavy, design: .rounded))
+                    .foregroundStyle(AppColors.gold)
+                    .frame(width: proWidth)
+            }
+            .padding(.bottom, 6)
+            .padding(.horizontal, 8)
+
+            ForEach(Array(Self.rows.enumerated()), id: \.offset) { _, row in
+                let isHighlighted = row.title == highlighted
+                HStack(spacing: 0) {
+                    Text(row.title)
+                        .font(.system(size: Layout.pad(15, 17),
+                                      weight: isHighlighted ? .bold : .medium, design: .rounded))
+                        .foregroundStyle(isHighlighted ? .white : .white.opacity(0.9))
+                        .lineLimit(1).minimumScaleFactor(0.75)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    mark(included: row.free, gold: false).frame(width: freeWidth)
+                    mark(included: true, gold: true).frame(width: proWidth)
+                }
+                .padding(.vertical, Layout.pad(9, 11))
+                .padding(.horizontal, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                        .fill(AppColors.gold.opacity(isHighlighted ? 0.15 : 0))
+                        .overlay(alignment: .leading) {
+                            if isHighlighted {
+                                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                    .fill(AppColors.gold)
+                                    .frame(width: 3)
+                                    .padding(.vertical, 7)
+                            }
+                        }
+                )
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(row.title). \(row.free ? "Included in Free and PRO" : "PRO only").")
+            }
+        }
+        .padding(Layout.pad(14, 18))
+        .background(
+            RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
+                    .fill(Color.black.opacity(0.22)))
+                .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
+                    .strokeBorder(AppColors.gold.opacity(0.28), lineWidth: 1))
+        )
+    }
+
+    @ViewBuilder private func mark(included: Bool, gold: Bool) -> some View {
+        Image(systemName: included ? "checkmark" : "minus")
+            .font(.system(size: 13, weight: .heavy))
+            .foregroundStyle(included ? (gold ? AppColors.gold : .white.opacity(0.62))
+                                      : .white.opacity(0.26))
     }
 }

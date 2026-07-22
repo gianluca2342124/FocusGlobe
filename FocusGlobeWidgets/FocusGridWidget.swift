@@ -6,9 +6,13 @@ import WidgetKit
 /// The SAME six-month span as the app's Passport/Streak grid (26 rolling weeks ×
 /// 7 rows, newest week on the right), rebuilt on the widget from the shared set
 /// of active local-day ordinals. No scrolling; sizes itself to the available
-/// width. Active/inactive only (the widget doesn't need per-day intensity).
+/// width. Each lit day takes its focus-category hue (parity with Passport);
+/// intensity isn't needed at widget scale.
 struct WFocusGrid: View {
     let activeOrdinals: Set<Int>
+    /// Local day-ordinal → category key of that day's latest qualifying journey.
+    /// Empty (older snapshot) ⇒ every lit day falls back to the signature gold.
+    var categories: [Int: String] = [:]
     var weeks: Int = 26
 
     private static let spacingFactor: CGFloat = 0.28
@@ -48,7 +52,7 @@ struct WFocusGrid: View {
             let active = activeOrdinals.contains(ord)
             let isToday = ord == todayOrd
             RoundedRectangle(cornerRadius: side * 0.28, style: .continuous)
-                .fill(active ? WTheme.gold : WTheme.hair)
+                .fill(active ? WTheme.category(categories[ord]) : WTheme.hair)
                 .overlay(
                     RoundedRectangle(cornerRadius: side * 0.28, style: .continuous)
                         .strokeBorder(WTheme.ink.opacity(isToday ? 0.9 : 0), lineWidth: 1)
@@ -94,7 +98,8 @@ struct FocusGridWidgetView: View {
                             .foregroundStyle(WTheme.ink)
                     }
                 }
-                WFocusGrid(activeOrdinals: Set(snapshot.activeDayOrdinals))
+                WFocusGrid(activeOrdinals: Set(snapshot.activeDayOrdinals),
+                           categories: snapshot.activeDayCategories)
                     .frame(maxWidth: .infinity)
                 HStack(spacing: 12) {
                     Text("\(snapshot.activeFocusDays) focus days")

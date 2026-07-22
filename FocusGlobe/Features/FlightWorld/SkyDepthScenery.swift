@@ -111,66 +111,87 @@ enum SkyWorld {
 
     @ViewBuilder
     static func desertNight(W: CGFloat, H: CGFloat, t: Double, k: Double) -> some View {
-        // FOUR authored dune depth layers — each a BROAD, ROUNDED, wind-shaped
-        // mass with long shallow slopes (never a pointed peak or sine wave).
-        // Farthest reads tiny, hazy and cool; nearest is a large smooth
-        // foreground dune with a crisp moonlit crest. A single distant camp
-        // nestles on the far ridge.
-        let farthest: [(x: CGFloat, h: CGFloat, wind: CGFloat, lee: CGFloat)] = [
-            (0.08, 0.30, 0.22, 0.18), (0.30, 0.40, 0.26, 0.20),
-            (0.52, 0.28, 0.22, 0.17), (0.74, 0.36, 0.24, 0.19), (0.95, 0.30, 0.20, 0.16),
+        // FOUR authored dune layers, each ONE continuous wind-shaped sand-line
+        // (SandDune) — a sweeping, asymmetric ridge with long shallow windward
+        // rises and shorter, steeper leeward falls. Never a row of semicircular
+        // humps, never a sine wave, never identical paths rescaled: every layer
+        // has its own crest line. Shadows are cool indigo / plum (not black); the
+        // crests catch cool moonlight; a warm wash + cool haze sit at the horizon.
+        // A single tiny camp nestles on the broad far ridge. (Desert Night only.)
+        let farDrift0 = drift(t, depth: 0, points: 5)
+        let farDrift1 = drift(t, depth: 0, points: 8)
+        let midDrift  = drift(t, depth: 1, points: 12)
+        let nearDrift = drift(t, depth: 2, points: 16)
+
+        // Layer 1 — farthest: a low, gentle field just off the horizon.
+        let farthest: [(x: CGFloat, y: CGFloat)] = [
+            (-0.05, 0.46), (0.14, 0.64), (0.30, 0.50), (0.50, 0.68),
+            (0.68, 0.52), (0.86, 0.62), (1.05, 0.50),
         ]
-        let far: [(x: CGFloat, h: CGFloat, wind: CGFloat, lee: CGFloat)] = [
-            (0.12, 0.34, 0.30, 0.24), (0.42, 0.46, 0.36, 0.28),
-            (0.70, 0.36, 0.32, 0.26), (0.93, 0.42, 0.32, 0.26),
+        // Layer 2 — far: a BROAD distant ridge with a dominant crest the camp
+        // rests on (x ≈ 0.30).
+        let far: [(x: CGFloat, y: CGFloat)] = [
+            (-0.05, 0.44), (0.10, 0.60), (0.30, 0.80), (0.48, 0.54),
+            (0.72, 0.70), (0.90, 0.52), (1.05, 0.60),
         ]
-        let mid: [(x: CGFloat, h: CGFloat, wind: CGFloat, lee: CGFloat)] = [
-            (0.06, 0.44, 0.36, 0.30), (0.44, 0.56, 0.42, 0.36), (0.82, 0.48, 0.38, 0.32),
+        // Layer 3 — mid: large, flowing dunes; a saddle near x ≈ 0.30 keeps the
+        // camp uncovered.
+        let mid: [(x: CGFloat, y: CGFloat)] = [
+            (-0.05, 0.40), (0.12, 0.66), (0.30, 0.48), (0.56, 0.86),
+            (0.78, 0.56), (1.05, 0.70),
         ]
-        let near: [(x: CGFloat, h: CGFloat, wind: CGFloat, lee: CGFloat)] = [
-            (0.28, 0.52, 0.46, 0.42), (0.80, 0.60, 0.50, 0.46),
+        // Layer 4 — near: the big, clean foreground dune mass reaching the very
+        // bottom edge; long sweeping windward flanks, a low shoulder near x ≈ 0.30.
+        let near: [(x: CGFloat, y: CGFloat)] = [
+            (-0.05, 0.52), (0.08, 0.62), (0.30, 0.56), (0.52, 0.94),
+            (0.74, 0.64), (0.92, 0.96), (1.05, 0.82),
         ]
+
         ZStack {
-            // A low warm horizon wash behind the dunes (cool shadow valleys read
-            // from the dark plane bottoms).
-            LinearGradient(colors: [.clear, Color(hex: 0xE8A85E).opacity(0.14 * k)],
+            // Warm horizon light + a soft cool haze band where the sand meets the
+            // night sky (atmosphere, and it lifts the distant ridges out of black).
+            LinearGradient(colors: [.clear, Color(hex: 0xE8A85E).opacity(0.18 * k)],
                            startPoint: .top, endPoint: .bottom)
-                .frame(width: W, height: H * 0.24)
-                .position(x: W / 2, y: H * 0.80)
-                .blur(radius: 8)
+                .frame(width: W, height: H * 0.22)
+                .position(x: W / 2, y: H * 0.78)
+                .blur(radius: 10)
+            Rectangle()
+                .fill(Color(hex: 0x6E6796).opacity(0.10 * k))
+                .frame(width: W, height: H * 0.12)
+                .position(x: W / 2, y: H * 0.75)
+                .blur(radius: 14)
 
-            // Layer 1 — farthest: small, hazy, cool, barely lifted off the horizon.
-            plane(DuneField(crests: farthest, parallax: drift(t, depth: 0, points: 5)),
-                  base: 0.84, height: 0.16, tint: Color(hex: 0x4A3A54),
-                  top: 0.18, bottom: 0.42, k: k, W: W, H: H)
+            // Layer 1 — farthest: hazy, cool indigo, barely lifted off the horizon.
+            plane(SandDune(anchors: farthest, parallax: farDrift0),
+                  base: 0.84, height: 0.16, tint: Color(hex: 0x565274),
+                  top: 0.28, bottom: 0.52, k: k, W: W, H: H)
 
-            // Layer 2 — far: the ridge the camp sits on.
-            plane(DuneField(crests: far, parallax: drift(t, depth: 0, points: 8)),
-                  base: 0.90, height: 0.20, tint: Color(hex: 0x6A4448),
-                  top: 0.34, bottom: 0.62, k: k, W: W, H: H)
+            // Layer 2 — far: the broad plum ridge the camp sits on.
+            plane(SandDune(anchors: far, parallax: farDrift1),
+                  base: 0.90, height: 0.20, tint: Color(hex: 0x4C4668),
+                  top: 0.40, bottom: 0.66, k: k, W: W, H: H)
             // The distant desert camp, nestled on the far ridge (small, secondary),
-            // drawn before the nearer dunes so they tuck its base — it reads far.
+            // drawn before the nearer dunes so their fronts tuck its base.
             desertCamp(W: W, H: H, t: t, k: k)
 
-            // Layer 3 — mid, with its own warm moonlit crest highlight.
-            plane(DuneField(crests: mid, parallax: drift(t, depth: 1, points: 12)),
-                  base: 0.96, height: 0.26, tint: Color(hex: 0x412A38),
-                  top: 0.55, bottom: 0.82, k: k, W: W, H: H)
-            DuneField(crests: mid, parallax: drift(t, depth: 1, points: 12))
-                .stroke(Color(hex: 0xE8B080).opacity(0.16 * k), lineWidth: 1.1)
+            // Layer 3 — mid: large flowing dunes + a cool moonlit crest highlight.
+            plane(SandDune(anchors: mid, parallax: midDrift),
+                  base: 0.96, height: 0.26, tint: Color(hex: 0x3F3859),
+                  top: 0.56, bottom: 0.82, k: k, W: W, H: H)
+            SandDune(anchors: mid, parallax: midDrift)
+                .stroke(Color(hex: 0xCBD0EE).opacity(0.14 * k), lineWidth: 1.1)
                 .frame(width: W, height: H * 0.26)
-                .position(x: W / 2, y: H - H * 0.02 - (H * 0.26) / 2)
+                .position(x: W / 2, y: H - H * 0.04 - (H * 0.26) / 2)
                 .blur(radius: 0.6)
 
-            // Layer 4 — the large, smooth foreground dune mass, with a crisp
-            // moonlit crest caught in the SAME geometry so the highlight rides
-            // exactly on the ridge.
+            // Layer 4 — the large, smooth foreground dune (deep cool indigo, NOT
+            // black), with a crisp moonlit crest riding the SAME geometry.
             ZStack {
-                plane(DuneField(crests: near, parallax: drift(t, depth: 2, points: 16)),
-                      base: 1.0, height: 0.34, tint: Color(hex: 0x241726),
-                      top: 0.82, bottom: 0.97, k: k, W: W, H: H)
-                DuneField(crests: near, parallax: drift(t, depth: 2, points: 16))
-                    .stroke(Color(hex: 0xF0BE8A).opacity(0.26 * k), lineWidth: 1.5)
+                plane(SandDune(anchors: near, parallax: nearDrift),
+                      base: 1.0, height: 0.34, tint: Color(hex: 0x322B49),
+                      top: 0.80, bottom: 0.96, k: k, W: W, H: H)
+                SandDune(anchors: near, parallax: nearDrift)
+                    .stroke(Color(hex: 0xD8D2F0).opacity(0.24 * k), lineWidth: 1.5)
                     .frame(width: W, height: H * 0.34)
                     .position(x: W / 2, y: H - H * 0.17)
                     .blur(radius: 0.5)
@@ -182,8 +203,11 @@ enum SkyWorld {
     /// lantern lights that gently flicker, and a couple of faint camels — all
     /// small and secondary, never cartoonish or branded.
     private static func desertCamp(W: CGFloat, H: CGFloat, t: Double, k: Double) -> some View {
-        let cx = W * 0.66 + drift(t, depth: 0, points: 8)   // rides the far ridge's parallax
-        let cy = H * 0.80
+        // Rides the far ridge's dominant crest (anchor x ≈ 0.30) and drift, so it
+        // sits ON the sand; the mid/near dunes have a saddle here so it stays
+        // visible while their fronts tuck its base.
+        let cx = W * 0.30 + drift(t, depth: 0, points: 8)
+        let cy = H * 0.745
         let cw = W * 0.085
         let ch = H * 0.026
         func flicker(_ phase: Double) -> Double {

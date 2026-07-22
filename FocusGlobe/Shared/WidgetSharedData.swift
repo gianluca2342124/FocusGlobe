@@ -94,6 +94,11 @@ struct WidgetSnapshot: Codable, Hashable {
     /// Local day-ordinals (days since 1970-01-01, local calendar) that are
     /// active — the 26-week Focus Grid is rebuilt from this set on the widget.
     var activeDayOrdinals: [Int] = []
+    /// Local day-ordinal → focus-category key ("" = uncategorised) of the MOST
+    /// RECENTLY completed qualifying journey that day, so the widget grid tints
+    /// each lit day by category (parity with Passport). Missing ⇒ older snapshot
+    /// ⇒ the grid falls back to a single accent.
+    var activeDayCategories: [Int: String] = [:]
     /// The selected Sky's name + gradient (idle Focus Now / Streak backdrop).
     var selectedSkyName: String?
     var skyTopHex = 0
@@ -187,6 +192,7 @@ extension WidgetSnapshot {
         activeFocusDays = v(.activeFocusDays, activeFocusDays)
         focusedToday = v(.focusedToday, focusedToday)
         activeDayOrdinals = v(.activeDayOrdinals, activeDayOrdinals)
+        activeDayCategories = v(.activeDayCategories, activeDayCategories)
         selectedSkyName = v(.selectedSkyName, selectedSkyName)
         skyTopHex = v(.skyTopHex, skyTopHex)
         skyBottomHex = v(.skyBottomHex, skyBottomHex)

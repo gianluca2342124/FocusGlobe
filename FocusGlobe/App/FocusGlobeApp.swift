@@ -12,11 +12,9 @@ struct FocusGlobeApp: App {
 
     init() {
         LaunchLog.mark("FocusGlobeApp.init")
-        // Install the screen-scoped status-bar override (public ObjC-runtime
-        // getter swap) once, before any screen can request a style.
-        #if canImport(UIKit)
-        StatusBarOverride.installIfNeeded()
-        #endif
+        // The screen-scoped status bar is now driven by a container view
+        // controller reparented once at first layout (see RootView
+        // `.installStatusBarContainer()`) — no ObjC runtime swap.
         // Decode + trim every balloon-skin image in the background NOW, so the
         // first Shop tap never stalls on synchronous image work.
         BalloonSkinImage.warmUp()
