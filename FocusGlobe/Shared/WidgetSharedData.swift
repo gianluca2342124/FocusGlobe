@@ -34,6 +34,13 @@ struct WidgetGoal: Codable, Hashable {
     var fraction: Double { target <= 0 ? 1 : min(1, current / target) }
 }
 
+/// A badge, flattened for the Badge Collection widget.
+struct WidgetBadge: Codable, Hashable {
+    var name: String
+    var icon: String
+    var earned: Bool
+}
+
 /// A small, read-only snapshot of app state the widgets render. Written by the
 /// app whenever the underlying data changes; read by the widget timeline.
 struct WidgetSnapshot: Codable, Hashable {
@@ -76,7 +83,40 @@ struct WidgetSnapshot: Codable, Hashable {
     var goalsTotal = 0
     var canClaimReward = false
 
+    // MARK: Final-5 widget data
+    /// Total real completed focused seconds (cancelled excluded) — the ONE
+    /// authoritative total, shared with the app.
+    var totalFocusedSeconds = 0
+    /// Distinct local calendar days with ≥1 qualifying (≥300 s) session.
+    var activeFocusDays = 0
+    /// Whether TODAY already qualifies (drives the Streak Companion's state).
+    var focusedToday = false
+    /// Local day-ordinals (days since 1970-01-01, local calendar) that are
+    /// active — the 26-week Focus Grid is rebuilt from this set on the widget.
+    var activeDayOrdinals: [Int] = []
+    /// The selected Sky's name + gradient (idle Focus Now / Streak backdrop).
+    var selectedSkyName: String?
+    var skyTopHex = 0
+    var skyBottomHex = 0
+    /// Active flight (Focus Now live state). `activeEndDate` drives a native
+    /// `Text(timerInterval:)` countdown; nil endDate + `activeInfinite` = ∞.
+    var activeFlight = false
+    var activeEndDate: Date?
+    var activeInfinite = false
+    var activeSkyName: String?
+    var activeCategory: String?
+    // Badges (Badge Collection)
+    var badges: [WidgetBadge] = []
+    var badgeUnlockedCount = 0
+    var badgeTotal = 0
+
     var updatedAt = Date(timeIntervalSince1970: 0)
+
+    /// Total focused time as minutes (widget stat).
+    var totalFocusedMinutes: Int { totalFocusedSeconds / 60 }
+
+    /// The next locked badge to hint at, if any.
+    var nextBadge: WidgetBadge? { badges.first { !$0.earned } }
 
     /// Laps "around the Earth" earned so far (focus miles are distance-based).
     var aroundEarthLaps: Double {
@@ -143,6 +183,21 @@ extension WidgetSnapshot {
         goalsCompleted = v(.goalsCompleted, goalsCompleted)
         goalsTotal = v(.goalsTotal, goalsTotal)
         canClaimReward = v(.canClaimReward, canClaimReward)
+        totalFocusedSeconds = v(.totalFocusedSeconds, totalFocusedSeconds)
+        activeFocusDays = v(.activeFocusDays, activeFocusDays)
+        focusedToday = v(.focusedToday, focusedToday)
+        activeDayOrdinals = v(.activeDayOrdinals, activeDayOrdinals)
+        selectedSkyName = v(.selectedSkyName, selectedSkyName)
+        skyTopHex = v(.skyTopHex, skyTopHex)
+        skyBottomHex = v(.skyBottomHex, skyBottomHex)
+        activeFlight = v(.activeFlight, activeFlight)
+        activeEndDate = v(.activeEndDate, activeEndDate)
+        activeInfinite = v(.activeInfinite, activeInfinite)
+        activeSkyName = v(.activeSkyName, activeSkyName)
+        activeCategory = v(.activeCategory, activeCategory)
+        badges = v(.badges, badges)
+        badgeUnlockedCount = v(.badgeUnlockedCount, badgeUnlockedCount)
+        badgeTotal = v(.badgeTotal, badgeTotal)
         updatedAt = v(.updatedAt, updatedAt)
     }
 }

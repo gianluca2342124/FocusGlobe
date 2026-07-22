@@ -129,9 +129,9 @@ final class AppRouter: ObservableObject {
         case "choose", "journey", "start":
             // The flight setup flow lives on Home now (no map route selection).
             path.removeAll(); selectedTab = .home
-        case "passport", "stats", "goals", "missions", "collection":
+        case "passport", "stats", "goals", "missions", "collection", "badges":
             path.removeAll(); selectedTab = .passport
-        case "streak", "resume", "current", "home", "":
+        case "streak", "resume", "current", "flight", "home", "":
             // Home is where the live streak lives and it auto-offers a resume
             // when an unfinished journey is saved.
             path.removeAll(); selectedTab = .home

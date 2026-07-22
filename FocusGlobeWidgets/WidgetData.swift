@@ -40,6 +40,13 @@ struct WidgetGoal: Codable, Hashable {
     var fraction: Double { target <= 0 ? 1 : min(1, current / target) }
 }
 
+/// A badge, flattened for the Badge Collection widget.
+struct WidgetBadge: Codable, Hashable {
+    var name: String
+    var icon: String
+    var earned: Bool
+}
+
 /// A small, read-only snapshot of app state the widgets render. Written by the
 /// app whenever the underlying data changes; read by the widget timeline.
 struct WidgetSnapshot: Codable, Hashable {
@@ -82,12 +89,32 @@ struct WidgetSnapshot: Codable, Hashable {
     var goalsTotal = 0
     var canClaimReward = false
 
+    // MARK: Final-5 widget data (keep in sync with the app's WidgetSharedData)
+    var totalFocusedSeconds = 0
+    var activeFocusDays = 0
+    var focusedToday = false
+    var activeDayOrdinals: [Int] = []
+    var selectedSkyName: String?
+    var skyTopHex = 0
+    var skyBottomHex = 0
+    var activeFlight = false
+    var activeEndDate: Date?
+    var activeInfinite = false
+    var activeSkyName: String?
+    var activeCategory: String?
+    var badges: [WidgetBadge] = []
+    var badgeUnlockedCount = 0
+    var badgeTotal = 0
+
     var updatedAt = Date(timeIntervalSince1970: 0)
 
     /// Laps "around the Earth" earned so far (focus miles are distance-based).
     var aroundEarthLaps: Double {
         Double(totalFocusMiles) / Double(FocusGlobeShared.earthCircumferenceKm)
     }
+
+    var totalFocusedMinutes: Int { totalFocusedSeconds / 60 }
+    var nextBadge: WidgetBadge? { badges.first { !$0.earned } }
 
     /// Rich sample data for previews / the widget gallery.
     static let placeholder = WidgetSnapshot(
@@ -109,7 +136,26 @@ struct WidgetSnapshot: Codable, Hashable {
             WidgetGoal(title: "Earn 60 miles", systemImage: "sparkles", current: 60, target: 60),
         ],
         goalsCompleted: 2, goalsTotal: 4, canClaimReward: false,
+        totalFocusedSeconds: 41_400, activeFocusDays: 37, focusedToday: true,
+        activeDayOrdinals: WidgetSnapshot.sampleOrdinals,
+        selectedSkyName: "Desert Night", skyTopHex: 0x0A0A1E, skyBottomHex: 0x8E5A46,
+        badges: [
+            WidgetBadge(name: "First Flight", icon: "airplane.departure", earned: true),
+            WidgetBadge(name: "10 Flights", icon: "10.circle.fill", earned: true),
+            WidgetBadge(name: "7-Day Streak", icon: "bolt.heart.fill", earned: true),
+            WidgetBadge(name: "500 Focus Minutes", icon: "clock.badge.checkmark.fill", earned: true),
+            WidgetBadge(name: "1,000 Focus Minutes", icon: "infinity.circle.fill", earned: false),
+            WidgetBadge(name: "14-Day Streak", icon: "flame.circle.fill", earned: false),
+        ],
+        badgeUnlockedCount: 4, badgeTotal: 6,
         updatedAt: Date())
+
+    /// A pleasant, deterministic set of recent active-day ordinals for previews.
+    static let sampleOrdinals: [Int] = {
+        let todayOrd = Int((Date().timeIntervalSince1970 / 86_400).rounded(.down))
+        // A believable ~5-days-a-week pattern over the last ~12 weeks.
+        return (0..<84).compactMap { d in (d % 7 != 5 && d % 7 != 6 && d % 3 != 2) ? todayOrd - d : nil }
+    }()
 }
 
 extension WidgetSnapshot {
@@ -149,6 +195,21 @@ extension WidgetSnapshot {
         goalsCompleted = v(.goalsCompleted, goalsCompleted)
         goalsTotal = v(.goalsTotal, goalsTotal)
         canClaimReward = v(.canClaimReward, canClaimReward)
+        totalFocusedSeconds = v(.totalFocusedSeconds, totalFocusedSeconds)
+        activeFocusDays = v(.activeFocusDays, activeFocusDays)
+        focusedToday = v(.focusedToday, focusedToday)
+        activeDayOrdinals = v(.activeDayOrdinals, activeDayOrdinals)
+        selectedSkyName = v(.selectedSkyName, selectedSkyName)
+        skyTopHex = v(.skyTopHex, skyTopHex)
+        skyBottomHex = v(.skyBottomHex, skyBottomHex)
+        activeFlight = v(.activeFlight, activeFlight)
+        activeEndDate = v(.activeEndDate, activeEndDate)
+        activeInfinite = v(.activeInfinite, activeInfinite)
+        activeSkyName = v(.activeSkyName, activeSkyName)
+        activeCategory = v(.activeCategory, activeCategory)
+        badges = v(.badges, badges)
+        badgeUnlockedCount = v(.badgeUnlockedCount, badgeUnlockedCount)
+        badgeTotal = v(.badgeTotal, badgeTotal)
         updatedAt = v(.updatedAt, updatedAt)
     }
 }

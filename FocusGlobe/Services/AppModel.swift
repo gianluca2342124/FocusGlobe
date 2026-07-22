@@ -1341,8 +1341,99 @@ final class AppModel: ObservableObject {
         snap.goalsTotal = missions.count
         snap.canClaimReward = canClaimDailyMissionReward
 
+        // MARK: Final-5 widget data
+        // The ONE authoritative focused-time total (completed sessions only).
+        snap.totalFocusedSeconds = history.filter { $0.completed }.reduce(0) { $0 + max(0, $1.focusedSeconds) }
+        // Active focus days + today state + the 26-week grid's active day set,
+        // from the SAME model the Passport/Streak grid uses (300 s rule).
+        let cal = Calendar.current
+        let activeDays = FocusConsistency.activeDays(history: history, calendar: cal)
+        snap.activeFocusDays = activeDays.count
+        let today = cal.startOfDay(for: Date())
+        snap.focusedToday = activeDays[today] != nil
+        // Only the last ~26 weeks are needed for the grid; keep the payload small.
+        let cutoff = today.addingTimeInterval(-Double(26 * 7 + 2) * 86_400)
+        snap.activeDayOrdinals = activeDays.keys
+            .filter { $0 >= cutoff }
+            .map { Int((cal.startOfDay(for: $0).timeIntervalSince1970 / 86_400).rounded()) }
+        // The selected Sky's identity + gradient for the idle Focus Now backdrop.
+        let sky = selectedSky
+        snap.selectedSkyName = sky.name
+        snap.skyTopHex = Int(sky.moodPalette.first ?? 0x181721)
+        snap.skyBottomHex = Int(sky.moodPalette.last ?? 0x100F16)
+        // Active-flight live state (nil when idle).
+        snap.activeFlight = activeFlightSkyName != nil || activeFlightEndDate != nil || activeFlightInfinite
+        snap.activeEndDate = activeFlightEndDate
+        snap.activeInfinite = activeFlightInfinite
+        snap.activeSkyName = activeFlightSkyName
+        snap.activeCategory = activeFlightCategory
+        // Badges — real earned state (never fabricated).
+        let badges = makeWidgetBadges()
+        snap.badges = badges
+        snap.badgeUnlockedCount = badges.filter { $0.earned }.count
+        snap.badgeTotal = badges.count
+
         snap.updatedAt = Date()
         return snap
+    }
+
+    // MARK: Active-flight widget state (drives the Focus Now live timer)
+
+    private(set) var activeFlightEndDate: Date?
+    private(set) var activeFlightSkyName: String?
+    private(set) var activeFlightCategory: String?
+    private(set) var activeFlightInfinite = false
+
+    /// Called when a flight actually starts (or resumes) so the Focus Now widget
+    /// can show the live remaining time via a native timer. `endDate == nil` with
+    /// `infinite == true` renders ∞.
+    func flightDidStart(skyName: String, category: String?, endDate: Date?, infinite: Bool) {
+        activeFlightSkyName = skyName
+        activeFlightCategory = category
+        activeFlightEndDate = endDate
+        activeFlightInfinite = infinite
+        syncWidgets()
+    }
+
+    /// Called when a flight lands, is cancelled, or the session tears down.
+    func flightDidEnd() {
+        guard activeFlightSkyName != nil || activeFlightEndDate != nil || activeFlightInfinite else { return }
+        activeFlightSkyName = nil
+        activeFlightCategory = nil
+        activeFlightEndDate = nil
+        activeFlightInfinite = false
+        syncWidgets()
+    }
+
+    /// The badge set for the Badge Collection widget — a compact, real slice of
+    /// the Passport achievements (earned flags computed from live progress; never
+    /// fabricated). Ordered so unlocked badges surface first and the first locked
+    /// one is the "next" hint.
+    private func makeWidgetBadges() -> [WidgetBadge] {
+        let flights = progress.landings
+        let mins = lifetimeFocusMinutes
+        let best = progress.bestFocusMinutes
+        let streak = max(progress.currentStreak, progress.longestStreak)
+        let coins = progress.totalFocusMiles
+        let raw: [(String, String, Bool)] = [
+            ("First Flight", "airplane.departure", flights >= 1),
+            ("5 Flights", "5.circle.fill", flights >= 5),
+            ("10 Flights", "10.circle.fill", flights >= 10),
+            ("25 Flights", "airplane.circle.fill", flights >= 25),
+            ("25-Min Pilot", "25.circle.fill", best >= 25),
+            ("1 Hour Focused", "hourglass.bottomhalf.filled", best >= 60),
+            ("100 Focus Minutes", "clock.fill", mins >= 100),
+            ("500 Focus Minutes", "clock.badge.checkmark.fill", mins >= 500),
+            ("1,000 Focus Minutes", "infinity.circle.fill", mins >= 1000),
+            ("3-Day Streak", "flame.fill", streak >= 3),
+            ("7-Day Streak", "bolt.heart.fill", streak >= 7),
+            ("14-Day Streak", "flame.circle.fill", streak >= 14),
+            ("Focus Coin Saver", "circle.hexagongrid.circle.fill", coins >= 100),
+            ("PRO Pilot", "crown.fill", isPro),
+        ]
+        let earned = raw.filter { $0.2 }.map { WidgetBadge(name: $0.0, icon: $0.1, earned: true) }
+        let locked = raw.filter { !$0.2 }.map { WidgetBadge(name: $0.0, icon: $0.1, earned: false) }
+        return earned + locked
     }
 }
 

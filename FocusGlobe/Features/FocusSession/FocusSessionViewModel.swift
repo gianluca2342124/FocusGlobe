@@ -200,6 +200,13 @@ final class FocusSessionViewModel: ObservableObject {
         appModel.onlineFlightDidStart(skyID: FocusSky.matching(routeID: route.id)?.id ?? appModel.selectedSky.id,
                                       sessionID: onlineSessionID,
                                       expectedEndAt: expectedEnd)
+        // Publish the live-flight state for the Focus Now widget (endDate drives a
+        // native countdown; ∞ flights show endless).
+        let isInfinite = route.id.hasPrefix(FlightRouteFactory.infinityIDPrefix)
+        appModel.flightDidStart(skyName: (FocusSky.matching(routeID: route.id) ?? appModel.selectedSky).name,
+                                category: route.mood.displayName,
+                                endDate: isInfinite ? nil : expectedEnd,
+                                infinite: isInfinite)
     }
 
     func tearDown() {
@@ -214,6 +221,9 @@ final class FocusSessionViewModel: ObservableObject {
             appModel?.focusShield.clear(reason: .cancel)
         }
         appModel?.sound.stop()
+        // Clear the live-flight widget state (idempotent) so Focus Now returns to
+        // its idle "Start Focus" state.
+        appModel?.flightDidEnd()
     }
 
     /// Call when the scene becomes active so a backgrounded session catches up.
