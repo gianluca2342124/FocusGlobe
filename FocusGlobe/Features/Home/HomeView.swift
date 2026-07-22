@@ -686,20 +686,34 @@ private struct SkyPreviewFlightView: View {
         }
     }
 
+    /// A focus-minutes Sky is pure free progression (earned by focusing), so its
+    /// preview leads with the progress and shows NO PRO call-to-action.
+    private var isFreeMinutesSky: Bool {
+        if case .focusMinutes = sky.unlockRequirement { return true }
+        return false
+    }
+
     private var actions: some View {
         VStack(spacing: AppSpacing.sm) {
-            AppPrimaryButton(title: "Unlock FocusGlobe PRO", systemImage: "crown.fill") {
-                appModel.tapFeedback()
-                dismiss()
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { router.presentPaywall(context: .sky) }
-            }
-            if isPremiumOnly {
-                softSecondary(title: "Maybe later") { dismiss() }
-            } else {
-                Text("or")
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.6))
+            if isFreeMinutesSky {
+                // Fiji Lagoon (and any focus-minute Sky): the progress IS the hero;
+                // never a PRO upsell.
                 secondaryButton
+                softSecondary(title: "Keep focusing") { dismiss() }
+            } else {
+                AppPrimaryButton(title: "Unlock FocusGlobe PRO", systemImage: "crown.fill") {
+                    appModel.tapFeedback()
+                    dismiss()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { router.presentPaywall(context: .sky) }
+                }
+                if isPremiumOnly {
+                    softSecondary(title: "Maybe later") { dismiss() }
+                } else {
+                    Text("or")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.6))
+                    secondaryButton
+                }
             }
         }
     }
@@ -806,7 +820,7 @@ private struct SkyPreviewFlightView: View {
         case .invite(let n):
             return "Invite \(n) friend\(n == 1 ? "" : "s") or upgrade to FocusGlobe PRO to unlock \(sky.name)."
         case .focusMinutes(let n):
-            return "Focus \(n.formatted()) minutes or upgrade to FocusGlobe PRO to unlock \(sky.name)."
+            return "Focus \(n.formatted()) minutes to unlock \(sky.name) — free, just keep flying."
         case .streakDays(let n):
             return "Reach a \(n)-day streak or upgrade to FocusGlobe PRO to unlock \(sky.name)."
         case .free:

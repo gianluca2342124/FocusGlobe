@@ -288,10 +288,14 @@ final class AppModel: ObservableObject {
     /// all while active; otherwise the Sky must have earned its own 3 accepted
     /// invites (per-Sky unlocks — never global).
     func isSkyUnlocked(_ sky: FocusSky) -> Bool {
+        // Invite unlocks are SERVER-authoritative: the count is the verified
+        // `campaign_progress` RPC (distinct authenticated joiners, self excluded),
+        // never the client-side tally. A previously-earned invite Sky stays
+        // unlocked via the persisted `unlockedSkyIDs` grandfather set.
         SkyUnlock.isUnlocked(sky, isPro: isPro, unlockedSkyIDs: profile.unlockedSkyIDs ?? [],
                              focusMinutes: lifetimeFocusMinutes,
                              streakDays: progress.currentStreak,
-                             invites: rawInviteCount(for: sky))
+                             invites: onlineRef?.campaignProgress(skyID: sky.id) ?? 0)
     }
 
     /// Lifetime completed focus minutes — drives minute-based Sky unlocks.
