@@ -140,40 +140,51 @@ struct CabinView: View {
     // Equipped decorations placed over the cabin sill (approximate per-asset
     // anchors; subtle and premium, never overcrowded).
     @ViewBuilder private func assetEquippedProps(W: CGFloat, H: CGFloat, t: Double) -> some View {
-        if equippedItemIDs.contains("cabin-plant") {
-            CabinFern(t: animated ? t : 0)
-                .frame(width: W * 0.12, height: W * 0.15)
-                .position(x: W * 0.30, y: H * 0.50)
-        }
-        if equippedItemIDs.contains("cabin-teapot") {
-            CabinTeapot()
-                .frame(width: W * 0.15, height: W * 0.11)
-                .position(x: W * 0.70, y: H * 0.50)
-        }
-        newArtProps(W: W, H: H)
+        // Tiny Fern + Ceramic Teapot now flow through the SAME asset renderer as
+        // every other cabin object (they carry `imageName` "TinyFern" /
+        // "CeramicTeapot"), so `newArtProps` places them — with a procedural
+        // fallback until those Image Sets ship. No separate hard-coded blocks.
+        newArtProps(W: W, H: H, t: t)
     }
 
     /// Renders any equipped Cabin objects that ship as their own PNG (the new
     /// catalog art), anchored to a real surface by their `cabinPlacement` and
     /// spread along the sill so they don't stack. Never covers the window or timer.
-    @ViewBuilder private func newArtProps(W: CGFloat, H: CGFloat) -> some View {
+    @ViewBuilder private func newArtProps(W: CGFloat, H: CGFloat, t: Double) -> some View {
         let items = StoreItem.all.filter {
             equippedItemIDs.contains($0.id) && $0.imageName != nil && $0.cabinPlacement != .none
         }
         ForEach(items, id: \.id) { item in
-            cabinItemImage(item)
+            cabinItemImage(item, t: t)
                 .frame(width: W * itemScale(item), height: W * itemScale(item))
                 .position(x: W * anchorX(item, in: items), y: H * anchorY(item))
         }
     }
 
-    @ViewBuilder private func cabinItemImage(_ item: StoreItem) -> some View {
+    /// One cabin object drawn from its real asset — with a graceful procedural
+    /// fallback for Tiny Fern / Ceramic Teapot so they never vanish before their
+    /// PNGs are added (other items simply render nothing until their art ships).
+    @ViewBuilder private func cabinItemImage(_ item: StoreItem, t: Double) -> some View {
         #if canImport(UIKit)
         if let ui = UIImage(named: item.bestAssetName) {
             Image(uiImage: ui).resizable().scaledToFit()
                 .shadow(color: .black.opacity(0.32), radius: 6, y: 4)
+        } else {
+            cabinCompanionFallback(id: item.id, t: t)
         }
+        #else
+        cabinCompanionFallback(id: item.id, t: t)
         #endif
+    }
+
+    /// The procedural stand-in for the two companion pieces until their real
+    /// assets (`TinyFern`, `CeramicTeapot`) resolve.
+    @ViewBuilder private func cabinCompanionFallback(id: String, t: Double) -> some View {
+        switch id {
+        case "cabin-plant":  CabinFern(t: animated ? t : 0)
+        case "cabin-teapot": CabinTeapot()
+        default:             EmptyView()
+        }
     }
 
     private func itemScale(_ item: StoreItem) -> CGFloat {
@@ -349,13 +360,15 @@ struct CabinView: View {
 
     @ViewBuilder private func equippedProps(W: CGFloat, H: CGFloat, t: Double) -> some View {
         let sillTopY = H * 0.30 + (H * 0.42) / 2 - 6 - (H * 0.045) / 2
-        if equippedItemIDs.contains("cabin-plant") {
-            CabinFern(t: animated ? t : 0)
+        // Real Tiny Fern / Ceramic Teapot art when present, else the procedural
+        // piece — the SAME asset-or-fallback path as the asset cabin.
+        if equippedItemIDs.contains("cabin-plant"), let fern = StoreItem.byID("cabin-plant") {
+            cabinItemImage(fern, t: t)
                 .frame(width: W * 0.13, height: W * 0.16)
                 .position(x: W * 0.14, y: sillTopY - W * 0.055)
         }
-        if equippedItemIDs.contains("cabin-teapot") {
-            CabinTeapot()
+        if equippedItemIDs.contains("cabin-teapot"), let teapot = StoreItem.byID("cabin-teapot") {
+            cabinItemImage(teapot, t: t)
                 .frame(width: W * 0.16, height: W * 0.12)
                 .position(x: W * 0.85, y: sillTopY - W * 0.042)
         }

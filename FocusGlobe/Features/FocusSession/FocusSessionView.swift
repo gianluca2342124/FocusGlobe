@@ -455,6 +455,10 @@ struct FocusSessionView: View {
             withAnimation(.easeInOut(duration: 4.4).repeatForever(autoreverses: true)) { balloonBob = -14 }
             withAnimation(.easeInOut(duration: 7.5).repeatForever(autoreverses: true)) { balloonDrift = 9 }
         }
+        // Keep the screen awake for the whole active journey — finite, Infinite or
+        // paused — and restore normal auto-lock the instant the flight leaves the
+        // screen (end, cancel, or returning Home). Scoped to this view only.
+        .keepScreenAwake(true)
     }
 
     // The balloon is **tiny** (~7% of screen height) and stays roughly still,

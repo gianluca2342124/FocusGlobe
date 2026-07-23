@@ -382,16 +382,20 @@ struct PaywallView: View {
                 }
             }
             .frame(maxWidth: .infinity).frame(height: 56)
-            // The primary subscription CTA now wears the PRO multicolor gradient
-            // (white label keeps strong contrast). Purchase behaviour unchanged.
-            .background(Capsule().fill(ProBrand.gradient))
+            // The primary subscription CTA is a premium, restrained near-solid
+            // royal-blue — NOT the multicolor spectrum (reserved for the badge,
+            // the PRO column and selected outlines). White label keeps strong
+            // contrast on the dark navy; a subtle lower shadow gives depth.
+            // Purchase behaviour unchanged.
+            .background(Capsule().fill(ProBrand.primaryButton))
+            .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 1))
             // Subtle gloss sweep every few seconds (only on the live CTA).
             .overlay {
                 if available && !working {
                     shineSweep.clipShape(Capsule()).allowsHitTesting(false)
                 }
             }
-            .shadow(color: ProBrand.glow.opacity(0.5), radius: 16, y: 8)
+            .shadow(color: ProBrand.ctaBlue.opacity(0.45), radius: 16, y: 8)
             .opacity(available ? 1 : 0.5)
         }
         .buttonStyle(SoftPressStyle())
@@ -479,27 +483,28 @@ struct PaywallView: View {
 
 // MARK: - Shared Free-vs-PRO comparison
 
-/// The ONE Free-vs-PRO comparison used by every paywall context. Eight direct,
+/// The ONE Free-vs-PRO comparison used by every paywall context. Nine direct,
 /// benefit-led rows (No Ads deliberately second), checkmark / dash values only.
 /// It is NOT a boxed table card: it sits straight on the paywall background, and
-/// the PRO column is a full-height GOLD bar behind its checkmarks — the strong,
-/// conversion-focused emphasis (mirrors the reference layout). The row matching
-/// the opening context is highlighted in gold. Free includes only Solo Focus;
-/// every other benefit is a PRO unlock, so the PRO column is all checks.
+/// the PRO column is a full-height MULTICOLOR wash behind its checkmarks — the
+/// strong, conversion-focused emphasis. The row matching the opening context is
+/// highlighted with the PRO spectrum. Free includes only Solo Mode; every other
+/// benefit is a PRO unlock, so the PRO column is all checks.
 struct PaywallComparisonTable: View {
     /// The benefit row to spotlight (nil = broad entry → nothing highlighted).
     var highlighted: String? = nil
 
     /// (title, includedInFree). Order is fixed. PRO includes everything.
     private static let rows: [(title: String, free: Bool)] = [
-        ("Solo Focus",      true),
-        ("No Ads",          false),
-        ("Online Mode",     false),
-        ("Invite Friends",  false),
-        ("Infinite Focus",  false),
-        ("Exclusive Skies", false),
-        ("Premium Items",   false),
-        ("Smart Widgets",   false),
+        ("Solo Mode",         true),
+        ("No Ads",            false),
+        ("Online Mode",       false),
+        ("Invite Friends",    false),
+        ("Infinite Focus  ∞", false),
+        ("Exclusive Skies",   false),
+        ("Premium Skins",     false),
+        ("Premium Items",     false),
+        ("Exclusive Widgets", false),
     ]
 
     private var freeWidth: CGFloat { Layout.pad(56, 68) }

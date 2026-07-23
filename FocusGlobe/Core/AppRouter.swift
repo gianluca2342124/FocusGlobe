@@ -264,10 +264,11 @@ enum PaywallContext: Equatable {
         switch self {
         case .online:                return "Online Mode"
         case .invite:                return "Invite Friends"
-        case .infinite:              return "Infinite Focus"
-        case .widget:                return "Smart Widgets"
+        case .infinite:              return "Infinite Focus  ∞"
+        case .widget:                return "Exclusive Widgets"
         case .sky:                   return "Exclusive Skies"
-        case .balloonSkin, .interior, .sound: return "Premium Items"
+        case .balloonSkin:           return "Premium Skins"
+        case .interior, .sound:      return "Premium Items"
         case .general, .rewards, .pause: return nil
         }
     }

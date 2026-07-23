@@ -102,10 +102,13 @@ struct StoreView: View {
             .background(Capsule().fill(.ultraThinMaterial))
             .overlay(Capsule().strokeBorder(.white.opacity(0.12), lineWidth: 1))
             .accessibilityLabel("\(appModel.focusCoins) Focus Coins")
-            // No coin IAP exists — this opens the REAL coin source (the
-            // rewarded Coin Spin), honestly labelled, never a dead button.
+            // "Get Coins" is entitlement-aware and NEVER opens the Home rewarded
+            // Free Coin Spin. A free pilot is taken to the FocusGlobe PRO paywall
+            // (coins/rewards context); a premium pilot goes to their ad-free coin
+            // earning flow; a loading entitlement just refreshes (never presumed
+            // free, never a double modal). The Home Free Coin Spin is separate.
             Button {
-                appModel.tapFeedback(); router.present(.coinSpin)
+                appModel.tapFeedback(); getCoinsTapped()
             } label: {
                 Text("Get Coins")
                     .font(.system(size: 13.5, weight: .bold, design: .default))
@@ -117,6 +120,21 @@ struct StoreView: View {
             .accessibilityLabel("Get Focus Coins")
         }
         .padding(.top, AppSpacing.xs)
+    }
+
+    /// Route "Get Coins" by the REAL entitlement — never the Home Free Coin Spin.
+    /// Free → the FocusGlobe PRO paywall (rewards context). Premium → the coin
+    /// earning flow (ad-free for PRO; no dedicated coin IAP exists in the app, so
+    /// this is the direct earning interface). Loading → a quiet refresh, so a
+    /// possibly-premium owner is never flashed the paywall. Guarded against a
+    /// double modal.
+    private func getCoinsTapped() {
+        guard router.activeModal == nil else { return }
+        switch appModel.entitlement {
+        case .free:     router.presentPaywall(context: .rewards)
+        case .premium:  router.present(.coinSpin)
+        case .loading:  appModel.refreshSubscriptionStatus()
+        }
     }
 
     // MARK: Open-air preview stage (7A) — no dark framing card.

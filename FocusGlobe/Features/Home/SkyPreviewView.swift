@@ -64,10 +64,15 @@ struct SkyPreviewView: View {
         artCache[name] = ui
         return ui
     }
-    /// Bundled Sky art when present: the shared naming convention first
-    /// (Sky_<ID>_Background_Portrait/_Landscape), then the legacy field.
+    /// Bundled Sky art when present, resolved through the ONE centralized mapping:
+    /// the per-Sky `SkyArtwork_…` name first, then the legacy background naming,
+    /// then the legacy field. All misses are cached, so a Sky with no art keeps
+    /// rendering the live procedural scene (`SkyDepthScenery`) with zero churn.
+    /// The ACTIVE flight always uses the live renderer — this static art is for
+    /// the Home preview only.
     private static func resolvedArt(for sky: FocusSky, landscape: Bool) -> UIImage? {
-        cachedImage(named: sky.backgroundAssetName(landscape: landscape))
+        cachedImage(named: sky.artworkAssetName)
+            ?? cachedImage(named: sky.backgroundAssetName(landscape: landscape))
             ?? sky.previewImageName.flatMap { cachedImage(named: $0) }
     }
 

@@ -384,18 +384,45 @@ struct FocusConsistencyGrid: View {
     }
 
     /// Subtle month initials above the column where each month begins.
-    private func monthLabels(_ cols: [[(date: Date, minutes: Int?)?]],
-                             side: CGFloat, spacing: CGFloat) -> some View {
+    /// The deduplicated, non-overlapping month-label plan for the grid columns.
+    /// A boundary label is placed on the FIRST column of each new month, but:
+    ///   • consecutive labels are forced at least `minGap` columns apart, so the
+    ///     text (a few columns wide) can never overlap a neighbour — this is what
+    ///     kills the old "Jan sitting on top of Feb" collision at the left edge;
+    ///   • the total is capped at 6 labels (never a 7th);
+    ///   • ties are resolved newest-first (right side), so the most recent months
+    ///     always keep their labels and only crowded OLDER ones are dropped.
+    /// Same plan is used by the Passport, Streak, share card and Focus Grid widget
+    /// (that widget mirrors this exact algorithm in its own target).
+    static func monthLabelPlan(_ cols: [[(date: Date, minutes: Int?)?]],
+                               calendar: Calendar,
+                               minGap: Int = 3, maxLabels: Int = 6) -> [(index: Int, text: String)] {
         let formatter = DateFormatter()
         formatter.setLocalizedDateFormatFromTemplate("MMM")
+        // Candidate boundaries: the first column of each new month (left → right).
         var lastMonth = -1
-        let labels: [(index: Int, text: String)] = cols.enumerated().compactMap { index, col in
-            guard let first = col.compactMap({ $0 }).first else { return nil }
+        var candidates: [(index: Int, text: String)] = []
+        for (index, col) in cols.enumerated() {
+            guard let first = col.compactMap({ $0 }).first else { continue }
             let month = calendar.component(.month, from: first.date)
-            defer { lastMonth = month }
-            guard month != lastMonth else { return nil }
-            return (index, formatter.string(from: first.date))
+            guard month != lastMonth else { continue }
+            lastMonth = month
+            candidates.append((index, formatter.string(from: first.date)))
         }
+        // Walk newest → oldest, keeping a label only when it clears `minGap` from
+        // the last kept one; cap at `maxLabels`.
+        var kept: [(index: Int, text: String)] = []
+        for cand in candidates.reversed() {
+            if let last = kept.last, last.index - cand.index < minGap { continue }
+            kept.append(cand)
+            if kept.count >= maxLabels { break }
+        }
+        return kept.reversed()
+    }
+
+    private func monthLabels(_ cols: [[(date: Date, minutes: Int?)?]],
+                             side: CGFloat, spacing: CGFloat) -> some View {
+        let labels = Self.monthLabelPlan(cols, calendar: calendar)
         return ZStack(alignment: .bottomLeading) {
             Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
             ForEach(labels, id: \.index) { label in

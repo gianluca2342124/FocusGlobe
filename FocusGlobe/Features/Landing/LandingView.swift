@@ -3,7 +3,7 @@ import UIKit
 
 /// The completion sequence — a minimal, premium two-card flow over the **frozen**
 /// Sky the pilot just flew. First a "Success!" card (Time · Focus Coins ·
-/// Distance, with an optional rewarded "Double" ), then a streak card; a single
+/// Focused Minutes, with an optional rewarded "Double" ), then a streak card; a single
 /// completion interstitial plays for free users before returning Home. No
 /// postcards, no passport/share buttons, no old "You landed" screen.
 struct LandingView: View {
@@ -79,9 +79,12 @@ struct LandingView: View {
                 divider
                 coinTile
                 divider
-                statTile(icon: "location.fill",
-                         value: Formatters.distance(km: summary.distanceKm),
-                         label: "Distance", tint: AppColors.teal)
+                // The Success stat is Focused Minutes now — the actual qualifying
+                // focused time (whole minutes), the SAME canonical value used by
+                // Objectives, Streak, Passport and the widgets. No distance/km.
+                statTile(icon: "timer",
+                         value: "\(max(0, summary.focusedMinutes))",
+                         label: "Focused Min", tint: AppColors.teal)
             }
             .padding(.vertical, AppSpacing.md)
             .glassBackground(cornerRadius: AppSpacing.cardRadius, tintOpacity: 0.2, shadowRadius: 12, shadowY: 6)

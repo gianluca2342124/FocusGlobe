@@ -268,8 +268,12 @@ struct SkyFlightSceneView: View {
                 .position(x: W * 0.74 + drift, y: H * 0.20)
                 .opacity(fadeIn)
         case "sahara-night":
+            // Nudged in from the far-left corner (0.26 → 0.40) so the moon reads
+            // meaningfully THROUGH the Cabin window (its arched top-left corner was
+            // clipping the disc), while staying balanced in the full-screen flight.
+            // The Home preview draws its own accent, so it is unaffected.
             softMoon(d: W * 0.12, dim: true)
-                .position(x: W * 0.26 + drift, y: H * 0.16)
+                .position(x: W * 0.40 + drift, y: H * 0.17)
                 .opacity(fadeIn * 0.8)
         case "galaxy-drift":
             ZStack {

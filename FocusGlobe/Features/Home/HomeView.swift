@@ -303,13 +303,19 @@ struct HomeView: View {
             CoinSpinCircleButton { appModel.tapFeedback(); router.present(.coinSpin) }
             Spacer()
             coinsChip
-            if appModel.isPro {
-                ProCircleBadge { appModel.tapFeedback(); router.presentPaywall(context: .general) }
-            } else {
-                CrownButton(size: Layout.pad(46, 54), onWhite: true) {
-                    appModel.tapFeedback(); router.presentPaywall(context: .general)
-                }
+            // The PRO control is the real multicolor badge itself — never wrapped
+            // in a circle/capsule. The image carries its own outline + glow; the
+            // tap target stays a full 44×44 invisible rectangle around it.
+            Button {
+                appModel.tapFeedback(); router.presentPaywall(context: .general)
+            } label: {
+                FocusGlobePROBadge(visibleHeight: Layout.pad(21, 24))
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(SoftPressStyle(scale: 0.94))
+            .shadow(color: ProBrand.glow.opacity(0.30), radius: 8, y: 0)
+            .accessibilityLabel(appModel.isPro ? "FocusGlobe PRO is active" : "Unlock FocusGlobe PRO")
         }
         .padding(.top, AppSpacing.xs)
     }

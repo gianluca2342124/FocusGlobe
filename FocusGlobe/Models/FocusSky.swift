@@ -131,6 +131,30 @@ struct FocusSky: Identifiable, Hashable {
     func backgroundAssetName(landscape: Bool) -> String {
         "Sky_\(assetBaseName)_Background_\(landscape ? "Landscape" : "Portrait")"
     }
+
+    /// The ONE centralized Sky → hero artwork mapping. These are the EXACT Image
+    /// Set names to add per Sky (keyed to the marketing name, NOT the internal
+    /// id): until they ship, every surface falls back to the live procedural
+    /// scene — never a blank or a crash. Keep all artwork names here so no screen
+    /// hard-codes its own.
+    ///
+    ///   SkyArtwork_DesertNight · SkyArtwork_FijiLagoon ·
+    ///   SkyArtwork_KyotoLanternNight · SkyArtwork_NorthernAurora ·
+    ///   SkyArtwork_RainyTokyo · SkyArtwork_SwissAlps ·
+    ///   SkyArtwork_StarfallNebula · SkyArtwork_DeepSpace
+    var artworkAssetName: String {
+        switch id {
+        case "sahara-night":     return "SkyArtwork_DesertNight"
+        case "fiji-lagoon":      return "SkyArtwork_FijiLagoon"
+        case "kyoto-lanterns":   return "SkyArtwork_KyotoLanternNight"
+        case "aurora-snowfield": return "SkyArtwork_NorthernAurora"
+        case "rainy-tokyo":      return "SkyArtwork_RainyTokyo"
+        case "swiss-alps":       return "SkyArtwork_SwissAlps"
+        case "galaxy-drift":     return "SkyArtwork_StarfallNebula"
+        case "deep-space":       return "SkyArtwork_DeepSpace"
+        default:                 return "SkyArtwork_\(assetBaseName)"
+        }
+    }
     /// The take-off ground plate (`Sky_RainyTokyo_Ground`) — shown only during
     /// lift-off, never tiled or repeated.
     var groundAssetName: String { "Sky_\(assetBaseName)_Ground" }

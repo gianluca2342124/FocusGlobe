@@ -67,7 +67,17 @@ struct FlightModeSelectorView: View {
         .animation(.snappy(duration: 0.22), value: canSignIn)
         .onAppear {
             if !onlineAvailable && selection.isOnline && !canSignIn { selection = .solo }
+            // A FREE pilot must never sit on a pre-selected Online card (the last
+            // mode could have been Online before an entitlement lapse). Solo is
+            // the default until a premium pilot chooses Online. Loading is never
+            // presumed free, so it's left alone.
+            if selection.isOnline && appModel.entitlement == .free { selection = .solo }
             Task { await online.refreshAvailability() }
+        }
+        // If the entitlement resolves to free while Online is showing selected,
+        // fall back to Solo (no flash of a premium-only preselect for a free user).
+        .onChange(of: appModel.entitlement) { _, now in
+            if now == .free && selection.isOnline { selection = .solo }
         }
         .onChange(of: online.availability) { _, now in
             // Fall back to Solo only for a genuine outage — signed-out still
@@ -136,20 +146,23 @@ struct FlightModeSelectorView: View {
 
     // MARK: - Two equal cards
 
+    /// The warm cream selection highlight — a calm, premium accent shared by
+    /// BOTH cards, replacing the old saturated electric-blue. No blue anywhere.
+    private static let creamAccent = Color(hex: 0xF3ECD9)
+
     private func modeCard(mode: OnlineFlightMode, title: String, icon: String,
                           subtitle: String) -> some View {
         let selected = selection == mode || (mode == .publicSky && selection.isOnline)
+        let cream = Self.creamAccent
         return Button {
-            // Tapping a card only SELECTS it. Sign-in (PRO) or the paywall (Free)
-            // is decided on Continue — never from a card tap.
             appModel.tapFeedback()
-            withAnimation(.snappy(duration: 0.2)) { selection = mode }
+            cardTapped(mode)
         } label: {
             VStack(spacing: AppSpacing.sm) {
                 ZStack {
                     Image(systemName: icon)
                         .font(.system(size: 34, weight: .bold))
-                        .foregroundStyle(selected ? ProBrand.c4 : .white.opacity(0.7))
+                        .foregroundStyle(selected ? AnyShapeStyle(cream) : AnyShapeStyle(.white.opacity(0.7)))
                     if mode == .publicSky {
                         liveDot.offset(x: 30, y: -20)
                     }
@@ -165,29 +178,44 @@ struct FlightModeSelectorView: View {
             .frame(minHeight: 146)
             .padding(AppSpacing.md)
             .glassBackground(cornerRadius: AppSpacing.cardRadius,
-                             tintOpacity: selected ? 0.26 : 0.13, shadowRadius: 12, shadowY: 6)
+                             tintOpacity: selected ? 0.24 : 0.13, shadowRadius: 12, shadowY: 6)
+            // Soft warm cream border + gentle neutral glow — the SAME selection
+            // language for Solo and Online (no saturated blue outline).
             .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
-                .strokeBorder(selected ? ProBrand.c4.opacity(0.85) : Color.white.opacity(0.1),
+                .strokeBorder(selected ? cream.opacity(0.8) : Color.white.opacity(0.1),
                               lineWidth: selected ? 2 : 1))
-            .shadow(color: selected ? ProBrand.c4.opacity(0.3) : .clear, radius: 14)
+            .shadow(color: selected ? Color.white.opacity(0.22) : .clear, radius: 14)
             .overlay(alignment: .topTrailing) {
                 if selected {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 21, weight: .semibold))
-                        .foregroundStyle(ProBrand.c4)
+                        .foregroundStyle(cream)
                         .padding(10)
                         .transition(.scale.combined(with: .opacity))
                 }
             }
-            // Online is a FocusGlobe PRO feature — the real multicolor PRO badge
-            // marks it while the pilot isn't premium (never shown once PRO).
-            .overlay(alignment: .topLeading) {
-                if mode == .publicSky && appModel.entitlement != .premium {
-                    FocusGlobePROBadge(visibleHeight: 15).padding(9)
-                }
-            }
         }
         .buttonStyle(SoftPressStyle(scale: 0.97))
+    }
+
+    /// A card tap decides everything up front — never Continue. Solo always
+    /// selects. Online is PRO: a FREE pilot goes STRAIGHT to the Online paywall
+    /// with Solo left selected (no selection change, no auth, no presence, no
+    /// room); a LOADING entitlement only nudges a refresh (never presumed free);
+    /// only a PREMIUM pilot actually selects Online.
+    private func cardTapped(_ mode: OnlineFlightMode) {
+        guard mode.isOnline else {
+            withAnimation(.snappy(duration: 0.2)) { selection = mode }
+            return
+        }
+        switch appModel.entitlement {
+        case .premium:
+            withAnimation(.snappy(duration: 0.2)) { selection = mode }
+        case .free:
+            onNeedOnlinePaywall()
+        case .loading:
+            appModel.refreshSubscriptionStatus()
+        }
     }
 
     /// The Online card's second line: the LIVE ambient count for the selected

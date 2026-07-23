@@ -43,14 +43,14 @@ struct StreakCircleButton: View {
         StatusCircleButton(ring: alive ? Color(hex: 0xF2643C).opacity(0.45) : nil,
                            accessibilityText: "\(streak) day streak. Opens streak details.",
                            action: action) {
-            Image(systemName: "flame.fill")
-                .font(.system(size: Layout.pad(19, 22), weight: .bold))
-                .foregroundStyle(
-                    // The inactive flame is a warm grey (reads on both the day
-                    // white disc and the night glass), the active one the ember.
-                    LinearGradient(colors: alive ? [Color(hex: 0xFFB65C), Color(hex: 0xF2643C)]
-                                                 : [Color(hex: 0xB6A890), Color(hex: 0x9C8E76)],
-                                   startPoint: .top, endPoint: .bottom))
+            // The real streak-fire artwork (full-height flame). Desaturated + dimmed
+            // when the streak is asleep, so no streak reads calm, not broken.
+            Image("streakfire")
+                .resizable()
+                .scaledToFit()
+                .frame(width: Layout.pad(27, 32), height: Layout.pad(27, 32))
+                .grayscale(alive ? 0 : 0.9)
+                .opacity(alive ? 1 : 0.55)
         }
         .overlay(alignment: .top) {
             Text("\(min(streak, 999))")
@@ -77,13 +77,12 @@ struct CoinSpinCircleButton: View {
         StatusCircleButton(ring: AppColors.gold.opacity(0.30),
                            accessibilityText: "Free Coin Spin. Watch a video to win Focus Coins.",
                            action: action) {
-            ZStack {
-                Image(systemName: "play.rectangle.fill")
-                    .font(.system(size: Layout.pad(17, 19), weight: .semibold))
-                    .foregroundStyle(AppColors.gold)
-                FocusCoinIcon(size: Layout.pad(13, 15))
-                    .offset(x: Layout.pad(11, 12), y: -Layout.pad(10, 11))
-            }
+            // The real free-coin-spin artwork (near full-bleed). No generated
+            // play/coin glyphs — the asset carries the whole invitation.
+            Image("freecoinspin")
+                .resizable()
+                .scaledToFit()
+                .frame(width: Layout.pad(30, 34), height: Layout.pad(30, 34))
         }
         .phaseAnimator([0, 1, 2, 3, 4]) { content, phase in
             content.rotationEffect(.degrees(spinShake(phase)))

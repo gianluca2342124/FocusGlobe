@@ -118,17 +118,12 @@ private struct WidgetPreviewTile: View {
                 .padding(side * 0.12)
 
             // Image-only preview: the card + signature glyph read as the widget
-            // itself. Only the PRO/lock affordance remains (no name, no size
-            // labels) — the identity + families live in the detail sheet.
+            // itself. ONLY the PRO/lock affordance remains — a free widget carries
+            // no "FREE" badge at all (it just appears available). The identity +
+            // families live in the detail sheet.
             HStack(spacing: 5) {
                 if item.isPro {
                     FocusGlobePROBadge(visibleHeight: 13)
-                } else {
-                    Text("FREE")
-                        .font(.system(size: 9, weight: .heavy, design: .default)).tracking(0.6)
-                        .foregroundStyle(WGTheme.inkSoft)
-                        .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(Capsule().fill(Color.white.opacity(0.18)))
                 }
                 if locked {
                     Image(systemName: "lock.fill")
@@ -207,11 +202,11 @@ private struct WidgetDetailSheet: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, AppSpacing.md)
                         HStack(spacing: 6) {
-                            Text(item.isPro ? "FocusGlobe PRO" : "Free")
-                                .font(.system(size: 11, weight: .bold, design: .default))
-                                .foregroundStyle(item.isPro ? AppColors.gold : AppColors.success)
-                                .padding(.horizontal, 8).padding(.vertical, 4)
-                                .background(Capsule().fill((item.isPro ? AppColors.gold : AppColors.success).opacity(0.14)))
+                            // PRO widgets wear the real multicolor PRO badge; free
+                            // widgets carry NO tier chip (no "Free" label at all).
+                            if item.isPro {
+                                FocusGlobePROBadge(visibleHeight: 14)
+                            }
                             ForEach(item.families, id: \.self) { fam in
                                 Text(fam)
                                     .font(.system(size: 11, weight: .semibold, design: .default))

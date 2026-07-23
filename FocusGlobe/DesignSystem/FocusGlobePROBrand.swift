@@ -35,6 +35,15 @@ enum ProBrand {
                                                startPoint: .topLeading, endPoint: .bottomTrailing)
     /// A soft glow colour for shadows behind PRO elements.
     static let glow = c5
+
+    /// The restrained PRIMARY-ACTION fill (e.g. the purchase CTA): a premium,
+    /// near-solid royal / violet blue — deliberately NOT the multicolor spectrum,
+    /// which stays reserved for the PRO badge, the comparison column and selected
+    /// outlines. A whisper of vertical gradient gives depth without any rainbow.
+    static let ctaBlue = Color(hex: 0x4D5BFF)
+    static let primaryButton = LinearGradient(
+        colors: [Color(hex: 0x5A66FF), Color(hex: 0x3F4CE0)],
+        startPoint: .top, endPoint: .bottom)
     /// A low-opacity vertical wash for the comparison-table PRO column (kept light
     /// enough that the checkmarks over it stay perfectly readable).
     static let columnWash = LinearGradient(

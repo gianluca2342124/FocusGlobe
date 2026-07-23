@@ -38,8 +38,8 @@ struct StoreItem: Identifiable, Hashable {
     enum CabinPlacement { case tabletop, bench, wall, hook, none }
     var cabinPlacement: CabinPlacement {
         switch id {
-        case "iced-latte", "potted-plant", "scented-candle", "alarm-clock", "notebook",
-             "headphones", "cabin-plant", "cabin-teapot": return .tabletop
+        case "iced-latte", "notebook", "headphones", "cabin-plant", "cabin-teapot":
+            return .tabletop
         case "sleeping-cat", "closed-laptop":              return .bench
         case "framed-poster":                              return .wall
         case "christmas-ornament":                         return .hook
@@ -74,22 +74,10 @@ struct StoreItem: Identifiable, Hashable {
     // `equippedTrailID` still decodes harmlessly. Prices are tuned for the small
     // per-session coin economy (see `FocusEconomy`).
     static let all: [StoreItem] = [
-        // Basket charms.
-        StoreItem(id: "charm-compass", name: "Brass Compass", subtitle: "A charm for the basket",
-                  kind: .charm, price: 350, isPremium: false, systemImage: "location.north.circle.fill", tintHex: 0xD9A94F),
-        StoreItem(id: "charm-pennant", name: "Cream Pennant", subtitle: "A little flag in the wind",
-                  kind: .charm, price: 250, isPremium: false, systemImage: "flag.fill", tintHex: 0xF4EFE4),
-        StoreItem(id: "charm-lantern", name: "Paper Lantern", subtitle: "Warm light for night skies",
-                  kind: .charm, price: 400, isPremium: false, systemImage: "lightbulb.fill", tintHex: 0xFFC873),
-        // Cabin objects — new art (Image Set name IS the item id).
+        // Cabin objects — real art (Image Set name IS the item id). Prices are
+        // tuned for the small per-session coin economy (see `FocusEconomy`).
         StoreItem(id: "iced-latte", name: "Iced Latte", subtitle: "A cool companion for long flights",
                   kind: .cabinDecoration, price: 280, isPremium: false, systemImage: "cup.and.saucer.fill", tintHex: 0xC9A27A, imageName: "iced-latte"),
-        StoreItem(id: "potted-plant", name: "Potted Plant", subtitle: "A little green on the sill",
-                  kind: .cabinDecoration, price: 320, isPremium: false, systemImage: "leaf.fill", tintHex: 0x6FD8B8, imageName: "potted-plant"),
-        StoreItem(id: "scented-candle", name: "Scented Candle", subtitle: "Warm light and calm",
-                  kind: .cabinDecoration, price: 300, isPremium: false, systemImage: "flame.fill", tintHex: 0xF2A65A, imageName: "scented-candle"),
-        StoreItem(id: "alarm-clock", name: "Alarm Clock", subtitle: "Keep gentle time",
-                  kind: .cabinDecoration, price: 260, isPremium: false, systemImage: "alarm.fill", tintHex: 0xE86A6A, imageName: "alarm-clock"),
         StoreItem(id: "notebook", name: "Notebook", subtitle: "For your best ideas",
                   kind: .cabinDecoration, price: 250, isPremium: false, systemImage: "book.closed.fill", tintHex: 0xB0783E, imageName: "notebook"),
         StoreItem(id: "headphones", name: "Headphones", subtitle: "Sink into deep focus",
@@ -102,16 +90,21 @@ struct StoreItem: Identifiable, Hashable {
                   kind: .cabinDecoration, price: 600, isPremium: false, systemImage: "laptopcomputer", tintHex: 0x9AA7B4, imageName: "closed-laptop"),
         StoreItem(id: "sleeping-cat", name: "Sleeping Cat", subtitle: "A calm co-pilot",
                   kind: .cabinDecoration, price: 650, isPremium: false, systemImage: "cat.fill", tintHex: 0xD8C0A0, imageName: "sleeping-cat"),
-        // Existing cabin items (kept; prices lifted into the new economy).
+        // Cabin companions with dedicated art (Tiny Fern → `TinyFern`,
+        // Ceramic Teapot → `CeramicTeapot`; the renderer falls back to a tinted
+        // procedural piece until those Image Sets ship).
         StoreItem(id: "cabin-plant", name: "Tiny Fern", subtitle: "A cabin companion",
-                  kind: .cabinDecoration, price: 300, isPremium: false, systemImage: "leaf.fill", tintHex: 0x6FD8B8),
+                  kind: .cabinDecoration, price: 300, isPremium: false, systemImage: "leaf.fill", tintHex: 0x6FD8B8, imageName: "TinyFern"),
         StoreItem(id: "cabin-teapot", name: "Ceramic Teapot", subtitle: "For longer flights",
-                  kind: .cabinDecoration, price: 380, isPremium: false, systemImage: "mug.fill", tintHex: 0xE9C07A),
-        StoreItem(id: "cabin-quilt", name: "Aurora Quilt", subtitle: "Woven from cold skies",
-                  kind: .cabinDecoration, price: 0, isPremium: true, systemImage: "square.grid.3x3.topleft.filled", tintHex: 0x54E0A8),
+                  kind: .cabinDecoration, price: 380, isPremium: false, systemImage: "mug.fill", tintHex: 0xE9C07A, imageName: "CeramicTeapot"),
     ]
 
     static func byID(_ id: String) -> StoreItem? { all.first { $0.id == id } }
+
+    /// The set of live item ids — used to migrate any persisted equipped/owned id
+    /// that pointed at a now-removed item (Brass Compass, Cream Pennant, Paper
+    /// Lantern, Potted Plant, Scented Candle, Alarm Clock, Aurora Quilt).
+    static var validIDs: Set<String> { Set(all.map(\.id)) }
 
     /// Today's rotating featured items — deterministic from the calendar day,
     /// so everyone (and every relaunch) sees the same three until midnight.

@@ -89,16 +89,20 @@ struct CoinSpinSheet: View {
                                center: UnitPoint(x: 0.85, y: 0.9), startRadius: 4, endRadius: 300)
             }
             .ignoresSafeArea()
+            // Centre the hero + content group vertically so it sits comfortably in
+            // the sheet — no longer crammed against the top with a large empty gap
+            // below. A slightly larger top spacer biases the group a touch downward.
             VStack(spacing: AppSpacing.sm) {
+                Spacer(minLength: AppSpacing.md)
                 switch phase {
                 case .intro:    intro
                 case .spinning: spinning
                 case .result:   result
                 }
-                Spacer(minLength: 0)
+                Spacer(minLength: AppSpacing.sm)
             }
             .padding(.horizontal, AppSpacing.screen)
-            .padding(.top, AppSpacing.lg)
+            .padding(.top, AppSpacing.sm)
             .padding(.bottom, AppSpacing.md)
             .frame(maxWidth: 460)
             .frame(maxWidth: .infinity)

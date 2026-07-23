@@ -124,6 +124,27 @@ final class AppModel: ObservableObject {
             loadedProfile.selectedSkyID = FocusSky.defaultFree.id
             persistence.save(loadedProfile, for: .profile)
         }
+        // Store-catalog migration: seven items were retired (Brass Compass, Cream
+        // Pennant, Paper Lantern, Potted Plant, Scented Candle, Alarm Clock, Aurora
+        // Quilt). Drop any owned/equipped id no longer in the live catalog so an
+        // old profile never keeps a dangling reference (a removed equipped piece
+        // simply becomes unequipped — the cabin falls back to nothing/default).
+        do {
+            let valid = StoreItem.validIDs
+            var dirty = false
+            if let owned = loadedProfile.ownedStoreItemIDs {
+                let kept = owned.intersection(valid)
+                if kept != owned { loadedProfile.ownedStoreItemIDs = kept; dirty = true }
+            }
+            if let equipped = loadedProfile.equippedCabinItemIDs {
+                let kept = equipped.intersection(valid)
+                if kept != equipped { loadedProfile.equippedCabinItemIDs = kept; dirty = true }
+            }
+            if let trail = loadedProfile.equippedTrailID, !valid.contains(trail) {
+                loadedProfile.equippedTrailID = nil; dirty = true
+            }
+            if dirty { persistence.save(loadedProfile, for: .profile) }
+        }
         // Balloon-skin migration (flight milestones → focused minutes): the five
         // milestone skins now unlock at 300/900/1800/3000/5000 focused minutes.
         // Grandfather any skin a pilot already earned under the OLD flight
@@ -896,15 +917,17 @@ final class AppModel: ObservableObject {
         let journeys = Double(todays.count)
         let minutes = Double(todays.reduce(0) { $0 + $1.focusedSeconds }) / 60.0
         let miles = Double(todays.reduce(0) { $0 + $1.focusMiles })
-        let earlierRouteIDs = Set(history.filter { $0.completed && !cal.isDateInToday($0.date) }.map { $0.routeID })
-        let newDestinations = Double(Set(todays.map { $0.routeID }).subtracting(earlierRouteIDs).count)
+        // A "deep" journey = one qualifying session of at least 25 focused minutes
+        // today (Infinite counts once it passes 25 min; cancelled / short sessions
+        // never qualify — `todays` is already completed sessions only).
+        let deepJourneys = Double(todays.filter { $0.focusedSeconds >= 25 * 60 }.count)
         return [
             DailyMission(id: "journey", title: "Complete one flight", systemImage: "paperplane.fill",
                          accent: .indigo, target: 1, current: journeys),
             DailyMission(id: "focus", title: "Focus 30 minutes", systemImage: "timer",
                          accent: .teal, target: 30, current: minutes),
-            DailyMission(id: "new", title: "Land in a new Sky", systemImage: "moon.stars.fill",
-                         accent: .gold, target: 1, current: newDestinations),
+            DailyMission(id: "deep", title: "Complete a 25-minute focus journey",
+                         systemImage: "hourglass", accent: .gold, target: 1, current: deepJourneys),
             DailyMission(id: "miles", title: "Earn 60 Focus Coins", systemImage: "sparkles",
                          accent: .coral, target: 60, current: miles),
         ]
