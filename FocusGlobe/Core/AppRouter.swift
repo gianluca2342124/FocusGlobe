@@ -257,6 +257,28 @@ enum PaywallContext: Equatable {
         }
     }
 
+    /// The ONE centralized mapping from context → contextual paywall hero art.
+    /// These are the exact Image Set names to add; until an asset ships the paywall
+    /// simply omits the hero (never a placeholder box). No golden-balloon fallback.
+    ///
+    ///   PaywallHero_InfiniteFocus · PaywallHero_OnlineMode ·
+    ///   PaywallHero_InviteFriends · PaywallHero_ExclusiveSkies ·
+    ///   PaywallHero_PremiumSkins · PaywallHero_PremiumItems ·
+    ///   PaywallHero_ExclusiveWidgets · PaywallHero_NoAds · PaywallHero_GeneralPRO
+    var heroAssetName: String {
+        switch self {
+        case .infinite:         return "PaywallHero_InfiniteFocus"
+        case .online:           return "PaywallHero_OnlineMode"
+        case .invite:           return "PaywallHero_InviteFriends"
+        case .sky:              return "PaywallHero_ExclusiveSkies"
+        case .balloonSkin:      return "PaywallHero_PremiumSkins"
+        case .interior, .sound: return "PaywallHero_PremiumItems"
+        case .widget:           return "PaywallHero_ExclusiveWidgets"
+        case .rewards:          return "PaywallHero_NoAds"
+        case .general, .pause:  return "PaywallHero_GeneralPRO"
+        }
+    }
+
     /// The single comparison-table benefit row to spotlight for this entry point
     /// (nil for broad / general entries). Titles match `PaywallComparisonTable`
     /// exactly.

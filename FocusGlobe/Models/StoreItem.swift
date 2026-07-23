@@ -63,9 +63,9 @@ struct StoreItem: Identifiable, Hashable {
 
     var rarity: Rarity {
         if isPremium { return .premium }
-        if price >= 220 { return .ultra }
-        if price >= 130 { return .rare }
-        return .common
+        if price >= 400 { return .ultra }   // exceptional band
+        if price >= 150 { return .rare }    // rare band
+        return .common                       // common / uncommon bands
     }
 
     // MARK: Catalog (cosmetic foundation — grows freely later)
@@ -77,26 +77,26 @@ struct StoreItem: Identifiable, Hashable {
         // Cabin objects — real art (Image Set name IS the item id). Prices are
         // tuned for the small per-session coin economy (see `FocusEconomy`).
         StoreItem(id: "iced-latte", name: "Iced Latte", subtitle: "A cool companion for long flights",
-                  kind: .cabinDecoration, price: 280, isPremium: false, systemImage: "cup.and.saucer.fill", tintHex: 0xC9A27A, imageName: "iced-latte"),
+                  kind: .cabinDecoration, price: 60, isPremium: false, systemImage: "cup.and.saucer.fill", tintHex: 0xC9A27A, imageName: "iced-latte"),
         StoreItem(id: "notebook", name: "Notebook", subtitle: "For your best ideas",
-                  kind: .cabinDecoration, price: 250, isPremium: false, systemImage: "book.closed.fill", tintHex: 0xB0783E, imageName: "notebook"),
+                  kind: .cabinDecoration, price: 40, isPremium: false, systemImage: "book.closed.fill", tintHex: 0xB0783E, imageName: "notebook"),
         StoreItem(id: "headphones", name: "Headphones", subtitle: "Sink into deep focus",
-                  kind: .cabinDecoration, price: 420, isPremium: false, systemImage: "headphones", tintHex: 0x8FA6D8, imageName: "headphones"),
+                  kind: .cabinDecoration, price: 200, isPremium: false, systemImage: "headphones", tintHex: 0x8FA6D8, imageName: "headphones"),
         StoreItem(id: "framed-poster", name: "Framed Poster", subtitle: "A view for the wall",
-                  kind: .cabinDecoration, price: 520, isPremium: false, systemImage: "photo.fill", tintHex: 0xE0A46A, imageName: "framed-poster"),
+                  kind: .cabinDecoration, price: 340, isPremium: false, systemImage: "photo.fill", tintHex: 0xE0A46A, imageName: "framed-poster"),
         StoreItem(id: "christmas-ornament", name: "Festive Ornament", subtitle: "A little seasonal cheer",
-                  kind: .cabinDecoration, price: 480, isPremium: false, systemImage: "sparkles", tintHex: 0xE8654B, imageName: "christmas-ornament"),
+                  kind: .cabinDecoration, price: 280, isPremium: false, systemImage: "sparkles", tintHex: 0xE8654B, imageName: "christmas-ornament"),
         StoreItem(id: "closed-laptop", name: "Closed Laptop", subtitle: "Work set aside for the climb",
-                  kind: .cabinDecoration, price: 600, isPremium: false, systemImage: "laptopcomputer", tintHex: 0x9AA7B4, imageName: "closed-laptop"),
+                  kind: .cabinDecoration, price: 460, isPremium: false, systemImage: "laptopcomputer", tintHex: 0x9AA7B4, imageName: "closed-laptop"),
         StoreItem(id: "sleeping-cat", name: "Sleeping Cat", subtitle: "A calm co-pilot",
-                  kind: .cabinDecoration, price: 650, isPremium: false, systemImage: "cat.fill", tintHex: 0xD8C0A0, imageName: "sleeping-cat"),
+                  kind: .cabinDecoration, price: 560, isPremium: false, systemImage: "cat.fill", tintHex: 0xD8C0A0, imageName: "sleeping-cat"),
         // Cabin companions with dedicated art (Tiny Fern → `TinyFern`,
         // Ceramic Teapot → `CeramicTeapot`; the renderer falls back to a tinted
         // procedural piece until those Image Sets ship).
         StoreItem(id: "cabin-plant", name: "Tiny Fern", subtitle: "A cabin companion",
-                  kind: .cabinDecoration, price: 300, isPremium: false, systemImage: "leaf.fill", tintHex: 0x6FD8B8, imageName: "TinyFern"),
+                  kind: .cabinDecoration, price: 90, isPremium: false, systemImage: "leaf.fill", tintHex: 0x6FD8B8, imageName: "TinyFern"),
         StoreItem(id: "cabin-teapot", name: "Ceramic Teapot", subtitle: "For longer flights",
-                  kind: .cabinDecoration, price: 380, isPremium: false, systemImage: "mug.fill", tintHex: 0xE9C07A, imageName: "CeramicTeapot"),
+                  kind: .cabinDecoration, price: 130, isPremium: false, systemImage: "mug.fill", tintHex: 0xE9C07A, imageName: "CeramicTeapot"),
     ]
 
     static func byID(_ id: String) -> StoreItem? { all.first { $0.id == id } }

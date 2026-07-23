@@ -3,7 +3,7 @@ import UIKit
 
 /// The completion sequence — a minimal, premium two-card flow over the **frozen**
 /// Sky the pilot just flew. First a "Success!" card (Time · Focus Coins ·
-/// Focused Minutes, with an optional rewarded "Double" ), then a streak card; a single
+/// Focus Type, with an optional rewarded "Double" ), then a streak card; a single
 /// completion interstitial plays for free users before returning Home. No
 /// postcards, no passport/share buttons, no old "You landed" screen.
 struct LandingView: View {
@@ -79,12 +79,11 @@ struct LandingView: View {
                 divider
                 coinTile
                 divider
-                // The Success stat is Focused Minutes now — the actual qualifying
-                // focused time (whole minutes), the SAME canonical value used by
-                // Objectives, Streak, Passport and the widgets. No distance/km.
-                statTile(icon: "timer",
-                         value: "\(max(0, summary.focusedMinutes))",
-                         label: "Focused Min", tint: AppColors.teal)
+                // The third stat is the session's real Focus Type (its chosen
+                // preset — Fly / Study / Work / …), never a duplicate of Time.
+                statTile(icon: focusTypeIcon,
+                         value: focusTypeName,
+                         label: "Focus Type", tint: AppColors.teal)
             }
             .padding(.vertical, AppSpacing.md)
             .glassBackground(cornerRadius: AppSpacing.cardRadius, tintOpacity: 0.2, shadowRadius: 12, shadowY: 6)
@@ -127,6 +126,16 @@ struct LandingView: View {
             Text(label).font(AppTypography.micro).foregroundStyle(AppColors.textTertiary)
         }
         .frame(maxWidth: .infinity)
+    }
+
+    /// The session's Focus Type — its chosen preset title. A plain flight with no
+    /// preset defaults to the app's default preset, "Fly" (never a fabricated one).
+    private var focusTypeName: String {
+        let t = summary.intention?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (t?.isEmpty == false) ? t! : "Fly"
+    }
+    private var focusTypeIcon: String {
+        FocusPreset.all.first { $0.title == focusTypeName }?.systemImage ?? "paperplane.fill"
     }
 
     private var divider: some View {

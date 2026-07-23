@@ -85,47 +85,17 @@ struct DuneCrestLine: Shape {
 
 // MARK: Desert camp — a tiny, distant Bedouin camp on a far dune ridge
 
-/// One or two low, wide tents with a softly peaked ridge — never a sharp
-/// cartoon triangle. Authored to read as a distant camp at very small size.
-struct TentCamp: Shape {
+/// One soft, low tent silhouette — a gently peaked dome, refined at tiny distant
+/// size. Deliberately unambiguous: never a sharp triangle, an animal or a blob.
+struct DesertTent: Shape {
     func path(in rect: CGRect) -> Path {
         let w = rect.width, h = rect.height, base = rect.maxY
         var p = Path()
-        // Main tent: wide skirt, a gentle peaked ridge left of centre.
         p.move(to: CGPoint(x: rect.minX, y: base))
-        p.addQuadCurve(to: CGPoint(x: rect.minX + w * 0.40, y: rect.minY + h * 0.08),
-                       control: CGPoint(x: rect.minX + w * 0.20, y: rect.minY + h * 0.46))
-        p.addQuadCurve(to: CGPoint(x: rect.minX + w * 0.60, y: base),
-                       control: CGPoint(x: rect.minX + w * 0.52, y: rect.minY + h * 0.40))
-        p.closeSubpath()
-        // A smaller second tent to the right.
-        p.move(to: CGPoint(x: rect.minX + w * 0.56, y: base))
-        p.addQuadCurve(to: CGPoint(x: rect.minX + w * 0.80, y: rect.minY + h * 0.34),
-                       control: CGPoint(x: rect.minX + w * 0.70, y: rect.minY + h * 0.60))
+        p.addQuadCurve(to: CGPoint(x: rect.midX, y: rect.minY + h * 0.10),
+                       control: CGPoint(x: rect.minX + w * 0.30, y: rect.minY + h * 0.28))
         p.addQuadCurve(to: CGPoint(x: rect.maxX, y: base),
-                       control: CGPoint(x: rect.minX + w * 0.90, y: rect.minY + h * 0.52))
-        p.closeSubpath()
-        return p
-    }
-}
-
-/// A minimal camel silhouette (two humps, neck, head) — faint and secondary.
-struct CamelSilhouette: Shape {
-    func path(in rect: CGRect) -> Path {
-        let w = rect.width, h = rect.height, base = rect.maxY
-        var p = Path()
-        p.move(to: CGPoint(x: rect.minX, y: base))
-        p.addLine(to: CGPoint(x: rect.minX + w * 0.08, y: rect.minY + h * 0.5))
-        // Two humps.
-        p.addQuadCurve(to: CGPoint(x: rect.minX + w * 0.48, y: rect.minY + h * 0.5),
-                       control: CGPoint(x: rect.minX + w * 0.28, y: rect.minY - h * 0.12))
-        p.addQuadCurve(to: CGPoint(x: rect.minX + w * 0.74, y: rect.minY + h * 0.42),
-                       control: CGPoint(x: rect.minX + w * 0.60, y: rect.minY - h * 0.02))
-        // Neck up-right, small head, back down to the leg line.
-        p.addLine(to: CGPoint(x: rect.minX + w * 0.86, y: rect.minY + h * 0.06))
-        p.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + h * 0.12))
-        p.addLine(to: CGPoint(x: rect.minX + w * 0.90, y: rect.minY + h * 0.34))
-        p.addLine(to: CGPoint(x: rect.minX + w * 0.94, y: base))
+                       control: CGPoint(x: rect.maxX - w * 0.30, y: rect.minY + h * 0.28))
         p.closeSubpath()
         return p
     }
@@ -265,57 +235,6 @@ struct PagodaShape: Shape {
     }
 }
 
-/// A traditional torii gate silhouette — two tapered posts, a lower tie beam,
-/// and a broad top lintel that sweeps up at both ends. Reads as a shrine gate,
-/// never a plain rectangle frame.
-struct ToriiGate: Shape {
-    func path(in rect: CGRect) -> Path {
-        let w = rect.width, h = rect.height, base = rect.maxY
-        let postW = w * 0.11
-        let lx = rect.minX + w * 0.24, rx = rect.maxX - w * 0.24
-        let topY = base - h
-        var p = Path()
-        // Posts.
-        p.addRect(CGRect(x: lx - postW / 2, y: topY + h * 0.08, width: postW, height: h - h * 0.08))
-        p.addRect(CGRect(x: rx - postW / 2, y: topY + h * 0.08, width: postW, height: h - h * 0.08))
-        // Lower tie beam (nuki).
-        p.addRect(CGRect(x: lx - postW * 0.7, y: base - h * 0.62,
-                         width: (rx - lx) + postW * 1.4, height: h * 0.07))
-        // Top lintel (kasagi) — a wide beam curving up at the ends.
-        var lintel = Path()
-        lintel.move(to: CGPoint(x: lx - w * 0.16, y: topY + h * 0.03))
-        lintel.addQuadCurve(to: CGPoint(x: rx + w * 0.16, y: topY + h * 0.03),
-                            control: CGPoint(x: rect.midX, y: topY - h * 0.07))
-        lintel.addLine(to: CGPoint(x: rx + w * 0.16, y: topY + h * 0.12))
-        lintel.addQuadCurve(to: CGPoint(x: lx - w * 0.16, y: topY + h * 0.12),
-                            control: CGPoint(x: rect.midX, y: topY + h * 0.02))
-        lintel.closeSubpath()
-        p.addPath(lintel)
-        return p
-    }
-}
-
-/// A gently arched footbridge silhouette with railing posts — a quiet garden
-/// note in the Kyoto midground.
-struct ArchedBridge: Shape {
-    func path(in rect: CGRect) -> Path {
-        let w = rect.width, h = rect.height, base = rect.maxY
-        var p = Path()
-        p.move(to: CGPoint(x: rect.minX, y: base))
-        p.addQuadCurve(to: CGPoint(x: rect.maxX, y: base),
-                       control: CGPoint(x: rect.midX, y: base - h))
-        p.addQuadCurve(to: CGPoint(x: rect.minX, y: base),
-                       control: CGPoint(x: rect.midX, y: base - h * 0.58))
-        p.closeSubpath()
-        for f in stride(from: 0.16, through: 0.84, by: 0.17) {
-            let x = rect.minX + w * CGFloat(f)
-            let deckY = base - CGFloat(Foundation.sin(Double(f) * .pi)) * h * 0.72
-            p.addRect(CGRect(x: x, y: deckY - h * 0.20, width: w * 0.022, height: h * 0.20))
-        }
-        return p
-    }
-}
-
 /// A low row of traditional temple/house rooflines — varied widths and ridge
 /// heights, gently upswept. Fills to the base so it reads as a settlement.
 struct TempleRoofline: Shape {
@@ -441,61 +360,6 @@ struct LagoonIslandChain: Shape {
         p.addLine(to: CGPoint(x: rect.maxX + 6, y: prev.y))
         p.addLine(to: CGPoint(x: rect.maxX + 6, y: base))
         p.closeSubpath()
-        return p
-    }
-}
-
-/// One distinct lagoon islet: a low sandy body with a soft asymmetric vegetated
-/// crown and a few lean palms — authored per-instance (crown height, palm count
-/// and lean) so the 2–3 midground islets never look duplicated. Filled to the
-/// base so it sits IN the water plane.
-struct LagoonIslet: Shape {
-    var crownH: CGFloat = 0.66      // vegetated crown height ÷ rect height
-    var palms: Int = 2
-    var lean: CGFloat = 1           // palm lean scale & direction
-
-    func path(in rect: CGRect) -> Path {
-        let w = rect.width, h = rect.height, base = rect.maxY
-        let cx = rect.midX
-        let topY = base - crownH * h
-        var p = Path()
-        // Low, wide sandy body with a gently asymmetric crown.
-        p.move(to: CGPoint(x: rect.minX, y: base))
-        p.addQuadCurve(to: CGPoint(x: cx - w * 0.06, y: topY),
-                       control: CGPoint(x: rect.minX + w * 0.26, y: topY + crownH * h * 0.20))
-        p.addQuadCurve(to: CGPoint(x: cx + w * 0.20, y: base - crownH * h * 0.58),
-                       control: CGPoint(x: cx + w * 0.05, y: topY - crownH * h * 0.06))
-        p.addQuadCurve(to: CGPoint(x: rect.maxX, y: base),
-                       control: CGPoint(x: cx + w * 0.34, y: base - crownH * h * 0.22))
-        p.closeSubpath()
-        // Palms rising off the crown — thin leaning trunk + a fan of frond wedges.
-        let tips: [(CGFloat, CGFloat)] = [
-            (-0.14, -0.05), (-0.08, -0.12), (0.08, -0.12), (0.14, -0.05), (0.0, -0.15),
-        ]
-        for i in 0..<max(0, palms) {
-            let f = palms <= 1 ? 0.5 : CGFloat(i) / CGFloat(palms - 1)
-            let px = cx + (f - 0.5) * w * 0.44
-            let baseY = topY + crownH * h * 0.05
-            let trunkTop = topY - crownH * h * 0.42
-            let curve = lean * w * 0.09 * (i % 2 == 0 ? 1 : -0.7)
-            let tw = max(0.6, w * 0.012)
-            p.move(to: CGPoint(x: px - tw, y: baseY))
-            p.addQuadCurve(to: CGPoint(x: px + curve - tw, y: trunkTop),
-                           control: CGPoint(x: px + curve * 0.4 - tw, y: (baseY + trunkTop) / 2))
-            p.addLine(to: CGPoint(x: px + curve + tw, y: trunkTop))
-            p.addQuadCurve(to: CGPoint(x: px + tw, y: baseY),
-                           control: CGPoint(x: px + curve * 0.4 + tw, y: (baseY + trunkTop) / 2))
-            p.closeSubpath()
-            let hubX = px + curve, hubY = trunkTop, perp = max(0.6, w * 0.008)
-            for tip in tips {
-                let tx = hubX + tip.0 * w
-                let ty = hubY + tip.1 * h
-                p.move(to: CGPoint(x: hubX, y: hubY - perp))
-                p.addLine(to: CGPoint(x: tx, y: ty))
-                p.addLine(to: CGPoint(x: hubX, y: hubY + perp))
-                p.closeSubpath()
-            }
-        }
         return p
     }
 }

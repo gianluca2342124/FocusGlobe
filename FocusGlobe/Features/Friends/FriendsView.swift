@@ -39,10 +39,16 @@ struct FriendsView: View {
             || !online.incomingRequests.isEmpty || !online.outgoingRequests.isEmpty
     }
 
-    /// A free pilot sees the whole Friends interface behind a tasteful blur with a
-    /// single Unlock overlay; PRO / Lifetime get full functionality. Loading is
-    /// NEVER treated as locked, so a premium owner never sees the overlay flash.
-    private var friendsLocked: Bool { appModel.entitlement == .free }
+    /// Route a PRO-gated Friends action. PRO/Lifetime → run it. FREE → open the
+    /// correct contextual paywall (never start auth/presence/rooms/invites first).
+    /// LOADING → a neutral no-op nudge (never a paywall, never a temporary grant).
+    private func gate(_ context: PaywallContext, run: () -> Void) {
+        switch appModel.entitlement {
+        case .premium: run()
+        case .free:    appModel.tapFeedback(); router.presentPaywall(context: context)
+        case .loading: appModel.tapFeedback(); appModel.refreshSubscriptionStatus()
+        }
+    }
 
     var body: some View {
         ZStack {
@@ -55,7 +61,7 @@ struct FriendsView: View {
                         // state never dominates the whole page. Signed-out
                         // offers Sign in with Apple right here.
                         OnlineUnavailableView(availability: online.availability, compact: true,
-                                              onSignIn: { showSignIn = true })
+                                              onSignIn: { gate(.online) { showSignIn = true } })
                     }
                     if let message = online.inviteJoinMessage {
                         // Outcome of an invitation link that couldn't be joined
@@ -98,12 +104,6 @@ struct FriendsView: View {
                 .contentMaxWidth()
             }
             .refreshable { await refresh() }
-            // The real Friends interface stays visible behind a strong, tasteful
-            // blur for a free pilot, with every control disabled.
-            .blur(radius: friendsLocked ? 16 : 0)
-            .disabled(friendsLocked)
-            .allowsHitTesting(!friendsLocked)
-            if friendsLocked { friendsLockOverlay }
         }
         .focusScreenChrome()
         .task { await refresh() }
@@ -158,40 +158,6 @@ struct FriendsView: View {
             Button("Cancel", role: .cancel) { removalTarget = nil }
         } message: {
             Text("You can always reconnect later with a new request.")
-        }
-    }
-
-    /// The single centred Unlock overlay shown over the blurred Friends interface
-    /// for a free pilot: the real PRO badge, the invitation line, and ONE CTA into
-    /// the Friends/Online contextual paywall. Enough of the interface shows through.
-    private var friendsLockOverlay: some View {
-        ZStack {
-            Color.black.opacity(0.18).ignoresSafeArea()
-            VStack(spacing: AppSpacing.md) {
-                FocusGlobePROBadge(visibleHeight: 26)
-                Text("Invite your friends and fly together with FocusGlobe PRO")
-                    .font(.system(size: 20, weight: .bold, design: .default))
-                    .foregroundStyle(.white)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                Button {
-                    appModel.tapFeedback()
-                    router.presentPaywall(context: .invite)
-                } label: {
-                    Text("Unlock FocusGlobe PRO")
-                        .font(AppTypography.headline)
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity).frame(height: 54)
-                        .background(Capsule().fill(ProBrand.primaryButton))
-                        .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 1))
-                        .shadow(color: ProBrand.ctaBlue.opacity(0.4), radius: 14, y: 6)
-                }
-                .buttonStyle(SoftPressStyle())
-            }
-            .padding(AppSpacing.lg)
-            .frame(maxWidth: 360)
-            .glassBackground(cornerRadius: 28, tintOpacity: 0.28, shadowRadius: 24, shadowY: 12)
-            .padding(AppSpacing.xl)
         }
     }
 

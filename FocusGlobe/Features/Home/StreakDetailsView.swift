@@ -42,8 +42,9 @@ struct StreakDetailsView: View {
                     goalsSection
                 }
                 .padding(Layout.pad(AppSpacing.screen, AppSpacing.xl))
-                .frame(maxWidth: Layout.pad(540, 760))   // fills the iPad modal panel
-                .frame(maxWidth: .infinity)
+                // A snug centred column on iPad/Mac (≈520 pt) — not a stretched
+                // phone layout; full-width on iPhone.
+                .streakMaxWidth()
                 .opacity(appeared ? 1 : 0)
                 .onAppear(perform: animateIn)
             }

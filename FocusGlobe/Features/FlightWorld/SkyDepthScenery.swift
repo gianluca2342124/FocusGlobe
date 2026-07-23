@@ -193,224 +193,156 @@ enum SkyWorld {
         .position(x: W / 2, y: H - (planeH + skirtH) / 2)
     }
 
-    /// A tiny distant camp on the far dune ridge: two low tents, 2–3 warm
-    /// lantern lights that gently flicker, and a couple of faint camels — all
-    /// small and secondary, never cartoonish or branded.
+    /// A tiny, unobtrusive desert camp on the far dune ridge: ONE very subtle low
+    /// tent silhouette and two tiny warm lights that gently flicker. Nothing that
+    /// could read as an animal, a rock or an ambiguous floating object.
     private static func desertCamp(W: CGFloat, H: CGFloat, t: Double, k: Double) -> some View {
-        // Sits ON the far dune's crest (x ≈ 0.30, screen y ≈ 0.77 H) and shares
-        // its parallax drift, so it never floats; the mid / near dunes crest to
-        // the right and stay LOW here, so they never cover it.
+        // Sits ON the far dune's crest (x ≈ 0.30, screen y ≈ 0.775 H) and shares
+        // its parallax drift, so it never floats.
         let cx = W * 0.30 + drift(t, depth: 0, points: 8)
         let cy = H * 0.775
-        let cw = W * 0.085
-        let ch = H * 0.026
+        let cw = W * 0.05
+        let ch = H * 0.018
         func flicker(_ phase: Double) -> Double {
             t == 0 ? 1.0 : 0.72 + 0.28 * Foundation.sin(t * 0.9 + phase)
         }
         return ZStack {
-            // Faint camels just left of the tents.
-            CamelSilhouette()
-                .fill(Color(hex: 0x1A1020).opacity(0.55 * k))
-                .frame(width: cw * 0.66, height: ch * 0.9)
-                .position(x: cx - cw * 0.95, y: cy + ch * 0.55)
-            // The tents.
-            TentCamp()
-                .fill(Color(hex: 0x1C1122).opacity(0.9 * k))
+            // One soft, low tent silhouette — a gently peaked dome, never a sharp
+            // triangle or a malformed shape.
+            DesertTent()
+                .fill(Color(hex: 0x1C1122).opacity(0.7 * k))
                 .frame(width: cw, height: ch)
                 .position(x: cx, y: cy)
-            // 2–3 warm lantern lights with a gentle, uncorrelated flicker.
-            ForEach(0..<3, id: \.self) { i in
+            // Two tiny warm camp lights with a gentle, uncorrelated flicker.
+            ForEach(0..<2, id: \.self) { i in
                 Circle()
                     .fill(Color(hex: 0xF3BC66))
-                    .frame(width: 2.4, height: 2.4)
+                    .frame(width: 2.2, height: 2.2)
                     .blur(radius: 0.4)
                     .shadow(color: Color(hex: 0xF3BC66).opacity(0.6 * k), radius: 3)
-                    .opacity((0.9 * k) * flicker(Double(i) * 2.1))
-                    .position(x: cx + cw * (CGFloat(i) - 1) * 0.26, y: cy + ch * 0.16)
+                    .opacity((0.9 * k) * flicker(Double(i) * 2.4))
+                    .position(x: cx + cw * (CGFloat(i) * 2 - 1) * 0.42, y: cy + ch * 0.2)
             }
         }
     }
 
-    // MARK: Fiji Lagoon — an immense tropical lagoon seen from above
+    // MARK: Fiji Lagoon — a calm tropical lagoon seen from above (refined)
 
     @ViewBuilder
     static func fijiLagoon(W: CGFloat, H: CGFloat, t: Double, k: Double) -> some View {
-        // The waterline sits high so the lagoon fills the lower ~42 % and the
-        // turquoise air the upper ~58 %, with islands meeting at the horizon.
-        let seaTop = H * 0.58
+        // A spacious turquoise sky over a calm lagoon: the waterline sits a little
+        // above centre so the water reads clearly and the horizon stays uncluttered.
+        let seaTop = H * 0.56
         ZStack {
-            // Sky: a warm tropical horizon, a cool aqua haze, sparse drifting cloud.
+            // Sky: only a warm horizon light + a cool aqua haze — no clouds, nothing
+            // that competes with the landscape.
             fijiSkyAtmosphere(W: W, H: H, seaTop: seaTop, t: t, k: k)
 
-            // Far island chain — an irregular, hazy coastline on the waterline
-            // (NO repeated semicircle hills). No skirt: the water covers below.
-            LagoonIslandChain(parallax: drift(t, depth: 0, points: 5))
-                .fill(LinearGradient(colors: [Color(hex: 0x10525A).opacity(0.55 * k),
-                                              Color(hex: 0x0B3E48).opacity(0.72 * k)],
+            // ONE elegant, organic distant island chain resting on the waterline,
+            // kept subtle by atmospheric perspective (no repeated semicircles).
+            LagoonIslandChain(parallax: drift(t, depth: 0, points: 4))
+                .fill(LinearGradient(colors: [Color(hex: 0x1B5E60).opacity(0.42 * k),
+                                              Color(hex: 0x123F46).opacity(0.58 * k)],
                                      startPoint: .top, endPoint: .bottom))
-                .frame(width: W, height: H * 0.17)
-                .position(x: W / 2, y: seaTop - H * 0.085)
-            // Subtle palm silhouettes on the two tallest far headlands.
-            fijiFarPalms(W: W, H: H, seaTop: seaTop, t: t, k: k)
+                .frame(width: W, height: H * 0.12)
+                .position(x: W / 2, y: seaTop - H * 0.055)
+                .blur(radius: 0.6)
 
             // A soft mist band settling the far chain into the distance.
-            Rectangle().fill(Color(hex: 0xCDEFE4).opacity(0.10 * k))
-                .frame(width: W, height: H * 0.05)
-                .position(x: W / 2, y: seaTop + H * 0.005).blur(radius: 11)
+            Rectangle().fill(Color(hex: 0xCDEFE4).opacity(0.09 * k))
+                .frame(width: W, height: H * 0.045)
+                .position(x: W / 2, y: seaTop).blur(radius: 12)
 
-            // The lagoon water: perspective shimmer, reef & channel colour, glints.
+            // The lagoon water: layered turquoise→teal, a soft channel, organic reef
+            // blooms and a few broad non-repeating reflection curves.
             lagoonWater(W: W, H: H, seaTop: seaTop, t: t, k: k)
 
-            // Midground islets (2–3 distinct) with pale reef edges, over the water.
+            // Two refined islets with soft tree-canopy silhouettes (no stick palms).
             fijiIslets(W: W, H: H, seaTop: seaTop, t: t, k: k)
 
-            // Rare living events — a seabird skein, a lone distant boat.
+            // One rare, refined living event: a small distant bird group.
             fijiEvents(W: W, H: H, seaTop: seaTop, t: t, k: k)
         }
     }
 
-    /// The tropical air above the waterline: a warm horizon light, a cool aqua
-    /// haze hugging the sea, and a few soft clouds drifting gently (never a wall).
+    /// The tropical air above the waterline: a warm horizon glow and a cool aqua
+    /// haze hugging the sea. Deliberately empty otherwise — the sky stays spacious.
     private static func fijiSkyAtmosphere(W: CGFloat, H: CGFloat, seaTop: CGFloat,
                                           t: Double, k: Double) -> some View {
         ZStack {
-            LinearGradient(colors: [.clear, Color(hex: 0xFFE1AC).opacity(0.14 * k)],
+            LinearGradient(colors: [.clear, Color(hex: 0xFFE1AC).opacity(0.12 * k)],
                            startPoint: .top, endPoint: .bottom)
-                .frame(width: W, height: H * 0.15)
-                .position(x: W / 2, y: seaTop - H * 0.02).blur(radius: 14)
-            Rectangle().fill(Color(hex: 0x8FE6D8).opacity(0.10 * k))
-                .frame(width: W, height: H * 0.10)
-                .position(x: W / 2, y: seaTop - H * 0.09).blur(radius: 16)
-            Canvas { ctx, s in
-                let clouds: [(x: CGFloat, y: CGFloat, w: CGFloat)] = [
-                    (0.22, 0.15, 0.34), (0.66, 0.09, 0.26), (0.48, 0.25, 0.22),
-                ]
-                for (idx, c) in clouds.enumerated() {
-                    let dx = t == 0 ? 0 : CGFloat(Foundation.sin(t * 0.01 + Double(idx) * 1.6) * 12)
-                    let cx = c.x * s.width + dx
-                    let cy = c.y * s.height
-                    let cw = c.w * s.width
-                    for j in 0..<3 {
-                        let ox = CGFloat(j - 1) * cw * 0.3
-                        SkyFX.glow(&ctx, x: cx + ox, y: cy,
-                                   r: cw * (0.5 - CGFloat(abs(j - 1)) * 0.12),
-                                   color: .white.opacity(0.10 * k))
-                    }
-                }
-            }
-            .frame(width: W, height: seaTop)
-            .position(x: W / 2, y: seaTop / 2)
+                .frame(width: W, height: H * 0.16)
+                .position(x: W / 2, y: seaTop - H * 0.02).blur(radius: 16)
+            Rectangle().fill(Color(hex: 0x8FE6D8).opacity(0.09 * k))
+                .frame(width: W, height: H * 0.09)
+                .position(x: W / 2, y: seaTop - H * 0.085).blur(radius: 18)
         }
     }
 
-    /// Two faint palm clusters standing on the tallest far headlands — small and
-    /// hazy, the signature tropical note without cluttering the horizon.
-    private static func fijiFarPalms(W: CGFloat, H: CGFloat, seaTop: CGFloat,
-                                     t: Double, k: Double) -> some View {
-        Canvas { ctx, s in
-            let dx = drift(t, depth: 0, points: 5)
-            let clusters: [(x: CGFloat, palms: Int)] = [(0.24, 2), (0.67, 3)]
-            for cl in clusters {
-                let baseX = cl.x * s.width + dx
-                let baseY = seaTop - H * 0.006
-                for pI in 0..<cl.palms {
-                    let px = baseX + CGFloat(pI - cl.palms / 2) * W * 0.012
-                    let top = baseY - H * 0.045
-                    var trunk = Path()
-                    trunk.move(to: CGPoint(x: px, y: baseY))
-                    trunk.addQuadCurve(to: CGPoint(x: px + W * 0.006, y: top),
-                                       control: CGPoint(x: px, y: (baseY + top) / 2))
-                    ctx.stroke(trunk, with: .color(Color(hex: 0x123C3E).opacity(0.42 * k)),
-                               lineWidth: 1.1)
-                    for a in [-0.9, -0.4, 0.4, 0.9] {
-                        var fr = Path()
-                        fr.move(to: CGPoint(x: px + W * 0.006, y: top))
-                        fr.addLine(to: CGPoint(x: px + W * 0.006 + CGFloat(a) * W * 0.012,
-                                               y: top - H * 0.008 + CGFloat(abs(a)) * H * 0.006))
-                        ctx.stroke(fr, with: .color(Color(hex: 0x123C3E).opacity(0.36 * k)),
-                                   lineWidth: 1.0)
-                    }
-                }
-            }
-        }
-        .frame(width: W, height: H).position(x: W / 2, y: H / 2)
-    }
-
-    /// The lagoon itself — a luminous shallow water plane from the waterline to
-    /// the bottom: a soft depth gradient, a meandering channel and coral reef
-    /// colour variation, perspective shimmer bands (unevenly spaced, each with
-    /// its own phase — never identical stripes) and restrained bioluminescence.
+    /// The lagoon plane: a layered turquoise→deep-teal gradient, a soft meandering
+    /// channel, large organic reef blooms, and a FEW broad reflection curves that
+    /// follow perspective (never repeated straight stripes), plus faint glints.
     private static func lagoonWater(W: CGFloat, H: CGFloat, seaTop: CGFloat,
                                     t: Double, k: Double) -> some View {
         let waterH = H - seaTop
         return ZStack(alignment: .top) {
-            LinearGradient(colors: [Color(hex: 0x5EC8C0).opacity(0.42 * k),
-                                    Color(hex: 0x2C8C92).opacity(0.60 * k),
-                                    Color(hex: 0x14666E).opacity(0.72 * k)],
+            LinearGradient(colors: [Color(hex: 0x64CFC6).opacity(0.50 * k),
+                                    Color(hex: 0x2E9096).opacity(0.66 * k),
+                                    Color(hex: 0x115A64).opacity(0.80 * k)],
                            startPoint: .top, endPoint: .bottom)
             Canvas { ctx, s in
                 let ww = s.width, wh = s.height
-                // Meandering channel (a slightly deeper, cooler ribbon).
-                let chDrift = t == 0 ? 0 : CGFloat(Foundation.sin(t * 0.05) * Double(ww) * 0.02)
+                // Soft meandering channel — a slightly deeper, cooler ribbon.
+                let chDrift = t == 0 ? 0 : CGFloat(Foundation.sin(t * 0.05) * Double(ww) * 0.015)
                 var ch = Path()
-                ch.move(to: CGPoint(x: ww * 0.30 + chDrift, y: 0))
-                ch.addQuadCurve(to: CGPoint(x: ww * 0.44 + chDrift, y: wh * 0.55),
-                                control: CGPoint(x: ww * 0.20 + chDrift, y: wh * 0.28))
-                ch.addQuadCurve(to: CGPoint(x: ww * 0.36 + chDrift, y: wh),
-                                control: CGPoint(x: ww * 0.54 + chDrift, y: wh * 0.80))
-                ch.addLine(to: CGPoint(x: ww * 0.54 + chDrift, y: wh))
-                ch.addQuadCurve(to: CGPoint(x: ww * 0.58 + chDrift, y: wh * 0.5),
-                                control: CGPoint(x: ww * 0.66 + chDrift, y: wh * 0.80))
+                ch.move(to: CGPoint(x: ww * 0.34 + chDrift, y: -4))
+                ch.addQuadCurve(to: CGPoint(x: ww * 0.46 + chDrift, y: wh * 0.55),
+                                control: CGPoint(x: ww * 0.24 + chDrift, y: wh * 0.30))
+                ch.addQuadCurve(to: CGPoint(x: ww * 0.40 + chDrift, y: wh + 4),
+                                control: CGPoint(x: ww * 0.56 + chDrift, y: wh * 0.82))
+                ch.addLine(to: CGPoint(x: ww * 0.58 + chDrift, y: wh + 4))
+                ch.addQuadCurve(to: CGPoint(x: ww * 0.60 + chDrift, y: wh * 0.5),
+                                control: CGPoint(x: ww * 0.70 + chDrift, y: wh * 0.82))
                 ch.closeSubpath()
-                ctx.fill(ch, with: .color(Color(hex: 0x0C4A56).opacity(0.26 * k)))
-                // Coral-reef shallows — irregular lighter-aqua blooms.
+                ctx.fill(ch, with: .color(Color(hex: 0x0C4A56).opacity(0.20 * k)))
+                // Large organic reef shallows — soft lighter-aqua blooms that drift
+                // very slowly (no hard polygons or triangle channels).
                 let reefs: [(x: CGFloat, y: CGFloat, r: CGFloat)] = [
-                    (0.72, 0.34, 0.20), (0.20, 0.62, 0.16), (0.58, 0.80, 0.22), (0.87, 0.60, 0.14),
+                    (0.74, 0.32, 0.26), (0.22, 0.60, 0.22), (0.55, 0.82, 0.30),
                 ]
                 for rf in reefs {
-                    SkyFX.glow(&ctx, x: rf.x * ww, y: rf.y * wh, r: rf.r * ww,
-                               color: Color(hex: 0x9BF0DC).opacity(0.16 * k))
+                    let d = t == 0 ? 0 : CGFloat(Foundation.sin(t * 0.03 + Double(rf.x) * 5) * Double(ww) * 0.01)
+                    SkyFX.glow(&ctx, x: rf.x * ww + d, y: rf.y * wh, r: rf.r * ww,
+                               color: Color(hex: 0x8FEFD8).opacity(0.15 * k))
                 }
-                // Perspective shimmer bands — seeded uneven spacing/phase, wider &
-                // brighter toward the viewer, each a gently wobbling polyline.
-                var rng = SeededRNG(seed: 0xF1DA_A6)
-                var y: CGFloat = wh * 0.05
-                var i = 0
-                while y < wh {
-                    let f = y / wh
-                    let jitter = CGFloat(rng.unit())
-                    let gap = wh * (0.035 + f * 0.075) * (0.7 + jitter * 0.7)
-                    let amp = 0.6 + Double(f) * 2.6
-                    let phase = Double(i) * 1.7 + Double(jitter) * 6.2
-                    let shimmer = t == 0 ? 0.0 : Foundation.sin(t * (0.18 + Double(f) * 0.22) + phase) * amp
-                    let a = (0.05 + f * 0.16) * (0.6 + jitter * 0.6) * k
+                // A FEW broad reflection curves — wide, faint, each a single gentle
+                // arc that drifts slowly. Three only, at different depths/widths, so
+                // they never read as repeated stripes.
+                let curves: [(y: CGFloat, half: CGFloat, a: Double, ph: Double)] = [
+                    (0.30, 0.34, 0.09, 0.0), (0.52, 0.42, 0.11, 1.4), (0.78, 0.50, 0.13, 2.7),
+                ]
+                for c in curves {
+                    let y = c.y * wh
+                    let sh = t == 0 ? 0.0 : Foundation.sin(t * 0.22 + c.ph) * (2 + Double(c.y) * 5)
                     var p = Path()
-                    let segs = 5
-                    for sIdx in 0...segs {
-                        let sx = ww * CGFloat(sIdx) / CGFloat(segs)
-                        let wob = Foundation.sin(Double(sIdx) * 1.3 + phase + t * 0.1) * amp * 0.5
-                        let py = y + CGFloat(sIdx.isMultiple(of: 2) ? shimmer : -shimmer) + CGFloat(wob)
-                        if sIdx == 0 { p.move(to: CGPoint(x: sx, y: py)) }
-                        else { p.addLine(to: CGPoint(x: sx, y: py)) }
-                    }
-                    ctx.stroke(p, with: .color(Color(hex: 0xBFF4E4).opacity(a)),
-                               lineWidth: 0.8 + f * 1.8)
-                    y += gap
-                    i += 1
+                    p.move(to: CGPoint(x: ww * (0.5 - c.half), y: y + CGFloat(sh)))
+                    p.addQuadCurve(to: CGPoint(x: ww * (0.5 + c.half), y: y - CGFloat(sh)),
+                                   control: CGPoint(x: ww * 0.5, y: y - c.half * ww * 0.05))
+                    ctx.stroke(p, with: .color(Color(hex: 0xCFF7EA).opacity(c.a * k)),
+                               lineWidth: 1.4 + c.y * 2.4)
                 }
-                // Restrained bioluminescence — a few cyan glints that slowly wax,
-                // not a per-frame sparkle field. All rng draws are unconditional so
-                // nothing teleports between frames.
+                // Restrained bioluminescence — a couple of faint glints that wax.
                 var brng = SeededRNG(seed: 0xB101_07)
-                for _ in 0..<10 {
+                for _ in 0..<7 {
                     let bx = CGFloat(brng.unit()) * ww
-                    let by = (0.35 + CGFloat(brng.unit()) * 0.6) * wh
-                    let rate = 0.15 + brng.unit() * 0.2
+                    let by = (0.40 + CGFloat(brng.unit()) * 0.55) * wh
+                    let rate = 0.15 + brng.unit() * 0.18
                     let ph = brng.unit() * 6.28
                     let rr = 5 + 4 * CGFloat(brng.unit())
                     let wax = t == 0 ? 0.0 : max(0, Foundation.sin(t * rate + ph))
-                    guard wax > 0.6 else { continue }
-                    let a = (wax - 0.6) / 0.4 * 0.45 * k
+                    guard wax > 0.7 else { continue }
+                    let a = (wax - 0.7) / 0.3 * 0.4 * k
                     SkyFX.glow(&ctx, x: bx, y: by, r: rr, color: Color(hex: 0x7BFBE6).opacity(a))
                 }
             }
@@ -419,86 +351,80 @@ enum SkyWorld {
         .position(x: W / 2, y: seaTop + waterH / 2)
     }
 
-    /// The 2–3 distinct midground islets, each with a pale reef edge in the
-    /// water and its own crown/palm authoring so none reads as a duplicate.
+    /// Two refined lagoon islets: a low sandy body with a soft, bumpy tree-canopy
+    /// silhouette (never stick palms), a thin sand line and a pale reef halo. One
+    /// deterministic Canvas; positions move only with the slow parallax drift.
     private static func fijiIslets(W: CGFloat, H: CGFloat, seaTop: CGFloat,
                                    t: Double, k: Double) -> some View {
-        let dx = drift(t, depth: 1, points: 6)
-        let islets: [(x: CGFloat, by: CGFloat, w: CGFloat, h: CGFloat, palms: Int, lean: CGFloat)] = [
-            (0.24, 0.70, 0.24, 0.11, 2, 1.0),
-            (0.60, 0.66, 0.16, 0.075, 1, -0.8),
-            (0.84, 0.74, 0.20, 0.12, 3, 0.7),
-        ]
-        return ZStack {
-            ForEach(islets.indices, id: \.self) { i in
-                let isl = islets[i]
-                let cx = W * isl.x + dx
-                let by = H * isl.by
-                let iw = W * isl.w
-                let ih = H * isl.h
-                Ellipse().fill(Color(hex: 0xAFF4E2).opacity(0.14 * k))
-                    .frame(width: iw * 1.7, height: ih * 0.7)
-                    .position(x: cx, y: by).blur(radius: 6)
-                LagoonIslet(crownH: 0.66, palms: isl.palms, lean: isl.lean)
-                    .fill(LinearGradient(colors: [Color(hex: 0x1E6E60).opacity(0.92 * k),
-                                                  Color(hex: 0x0E4038).opacity(0.96 * k)],
-                                         startPoint: .top, endPoint: .bottom))
-                    .frame(width: iw, height: ih)
-                    .position(x: cx, y: by - ih / 2)
+        Canvas { ctx, s in
+            let ww = s.width, hh = s.height
+            let dx = drift(t, depth: 1, points: 5)
+            let seaFrac = seaTop / hh
+            // (centreX frac, base-below-seaTop frac, halfWidth frac, height frac, bumps)
+            let islets: [(cx: CGFloat, drop: CGFloat, w: CGFloat, h: CGFloat, bumps: Int)] = [
+                (0.30, 0.055, 0.13, 0.060, 5),
+                (0.72, 0.020, 0.09, 0.045, 4),
+            ]
+            for isl in islets {
+                let cx = isl.cx * ww + dx
+                let by = (seaFrac + isl.drop) * hh
+                let w = isl.w * ww
+                let h = isl.h * hh
+                // Pale reef halo in the water.
+                SkyFX.glow(&ctx, x: cx, y: by, r: w * 1.5, color: Color(hex: 0x9BF0DC).opacity(0.12 * k))
+                // Thin sand line at the base.
+                ctx.fill(Path(ellipseIn: CGRect(x: cx - w, y: by - h * 0.05, width: w * 2, height: h * 0.22)),
+                         with: .color(Color(hex: 0xE9DBBE).opacity(0.30 * k)))
+                // Island body with a soft scalloped tree-canopy top (no sticks).
+                let leftX = cx - w, rightX = cx + w
+                let shoulderY = by - h * 0.32
+                let topY = by - h
+                var p = Path()
+                p.move(to: CGPoint(x: leftX, y: by))
+                p.addLine(to: CGPoint(x: leftX, y: shoulderY))
+                let n = isl.bumps
+                for i in 1...n {
+                    let x = leftX + (rightX - leftX) * CGFloat(i) / CGFloat(n)
+                    let prevX = leftX + (rightX - leftX) * CGFloat(i - 1) / CGFloat(n)
+                    let midX = (prevX + x) / 2
+                    let bumpY = topY + h * (i % 2 == 0 ? 0.20 : 0.02)
+                    p.addQuadCurve(to: CGPoint(x: x, y: shoulderY), control: CGPoint(x: midX, y: bumpY))
+                }
+                p.addLine(to: CGPoint(x: rightX, y: by))
+                p.closeSubpath()
+                ctx.fill(p, with: .color(Color(hex: 0x15564A).opacity(0.95 * k)))
+                // A subtle darker underside gives a little form.
+                ctx.fill(Path(ellipseIn: CGRect(x: cx - w * 0.9, y: by - h * 0.12, width: w * 1.8, height: h * 0.2)),
+                         with: .color(Color(hex: 0x0C3A34).opacity(0.40 * k)))
             }
         }
+        .frame(width: W, height: H).position(x: W / 2, y: H / 2)
     }
 
-    /// Rare, deterministic living events on a slow cycle: a small seabird skein
-    /// crossing the sky, and — on a longer cycle — a lone distant boat drifting
-    /// across the far water. Both absent most of the time; keyed to a floor()
-    /// cycle of `t`, so they never reset on re-render and never teleport.
+    /// One rare, refined living event: a small distant bird group crossing high on
+    /// a long deterministic cycle (absent most of the time; never teleports).
     private static func fijiEvents(W: CGFloat, H: CGFloat, seaTop: CGFloat,
                                    t: Double, k: Double) -> some View {
         Canvas { ctx, s in
             guard t != 0 else { return }
             let ww = s.width, hh = s.height
-            // Seabird skein — visible for a third of a 46 s cycle.
-            let cyc = t / 46.0
+            let cyc = t / 54.0
             let ph = cyc - cyc.rounded(.down)
-            if ph < 0.34 {
-                let p = ph / 0.34
-                let bx = CGFloat(-0.1 + p * 1.2) * ww
-                let by = (0.18 + 0.05 * CGFloat(Foundation.sin(p * 6.28))) * hh
-                for b in 0..<5 {
-                    let x = bx + CGFloat(b) * ww * 0.02 - ww * 0.04
-                    let y = by + CGFloat(abs(b - 2)) * hh * 0.012
-                    let flap = 1 + 0.5 * Foundation.sin(t * 6 + Double(b))
-                    var wing = Path()
-                    wing.move(to: CGPoint(x: x - 4, y: y + CGFloat(flap)))
-                    wing.addQuadCurve(to: CGPoint(x: x, y: y - 1),
-                                      control: CGPoint(x: x - 2, y: y - CGFloat(flap)))
-                    wing.addQuadCurve(to: CGPoint(x: x + 4, y: y + CGFloat(flap)),
-                                      control: CGPoint(x: x + 2, y: y - CGFloat(flap)))
-                    ctx.stroke(wing, with: .color(Color(hex: 0x24333A).opacity(0.5 * k)),
-                               lineWidth: 1.2)
-                }
-            }
-            // Lone distant boat — visible for half of a longer, offset cycle.
-            let bcyc = (t + 30) / 82.0
-            let bph = bcyc - bcyc.rounded(.down)
-            if bph < 0.5 {
-                let p = bph / 0.5
-                let x = CGFloat(-0.08 + p * 1.16) * ww
-                let y = seaTop + hh * 0.03
-                let bw = ww * 0.05, bh = hh * 0.03
-                var hull = Path()
-                hull.move(to: CGPoint(x: x - bw / 2, y: y))
-                hull.addQuadCurve(to: CGPoint(x: x + bw / 2, y: y),
-                                  control: CGPoint(x: x, y: y + bh * 0.6))
-                hull.closeSubpath()
-                ctx.fill(hull, with: .color(Color(hex: 0x17323A).opacity(0.55 * k)))
-                var sail = Path()
-                sail.move(to: CGPoint(x: x, y: y - bh * 0.1))
-                sail.addLine(to: CGPoint(x: x, y: y - bh * 2.2))
-                sail.addLine(to: CGPoint(x: x + bw * 0.5, y: y - bh * 0.3))
-                sail.closeSubpath()
-                ctx.fill(sail, with: .color(Color(hex: 0x2A4A52).opacity(0.5 * k)))
+            guard ph < 0.28 else { return }
+            let p = ph / 0.28
+            let bx = CGFloat(-0.1 + p * 1.2) * ww
+            let by = (0.20 + 0.04 * CGFloat(Foundation.sin(p * 6.28))) * hh
+            for b in 0..<5 {
+                let x = bx + CGFloat(b) * ww * 0.018 - ww * 0.036
+                let y = by + CGFloat(abs(b - 2)) * hh * 0.010
+                let flap = 1 + 0.5 * Foundation.sin(t * 6 + Double(b))
+                var wing = Path()
+                wing.move(to: CGPoint(x: x - 3.6, y: y + CGFloat(flap)))
+                wing.addQuadCurve(to: CGPoint(x: x, y: y - 1),
+                                  control: CGPoint(x: x - 1.8, y: y - CGFloat(flap)))
+                wing.addQuadCurve(to: CGPoint(x: x + 3.6, y: y + CGFloat(flap)),
+                                  control: CGPoint(x: x + 1.8, y: y - CGFloat(flap)))
+                ctx.stroke(wing, with: .color(Color(hex: 0x2A3A40).opacity(0.45 * k)), lineWidth: 1.1)
             }
         }
         .frame(width: W, height: H).position(x: W / 2, y: H / 2)
@@ -528,17 +454,10 @@ enum SkyWorld {
             kyotoDistantRoofs(W: W, H: H, t: t, k: k)
             kyotoMist(W: W, H: H, t: t, k: k)
 
-            // 2 — Midground: the pagoda (believable multi-tier), a torii gate and
-            //     a footbridge, then the varied village roofline in front.
+            // 2 — Midground: the pagoda (believable multi-tier), then the single
+            //     varied temple roofline in front. No torii, no bridge, no crude
+            //     houses — one refined pagoda + one roofline is enough.
             kyotoPagoda(W: W, H: H, t: t, k: k)
-            ToriiGate()
-                .fill(Color(hex: 0x5A1E22).opacity(0.85 * k))
-                .frame(width: W * 0.16, height: H * 0.13)
-                .position(x: W * 0.15 + drift(t, depth: 1, points: 5), y: H * 0.775)
-            ArchedBridge()
-                .fill(Color(hex: 0x241528).opacity(0.9 * k))
-                .frame(width: W * 0.22, height: H * 0.05)
-                .position(x: W * 0.50 + drift(t, depth: 1, points: 6), y: H * 0.805)
             plane(TempleRoofline(roofs: roofs, parallax: drift(t, depth: 2, points: 9)),
                   base: 0.94, height: 0.14, tint: Color(hex: 0x1E1330),
                   top: 0.72, bottom: 0.92, k: k, W: W, H: H)
@@ -696,10 +615,11 @@ enum SkyWorld {
         .position(x: W / 2, y: H * 0.87)
     }
 
-    /// The lantern signature — MANY warm lanterns across three depth layers plus
-    /// a few floating ones drifting slowly upward. Each is a recognisable paper
-    /// chōchin (top fitting, ribbed barrel, tassel), warm amber / red-orange,
-    /// with a restrained glow and its own slow flicker — never plain circles.
+    /// The lantern signature — ONE reusable paper-chōchin component (top fitting,
+    /// ribbed barrel, tassel, warm core + soft glow) drawn in THREE distinct,
+    /// never-mixed behaviours: anchored PATH lanterns (flicker only), HANGING
+    /// lanterns (tiny horizontal sway), and a few SKY lanterns that rise slowly
+    /// from the horizon and fade at both ends (never appearing mid-screen).
     private static func kyotoLanternField(W: CGFloat, H: CGFloat, t: Double, k: Double) -> some View {
         Canvas { ctx, s in
             let ww = s.width, hh = s.height
@@ -735,48 +655,56 @@ enum SkyWorld {
 
             let warmA = Color(hex: 0xFF9A4E)   // amber
             let warmB = Color(hex: 0xE85A3A)   // red-orange
-            // Far row — small, dim, hazy, high along the eaves.
-            let dx0 = drift(t, depth: 0, points: 6)
+
+            // 1 — PATH lanterns: a row lining the foreground terrace/path, anchored
+            //     to the ground with NO vertical movement — only a subtle flicker.
+            //     They recede along a gentle diagonal so the path reads with depth.
+            let dxPath = drift(t, depth: 2, points: 8)
             for i in 0..<7 {
-                let cx = ww * (0.12 + CGFloat(i) * 0.12) + dx0
-                let cy = hh * 0.60
-                let flick = t == 0 ? 1.0 : 0.78 + 0.22 * Foundation.sin(t * (0.5 + Double(i) * 0.2) + Double(i) * 1.7)
-                lantern(&ctx, cx: cx, cy: cy, lw: ww * 0.016, lh: hh * 0.03,
-                        warm: i % 2 == 0 ? warmA : warmB, a: 0.5 * flick * k, glowMul: 0.7)
+                let f = CGFloat(i) / 6
+                let cx = ww * (0.14 + f * 0.72) + dxPath
+                let cy = hh * (0.90 - f * 0.06)                 // nearer = lower/bigger
+                let scale = 1.0 - Double(f) * 0.45
+                let flick = t == 0 ? 1.0 : 0.82 + 0.18 * Foundation.sin(t * (0.6 + Double(i) * 0.2) + Double(i) * 1.7)
+                lantern(&ctx, cx: cx, cy: cy, lw: ww * 0.03 * CGFloat(scale), lh: hh * 0.056 * CGFloat(scale),
+                        warm: i % 3 == 0 ? warmB : warmA, a: 0.92 * flick * k, glowMul: 1.15)
             }
-            // Mid row — brighter, along the path / village line.
-            let dx1 = drift(t, depth: 1, points: 9)
-            for i in 0..<8 {
-                let cx = ww * (0.08 + CGFloat(i) * 0.115) + dx1
-                let cy = hh * (0.74 + 0.01 * CGFloat(i % 2))
-                let flick = t == 0 ? 1.0 : 0.72 + 0.28 * Foundation.sin(t * (0.6 + Double(i) * 0.25) + Double(i) * 2.1)
-                lantern(&ctx, cx: cx, cy: cy, lw: ww * 0.026, lh: hh * 0.05,
-                        warm: i % 3 == 0 ? warmB : warmA, a: 0.8 * flick * k, glowMul: 1.0)
+
+            // 2 — HANGING lanterns: a few strung from an implied eave line, with a
+            //     tiny HORIZONTAL sway only (they never drift upward).
+            let hangY = hh * 0.52
+            for i in 0..<5 {
+                let baseX = ww * (0.16 + CGFloat(i) * 0.17)
+                let sway = t == 0 ? 0.0 : Foundation.sin(t * 0.5 + Double(i) * 1.3) * Double(ww) * 0.006
+                let cx = baseX + CGFloat(sway) + drift(t, depth: 1, points: 5)
+                let cy = hangY + hh * 0.02 * CGFloat(i % 2)
+                // A cord up to the implied line.
+                var line = Path()
+                line.move(to: CGPoint(x: cx, y: cy - hh * 0.07))
+                line.addLine(to: CGPoint(x: baseX + drift(t, depth: 1, points: 5), y: hangY - hh * 0.06))
+                ctx.stroke(line, with: .color(Color(hex: 0x2A1414).opacity(0.4 * k)), lineWidth: 0.6)
+                let flick = t == 0 ? 1.0 : 0.76 + 0.24 * Foundation.sin(t * (0.7 + Double(i) * 0.3) + Double(i) * 2.1)
+                lantern(&ctx, cx: cx, cy: cy, lw: ww * 0.024, lh: hh * 0.046,
+                        warm: i % 2 == 0 ? warmA : warmB, a: 0.82 * flick * k, glowMul: 1.0)
             }
-            // Near row — a few large, bright foreground lanterns.
-            let dx2 = drift(t, depth: 2, points: 12)
-            let near: [(x: CGFloat, y: CGFloat)] = [(0.16, 0.90), (0.50, 0.93), (0.84, 0.90)]
-            for (i, n) in near.enumerated() {
-                let cx = n.x * ww + dx2
-                let cy = n.y * hh
-                let flick = t == 0 ? 1.0 : 0.7 + 0.3 * Foundation.sin(t * (0.5 + Double(i) * 0.3) + Double(i) * 1.3)
-                lantern(&ctx, cx: cx, cy: cy, lw: ww * 0.05, lh: hh * 0.09,
-                        warm: i % 2 == 0 ? warmA : warmB, a: 0.95 * flick * k, glowMul: 1.3)
-            }
-            // Floating lanterns — a few drifting slowly upward on a slow cycle.
+
+            // 3 — SKY lanterns: only a few, rising SLOWLY from near the horizon and
+            //     fading fully in near the bottom and out near the top — so none
+            //     ever pops into existence in the middle of the screen.
             var rng = SeededRNG(seed: 0x1A27_0F)
-            for _ in 0..<6 {
+            for _ in 0..<4 {
                 let baseX = CGFloat(rng.unit())
                 let sway = rng.unit()
                 let rate = 0.4 + rng.unit() * 0.5
-                let size = 0.6 + rng.unit() * 0.8
+                let size = 0.7 + rng.unit() * 0.6
                 let startY = rng.unit()
-                let cycle = t == 0 ? 0.4 : (t * (0.01 + rate * 0.006) + startY).truncatingRemainder(dividingBy: 1.0)
-                let cy = hh * CGFloat(0.9 - cycle * 0.7)
-                let cx = baseX * ww + CGFloat(Foundation.sin(t * 0.1 + sway * 6) * 10)
-                let fade = 1 - abs(cycle - 0.5) * 0.6
+                let cycle = t == 0 ? 0.5 : (t * (0.008 + rate * 0.004) + startY).truncatingRemainder(dividingBy: 1.0)
+                let cy = hh * CGFloat(0.86 - cycle * 0.66)       // horizon (0.86) → high (0.20)
+                let cx = baseX * ww + CGFloat(Foundation.sin(t * 0.08 + sway * 6) * 8)
+                // Fade 0 at both ends of the rise, so the wrap is never visible.
+                let fade = Foundation.sin(cycle * Double.pi)
                 lantern(&ctx, cx: cx, cy: cy, lw: ww * 0.02 * CGFloat(size), lh: hh * 0.038 * CGFloat(size),
-                        warm: warmA, a: 0.55 * fade * k, glowMul: 0.9)
+                        warm: warmA, a: 0.5 * fade * k, glowMul: 0.9)
             }
         }
         .frame(width: W, height: H).position(x: W / 2, y: H / 2)

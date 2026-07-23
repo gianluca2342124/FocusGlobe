@@ -26,11 +26,6 @@ struct PaywallView: View {
     // Privacy / Terms links are centralised and configurable in `LegalLinks`
     // (replace the placeholder URLs there before release — see APP_STORE_READINESS.md).
 
-    /// The paywall hero uses the premium **King** balloon via the BalloonSkin
-    /// model mapping (so a future asset rename stays safe). Falls back to the
-    /// default skin / vector balloon if the image is missing.
-    static let heroAssetName = BalloonSkin.skin(id: "king").assetName
-
     private var subs: SubscriptionManager { appModel.subscriptions }
 
     var body: some View {
@@ -44,15 +39,17 @@ struct PaywallView: View {
                 closeRow
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: AppSpacing.sm) {
-                        contextHero
-                        // The FocusGlobe PRO identity lockup — the real badge, not
-                        // a gold title treatment.
+                        // The FocusGlobe PRO identity lockup FIRST — native bold
+                        // wordmark + the real PRO badge (no gold balloon anymore).
                         FocusGlobePROBrand(size: .hero)
                         Text(context.headline)
                             .font(.system(size: Layout.pad(24, 31), weight: .bold, design: .default))
                             .foregroundStyle(.white)
                             .multilineTextAlignment(.center)
-                        contextShowcase
+                        // The contextual hero image (mapped from the context). Omits
+                        // cleanly when its asset hasn't shipped — never a gold balloon,
+                        // never an empty box.
+                        contextHeroImage
                         if context != .general {
                             Text("+ Unlock so much more with PRO")
                                 .font(.system(size: 13, weight: .semibold, design: .default))
@@ -97,98 +94,26 @@ struct PaywallView: View {
         .allowsHitTesting(false)
     }
 
-    // MARK: Contextual hero + showcase (ONE paywall, many entries)
+    // MARK: Contextual hero image (ONE paywall, many entries)
 
-    /// The hero visual per context: the King balloon for broad entries, the
-    /// premium collectibles themselves for Sky/skin/interior entries.
-    @ViewBuilder private var contextHero: some View {
-        switch context {
-        case .balloonSkin, .interior, .sky:
-            EmptyView()   // their showcase row below IS the hero
-        default:
-            balloonHero
+    /// The contextual hero art, resolved through the centralized
+    /// `PaywallContext.heroAssetName` mapping (`PaywallHero_…`). Rendered
+    /// `scaledToFit` at a compact max height that leaves room for the table + CTA
+    /// on the smallest iPhone. If the asset hasn't shipped it is omitted cleanly —
+    /// no empty box, no SF Symbol, and never the old golden balloon.
+    @ViewBuilder private var contextHeroImage: some View {
+        #if canImport(UIKit)
+        if let ui = UIImage(named: context.heroAssetName) {
+            let cap = min(max(UIScreen.main.bounds.width * 0.30, 108), 150)
+            Image(uiImage: ui)
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: .infinity)
+                .frame(maxHeight: cap)
+                .padding(.vertical, 2)
+                .accessibilityHidden(true)
         }
-    }
-
-    /// What actually becomes available — REAL premium content previews, so a
-    /// balloon-skin tap never shows Sky imagery (and vice versa).
-    @ViewBuilder private var contextShowcase: some View {
-        switch context {
-        case .sky:
-            HStack(spacing: AppSpacing.sm) {
-                ForEach(FocusSky.all.filter { $0.isPremium }.prefix(3)) { sky in
-                    VStack(spacing: 6) {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(LinearGradient(colors: sky.paletteColors,
-                                                 startPoint: .top, endPoint: .bottom))
-                            .frame(height: 92)
-                            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .strokeBorder(.white.opacity(0.16), lineWidth: 1))
-                        Text(sky.name)
-                            .font(.system(size: 11.5, weight: .bold, design: .default))
-                            .foregroundStyle(.white.opacity(0.85))
-                            .lineLimit(1).minimumScaleFactor(0.7)
-                    }
-                }
-            }
-            .padding(.top, 2)
-        case .balloonSkin:
-            HStack(spacing: AppSpacing.md) {
-                ForEach(BalloonSkin.all.filter { $0.isPremium }.prefix(4)) { skin in
-                    VStack(spacing: 5) {
-                        BalloonView(height: 72, showBurner: false, showGlow: false, skin: skin)
-                        Text(skin.name)
-                            .font(.system(size: 11, weight: .bold, design: .default))
-                            .foregroundStyle(.white.opacity(0.85))
-                    }
-                }
-            }
-            .padding(.vertical, 6)
-        case .interior:
-            HStack(spacing: AppSpacing.md) {
-                ForEach(premiumInteriorShowcase) { item in
-                    VStack(spacing: 5) {
-                        Group {
-                            if let ui = UIImage(named: item.bestAssetName) {
-                                Image(uiImage: ui).resizable().scaledToFit()
-                            } else {
-                                Image(systemName: item.systemImage)
-                                    .font(.system(size: 30, weight: .semibold))
-                                    .foregroundStyle(item.tint)
-                            }
-                        }
-                        .frame(width: 74, height: 74)
-                        Text(item.name)
-                            .font(.system(size: 11, weight: .bold, design: .default))
-                            .foregroundStyle(.white.opacity(0.85))
-                            .lineLimit(1).minimumScaleFactor(0.7)
-                    }
-                }
-            }
-            .padding(.vertical, 6)
-        case .sound:
-            HStack(spacing: AppSpacing.sm) {
-                ForEach(JourneyAudioOption.all.filter { $0.isPremium }.prefix(3)) { option in
-                    Label(option.displayName, systemImage: "music.note")
-                        .font(.system(size: 12.5, weight: .bold, design: .default))
-                        .foregroundStyle(.white.opacity(0.9))
-                        .padding(.horizontal, 12).padding(.vertical, 8)
-                        .background(Capsule().fill(.white.opacity(0.08)))
-                        .overlay(Capsule().strokeBorder(ProBrand.c3.opacity(0.4), lineWidth: 1))
-                }
-            }
-        default:
-            EmptyView()
-        }
-    }
-
-    /// Premium-first cabin showcase; falls back to the highest-priced pieces so
-    /// the row always shows REAL catalog items.
-    private var premiumInteriorShowcase: [StoreItem] {
-        let cabin = StoreItem.all.filter { $0.kind == .cabinDecoration }
-        let premium = cabin.filter { $0.isPremium }
-        let rest = cabin.filter { !$0.isPremium }.sorted { $0.price > $1.price }
-        return Array((premium + rest).prefix(3))
+        #endif
     }
 
     // MARK: Header
@@ -203,39 +128,6 @@ struct PaywallView: View {
         .padding(.top, AppSpacing.xs)
     }
 
-    /// Responsive hero height — a large premium visual on phones (~2x the old
-    /// size), with a sensible cap so it stays elegant (not huge) on iPad. The
-    /// hero lives in a ScrollView, so larger sizes scroll and never clip on the
-    /// smallest screens.
-    private var heroHeight: CGFloat {
-        let w = UIScreen.main.bounds.width
-        // Trimmed a little more so the full benefits list sits comfortably above
-        // the fold on a normal iPhone, while the hero still reads as a premium
-        // illustration (not a thumbnail).
-        return min(max(w * 0.34, 120), 170)
-    }
-
-    private var balloonHero: some View {
-        let h = heroHeight
-        return ZStack {
-            // Soft, diffused golden atmosphere behind the balloon. A radial that
-            // fades fully to clear (no hard circle edge) and is heavily blurred, so
-            // it reads as premium light rather than a disc and never looks cut off.
-            RadialGradient(colors: [AppColors.gold.opacity(0.42),
-                                    AppColors.gold.opacity(0.16),
-                                    .clear],
-                           center: .center, startRadius: 0, endRadius: h * 0.95)
-                .frame(width: h * 1.6, height: h * 1.5)
-                .blur(radius: 30)
-                .allowsHitTesting(false)
-            // Paywall hero balloon — the premium King skin via the model mapping,
-            // falling back to the default skin / vector if the asset is missing.
-            BalloonView(height: h, showBurner: true, showGlow: false,
-                        assetName: Self.heroAssetName)
-        }
-        .frame(height: h * 1.08)
-        .frame(maxWidth: .infinity)
-    }
 
     // MARK: Already Pro
 
@@ -526,44 +418,13 @@ struct PaywallComparisonTable: View {
             .padding(.top, Layout.pad(12, 15))
             .padding(.bottom, Layout.pad(10, 12))
 
+            // Rows and dividers are SIBLINGS in the VStack(spacing: 0): each row is
+            // a fixed-height cell (content vertically centred), and a divider is its
+            // OWN 1-pt row placed BETWEEN cells — so a separator can never cross a
+            // label baseline, and it always sits exactly midway between two rows.
             ForEach(Array(Self.rows.enumerated()), id: \.offset) { idx, row in
-                let isHi = row.title == highlighted
-                HStack(spacing: 0) {
-                    Text(row.title)
-                        .font(.system(size: Layout.pad(16.5, 19),
-                                      weight: isHi ? .heavy : .semibold, design: .default))
-                        // The context row is highlighted with a restrained
-                        // multicolor fill (never gold).
-                        .foregroundStyle(isHi ? AnyShapeStyle(ProBrand.softGradient)
-                                              : AnyShapeStyle(Color.white))
-                        .lineLimit(1).minimumScaleFactor(0.7)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    // Free — a dash for everything except Solo Focus.
-                    Image(systemName: row.free ? "checkmark" : "minus")
-                        .font(.system(size: Layout.pad(16, 18), weight: .heavy))
-                        .foregroundStyle(row.free ? .white.opacity(0.55) : .white.opacity(0.22))
-                        .frame(width: freeWidth)
-                    // PRO — a crisp white check over the soft multicolor column.
-                    Image(systemName: "checkmark")
-                        .font(.system(size: Layout.pad(17, 20), weight: .heavy))
-                        .foregroundStyle(.white)
-                        .shadow(color: ProBrand.deepNavy.opacity(0.35), radius: 2, y: 1)
-                        .frame(width: proWidth)
-                }
-                .padding(.vertical, Layout.pad(11, 13))
-                // A hairline between rows, only across the label + Free region
-                // (the gold column stays clean).
-                .overlay(alignment: .bottom) {
-                    if idx < Self.rows.count - 1 {
-                        HStack(spacing: 0) {
-                            Rectangle().fill(.white.opacity(0.10)).frame(height: 1)
-                                .frame(maxWidth: .infinity)
-                            Color.clear.frame(width: proWidth)
-                        }
-                    }
-                }
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("\(row.title). \(row.free ? "Included in Free and PRO" : "PRO only").")
+                comparisonRow(row)
+                if idx < Self.rows.count - 1 { rowDivider }
             }
         }
         // The full-height PRO column, trailing-aligned behind the checks — a
@@ -577,6 +438,48 @@ struct PaywallComparisonTable: View {
                     .strokeBorder(ProBrand.borderGradient, lineWidth: 1).opacity(0.6))
                 .frame(width: proWidth)
                 .shadow(color: ProBrand.glow.opacity(0.35), radius: 20, y: 8)
+        }
+    }
+
+    /// A consistent fixed row height, so every label / Free / PRO value is
+    /// vertically centred and every divider lands exactly halfway between rows.
+    private var rowHeight: CGFloat { Layout.pad(46, 52) }
+
+    @ViewBuilder private func comparisonRow(_ row: (title: String, free: Bool)) -> some View {
+        let isHi = row.title == highlighted
+        HStack(spacing: 0) {
+            Text(row.title)
+                .font(.system(size: Layout.pad(16.5, 19),
+                              weight: isHi ? .heavy : .semibold, design: .default))
+                // The context row is highlighted with a restrained multicolor fill.
+                .foregroundStyle(isHi ? AnyShapeStyle(ProBrand.softGradient)
+                                      : AnyShapeStyle(Color.white))
+                .lineLimit(1).minimumScaleFactor(0.7)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            // Free — a dash for everything except Solo Mode.
+            Image(systemName: row.free ? "checkmark" : "minus")
+                .font(.system(size: Layout.pad(16, 18), weight: .heavy))
+                .foregroundStyle(row.free ? .white.opacity(0.55) : .white.opacity(0.22))
+                .frame(width: freeWidth)
+            // PRO — a crisp white check over the soft multicolor column.
+            Image(systemName: "checkmark")
+                .font(.system(size: Layout.pad(17, 20), weight: .heavy))
+                .foregroundStyle(.white)
+                .shadow(color: ProBrand.deepNavy.opacity(0.35), radius: 2, y: 1)
+                .frame(width: proWidth)
+        }
+        .frame(height: rowHeight)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(row.title). \(row.free ? "Included in Free and PRO" : "PRO only").")
+    }
+
+    /// A 1-pt separator that spans ONLY the label + Free region and stops before
+    /// the PRO column, so it never crosses the gradient bar or any checkmark.
+    private var rowDivider: some View {
+        HStack(spacing: 0) {
+            Rectangle().fill(.white.opacity(0.10)).frame(height: 1)
+                .frame(maxWidth: .infinity)
+            Color.clear.frame(width: proWidth)
         }
     }
 }

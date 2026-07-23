@@ -309,7 +309,10 @@ struct HomeView: View {
             Button {
                 appModel.tapFeedback(); router.presentPaywall(context: .general)
             } label: {
-                FocusGlobePROBadge(visibleHeight: Layout.pad(21, 24))
+                // Visible plaque sized to balance the Coins / Streak controls
+                // (~30–32 pt); the shared renderer compensates the PNG's transparent
+                // padding, and the 44×44 rectangle keeps a comfortable tap target.
+                FocusGlobePROBadge(visibleHeight: Layout.pad(30, 32))
                     .frame(minWidth: 44, minHeight: 44)
                     .contentShape(Rectangle())
             }

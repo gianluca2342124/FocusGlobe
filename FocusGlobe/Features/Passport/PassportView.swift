@@ -155,14 +155,9 @@ struct PassportView: View {
     // MARK: Header
 
     private var header: some View {
-        HStack(alignment: .top) {
-            ScreenHeader(title: "Passport", showsBack: false)
-            Spacer()
-            // The crown only opens the paywall — hide it once Pro.
-            if !appModel.isPro {
-                CrownButton { appModel.tapFeedback(); router.presentPaywall() }
-            }
-        }
+        // A clean Passport header — no PRO / subscription shortcut here. PRO entry
+        // lives on its own surfaces (Home, contextual unlocks), not the logbook.
+        ScreenHeader(title: "Passport", showsBack: false)
     }
 
     // MARK: Hero logbook summary (the journal cover)

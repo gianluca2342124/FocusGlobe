@@ -45,7 +45,9 @@ enum Layout {
     static let content: CGFloat = 900      // Passport / general scroll screens
     static let readable: CGFloat = 720      // Landing single column
     static let settings: CGFloat = 780
-    static let paywall: CGFloat = 760       // paywall content cap (matches the panel)
+    static let paywall: CGFloat = 600       // paywall content cap (560–620 band)
+    static let streak: CGFloat = 520        // streak-details modal (480–540 band)
+    static let reward: CGFloat = 460        // coin / reward sheets (420–480 band)
     static let cluster: CGFloat = 760       // Home / Route bottom clusters
     static let journeyReadouts: CGFloat = 820
     static let bannerMaxWidth: CGFloat = 540
@@ -96,6 +98,10 @@ extension View {
     func settingsMaxWidth() -> some View { modifier(RegularMaxWidth(regular: Layout.settings)) }
     func paywallMaxWidth() -> some View { modifier(RegularMaxWidth(regular: Layout.paywall)) }
     func clusterMaxWidth() -> some View { modifier(RegularMaxWidth(regular: Layout.cluster)) }
+    /// Streak-details modal cap (iPad/Mac centred; full-width on iPhone).
+    func streakMaxWidth() -> some View { modifier(RegularMaxWidth(regular: Layout.streak)) }
+    /// Coin / reward sheet cap (Coin Spin, Booster, Daily Gift) — snug on iPad/Mac.
+    func rewardMaxWidth() -> some View { modifier(RegularMaxWidth(regular: Layout.reward)) }
 }
 
 // MARK: - Adaptive premium modal

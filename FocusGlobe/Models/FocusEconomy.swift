@@ -1,20 +1,30 @@
 import Foundation
 
-/// The single source of truth for **Focus Coin** rewards. Coins scale with
-/// *actual completed focus minutes* — never distance or planned duration — so
-/// short or infinity sessions can't be farmed. Kept tiny and pure so the
-/// economy stays easy to reason about and tune.
+/// The single source of truth for **Focus Coin** rewards — the canonical,
+/// duration-based earning formula. Coins scale with *actual completed focused
+/// minutes* only (never distance, never planned duration), so short, cancelled
+/// or Infinite sessions can't be farmed. One pure function, easy to reason about.
+///
+/// Canonical base reward:
+///
+///     baseCoins = max(1, ceil(completedFocusedMinutes / 10))
+///
+/// (5→1, 10→1, 15→2, 20→2, 25→3, 30→3, 45→5, 60→6, 90→9, 120→12 …)
+///
+/// The base is computed ONCE, for a qualifying journey only. Any x2 Coin Booster,
+/// rewarded-ad "Double", or friend-flight multiplier is applied by `AppModel`
+/// AFTER this base — reward granting stays idempotent per session.
 enum FocusEconomy {
-    /// Max coins a single session can earn (before an optional rewarded-ad double).
-    static let perSessionCap = 25
-
-    /// Coins for a completed session, from its real focused seconds:
-    /// base = floor(minutes / 10) (min 1), +1 at ≥25 min, +2 at ≥60 min, capped.
+    /// The canonical coin reward for a completed session, from its real focused
+    /// seconds. Whole completed minutes → `max(1, ceil(minutes / 10))`.
+    /// (Callers award this ONLY for a qualifying journey; a sub-minimum or
+    /// cancelled session must pass 0 / never call this for a reward.)
     static func coins(forFocusedSeconds seconds: Int) -> Int {
         let minutes = max(0, seconds) / 60
-        var coins = max(1, minutes / 10)
-        if minutes >= 25 { coins += 1 }
-        if minutes >= 60 { coins += 2 }
-        return min(perSessionCap, coins)
+        return max(1, Int(ceil(Double(minutes) / 10.0)))
     }
 }
+
+/// Alias for discoverability — the coin economy is centralized in `FocusEconomy`;
+/// `FocusCoinEconomy` refers to the same one calculation.
+typealias FocusCoinEconomy = FocusEconomy
