@@ -46,6 +46,10 @@ enum AnalyticsEvent: String {
     case interstitialJourneyCompleteDismissed = "interstitial_journey_complete_dismissed"
     case interstitialJourneyCompleteSkippedPro = "interstitial_journey_complete_skipped_pro"
     case interstitialJourneyCompleteContinueToLanding = "interstitial_journey_complete_continue_to_landing"
+    // Retention notifications
+    case notificationScheduled = "notification_scheduled"
+    case notificationCancelled = "notification_cancelled"
+    case notificationOpened = "notification_opened"
 }
 
 /// A mock analytics sink. In DEBUG it prints events; in release it's a no-op.

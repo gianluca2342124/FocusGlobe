@@ -1,20 +1,22 @@
 import SwiftUI
 import WidgetKit
 
-// MARK: - Passport Stats (PRO)
+// MARK: - Passport Dashboard (PRO)
 
-/// Real Passport statistics in a premium travel/passport language: journeys,
-/// focused time, longest journey, current + longest streak and active focus
-/// days. Taps through to the Passport.
+/// The real Passport dashboard in a premium travel/passport language: journeys,
+/// focused time, current + longest streak, longest session and active focus days
+/// — plus a few genuinely unlocked badges (folded in from the retired standalone
+/// Badge Collection widget). Taps through to the Passport.
 struct PassportStatsWidget: Widget {
     var body: some WidgetConfiguration {
+        // Kind stays "FGPassportStats" so existing installs keep working.
         StaticConfiguration(kind: "FGPassportStats", provider: FGProvider()) { entry in
             PassportStatsView(snapshot: entry.snapshot)
                 .fgWidgetBackground(glow: WTheme.indigo)
                 .widgetURL(FGLink.url(entry.snapshot.gatedLink("passport")))
         }
-        .configurationDisplayName("Passport Stats")
-        .description("Your journeys, focused time and streaks. FocusGlobe PRO.")
+        .configurationDisplayName("Passport Dashboard")
+        .description("Your journeys, focused time, streaks and badges. FocusGlobe PRO.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
@@ -56,12 +58,47 @@ struct PassportStatsView: View {
                 }
                 if family == .systemLarge {
                     Spacer(minLength: 0)
-                    WFocusGrid(activeOrdinals: Set(snapshot.activeDayOrdinals))
-                        .frame(maxWidth: .infinity)
+                    badgeRow
                 }
             }
             .padding(15)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
+    }
+
+    // A few genuinely unlocked badges (folded in from the retired Badge Collection
+    // widget) using the same passport badge language.
+    private var earnedBadges: [WidgetBadge] { snapshot.badges.filter { $0.earned } }
+
+    private var badgeRow: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                WHeader(icon: "rosette", title: "Badges", tint: WTheme.gold)
+                Spacer()
+                Text("\(snapshot.badgeUnlockedCount)/\(max(snapshot.badgeTotal, snapshot.badges.count))")
+                    .font(.system(size: 12, weight: .heavy, design: .default))
+                    .foregroundStyle(WTheme.ink)
+            }
+            HStack(spacing: 8) {
+                ForEach(Array(earnedBadges.prefix(6).enumerated()), id: \.offset) { _, b in
+                    badgeDot(icon: b.icon, earned: true)
+                }
+                if let next = snapshot.nextBadge { badgeDot(icon: next.icon, earned: false) }
+                Spacer(minLength: 0)
+            }
+        }
+    }
+
+    private func badgeDot(icon: String, earned: Bool) -> some View {
+        ZStack {
+            Circle()
+                .fill(earned ? WTheme.gold.opacity(0.18) : WTheme.hair)
+                .overlay(Circle().strokeBorder(earned ? WTheme.gold.opacity(0.6) : WTheme.inkSoft.opacity(0.3),
+                                               lineWidth: 1))
+            Image(systemName: earned ? icon : "lock.fill")
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(earned ? WTheme.gold : WTheme.inkSoft)
+        }
+        .frame(width: 34, height: 34)
     }
 }

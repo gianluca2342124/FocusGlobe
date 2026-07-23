@@ -32,14 +32,10 @@ struct WidgetGalleryItem: Identifiable {
               blurb: "Your last six months of real focus days as a living contribution grid — tap to open your Passport.",
               systemImage: "square.grid.3x3.fill", glow: WGTheme.teal,
               families: ["Medium", "Large"], isPro: true),
-        .init(id: "FGPassportStats", name: "Passport Stats",
-              blurb: "Journeys, focused time, your longest journey and your current + longest streak.",
+        .init(id: "FGPassportStats", name: "Passport Dashboard",
+              blurb: "Journeys, focused time, current + longest streak, your longest session — plus a few unlocked badges.",
               systemImage: "book.closed.fill", glow: WGTheme.indigo,
               families: ["Small", "Medium", "Large"], isPro: true),
-        .init(id: "FGBadgeCollection", name: "Badge Collection",
-              blurb: "Your unlocked badges, a hint at the next one to earn, and how many you've collected.",
-              systemImage: "rosette", glow: WGTheme.gold,
-              families: ["Small", "Medium"], isPro: true),
     ]
 }
 

@@ -1,5 +1,8 @@
 import SwiftUI
 import WidgetKit
+#if canImport(UIKit)
+import UIKit
+#endif
 
 // MARK: - Streak Companion (FREE · small)
 
@@ -66,7 +69,7 @@ struct StreakCompanionView: View {
         } else {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .top) {
-                    CompanionBalloon(lit: snapshot.focusedToday, tint: state.tint)
+                    streakVisual
                         .frame(width: 54, height: 66)
                     Spacer()
                     VStack(alignment: .trailing, spacing: -2) {
@@ -87,6 +90,25 @@ struct StreakCompanionView: View {
             }
             .padding(14)
         }
+    }
+
+    /// The main streak visual: the real `streakfire` artwork when it's present in
+    /// the widget bundle (desaturated + dimmed when the streak is asleep), else the
+    /// original balloon companion — so a widget target that hasn't been given the
+    /// asset yet still renders cleanly. (Add `streakfire` to the widget extension
+    /// target to show the real art.)
+    @ViewBuilder private var streakVisual: some View {
+        #if canImport(UIKit)
+        if let ui = UIImage(named: "streakfire") {
+            Image(uiImage: ui).resizable().scaledToFit()
+                .grayscale(snapshot.focusedToday ? 0 : 0.5)
+                .opacity(snapshot.currentStreak > 0 ? 1 : 0.6)
+        } else {
+            CompanionBalloon(lit: snapshot.focusedToday, tint: state.tint)
+        }
+        #else
+        CompanionBalloon(lit: snapshot.focusedToday, tint: state.tint)
+        #endif
     }
 }
 

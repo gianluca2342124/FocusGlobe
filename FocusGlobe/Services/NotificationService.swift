@@ -13,6 +13,25 @@ struct NotificationState {
     var unfinishedDestination: String? = nil
     /// The user's current origin city, for warm, personalised copy.
     var originCity: String? = nil
+    /// A real, unclaimed daily gift is waiting (drives `dailyGiftReady`).
+    var dailyGiftAvailable: Bool = false
+    /// PRO / Lifetime — never receives PRO / feature-discovery notifications.
+    var isPremium: Bool = false
+}
+
+/// The retention notification categories. `transactional` categories (a reminder
+/// the user effectively asked for, or a real waiting reward) do NOT count toward
+/// the marketing frequency cap; every other category does.
+enum NotificationCategory: String {
+    case streakAtRisk, plannedFocus, dailyGiftReady, dailyGoalIncomplete
+    case reactivation, friendsActivity, featureDiscovery, unfinishedJourney
+
+    var isTransactional: Bool {
+        switch self {
+        case .plannedFocus, .dailyGiftReady, .unfinishedJourney: return true
+        default: return false
+        }
+    }
 }
 
 /// Centralised, tasteful **local** notification strategy for retention — streak
@@ -40,10 +59,26 @@ final class NotificationService {
     /// Stable identifiers — one slot per upcoming day, so a reschedule *replaces*
     /// (never stacks) and we keep at most one notification per day.
     private enum ID {
-        static let today = "fg.notif.day0"
-        static let day1  = "fg.notif.day1"
-        static let day2  = "fg.notif.day2"
-        static let day3  = "fg.notif.day3"
+        static let today   = "fg.notif.day0"
+        static let day1    = "fg.notif.day1"
+        static let react3  = "fg.notif.react3"
+        static let react7  = "fg.notif.react7"
+        static let react14 = "fg.notif.react14"
+    }
+
+    /// Analytics sink for the scheduling side (scheduled / cancelled). AppModel
+    /// wires this to its analytics pipeline; opened / delivered are observed by the
+    /// `UNUserNotificationCenterDelegate`. `(action, category)`.
+    var onEvent: ((String, String) -> Void)?
+
+    /// Quiet hours 21:30–08:00 — never fire a notification before 08:00 or after
+    /// 21:30 in the user's local time (a scheduled focus reminder the user set for
+    /// themselves would be the only exception; the app has no such feature yet).
+    private func clampToWakingHours(_ hour: Int, _ minute: Int) -> (Int, Int) {
+        let mins = hour * 60 + minute
+        if mins < 8 * 60 { return (8, 0) }
+        if mins > 21 * 60 + 30 { return (21, 0) }
+        return (hour, minute)
     }
 
     /// User-facing toggle (defaults ON; only schedules once authorised).
@@ -109,47 +144,64 @@ final class NotificationService {
 
     private func reschedule(state: NotificationState) {
         center.removeAllPendingNotificationRequests()
+        onEvent?("cancelled", "all")
         let cal = Calendar.current
         let now = Date()
-        var scheduled = 0
+        // Non-transactional (marketing) frequency cap across the forward plan.
+        var marketing = 0
+        let marketingCap = 4
 
-        func plan(dayOffset: Int, hour: Int, id: String, title: String, body: String) {
+        func plan(dayOffset: Int, hour: Int, minute: Int = 0, id: String,
+                  category: NotificationCategory, title: String, body: String) {
+            // A PRO / Lifetime pilot never gets feature-discovery / PRO nudges.
+            if category == .featureDiscovery && state.isPremium { return }
+            if !category.isTransactional && marketing >= marketingCap { return }
+            let (h, m) = clampToWakingHours(hour, minute)
             guard let dayStart = cal.date(byAdding: .day, value: dayOffset, to: cal.startOfDay(for: now)),
-                  let fire = cal.date(bySettingHour: hour, minute: 0, second: 0, of: dayStart),
+                  let fire = cal.date(bySettingHour: h, minute: m, second: 0, of: dayStart),
                   fire > now else { return }
-            schedule(id, title: title, body: body, at: fire)
-            scheduled += 1
+            schedule(id, category: category, title: title, body: body, at: fire)
+            if !category.isTransactional { marketing += 1 }
         }
 
-        // TODAY — one best-fit reminder, only if it'd still fire later today and the
-        // user hasn't already focused. Priority: unfinished journey → streak → focus.
-        // (Never a streak-loss message once today's journey is done — `landedToday`.)
+        // TODAY — at most ONE reminder, best-fit by priority, only while it can
+        // still fire and the user hasn't already focused. It is cancelled the moment
+        // they land (this reschedule runs on completion with landedToday == true).
         if state.hasUnfinishedJourney {
-            plan(dayOffset: 0, hour: 19, id: ID.today,
+            plan(dayOffset: 0, hour: 19, id: ID.today, category: .unfinishedJourney,
                  title: "Your balloon is still waiting", body: unfinishedBody(state))
         } else if state.streak > 0 && !state.landedToday {
-            plan(dayOffset: 0, hour: 20, id: ID.today,
+            // Streak-at-risk ONLY when a streak actually exists.
+            plan(dayOffset: 0, hour: 19, minute: 30, id: ID.today, category: .streakAtRisk,
                  title: "Your \(state.streak)-day streak is waiting 🔥", body: pick(Self.streakBodies))
-        } else if !state.landedToday {
-            plan(dayOffset: 0, hour: 17, id: ID.today,
-                 title: "Ready for one focused expedition?", body: dailyBody(state, offset: 0))
+        } else if state.dailyGiftAvailable {
+            plan(dayOffset: 0, hour: 18, id: ID.today, category: .dailyGiftReady,
+                 title: "A gift is waiting in FocusGlobe",
+                 body: "Open your daily gift before it flies away.")
+        } else if state.goalsRemaining > 0 && !state.landedToday {
+            // Daily-goal reminder ONLY when today's goal is still incomplete.
+            plan(dayOffset: 0, hour: 19, minute: 30, id: ID.today, category: .dailyGoalIncomplete,
+                 title: "One calm flight can finish today", body: pick(Self.focusBodies))
         }
 
         // TOMORROW — a calm daily focus / study nudge (alternating, personalised).
-        plan(dayOffset: 1, hour: 10, id: ID.day1,
+        plan(dayOffset: 1, hour: 10, id: ID.day1, category: .dailyGoalIncomplete,
              title: dailyTitle(offset: 1), body: dailyBody(state, offset: 1))
 
-        // +2 / +3 days — gentle comeback. Only reaches genuinely inactive users:
-        // opening the app reschedules and pushes these later.
-        plan(dayOffset: 2, hour: 11, id: ID.day2,
-             title: "Your journal has been quiet", body: pick(Self.comebackBodies))
-        plan(dayOffset: 3, hour: 11, id: ID.day3,
-             title: "A new expedition is waiting", body: pick(Self.comebackBodies, offset: 1))
+        // REACTIVATION milestones at +3 / +7 / +14 days. Only genuinely inactive
+        // users ever reach them — opening the app reschedules and pushes them out.
+        plan(dayOffset: 3, hour: 11, id: ID.react3, category: .reactivation,
+             title: "The sky is still here", body: pick(Self.comebackBodies))
+        plan(dayOffset: 7, hour: 11, id: ID.react7, category: .reactivation,
+             title: "Ready for another quiet flight?", body: pick(Self.comebackBodies, offset: 1))
+        plan(dayOffset: 14, hour: 11, id: ID.react14, category: .reactivation,
+             title: "A new expedition is waiting", body: pick(Self.comebackBodies, offset: 2))
 
-        log("rescheduled \(scheduled) reminder(s); streak=\(state.streak) landedToday=\(state.landedToday) unfinished=\(state.hasUnfinishedJourney)")
+        log("rescheduled; streak=\(state.streak) landedToday=\(state.landedToday) gift=\(state.dailyGiftAvailable) goals=\(state.goalsRemaining)")
     }
 
-    private func schedule(_ id: String, title: String, body: String, at date: Date) {
+    private func schedule(_ id: String, category: NotificationCategory,
+                          title: String, body: String, at date: Date) {
         // Calendar trigger → fires at this wall-clock time in the user's current
         // time zone (robust if they travel after scheduling).
         let comps = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: date)
@@ -157,10 +209,12 @@ final class NotificationService {
         content.title = title
         content.body = body
         content.sound = .default
+        content.userInfo = ["category": category.rawValue]   // for opened-analytics
         let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
         let request = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
         Task { try? await center.add(request) }
-        log("scheduled \(id) — \"\(title)\"")
+        onEvent?("scheduled", category.rawValue)
+        log("scheduled \(id) [\(category.rawValue)] — \"\(title)\"")
     }
 
     private func log(_ msg: String) {

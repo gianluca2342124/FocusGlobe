@@ -181,6 +181,13 @@ final class AppModel: ObservableObject {
         sound.isEnabled = loadedSettings.soundEnabled
         uiSound.isEnabled = loadedSettings.soundEnabled
 
+        // Retention-notification analytics (scheduled / cancelled). Opened is
+        // logged by the notification-center delegate.
+        notifications.onEvent = { [weak analytics] action, category in
+            let event: AnalyticsEvent = (action == "scheduled") ? .notificationScheduled : .notificationCancelled
+            analytics?.log(event, ["category": category])
+        }
+
         // Mirror the location state so views observe `appModel.locationState`.
         locationState = location.state
         location.$state
@@ -1316,7 +1323,9 @@ final class AppModel: ObservableObject {
                                  hasUnfinishedJourney: resumable != nil,
                                  unfinishedOrigin: resumable?.origin.city,
                                  unfinishedDestination: resumable?.route.destinationName,
-                                 originCity: currentOrigin?.city)
+                                 originCity: currentOrigin?.city,
+                                 dailyGiftAvailable: canClaimDailyGift,
+                                 isPremium: isPro)
     }
 
     /// Reschedule reminders from the current progress (no-op unless authorised).
