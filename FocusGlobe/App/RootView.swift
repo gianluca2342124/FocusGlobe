@@ -38,6 +38,7 @@ struct RootView: View {
             FocusSessionContainerView(journey: journey)
                 .environmentObject(appModel)
                 .environmentObject(router)
+                .environmentObject(online)
         }
         // The ONE coordinated modal presenter for the whole app: exactly one
         // sheet at a time (paywall, Online sign-in, Coin Spin, Coins Boost,
