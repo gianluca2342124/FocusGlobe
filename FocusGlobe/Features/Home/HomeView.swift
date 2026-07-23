@@ -190,7 +190,13 @@ struct HomeView: View {
         .fullScreenCover(isPresented: $showSetup, onDismiss: launchPendingFlight) {
             FlightSetupView(focusSky: currentSkyUnlocked ? currentSky : appModel.selectedSky,
                             onTakeOff: beginTakeOff)
-                .environmentObject(appModel).environmentObject(router)
+                // The canonical FocusOnlineModel MUST cross this presentation
+                // boundary explicitly: a full-screen cover on Mac (Designed for
+                // iPad) is hosted separately and does NOT inherit the WindowGroup
+                // root's environment objects, so `FlightModeSelectorView` (which
+                // reads `online.availability`) would crash without it. Same
+                // instance as everywhere else — never a second model.
+                .environmentObject(appModel).environmentObject(router).environmentObject(online)
         }
         // "Start another flight" from the Landing screen: wait a beat for the
         // journey cover to finish dismissing, then open the setup ritual.
