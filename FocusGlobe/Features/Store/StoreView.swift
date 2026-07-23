@@ -174,13 +174,18 @@ struct StoreView: View {
         return ids
     }
 
-    private func lockBadge(premium: Bool) -> some View {
-        Image(systemName: premium ? "crown.fill" : "lock.fill")
-            .font(.system(size: 14, weight: .bold))
-            .foregroundStyle(premium ? AppColors.gold : .white.opacity(0.85))
-            .padding(9)
-            .background(Circle().fill(.ultraThinMaterial))
-            .overlay(Circle().strokeBorder(.white.opacity(0.2), lineWidth: 1))
+    @ViewBuilder private func lockBadge(premium: Bool) -> some View {
+        if premium {
+            // A premium (PRO) item wears the real multicolor badge, not a gold crown.
+            FocusGlobePROBadge(visibleHeight: 17)
+        } else {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(.white.opacity(0.85))
+                .padding(9)
+                .background(Circle().fill(.ultraThinMaterial))
+                .overlay(Circle().strokeBorder(.white.opacity(0.2), lineWidth: 1))
+        }
     }
 
     // MARK: Selected-item status + primary action (equip / place / buy / PRO)
@@ -213,7 +218,7 @@ struct StoreView: View {
             } else if unlocked {
                 goldAction("Equip") { appModel.selectSkin(skin); appModel.tapFeedback() }
             } else if skin.isPremium {
-                goldAction("Unlock with FocusGlobe PRO") {
+                goldAction("Unlock with FocusGlobe PRO", pro: true) {
                     appModel.tapFeedback(); router.presentPaywall(context: .balloonSkin)
                 }
             }
@@ -246,7 +251,7 @@ struct StoreView: View {
                         .font(.system(size: 13, weight: .bold, design: .default))
                         .foregroundStyle(AppColors.success)
                 } else if item.isPremium && !appModel.isPro {
-                    goldAction("Unlock with FocusGlobe PRO") {
+                    goldAction("Unlock with FocusGlobe PRO", pro: true) {
                         appModel.tapFeedback(); router.presentPaywall(context: .interior)
                     }
                 } else {
@@ -281,14 +286,18 @@ struct StoreView: View {
         }
     }
 
-    private func goldAction(_ title: String, action: @escaping () -> Void) -> some View {
+    /// A pill action button. `pro: true` gives the multicolor PRO gradient (for
+    /// "Unlock with FocusGlobe PRO"); otherwise the neutral gold (Equip / Place),
+    /// since gold now belongs to owned/coin actions, not subscription branding.
+    private func goldAction(_ title: String, pro: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
                 .font(.system(size: 13.5, weight: .bold, design: .default))
                 .lineLimit(1).minimumScaleFactor(0.75)
-                .foregroundStyle(Color(hex: 0x2B2510))
+                .foregroundStyle(pro ? .white : Color(hex: 0x2B2510))
                 .padding(.horizontal, 15).padding(.vertical, 8)
-                .background(Capsule().fill(AppColors.gold))
+                .background(Capsule().fill(pro ? AnyShapeStyle(ProBrand.gradient)
+                                              : AnyShapeStyle(AppColors.gold)))
         }
         .buttonStyle(SoftPressStyle(scale: 0.96))
     }
@@ -584,9 +593,7 @@ private struct StoreItemCard: View {
                 .font(.system(size: 11.5, weight: .bold, design: .default))
                 .foregroundStyle(AppColors.success)
         } else if item.isPremium {
-            Label("PRO", systemImage: "crown.fill")
-                .font(.system(size: 11.5, weight: .bold, design: .default))
-                .foregroundStyle(AppColors.gold)
+            FocusGlobePROBadge(visibleHeight: 15)
         } else {
             HStack(spacing: 4) {
                 FocusCoinIcon(size: 12)
@@ -627,11 +634,15 @@ private struct SkinCard: View {
                             .font(.system(size: 15, weight: .bold))
                             .foregroundStyle(AppColors.gold)
                     } else if !unlocked {
-                        Image(systemName: skin.isPremium ? "crown.fill" : "lock.fill")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(skin.isPremium ? AppColors.gold : AppColors.textSecondary)
-                            .padding(5)
-                            .background(Circle().fill(.ultraThinMaterial))
+                        if skin.isPremium {
+                            FocusGlobePROBadge(visibleHeight: 13)
+                        } else {
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(AppColors.textSecondary)
+                                .padding(5)
+                                .background(Circle().fill(.ultraThinMaterial))
+                        }
                     }
                 }
                 .frame(height: Layout.pad(104, 150))

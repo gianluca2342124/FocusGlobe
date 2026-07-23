@@ -103,18 +103,16 @@ struct CoinSpinCircleButton: View {
     }
 }
 
-/// The active-PRO status as a circle: the gold crown, quiet and proud.
+/// The active-PRO status as a circle: the real multicolor PRO badge, quiet and
+/// proud (no gold crown).
 struct ProCircleBadge: View {
     let action: () -> Void
 
     var body: some View {
-        StatusCircleButton(ring: AppColors.gold.opacity(0.55),
-                           accessibilityText: "FocusGlobe PRO is active",
+        StatusCircleButton(accessibilityText: "FocusGlobe PRO is active",
                            action: action) {
-            Image(systemName: "crown.fill")
-                .font(.system(size: Layout.pad(17, 19), weight: .semibold))
-                .foregroundStyle(AppColors.gold)
+            FocusGlobePROBadge(visibleHeight: Layout.pad(15, 17))
         }
-        .shadow(color: AppColors.gold.opacity(0.4), radius: 8, y: 0)
+        .shadow(color: ProBrand.glow.opacity(0.32), radius: 8, y: 0)
     }
 }

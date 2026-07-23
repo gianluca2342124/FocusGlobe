@@ -994,19 +994,19 @@ private struct FlightControlsPanel: View {
                     .font(.system(size: 14, weight: .bold))
                 Text(preparingInvite ? "Preparing…" : "Invite Friends")
                     .font(.system(size: 14, weight: .bold, design: .default))
-                // Inviting friends into a Private Flight is FocusGlobe PRO — a
-                // small crown marks the gate for a non-premium pilot.
+                // Inviting friends into a Private Flight is FocusGlobe PRO — the
+                // compact badge marks the gate for a non-premium pilot.
                 if !preparingInvite && appModel.entitlement != .premium {
-                    Image(systemName: "crown.fill").font(.system(size: 10, weight: .black))
+                    FocusGlobePROBadge(visibleHeight: 13)
                 }
                 Spacer()
                 if !preparingInvite {
-                    Image(systemName: "chevron.right").font(.system(size: 11, weight: .bold)).opacity(0.6)
+                    Image(systemName: "chevron.right").font(.system(size: 11, weight: .bold)).opacity(0.7)
                 }
             }
-            .foregroundStyle(Color(hex: 0x14120E))
+            .foregroundStyle(.white)
             .padding(.vertical, 10).padding(.horizontal, 12)
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(AppColors.gold))
+            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(ProBrand.softGradient))
         }
         .buttonStyle(SoftPressStyle(scale: 0.98))
         .disabled(preparingInvite)

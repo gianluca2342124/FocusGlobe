@@ -121,15 +121,19 @@ private struct WidgetPreviewTile: View {
             // itself. Only the PRO/lock affordance remains (no name, no size
             // labels) — the identity + families live in the detail sheet.
             HStack(spacing: 5) {
-                Text(item.isPro ? "PRO" : "FREE")
-                    .font(.system(size: 9, weight: .heavy, design: .default)).tracking(0.6)
-                    .foregroundStyle(item.isPro ? WGTheme.gold : WGTheme.inkSoft)
-                    .padding(.horizontal, 6).padding(.vertical, 2)
-                    .background(Capsule().fill((item.isPro ? WGTheme.gold : Color.white).opacity(0.18)))
+                if item.isPro {
+                    FocusGlobePROBadge(visibleHeight: 13)
+                } else {
+                    Text("FREE")
+                        .font(.system(size: 9, weight: .heavy, design: .default)).tracking(0.6)
+                        .foregroundStyle(WGTheme.inkSoft)
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(Capsule().fill(Color.white.opacity(0.18)))
+                }
                 if locked {
                     Image(systemName: "lock.fill")
                         .font(.system(size: 9, weight: .heavy))
-                        .foregroundStyle(WGTheme.gold)
+                        .foregroundStyle(.white.opacity(0.9))
                 }
             }
             .padding(side * 0.11)
@@ -223,7 +227,7 @@ private struct WidgetDetailSheet: View {
                     // A locked PRO widget leads with the contextual Widgets
                     // paywall instead of the add-instructions.
                     if locked {
-                        AppPrimaryButton(title: "Unlock Widgets with FocusGlobe PRO", systemImage: "crown.fill") {
+                        AppPrimaryButton(title: "Unlock Widgets with FocusGlobe PRO", systemImage: "sparkles") {
                             appModel.tapFeedback()
                             dismiss()
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {

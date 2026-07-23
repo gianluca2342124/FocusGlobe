@@ -688,7 +688,7 @@ struct OnboardingView: View {
                 .padding(.horizontal, 2)
             }
             VStack(spacing: AppSpacing.sm) {
-                AppPrimaryButton(title: "Try FocusGlobe PRO", systemImage: "crown.fill") {
+                AppPrimaryButton(title: "Try FocusGlobe PRO", systemImage: "sparkles") {
                     appModel.tapFeedback()
                     complete(thenPaywall: true)
                 }

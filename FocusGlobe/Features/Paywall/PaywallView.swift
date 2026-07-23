@@ -45,8 +45,11 @@ struct PaywallView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: AppSpacing.sm) {
                         contextHero
+                        // The FocusGlobe PRO identity lockup — the real badge, not
+                        // a gold title treatment.
+                        FocusGlobePROBrand(size: .hero)
                         Text(context.headline)
-                            .font(.system(size: Layout.pad(25, 32), weight: .bold, design: .serif))
+                            .font(.system(size: Layout.pad(24, 31), weight: .bold, design: .default))
                             .foregroundStyle(.white)
                             .multilineTextAlignment(.center)
                         contextShowcase
@@ -87,7 +90,7 @@ struct PaywallView: View {
         ZStack {
             LinearGradient(colors: [AppColors.neutralRaised, AppColors.neutralBase, AppColors.neutralDeep],
                            startPoint: .top, endPoint: .bottom)
-            RadialGradient(colors: [AppColors.gold.opacity(0.14), .clear],
+            RadialGradient(colors: [ProBrand.glow.opacity(0.16), .clear],
                            center: .top, startRadius: 10, endRadius: 420)
         }
         .ignoresSafeArea()
@@ -171,7 +174,7 @@ struct PaywallView: View {
                         .foregroundStyle(.white.opacity(0.9))
                         .padding(.horizontal, 12).padding(.vertical, 8)
                         .background(Capsule().fill(.white.opacity(0.08)))
-                        .overlay(Capsule().strokeBorder(AppColors.gold.opacity(0.3), lineWidth: 1))
+                        .overlay(Capsule().strokeBorder(ProBrand.c3.opacity(0.4), lineWidth: 1))
                 }
             }
         default:
@@ -238,15 +241,15 @@ struct PaywallView: View {
 
     private var proState: some View {
         VStack(spacing: AppSpacing.sm) {
-            Label("FocusGlobe PRO is active", systemImage: "checkmark.seal.fill")
+            Label("Your PRO is active", systemImage: "checkmark.seal.fill")
                 .font(AppTypography.headline)
-                .foregroundStyle(AppColors.gold)
+                .foregroundStyle(AppColors.success)
             Button { appModel.tapFeedback(); dismiss() } label: {
                 Text("Close")
                     .font(AppTypography.headline)
-                    .foregroundStyle(Color(hex: 0x2B2620))
+                    .foregroundStyle(.white)
                     .frame(maxWidth: .infinity).frame(height: 54)
-                    .background(Capsule().fill(goldGradient))
+                    .background(Capsule().fill(ProBrand.gradient))
             }
             .buttonStyle(SoftPressStyle())
         }
@@ -332,10 +335,11 @@ struct PaywallView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: AppSpacing.pillRadius, style: .continuous)
-                    .strokeBorder(selected ? AppColors.gold : AppColors.gold.opacity(0.18),
+                    .strokeBorder(selected ? AnyShapeStyle(ProBrand.borderGradient)
+                                           : AnyShapeStyle(Color.white.opacity(0.16)),
                                   lineWidth: selected ? 2 : 1)
             )
-            .shadow(color: selected ? AppColors.gold.opacity(0.35) : .clear, radius: 12, y: 0)
+            .shadow(color: selected ? ProBrand.glow.opacity(0.35) : .clear, radius: 12, y: 0)
         }
         .buttonStyle(SoftPressStyle(scale: 0.99))
         .opacity(dimmed ? 0.45 : 1)
@@ -353,9 +357,9 @@ struct PaywallView: View {
     private var discountBadge: some View {
         Text("-60%")
             .font(.system(size: 10, weight: .heavy, design: .default))
-            .foregroundStyle(Color(hex: 0x2B2620))
+            .foregroundStyle(.white)
             .padding(.horizontal, 6).padding(.vertical, 2)
-            .background(Capsule().fill(AppColors.gold))
+            .background(Capsule().fill(ProBrand.c1))   // savings green (PRO spectrum, not gold)
     }
 
     private var purchaseButton: some View {
@@ -370,22 +374,24 @@ struct PaywallView: View {
         return Button { purchase() } label: {
             ZStack {
                 if working {
-                    ProgressView().tint(Color(hex: 0x2B2620))
+                    ProgressView().tint(.white)
                 } else {
                     Text(available ? buttonTitle(for: kind) : "Products unavailable")
                         .font(AppTypography.headline)
-                        .foregroundStyle(Color(hex: 0x2B2620))
+                        .foregroundStyle(.white)
                 }
             }
             .frame(maxWidth: .infinity).frame(height: 56)
-            .background(Capsule().fill(goldGradient))
+            // The primary subscription CTA now wears the PRO multicolor gradient
+            // (white label keeps strong contrast). Purchase behaviour unchanged.
+            .background(Capsule().fill(ProBrand.gradient))
             // Subtle gloss sweep every few seconds (only on the live CTA).
             .overlay {
                 if available && !working {
                     shineSweep.clipShape(Capsule()).allowsHitTesting(false)
                 }
             }
-            .shadow(color: AppColors.gold.opacity(0.4), radius: 16, y: 8)
+            .shadow(color: ProBrand.glow.opacity(0.5), radius: 16, y: 8)
             .opacity(available ? 1 : 0.5)
         }
         .buttonStyle(SoftPressStyle())
@@ -431,10 +437,6 @@ struct PaywallView: View {
         kind == .annual ? "Start 7 days free trial" : "Continue"
     }
 
-    private var goldGradient: LinearGradient {
-        LinearGradient(colors: [Color(hex: 0xF6D38A), Color(hex: 0xDE9F38)],
-                       startPoint: .topLeading, endPoint: .bottomTrailing)
-    }
 
     // MARK: Actions
 
@@ -501,9 +503,7 @@ struct PaywallComparisonTable: View {
     ]
 
     private var freeWidth: CGFloat { Layout.pad(56, 68) }
-    private var proWidth: CGFloat { Layout.pad(76, 92) }
-    /// Dark ink that reads crisply on the gold PRO column.
-    private let proInk = Color(hex: 0x2B2510)
+    private var proWidth: CGFloat { Layout.pad(80, 96) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -514,13 +514,12 @@ struct PaywallComparisonTable: View {
                     .font(.system(size: 12, weight: .heavy, design: .default)).tracking(0.5)
                     .foregroundStyle(.white.opacity(0.5))
                     .frame(width: freeWidth)
-                Text("PRO")
-                    .font(.system(size: 13, weight: .heavy, design: .default)).tracking(0.5)
-                    .foregroundStyle(proInk)
+                // The real PRO badge crowns the column (no "PRO" text).
+                FocusGlobePROBadge(visibleHeight: Layout.pad(15, 18))
                     .frame(width: proWidth)
             }
             .padding(.top, Layout.pad(12, 15))
-            .padding(.bottom, Layout.pad(8, 10))
+            .padding(.bottom, Layout.pad(10, 12))
 
             ForEach(Array(Self.rows.enumerated()), id: \.offset) { idx, row in
                 let isHi = row.title == highlighted
@@ -528,7 +527,10 @@ struct PaywallComparisonTable: View {
                     Text(row.title)
                         .font(.system(size: Layout.pad(16.5, 19),
                                       weight: isHi ? .heavy : .semibold, design: .default))
-                        .foregroundStyle(isHi ? AppColors.gold : .white)
+                        // The context row is highlighted with a restrained
+                        // multicolor fill (never gold).
+                        .foregroundStyle(isHi ? AnyShapeStyle(ProBrand.softGradient)
+                                              : AnyShapeStyle(Color.white))
                         .lineLimit(1).minimumScaleFactor(0.7)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     // Free — a dash for everything except Solo Focus.
@@ -536,10 +538,11 @@ struct PaywallComparisonTable: View {
                         .font(.system(size: Layout.pad(16, 18), weight: .heavy))
                         .foregroundStyle(row.free ? .white.opacity(0.55) : .white.opacity(0.22))
                         .frame(width: freeWidth)
-                    // PRO — a crisp dark check over the gold column.
+                    // PRO — a crisp white check over the soft multicolor column.
                     Image(systemName: "checkmark")
                         .font(.system(size: Layout.pad(17, 20), weight: .heavy))
-                        .foregroundStyle(proInk)
+                        .foregroundStyle(.white)
+                        .shadow(color: ProBrand.deepNavy.opacity(0.35), radius: 2, y: 1)
                         .frame(width: proWidth)
                 }
                 .padding(.vertical, Layout.pad(11, 13))
@@ -558,14 +561,17 @@ struct PaywallComparisonTable: View {
                 .accessibilityLabel("\(row.title). \(row.free ? "Included in Free and PRO" : "PRO only").")
             }
         }
-        // The full-height gold PRO column, trailing-aligned behind the checks —
-        // the conversion emphasis, integrated onto the paywall (no table card).
+        // The full-height PRO column, trailing-aligned behind the checks — a
+        // subtle vertical MULTICOLOR wash (low opacity so the white checks stay
+        // perfectly readable) with a restrained gradient outline + soft glow.
+        // Integrated onto the paywall, no boxed table card, no gold.
         .background(alignment: .trailing) {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(LinearGradient(colors: [Color(hex: 0xF3D79A), AppColors.gold, Color(hex: 0xE4BE7E)],
-                                     startPoint: .top, endPoint: .bottom))
+                .fill(ProBrand.columnWash)
+                .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .strokeBorder(ProBrand.borderGradient, lineWidth: 1).opacity(0.6))
                 .frame(width: proWidth)
-                .shadow(color: AppColors.gold.opacity(0.4), radius: 20, y: 8)
+                .shadow(color: ProBrand.glow.opacity(0.35), radius: 20, y: 8)
         }
     }
 }

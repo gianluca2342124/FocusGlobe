@@ -149,7 +149,7 @@ struct FlightModeSelectorView: View {
                 ZStack {
                     Image(systemName: icon)
                         .font(.system(size: 34, weight: .bold))
-                        .foregroundStyle(selected ? AppColors.gold : .white.opacity(0.7))
+                        .foregroundStyle(selected ? ProBrand.c4 : .white.opacity(0.7))
                     if mode == .publicSky {
                         liveDot.offset(x: 30, y: -20)
                     }
@@ -167,29 +167,23 @@ struct FlightModeSelectorView: View {
             .glassBackground(cornerRadius: AppSpacing.cardRadius,
                              tintOpacity: selected ? 0.26 : 0.13, shadowRadius: 12, shadowY: 6)
             .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
-                .strokeBorder(selected ? AppColors.gold.opacity(0.85) : Color.white.opacity(0.1),
+                .strokeBorder(selected ? ProBrand.c4.opacity(0.85) : Color.white.opacity(0.1),
                               lineWidth: selected ? 2 : 1))
-            .shadow(color: selected ? AppColors.gold.opacity(0.3) : .clear, radius: 14)
+            .shadow(color: selected ? ProBrand.c4.opacity(0.3) : .clear, radius: 14)
             .overlay(alignment: .topTrailing) {
                 if selected {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 21, weight: .semibold))
-                        .foregroundStyle(AppColors.gold)
+                        .foregroundStyle(ProBrand.c4)
                         .padding(10)
                         .transition(.scale.combined(with: .opacity))
                 }
             }
-            // Online is a FocusGlobe PRO feature — a subtle gold PRO badge marks
-            // it while the pilot isn't premium (never shown once PRO).
+            // Online is a FocusGlobe PRO feature — the real multicolor PRO badge
+            // marks it while the pilot isn't premium (never shown once PRO).
             .overlay(alignment: .topLeading) {
                 if mode == .publicSky && appModel.entitlement != .premium {
-                    Text("PRO")
-                        .font(.system(size: 10, weight: .heavy, design: .default))
-                        .tracking(0.6)
-                        .foregroundStyle(Color(hex: 0x2B2510))
-                        .padding(.horizontal, 7).padding(.vertical, 3)
-                        .background(Capsule().fill(AppColors.gold))
-                        .padding(10)
+                    FocusGlobePROBadge(visibleHeight: 15).padding(9)
                 }
             }
         }

@@ -690,7 +690,7 @@ private struct SkyPreviewFlightView: View {
                 secondaryButton
                 softSecondary(title: "Keep focusing") { dismiss() }
             } else {
-                AppPrimaryButton(title: "Unlock FocusGlobe PRO", systemImage: "crown.fill") {
+                AppPrimaryButton(title: "Unlock FocusGlobe PRO", systemImage: "sparkles") {
                     appModel.tapFeedback()
                     dismiss()
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { router.presentPaywall(context: .sky) }

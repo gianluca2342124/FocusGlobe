@@ -526,24 +526,23 @@ struct DurationDialView: View {
                     index = DurationScale.index(forMinutes: p.minutes, infinite: p.infinite)
                 } label: {
                     Text(p.label)
-                        .font(.system(size: proLocked ? 17 : 15, weight: .bold, design: .default))
-                        .foregroundStyle(selected ? Color(hex: 0x14120E)
-                                         : (proLocked ? AppColors.gold : .white))
+                        .font(.system(size: proLocked ? 18 : 15, weight: .bold, design: .default))
+                        .foregroundStyle(selected ? AnyShapeStyle(Color(hex: 0x14120E))
+                                         : (proLocked ? AnyShapeStyle(ProBrand.softGradient)
+                                                      : AnyShapeStyle(Color.white)))
                         .frame(maxWidth: .infinity)
                         .frame(height: 42)
                         .background(RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .fill(selected ? Color(hex: 0xF4EFE4)
-                                  : (proLocked ? AppColors.gold.opacity(0.12) : Color.white.opacity(0.08))))
+                                  : (proLocked ? ProBrand.c5.opacity(0.12) : Color.white.opacity(0.08))))
+                        // Locked ∞ wears a restrained multicolor outline (never gold).
                         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .strokeBorder(proLocked ? AppColors.gold.opacity(0.75)
-                                          : .white.opacity(selected ? 0 : 0.12),
+                            .strokeBorder(proLocked ? AnyShapeStyle(ProBrand.borderGradient)
+                                          : AnyShapeStyle(Color.white.opacity(selected ? 0 : 0.12)),
                                           lineWidth: proLocked ? 1.5 : 1))
                         .overlay(alignment: .topTrailing) {
                             if proLocked {
-                                Image(systemName: "crown.fill")
-                                    .font(.system(size: 8, weight: .black))
-                                    .foregroundStyle(AppColors.gold)
-                                    .padding(3)
+                                FocusGlobePROBadge(visibleHeight: 10).padding(2)
                             }
                         }
                 }
