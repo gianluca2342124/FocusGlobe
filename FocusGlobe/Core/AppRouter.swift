@@ -236,6 +236,7 @@ enum PaywallContext: Equatable {
     case sound            // locked sound:        "Unlock Every Focus Sound with PRO"
     case widget           // locked widget:       "Unlock All Widgets with PRO"
     case rewards          // 2x rewards:          "Double Every Reward with PRO"
+    case noAds            // ad-free benefit:     "Focus Without Interruptions"
     case online           // Online flight:       "Focus Together with PRO"
     case invite           // invite friends:      "Invite Friends with PRO"
     case infinite         // infinite duration:   "Focus Without Limits with PRO"
@@ -250,6 +251,7 @@ enum PaywallContext: Equatable {
         case .sound:       return "Unlock Every Focus Sound with PRO"
         case .widget:      return "Unlock All Widgets with PRO"
         case .rewards:     return "Double Every Reward with PRO"
+        case .noAds:       return "Focus Without Interruptions"
         case .online:      return "Focus Together with PRO"
         case .invite:      return "Invite Friends with PRO"
         case .infinite:    return "Focus Without Limits with PRO"
@@ -274,8 +276,10 @@ enum PaywallContext: Equatable {
         case .balloonSkin:      return "PaywallHero_PremiumSkins"
         case .interior, .sound: return "PaywallHero_PremiumItems"
         case .widget:           return "PaywallHero_ExclusiveWidgets"
-        case .rewards:          return "PaywallHero_NoAds"
-        case .general, .pause:  return "PaywallHero_GeneralPRO"
+        case .rewards:          return "PaywallHero_Rewards"
+        case .noAds:            return "PaywallHero_NoAds"
+        case .pause:            return "PaywallHero_Pause"
+        case .general:          return "PaywallHero_GeneralPRO"
         }
     }
 
@@ -291,6 +295,7 @@ enum PaywallContext: Equatable {
         case .sky:                   return "Exclusive Skies"
         case .balloonSkin:           return "Premium Skins"
         case .interior, .sound:      return "Premium Items"
+        case .noAds:                return "No Ads"
         case .general, .rewards, .pause: return nil
         }
     }

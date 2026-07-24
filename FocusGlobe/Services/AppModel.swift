@@ -44,6 +44,7 @@ final class AppModel: ObservableObject {
             // `init`, so launch-time safety relies on the resolvers below.)
             if !isPro { reconcilePremiumSelections() }
             syncWidgets()
+            recordNewBadgeUnlocks()
         }
     }
 
@@ -242,6 +243,7 @@ final class AppModel: ObservableObject {
 
         // Publish the initial widget snapshot from the just-loaded state.
         LaunchLog.mark("syncWidgets")
+        initializeBadgeTrackingIfNeeded()
         syncWidgets()
 
         // Schedule re-engagement reminders from the just-loaded state (no prompt
@@ -369,6 +371,7 @@ final class AppModel: ObservableObject {
             unlocked.insert(skyID)
             profile.unlockedSkyIDs = unlocked
         }
+        recordNewBadgeUnlocks()
     }
 
     /// FocusGlobe Online: a Sky's invite campaign reached its verified target
@@ -467,6 +470,8 @@ final class AppModel: ObservableObject {
         var p = progress
         p.totalFocusMiles += Self.dailyGiftCoins
         progress = p
+        recordCoinEarnings(Self.dailyGiftCoins)
+        recordNewBadgeUnlocks()
         persistAll()
         haptics.rewardClaim()
         uiSound.play(.claim)
@@ -518,6 +523,8 @@ final class AppModel: ObservableObject {
         var p = progress
         p.totalFocusMiles += n
         progress = p
+        recordCoinEarnings(n)
+        recordNewBadgeUnlocks()
         persistAll()
         haptics.rewardClaim()
         uiSound.play(.claim)
@@ -624,6 +631,7 @@ final class AppModel: ObservableObject {
         var owned = profile.ownedStoreItemIDs ?? []
         owned.insert(item.id)
         profile.ownedStoreItemIDs = owned
+        recordNewBadgeUnlocks()
         haptics.rewardClaim()
         uiSound.play(.claim)
         return true
@@ -914,6 +922,106 @@ final class AppModel: ObservableObject {
         }
     }
 
+    // MARK: - Daily objective event tracking
+
+    /// Add a genuine earning event to today's monotonic counter. Wallet spending
+    /// is intentionally unrelated, and the all-objectives completion bonus does
+    /// not call this helper, preventing a self-completing reward loop.
+    private func recordCoinEarnings(_ amount: Int) {
+        guard amount > 0 else { return }
+        let today = Self.dayKey(Date())
+        var updated = profile
+        if updated.coinEarningsDayKey != today {
+            updated.coinEarningsDayKey = today
+            updated.coinsEarnedOnDay = 0
+        }
+        updated.coinsEarnedOnDay = (updated.coinsEarnedOnDay ?? 0) + amount
+        profile = updated
+    }
+
+    /// The same real conditions exposed as collectible Passport badges. Stable
+    /// string keys make the event tracker migration-safe without persisting view
+    /// models or fabricated completion values.
+    private var earnedBadgeKeys: Set<String> {
+        let completed = history.filter(\.completed)
+        let flights = max(progress.landings, completed.count)
+        let minutes = completed.reduce(0) { $0 + $1.focusedSeconds } / 60
+        let best = progress.bestFocusMinutes
+        let streak = max(progress.currentStreak, progress.longestStreak)
+        let coins = progress.totalFocusMiles
+        let destinations = completed.map(\.destinationName)
+        let hours = completed.map { Calendar.current.component(.hour, from: $0.date) }
+        let ownsCabin = StoreItem.all.contains {
+            $0.kind == .cabinDecoration && ownsStoreItem($0)
+        }
+        let skinsOwned = BalloonSkin.all.filter { isSkinUnlocked($0) }.count
+        let acceptedInvites = (profile.inviteProgressBySkyID ?? [:]).values.reduce(0, +)
+
+        var keys = Set<String>()
+        func earn(_ key: String, _ condition: Bool) {
+            if condition { keys.insert(key) }
+        }
+        func visited(_ names: [String]) -> Bool {
+            destinations.contains { names.contains($0) }
+        }
+
+        earn("first-flight", flights >= 1)
+        earn("25-minute-pilot", best >= 25)
+        earn("one-hour-focused", best >= 60)
+        earn("five-flights", flights >= 5)
+        earn("ten-flights", flights >= 10)
+        earn("twenty-five-flights", flights >= 25)
+        earn("100-focus-minutes", minutes >= 100)
+        earn("500-focus-minutes", minutes >= 500)
+        earn("1000-focus-minutes", minutes >= 1_000)
+        earn("three-day-streak", streak >= 3)
+        earn("seven-day-streak", streak >= 7)
+        earn("fourteen-day-streak", streak >= 14)
+        earn("night-owl", hours.contains { $0 >= 22 || $0 < 4 })
+        earn("early-bird", hours.contains { $0 >= 4 && $0 < 8 })
+        earn("tokyo-pilot", visited(["Rainy Tokyo"]))
+        earn("fiji-pilot", visited(["Fiji Lagoon"]))
+        earn("kyoto-lantern", visited(["Kyoto Lantern Night", "Kyoto Lanterns"]))
+        earn("aurora-explorer", visited(["Northern Aurora", "Aurora Snowfield"]))
+        earn("desert-stargazer",
+             visited(["Desert Night", "Sahara Night", "Amber Highlands", "Golden Hour"]))
+        earn("alpine-pilot", visited(["Swiss Alps"]))
+        earn("deep-space-pilot", visited(["Deep Space"]))
+        earn("focus-coin-saver", coins >= 100)
+        earn("cabin-decorator", ownsCabin)
+        earn("skin-collector", skinsOwned >= 3)
+        earn("friend-flight", acceptedInvites >= 1)
+        earn("pro-pilot", isPro)
+        earn("comeback-pilot",
+             progress.longestStreak > progress.currentStreak && progress.currentStreak >= 1)
+        return keys
+    }
+
+    /// Existing pilots begin with a silent baseline: installing this version
+    /// must not turn badges they already owned into fake "today" events.
+    private func initializeBadgeTrackingIfNeeded() {
+        guard profile.observedBadgeKeys == nil else { return }
+        var updated = profile
+        updated.observedBadgeKeys = earnedBadgeKeys
+        profile = updated
+    }
+
+    /// Persist a real transition from not-observed to earned. The observed set
+    /// only grows, so temporary entitlement/streak changes cannot award twice.
+    private func recordNewBadgeUnlocks() {
+        guard let observed = profile.observedBadgeKeys else {
+            initializeBadgeTrackingIfNeeded()
+            return
+        }
+        let current = earnedBadgeKeys
+        let newKeys = current.subtracting(observed)
+        guard !newKeys.isEmpty else { return }
+        var updated = profile
+        updated.observedBadgeKeys = observed.union(current)
+        updated.badgeUnlockEventDayKey = Self.dayKey(Date())
+        profile = updated
+    }
+
     // MARK: - Daily missions
 
     /// Today's goals, computed fresh from the session history (so they reset at
@@ -923,20 +1031,19 @@ final class AppModel: ObservableObject {
         let todays = history.filter { $0.completed && cal.isDateInToday($0.date) }
         let journeys = Double(todays.count)
         let minutes = Double(todays.reduce(0) { $0 + $1.focusedSeconds }) / 60.0
-        let miles = Double(todays.reduce(0) { $0 + $1.focusMiles })
-        // A "deep" journey = one qualifying session of at least 25 focused minutes
-        // today (Infinite counts once it passes 25 min; cancelled / short sessions
-        // never qualify — `todays` is already completed sessions only).
-        let deepJourneys = Double(todays.filter { $0.focusedSeconds >= 25 * 60 }.count)
+        let badgeUnlockedToday = profile.badgeUnlockEventDayKey == Self.dayKey(Date())
+        let coinsEarnedToday = profile.coinEarningsDayKey == Self.dayKey(Date())
+            ? Double(profile.coinsEarnedOnDay ?? 0) : 0
         return [
             DailyMission(id: "journey", title: "Complete one flight", systemImage: "paperplane.fill",
                          accent: .indigo, target: 1, current: journeys),
             DailyMission(id: "focus", title: "Focus 30 minutes", systemImage: "timer",
                          accent: .teal, target: 30, current: minutes),
-            DailyMission(id: "deep", title: "Complete a 25-minute focus journey",
-                         systemImage: "hourglass", accent: .gold, target: 1, current: deepJourneys),
-            DailyMission(id: "miles", title: "Earn 60 Focus Coins", systemImage: "sparkles",
-                         accent: .coral, target: 60, current: miles),
+            DailyMission(id: "badge", title: "Unlock a new badge",
+                         systemImage: "rosette", accent: .gold, target: 1,
+                         current: badgeUnlockedToday ? 1 : 0),
+            DailyMission(id: "coins", title: "Earn 10 Focus Coins", systemImage: "sparkles",
+                         accent: .coral, target: 10, current: coinsEarnedToday),
         ]
     }
 
@@ -955,6 +1062,9 @@ final class AppModel: ObservableObject {
         p.totalFocusMiles += dailyMissionRewardMiles
         p.missionRewardDay = Self.dayKey(Date())
         progress = p
+        // The completion bonus intentionally does not advance today's coin
+        // objective, but it may legitimately cross a lifetime badge threshold.
+        recordNewBadgeUnlocks()
         persistAll()
         haptics.rewardClaim()
         uiSound.play(.claim)
@@ -1111,10 +1221,12 @@ final class AppModel: ObservableObject {
             streakIncreased = p.currentStreak > previousStreak
             progress = p
             landedStreak = p.currentStreak
+            recordCoinEarnings(awardedMiles)
             // Capture any skin or Sky just earned into the grandfather sets, so a
             // later rule change (or a dropped streak) can never re-lock them.
             captureEarnedSkins()
             captureUnlockedSkies()
+            recordNewBadgeUnlocks()
 
             // Remember where we came from so the next screen can offer a return
             // trip, then make the destination the next origin. Only a qualifying
@@ -1185,6 +1297,8 @@ final class AppModel: ObservableObject {
         var p = progress
         p.totalFocusMiles += summary.baseMiles
         progress = p
+        recordCoinEarnings(summary.baseMiles)
+        recordNewBadgeUnlocks()
 
         if let idx = history.firstIndex(where: { $0.id == summary.id }) {
             let r = history[idx]
@@ -1255,6 +1369,8 @@ final class AppModel: ObservableObject {
         var p = progress
         p.totalFocusMiles += AdMobConfig.dailyBoostMiles
         progress = p
+        recordCoinEarnings(AdMobConfig.dailyBoostMiles)
+        recordNewBadgeUnlocks()
         persistAll()
         haptics.rewardClaim()
         uiSound.play(.claim)

@@ -147,7 +147,7 @@ struct OnboardingView: View {
             }
             VStack(spacing: AppSpacing.sm) {
                 Text("Your phone becomes\na focus flight.")
-                    .font(.system(size: Layout.pad(34, 44), weight: .semibold, design: .serif))
+                    .font(.system(size: Layout.pad(34, 44), weight: .bold, design: .default))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.white)
                 Text("Choose a time, lift off, and let FocusGlobe keep you away from distractions.")
@@ -308,7 +308,7 @@ struct OnboardingView: View {
             }
             VStack(spacing: 3) {
                 Text(option.displayName)
-                    .font(.system(size: Layout.pad(23, 28), weight: .bold, design: .serif))
+                    .font(.system(size: Layout.pad(23, 28), weight: .bold, design: .default))
                     .foregroundStyle(.white)
                 Text(soundBlurb(option))
                     .font(AppTypography.caption)
@@ -490,7 +490,7 @@ struct OnboardingView: View {
             Spacer(minLength: 0)
             VStack(spacing: 8) {
                 Text("Stay on track")
-                    .font(.system(size: Layout.pad(28, 36), weight: .semibold, design: .serif))
+                    .font(.system(size: Layout.pad(28, 36), weight: .bold, design: .default))
                     .foregroundStyle(.white)
                 Text("A gentle nudge for your streak, planned flights and landings — never noise.")
                     .font(AppTypography.callout)
@@ -596,7 +596,7 @@ struct OnboardingView: View {
                 reviewCarousel
                 favourHero
                 Text("— the FocusGlobe team")
-                    .font(AppTypography.serifCaption)
+                    .font(AppTypography.caption)
                     .italic()
                     .foregroundStyle(.white.opacity(0.55))
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -675,7 +675,7 @@ struct OnboardingView: View {
                     premiumHero
                     VStack(spacing: 6) {
                         Text("Focus, elevated.")
-                            .font(.system(size: Layout.pad(30, 40), weight: .bold, design: .serif))
+                            .font(.system(size: Layout.pad(30, 40), weight: .bold, design: .default))
                             .foregroundStyle(.white)
                         Text("Everything in FocusGlobe, unlocked.")
                             .font(AppTypography.callout)
@@ -813,7 +813,7 @@ struct OnboardingView: View {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(title)
-                            .font(.system(size: Layout.pad(28, 36), weight: .semibold, design: .serif))
+                            .font(.system(size: Layout.pad(28, 36), weight: .bold, design: .default))
                             .foregroundStyle(.white)
                             .fixedSize(horizontal: false, vertical: true)
                         Text(subtitle)

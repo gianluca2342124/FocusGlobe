@@ -37,13 +37,15 @@ struct SkyFlightSceneView: View {
     /// Stable per-session seed (shared with Cabin) — varies effect placement
     /// between flights while staying fixed across pause/resume.
     var seed: UInt64 = 1
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         GeometryReader { geo in
             let W = geo.size.width
             let H = max(1, geo.size.height)
-            let artwork = SkyArtworkResolver.image(for: sky, landscape: W > H)
-            TimelineView(.animation(minimumInterval: animated ? 1.0 / 30.0 : 600)) { _ in
+            let artwork = SkyArtworkResolver.scene(for: sky, landscape: W > H)
+            let isLive = animated && scenePhase == .active
+            TimelineView(.animation(minimumInterval: isLive ? 1.0 / 30.0 : 600)) { _ in
                 // Static frame: a fixed, SETTLED moment (celestial faded in,
                 // scenery composed) — a constant, so Reduce Motion and off-
                 // screen previews show no movement at all, never the bare t=0
@@ -52,7 +54,8 @@ struct SkyFlightSceneView: View {
                 ZStack {
                     gradientField(W: W, H: H, t: t)
                     if let artwork {
-                        SkyArtworkFoundation(image: artwork)
+                        LayeredSkyArtworkFoundation(artwork: artwork, t: t,
+                                                    motionEnabled: isLive)
                         artworkGrade(W: W, H: H, t: t)
                     }
                     atmosphere(W: W, H: H, t: t)

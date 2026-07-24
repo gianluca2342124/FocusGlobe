@@ -52,7 +52,6 @@ final class FocusSessionViewModel: ObservableObject {
     /// Set the instant the journey finishes so the completion → interstitial →
     /// Landing transition can't be entered twice.
     private var landing = false
-    private var resumeAfterCancelDismiss = false
     /// The balloon skin asset captured at attach time so the map marker renders
     /// the user's selected skin (falls back to the default art if missing).
     private var skinAssetName: String = BalloonSkin.default.assetName
@@ -388,18 +387,14 @@ final class FocusSessionViewModel: ObservableObject {
     }
 
     func requestCancel() {
-        if !isPaused {
-            resumeAfterCancelDismiss = true
-            pause()
-        } else {
-            resumeAfterCancelDismiss = false
-        }
+        // A leave confirmation is presentation state, not a pause command.
+        // Keep the timer, audio, online clock and living Sky running until the
+        // pilot explicitly chooses Pause or confirms Leave.
         showCancelConfirm = true
     }
 
     func dismissCancel() {
         showCancelConfirm = false
-        if resumeAfterCancelDismiss { resume() }
     }
 
     /// Leave the journey before landing. Saved as a resumable snapshot so the

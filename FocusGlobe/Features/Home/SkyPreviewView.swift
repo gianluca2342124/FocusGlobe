@@ -20,13 +20,14 @@ import UIKit
 struct SkyPreviewView: View {
     let sky: FocusSky
     var animated: Bool = true
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         GeometryReader { geo in
             let W = geo.size.width
             let H = geo.size.height
-            let art = SkyArtworkResolver.image(for: sky, landscape: W > H)
-            if animated {
+            let art = SkyArtworkResolver.scene(for: sky, landscape: W > H)
+            if animated && scenePhase == .active {
                 TimelineView(.animation(minimumInterval: 1.0 / 12.0)) { ctx in
                     content(W: W, H: H, t: ctx.date.timeIntervalSinceReferenceDate, art: art)
                 }
@@ -38,7 +39,7 @@ struct SkyPreviewView: View {
         .allowsHitTesting(false)
     }
 
-    private func content(W: CGFloat, H: CGFloat, t: Double, art: UIImage?) -> some View {
+    private func content(W: CGFloat, H: CGFloat, t: Double, art: SkyArtworkSet?) -> some View {
         ZStack {
             background(W: W, H: H, t: t, art: art)
             if sky.stars > 0.01 {
@@ -65,14 +66,15 @@ struct SkyPreviewView: View {
     // MARK: Layers
 
     @ViewBuilder private func background(W: CGFloat, H: CGFloat, t: Double,
-                                         art: UIImage?) -> some View {
+                                         art: SkyArtworkSet?) -> some View {
         // The flight's own authored palette, drifting through its keyframes so
         // slowly the change is felt rather than seen. Never a flat gradient.
         let stops = SkyGradientTimeline.stops(skyID: sky.id, at: t * 0.5)
         let breathe = t == 0 ? 1.0 : 0.85 + 0.15 * Foundation.sin(t * 0.05)
         LinearGradient(colors: stops, startPoint: .top, endPoint: .bottom)
-        if let ui = art {
-            SkyArtworkFoundation(image: ui)
+        if let art {
+            LayeredSkyArtworkFoundation(artwork: art, t: t,
+                                        motionEnabled: animated && scenePhase == .active)
             artworkGrade(W: W, H: H, t: t)
         } else {
             // Zenith depth — the top of the sky deepens into vastness.

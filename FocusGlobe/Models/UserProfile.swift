@@ -77,6 +77,15 @@ struct UserProfile: Codable, Equatable {
     var rewardedFriendSessionIDs: [String]? = nil
     /// Online pilots the user chose to hide locally.
     var hiddenPilotIDs: Set<String>? = nil
+    /// Local-day key and monotonic total of Focus Coins genuinely earned that
+    /// day. Spending never subtracts from this counter.
+    var coinEarningsDayKey: String? = nil
+    var coinsEarnedOnDay: Int? = nil
+    /// Stable badge keys already observed by the daily-objective tracker. The
+    /// set only grows, so a temporary state change can never re-award a badge.
+    var observedBadgeKeys: Set<String>? = nil
+    /// Local day on which at least one previously unobserved badge became earned.
+    var badgeUnlockEventDayKey: String? = nil
 
     static let empty = UserProfile()
 }

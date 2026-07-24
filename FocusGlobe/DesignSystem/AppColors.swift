@@ -48,10 +48,13 @@ enum AppColors {
     static let textSecondary = Color.dynamic(light: 0x8A7D6A, dark: 0xA89D8C)
     static let textTertiary  = Color.dynamic(light: 0xAFA28C, dark: 0x6F675A)
 
-    // MARK: Brand  (calm mint-teal accent)
-    static let brand     = Color.dynamic(light: 0x2E9C80, dark: 0x6FD8B8)
-    static let brandDeep = Color.dynamic(light: 0x217459, dark: 0x4DB596)
-    static let brandSoft = Color.dynamic(light: 0xCFE8DE, dark: 0x1B2E28)
+    // MARK: Standard interaction — Celestial Teal
+    /// The one standard, non-PRO interaction accent across navigation,
+    /// selection, Settings controls, links and ordinary progress.
+    static let celestialTeal = Color(hex: 0x58D6C2)
+    static let brand     = celestialTeal
+    static let brandDeep = Color.dynamic(light: 0x238C7C, dark: 0x45BDAA)
+    static let brandSoft = Color.dynamic(light: 0xD7F4EF, dark: 0x18332F)
 
     // MARK: Primary CTA — bold, minimal: ink pill by day, cream pill by night.
     static let ctaFill = Color.dynamic(light: 0x1C1A17, dark: 0xF4EFE4)
@@ -98,7 +101,7 @@ enum AppColors {
     static let sepia       = Color.dynamic(light: 0x8A7D6A, dark: 0xA89D8C)
     static let ink         = Color.dynamic(light: 0x26221D, dark: 0xF7F1E7)
     static let terracotta  = Color.dynamic(light: 0xD4553B, dark: 0xE9654B)
-    static let teal        = Color.dynamic(light: 0x2E9C80, dark: 0x6FD8B8)
+    static let teal        = celestialTeal
     static let waxSeal     = Color.dynamic(light: 0xB2402C, dark: 0xE9654B)
     static let goldFoil    = Color.dynamic(light: 0xD9A94F, dark: 0xD8B56D)
     static let lantern     = Color.dynamic(light: 0xE8B45C, dark: 0xE9C07A)

@@ -28,7 +28,7 @@ struct AppShell: View {
 }
 
 /// The premium glass tab bar. A single floating capsule low over the safe area,
-/// Home in the centre, the selected tab lifted in gold. Adapts its max width on
+/// Home in the centre, the selected tab lifted in Celestial Teal. Adapts its max width on
 /// iPad/Mac so it never stretches edge-to-edge on a wide screen.
 struct AppTabBar: View {
     @EnvironmentObject private var router: AppRouter
@@ -60,7 +60,7 @@ struct AppTabBar: View {
                 tab(item)
             }
         }
-        // The gold pill still glides between tabs — but only the bar animates,
+        // The interaction pill still glides between tabs — but only the bar animates,
         // never the whole two-tab tree (see the instant `tab` handler below).
         .animation(.easeInOut(duration: 0.22), value: router.selectedTab)
         .padding(.top, Layout.pad(7, 9))
@@ -95,14 +95,14 @@ struct AppTabBar: View {
             Image(systemName: item.system)
                 .font(.system(size: Layout.pad(24, 27), weight: .semibold))
                 .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(active ? AppColors.gold
+                .foregroundStyle(active ? AppColors.celestialTeal
                                  : Color.dynamic(light: 0x26221D, lightAlpha: 0.55,
                                                  dark: 0xFFFFFF, darkAlpha: 0.68))
                 .frame(width: Layout.pad(54, 62), height: 40)
                 .background {
                     if active {
                         RoundedRectangle(cornerRadius: 13, style: .continuous)
-                            .fill(AppColors.gold.opacity(0.14))
+                            .fill(AppColors.celestialTeal.opacity(0.15))
                     }
                 }
                 .frame(maxWidth: .infinity, minHeight: 44)
