@@ -1,0 +1,13 @@
+{
+  "images" : [
+    {
+      "filename" : "SkyArtwork_StarfallNebula_Landscape.jpg",
+      "idiom" : "universal",
+      "scale" : "1x"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

@@ -14,9 +14,9 @@ import UIKit
 ///     breathing aurora, falling rain),
 ///   • one or two tiny distant travellers.
 ///
-/// Fully procedural; a bundled preview asset still wins when present. Motion
-/// is calm and cheap (a single low-rate TimelineView), and Reduce Motion
-/// renders a perfectly still frame.
+/// Orientation-aware artwork is the foundation when bundled; the procedural
+/// world remains the safe fallback. Motion is calm and cheap (a single
+/// low-rate TimelineView), and Reduce Motion renders a perfectly still frame.
 struct SkyPreviewView: View {
     let sky: FocusSky
     var animated: Bool = true
@@ -25,25 +25,33 @@ struct SkyPreviewView: View {
         GeometryReader { geo in
             let W = geo.size.width
             let H = geo.size.height
+            let art = SkyArtworkResolver.image(for: sky, landscape: W > H)
             if animated {
                 TimelineView(.animation(minimumInterval: 1.0 / 12.0)) { ctx in
-                    content(W: W, H: H, t: ctx.date.timeIntervalSinceReferenceDate)
+                    content(W: W, H: H, t: ctx.date.timeIntervalSinceReferenceDate, art: art)
                 }
             } else {
-                content(W: W, H: H, t: 0)
+                content(W: W, H: H, t: 0, art: art)
             }
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
     }
 
-    private func content(W: CGFloat, H: CGFloat, t: Double) -> some View {
-        let art = Self.resolvedArt(for: sky, landscape: W > H)
-        return ZStack {
+    private func content(W: CGFloat, H: CGFloat, t: Double, art: UIImage?) -> some View {
+        ZStack {
             background(W: W, H: H, t: t, art: art)
-            if sky.stars > 0.01 { starField(W: W, H: H, t: t) }
-            accent(W: W, H: H, t: t)
+            if sky.stars > 0.01 {
+                starField(W: W, H: H, t: t)
+                    .opacity(art == nil ? 1 : 0.32)
+            }
+            if art == nil {
+                accent(W: W, H: H, t: t)
+            } else {
+                artworkAccent(W: W, H: H, t: t)
+            }
             glowPool(W: W, H: H, t: t)
+                .opacity(art == nil ? 1 : 0.28)
             // The authored per-Sky scenery IS the ground (it skirts to the
             // bottom). Procedural depth belongs to procedural skies only —
             // bundled art already carries its own scenery.
@@ -52,28 +60,6 @@ struct SkyPreviewView: View {
         }
         .frame(width: W, height: H)
         .clipped()
-    }
-
-    /// One bundle lookup per asset name for the app's lifetime — WITH misses
-    /// cached, so the 12 fps timeline never re-searches the bundle for art
-    /// that isn't there (every Sky is procedural today).
-    private static var artCache: [String: UIImage?] = [:]
-    private static func cachedImage(named name: String) -> UIImage? {
-        if let hit = artCache[name] { return hit }
-        let ui = UIImage(named: name)
-        artCache[name] = ui
-        return ui
-    }
-    /// Bundled Sky art when present, resolved through the ONE centralized mapping:
-    /// the per-Sky `SkyArtwork_…` name first, then the legacy background naming,
-    /// then the legacy field. All misses are cached, so a Sky with no art keeps
-    /// rendering the live procedural scene (`SkyDepthScenery`) with zero churn.
-    /// The ACTIVE flight always uses the live renderer — this static art is for
-    /// the Home preview only.
-    private static func resolvedArt(for sky: FocusSky, landscape: Bool) -> UIImage? {
-        cachedImage(named: sky.artworkAssetName)
-            ?? cachedImage(named: sky.backgroundAssetName(landscape: landscape))
-            ?? sky.previewImageName.flatMap { cachedImage(named: $0) }
     }
 
     // MARK: Layers
@@ -86,8 +72,8 @@ struct SkyPreviewView: View {
         let breathe = t == 0 ? 1.0 : 0.85 + 0.15 * Foundation.sin(t * 0.05)
         LinearGradient(colors: stops, startPoint: .top, endPoint: .bottom)
         if let ui = art {
-            Image(uiImage: ui).resizable().scaledToFill()
-                .frame(width: W, height: H).clipped()
+            SkyArtworkFoundation(image: ui)
+            artworkGrade(W: W, H: H, t: t)
         } else {
             // Zenith depth — the top of the sky deepens into vastness.
             LinearGradient(stops: [
@@ -104,6 +90,24 @@ struct SkyPreviewView: View {
             RadialGradient(colors: [sky.glowColor.opacity(0.12 * breathe), .clear],
                            center: UnitPoint(x: 0.5, y: 0.84),
                            startRadius: 4, endRadius: W * 0.9)
+        }
+    }
+
+    /// A restrained readability/atmosphere grade over finished art. It never
+    /// redraws terrain or architecture; it only keeps Home chrome legible and
+    /// lets the authored glow breathe almost imperceptibly.
+    private func artworkGrade(W: CGFloat, H: CGFloat, t: Double) -> some View {
+        let breathe = t == 0 ? 1.0 : 0.86 + 0.14 * Foundation.sin(t * 0.035)
+        return ZStack {
+            LinearGradient(stops: [
+                .init(color: .black.opacity(0.10), location: 0),
+                .init(color: .clear, location: 0.34),
+                .init(color: .clear, location: 0.72),
+                .init(color: .black.opacity(0.08), location: 1),
+            ], startPoint: .top, endPoint: .bottom)
+            RadialGradient(colors: [sky.glowColor.opacity(0.055 * breathe), .clear],
+                           center: UnitPoint(x: 0.5, y: 0.76),
+                           startRadius: 2, endRadius: W * 0.72)
         }
     }
 
@@ -173,6 +177,24 @@ struct SkyPreviewView: View {
             rainAccent(W: W, H: H, t: t)
         case .bigStars:
             bigStarAccent(W: W, H: H, t: t)
+        }
+    }
+
+    /// Finished artwork already owns every landmark and celestial body. Only the
+    /// effects that genuinely move remain above it, at a deliberately restrained
+    /// strength; this avoids duplicate planets/moons and decorative clutter.
+    @ViewBuilder private func artworkAccent(W: CGFloat, H: CGFloat, t: Double) -> some View {
+        switch sky.accent {
+        case .aurora:
+            auroraAccent(W: W, H: H, t: t).opacity(0.24)
+        case .lanterns:
+            lanternAccent(W: W, H: H, t: t).opacity(0.58)
+        case .rain:
+            rainAccent(W: W, H: H, t: t).opacity(0.82)
+        case .bigStars:
+            bigStarAccent(W: W, H: H, t: t).opacity(0.34)
+        case .none, .moon, .planet:
+            EmptyView()
         }
     }
 

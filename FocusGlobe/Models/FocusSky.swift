@@ -132,11 +132,11 @@ struct FocusSky: Identifiable, Hashable {
         "Sky_\(assetBaseName)_Background_\(landscape ? "Landscape" : "Portrait")"
     }
 
-    /// The ONE centralized Sky → hero artwork mapping. These are the EXACT Image
-    /// Set names to add per Sky (keyed to the marketing name, NOT the internal
-    /// id): until they ship, every surface falls back to the live procedural
-    /// scene — never a blank or a crash. Keep all artwork names here so no screen
-    /// hard-codes its own.
+    /// The ONE centralized Sky → hero artwork mapping. The base name is keyed to
+    /// the marketing name (not the persistent id); `orientedArtworkAssetName`
+    /// appends the device composition. Until art ships, every surface falls back
+    /// to the live procedural scene — never a blank or a crash. Keep all artwork
+    /// names here so no screen hard-codes its own.
     ///
     ///   SkyArtwork_DesertNight · SkyArtwork_FijiLagoon ·
     ///   SkyArtwork_KyotoLanternNight · SkyArtwork_NorthernAurora ·
@@ -154,6 +154,12 @@ struct FocusSky: Identifiable, Hashable {
         case "deep-space":       return "SkyArtwork_DeepSpace"
         default:                 return "SkyArtwork_\(assetBaseName)"
         }
+    }
+
+    /// The production artwork pair for this Sky:
+    /// `SkyArtwork_DesertNight_Portrait` / `…_Landscape`.
+    func orientedArtworkAssetName(landscape: Bool) -> String {
+        "\(artworkAssetName)_\(landscape ? "Landscape" : "Portrait")"
     }
     /// The take-off ground plate (`Sky_RainyTokyo_Ground`) — shown only during
     /// lift-off, never tiled or repeated.

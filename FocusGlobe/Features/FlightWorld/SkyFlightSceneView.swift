@@ -16,14 +16,12 @@ private let livingSkyInspectorEnabled = false
 /// Direction: premium digital sky art, not a scrolling world and not a
 /// procedural collage. The composition is:
 ///
-///   1. A full-screen gradient that **evolves continuously** through the Sky's
-///      authored palette timeline (~70 s between keyframes, ping-pong looped —
-///      no cuts, no seams, no banding).
+///   1. Orientation-aware, full-screen environment artwork defines terrain,
+///      architecture, water, lighting and depth. A continuously evolving
+///      authored gradient remains behind it as a safe missing-art fallback.
 ///   2. Soft breathing haze and a slowly wandering highlight — organic light,
 ///      never a hard-edged disc.
-///   3. The Sky's **permanent Ground** artwork anchored at the bottom for the
-///      whole flight (it never scrolls, fades or repeats).
-///   4. Per-Sky atmospheric moments that fade in, live briefly in place
+///   3. Per-Sky atmospheric moments that fade in, live briefly in place
 ///      (drift a little, breathe, twinkle) and fade out — birds, lanterns,
 ///      aurora, rain, petals, shimmer. Nothing travels top-to-bottom as
 ///      scenery; there are no rings, no vector geometry, no procedural mini
@@ -44,6 +42,7 @@ struct SkyFlightSceneView: View {
         GeometryReader { geo in
             let W = geo.size.width
             let H = max(1, geo.size.height)
+            let artwork = SkyArtworkResolver.image(for: sky, landscape: W > H)
             TimelineView(.animation(minimumInterval: animated ? 1.0 / 30.0 : 600)) { _ in
                 // Static frame: a fixed, SETTLED moment (celestial faded in,
                 // scenery composed) — a constant, so Reduce Motion and off-
@@ -52,15 +51,26 @@ struct SkyFlightSceneView: View {
                 let t = animated ? max(0, elapsed()) : 24
                 ZStack {
                     gradientField(W: W, H: H, t: t)
+                    if let artwork {
+                        SkyArtworkFoundation(image: artwork)
+                        artworkGrade(W: W, H: H, t: t)
+                    }
                     atmosphere(W: W, H: H, t: t)
-                    celestial(W: W, H: H, t: t)
+                        .opacity(artwork == nil ? 1 : 0.42)
+                    // Finished artwork already owns the moon/planets. The
+                    // procedural celestial layer remains only for missing art.
+                    if artwork == nil {
+                        celestial(W: W, H: H, t: t)
+                    }
                     effects(W: W, H: H, t: t)
-                    // The integrated living scenery IS the ground now: authored
-                    // per-Sky silhouette planes that skirt to the physical bottom
-                    // (no separate static Ground plate — that old PNG card sat
-                    // frozen in front of the parallax and read as a seam).
-                    SkyDepthScenery(sky: sky, t: t, horizon: 0.82, intensity: 0.95)
+                        .opacity(artwork == nil ? 1 : 0.52)
+                    if artwork == nil {
+                        // A future/missing artwork pair still gets the complete
+                        // legacy world rather than a blank background.
+                        SkyDepthScenery(sky: sky, t: t, horizon: 0.82, intensity: 0.95)
+                    }
                     weather(W: W, H: H, t: t)
+                        .opacity(artwork == nil ? 1 : artworkWeatherOpacity)
                     #if DEBUG
                     if livingSkyInspectorEnabled { inspector(t: t) }
                     #endif
@@ -71,6 +81,32 @@ struct SkyFlightSceneView: View {
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
+    }
+
+    /// A subtle moving light wash keeps the static foundation connected to the
+    /// live atmosphere without redrawing or distorting authored scenery.
+    private func artworkGrade(W: CGFloat, H: CGFloat, t: Double) -> some View {
+        let breathe = 0.86 + 0.14 * Foundation.sin(t * 0.035)
+        return ZStack {
+            LinearGradient(stops: [
+                .init(color: .black.opacity(sky.isCosmicSky ? 0.04 : 0.08), location: 0),
+                .init(color: .clear, location: 0.36),
+                .init(color: .clear, location: 0.74),
+                .init(color: .black.opacity(0.055), location: 1),
+            ], startPoint: .top, endPoint: .bottom)
+            RadialGradient(colors: [sky.glowColor.opacity(0.045 * breathe), .clear],
+                           center: UnitPoint(x: 0.5 + 0.05 * Foundation.sin(t * 0.009), y: 0.72),
+                           startRadius: 2, endRadius: W * 0.76)
+        }
+    }
+
+    /// Weather remains legible over detailed art without becoming visual noise.
+    private var artworkWeatherOpacity: Double {
+        switch sky.flightParticles {
+        case .rain: return 0.88
+        case .snow: return 0.68
+        case .none, .lanterns: return 1
+        }
     }
 
     private var skySeed: UInt64 {
