@@ -812,43 +812,75 @@ private struct SmileArc: Shape {
 
 // MARK: - Store-only calm daytime sky
 
-/// A tranquil daytime sky used ONLY in the Store preview stage — a soft blue
-/// gradient, a high sun bloom and a few static, fluffy white clouds. Deliberately
-/// simple: no stars, mountains, terrain, pilots or motion, so the shop reads as a
-/// calm, bright afternoon behind both the balloon and the cabin-window preview.
-/// Pure vector (no assets), so it composites cleanly behind the transparent
-/// cabin window where the dark night world previously showed as a grey pane.
+/// The Store's own premium open-air showroom. It uses an authored sky and three
+/// transparent cloud plates with glacial depth motion, shared by the balloon and
+/// cabin previews. The gradient remains only as a resilient missing-asset
+/// fallback.
 struct StoreDaytimeSky: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
+
     var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: [Color(hex: 0x4F9BEA), Color(hex: 0x7FC0F4),
-                         Color(hex: 0xBFE2FA), Color(hex: 0xE9F5FD)],
-                startPoint: .top, endPoint: .bottom)
-            // A gentle sun bloom, high on the right.
-            RadialGradient(colors: [Color.white.opacity(0.55), .clear],
-                           center: UnitPoint(x: 0.78, y: 0.15), startRadius: 4, endRadius: 240)
-            GeometryReader { g in
-                let w = g.size.width, h = g.size.height
-                cloud(w * 0.44).position(x: w * 0.26, y: h * 0.28)
-                cloud(w * 0.30).position(x: w * 0.74, y: h * 0.42)
-                cloud(w * 0.38).position(x: w * 0.50, y: h * 0.64)
-                cloud(w * 0.24).position(x: w * 0.13, y: h * 0.56)
+        GeometryReader { geo in
+            let landscape = geo.size.width > geo.size.height
+            let live = !reduceMotion && scenePhase == .active
+            if live {
+                TimelineView(.animation(minimumInterval: 1.0 / 12.0)) { context in
+                    showroom(size: geo.size,
+                             landscape: landscape,
+                             t: context.date.timeIntervalSinceReferenceDate,
+                             motionEnabled: true)
+                }
+            } else {
+                showroom(size: geo.size, landscape: landscape, t: 0, motionEnabled: false)
             }
-            .allowsHitTesting(false)
         }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 
-    /// A soft cluster of overlapping white blobs → a fluffy, edge-free cloud.
-    private func cloud(_ w: CGFloat) -> some View {
-        ZStack {
-            Capsule().fill(.white).frame(width: w, height: w * 0.34)
-            Circle().fill(.white).frame(width: w * 0.50, height: w * 0.50).offset(x: -w * 0.16, y: -w * 0.08)
-            Circle().fill(.white).frame(width: w * 0.62, height: w * 0.62).offset(x:  w * 0.10, y: -w * 0.10)
-            Circle().fill(.white).frame(width: w * 0.44, height: w * 0.44).offset(x:  w * 0.28, y: -w * 0.02)
+    private func showroom(size: CGSize, landscape: Bool,
+                          t: Double, motionEnabled: Bool) -> some View {
+        let suffix = landscape ? "Landscape" : "Portrait"
+        let w = size.width
+        let h = size.height
+        let drift: (Double, Double, CGFloat) -> CGFloat = { phase, rate, amplitude in
+            guard motionEnabled else { return 0 }
+            return CGFloat(Foundation.sin(t * rate + phase)) * amplitude
         }
-        .opacity(0.92)
-        .blur(radius: 3)
-        .shadow(color: Color(hex: 0x3E6E9E).opacity(0.12), radius: 8, y: 4)
+
+        return ZStack {
+            LinearGradient(
+                colors: [Color(hex: 0x4F9BEA), Color(hex: 0x7FC0F4),
+                         Color(hex: 0xBFE2FA), Color(hex: 0xF7E7BE)],
+                startPoint: .top, endPoint: .bottom)
+            showroomPlate(named: "StoreShowroom_Base_\(suffix)", scale: 1)
+            showroomPlate(named: "StoreShowroom_Clouds_Far_\(suffix)", scale: 1.025)
+                .offset(x: drift(0.4, 0.005, w * 0.012),
+                        y: drift(1.5, 0.004, h * 0.004))
+            showroomPlate(named: "StoreShowroom_Clouds_Mid_\(suffix)", scale: 1.055)
+                .offset(x: drift(1.7, 0.007, w * 0.025),
+                        y: drift(0.8, 0.005, h * 0.006))
+            showroomPlate(named: "StoreShowroom_Clouds_Near_\(suffix)", scale: 1.085)
+                .offset(x: drift(2.8, 0.009, w * 0.040),
+                        y: drift(2.1, 0.006, h * 0.008))
+            RadialGradient(colors: [Color.white.opacity(0.34), .clear],
+                           center: UnitPoint(x: 0.78, y: 0.15),
+                           startRadius: 4, endRadius: max(220, w * 0.52))
+            LinearGradient(colors: [.clear, Color(hex: 0xFFF0C9).opacity(0.11)],
+                           startPoint: .top, endPoint: .bottom)
+        }
+        .frame(width: w, height: h)
+        .clipped()
+    }
+
+    @ViewBuilder
+    private func showroomPlate(named name: String, scale: CGFloat) -> some View {
+        if let image = UIImage(named: name) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .scaleEffect(scale)
+        }
     }
 }

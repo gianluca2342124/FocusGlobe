@@ -133,10 +133,10 @@ struct WidgetSnapshot: Codable, Hashable {
         longestRouteOrigin: "Lisbon", longestRouteDestination: "Reykjavík",
         longestRouteKm: 2_480, longestRouteDurationMinutes: 50,
         goals: [
-            WidgetGoal(title: "Complete an expedition", systemImage: "paperplane.fill", current: 1, target: 1),
+            WidgetGoal(title: "Complete one flight", systemImage: "paperplane.fill", current: 1, target: 1),
             WidgetGoal(title: "Focus 30 minutes", systemImage: "timer", current: 18, target: 30),
-            WidgetGoal(title: "Visit a new place", systemImage: "mappin.and.ellipse", current: 0, target: 1),
-            WidgetGoal(title: "Earn 60 miles", systemImage: "sparkles", current: 60, target: 60),
+            WidgetGoal(title: "Unlock a new badge", systemImage: "rosette", current: 0, target: 1),
+            WidgetGoal(title: "Earn 10 Focus Coins", systemImage: "circle.hexagongrid.fill", current: 10, target: 10),
         ],
         goalsCompleted: 2, goalsTotal: 4, canClaimReward: false,
         totalFocusedSeconds: 41_400, activeFocusDays: 37, focusedToday: true,

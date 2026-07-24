@@ -15,7 +15,7 @@ enum WTheme {
     static let hair     = Color.white.opacity(0.12)
     static let gold     = Color(red: 0.95, green: 0.78, blue: 0.47)
     static let indigo   = Color(red: 0.40, green: 0.45, blue: 0.96)
-    static let teal     = Color(red: 0.20, green: 0.78, blue: 0.62)
+    static let teal     = Color(red: 88 / 255, green: 214 / 255, blue: 194 / 255)
     static let coral    = Color(red: 0.96, green: 0.47, blue: 0.36)
     static let sky      = Color(red: 0.36, green: 0.56, blue: 0.95)
 
@@ -32,7 +32,7 @@ enum WTheme {
         case "read":     return Color(red: 0.635, green: 0.294, blue: 0.878)  // 0xA24BE0 purple
         case "create":   return Color(red: 0.925, green: 0.357, blue: 0.608)  // 0xEC5B9B pink
         case "reflect":  return Color(red: 0.173, green: 0.733, blue: 0.831)  // 0x2CBBD4 cyan
-        default:         return Color(red: 0.910, green: 0.647, blue: 0.294)  // 0xE8A54B amber
+        default:         return teal
         }
     }
 }
@@ -40,9 +40,10 @@ enum WTheme {
 extension View {
     /// The standard dark, premium "deep space" widget container background
     /// (iOS 17+). Pass a `glow` to tint each widget's signature corner light.
-    func fgWidgetBackground(glow: Color = WTheme.indigo) -> some View {
+    func fgWidgetBackground(artwork: String? = nil,
+                            glow: Color = WTheme.indigo) -> some View {
         containerBackground(for: .widget) {
-            WSpace(glow: glow)
+            WSpace(glow: glow, artwork: artwork)
         }
     }
 }

@@ -1,5 +1,8 @@
 import SwiftUI
 import WidgetKit
+#if canImport(UIKit)
+import UIKit
+#endif
 
 // ============================================================================
 //  Premium widget visual system — dark space identity, large iconic art.
@@ -33,19 +36,31 @@ struct WStarfield: View {
     }
 }
 
-/// The shared deep-space backdrop: navy→black, a faint starfield and two soft
-/// glows (a coloured one + gold). Used by `fgWidgetBackground()`.
+/// The shared branded backdrop. Each widget can supply a dedicated authored
+/// environment plate; the lightweight space field remains a robust fallback.
 struct WSpace: View {
     var glow: Color = WTheme.indigo
+    var artwork: String?
+
     var body: some View {
         ZStack {
-            LinearGradient(colors: [Color(red: 0.06, green: 0.09, blue: 0.17),
-                                    Color(red: 0.02, green: 0.03, blue: 0.07)],
-                           startPoint: .top, endPoint: .bottom)
-            WStarfield()
+            if let artwork, let image = UIImage(named: artwork) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                LinearGradient(colors: [.black.opacity(0.10), .clear, .black.opacity(0.34)],
+                               startPoint: .top, endPoint: .bottom)
+                LinearGradient(colors: [.black.opacity(0.12), .clear, .black.opacity(0.20)],
+                               startPoint: .leading, endPoint: .trailing)
+            } else {
+                LinearGradient(colors: [Color(red: 0.06, green: 0.09, blue: 0.17),
+                                        Color(red: 0.02, green: 0.03, blue: 0.07)],
+                               startPoint: .top, endPoint: .bottom)
+                WStarfield()
+            }
             RadialGradient(colors: [glow.opacity(0.26), .clear],
                            center: .topTrailing, startRadius: 2, endRadius: 250)
-            RadialGradient(colors: [WTheme.gold.opacity(0.10), .clear],
+            RadialGradient(colors: [WTheme.teal.opacity(0.09), .clear],
                            center: .bottomLeading, startRadius: 2, endRadius: 200)
         }
     }

@@ -11,7 +11,8 @@ struct FocusNowWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "FGFocusNow", provider: FGProvider()) { entry in
             FocusNowView(snapshot: entry.snapshot)
-                .fgWidgetBackground(glow: WTheme.gold)
+                .fgWidgetBackground(artwork: "WidgetBG_FocusNow",
+                                    glow: WTheme.teal)
                 .widgetURL(FGLink.url(FocusNowView.link(entry.snapshot)))
         }
         .configurationDisplayName("Focus Now")
@@ -41,8 +42,8 @@ struct FocusNowView: View {
     var body: some View {
         ZStack {
             // The Sky itself is the backdrop tint (over the deep-space container).
-            skyGradient.opacity(0.9)
-            RadialGradient(colors: [WTheme.gold.opacity(0.16), .clear], center: .topTrailing,
+            skyGradient.opacity(0.30)
+            RadialGradient(colors: [WTheme.teal.opacity(0.18), .clear], center: .topTrailing,
                            startRadius: 4, endRadius: 180)
             content
         }
@@ -100,7 +101,7 @@ struct FocusNowView: View {
                 Spacer()
                 Image(systemName: "balloon.fill")
                     .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(WTheme.gold)
+                    .foregroundStyle(WTheme.teal)
             }
             Spacer(minLength: 0)
             HStack(spacing: 7) {
@@ -112,7 +113,7 @@ struct FocusNowView: View {
             .foregroundStyle(Color(red: 0.08, green: 0.07, blue: 0.05))
             .padding(.horizontal, 14).padding(.vertical, 9)
             .frame(maxWidth: family == .systemSmall ? .infinity : nil)
-            .background(Capsule().fill(WTheme.gold))
+            .background(Capsule().fill(WTheme.teal))
         }
         .padding(15)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)

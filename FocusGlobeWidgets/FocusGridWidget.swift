@@ -72,7 +72,8 @@ struct FocusGridWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "FGFocusGrid", provider: FGProvider()) { entry in
             FocusGridWidgetView(snapshot: entry.snapshot)
-                .fgWidgetBackground(glow: WTheme.teal)
+                .fgWidgetBackground(artwork: "WidgetBG_FocusGrid",
+                                    glow: WTheme.teal)
                 .widgetURL(FGLink.url(entry.snapshot.gatedLink("passport")))
         }
         .configurationDisplayName("Focus Grid")
@@ -108,7 +109,7 @@ struct FocusGridWidgetView: View {
                     Spacer()
                     Text("FocusGlobe")
                         .font(.system(size: 10.5, weight: .heavy, design: .default))
-                        .foregroundStyle(WTheme.gold)
+                        .foregroundStyle(WTheme.teal)
                 }
             }
             .padding(14)

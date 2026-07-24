@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// One entry in the in-app Widgets gallery. These are *previews* that mirror the
 /// real Home Screen widgets (the widget views live in the extension target and
@@ -10,31 +13,32 @@ struct WidgetGalleryItem: Identifiable {
     let name: String
     let blurb: String
     let systemImage: String
+    let artwork: String
     let glow: Color
     let families: [String]    // e.g. ["Small", "Medium", "Large"]
     let isPro: Bool
 
-    /// The FIVE final FocusGlobe widgets — two Free, three PRO. Kept in lock-step
+    /// The four final FocusGlobe widgets — two Free, two PRO. Kept in lock-step
     /// with the widget extension so the gallery always mirrors what a pilot can
     /// actually add.
     static let all: [WidgetGalleryItem] = [
         // FREE
         .init(id: "FGStreakCompanion", name: "Streak Companion",
               blurb: "An expressive balloon, your streak flame and today's state — nothing yet, focused, at risk or a milestone.",
-              systemImage: "flame.fill", glow: WGTheme.coral,
+              systemImage: "flame.fill", artwork: "WidgetBG_StreakCompanion", glow: WGTheme.coral,
               families: ["Small", "Lock Screen"], isPro: false),
         .init(id: "FGFocusNow", name: "Focus Now",
               blurb: "Start a flight in a tap when idle, or watch the live time remaining on the flight you're on.",
-              systemImage: "paperplane.fill", glow: WGTheme.gold,
+              systemImage: "paperplane.fill", artwork: "WidgetBG_FocusNow", glow: WGTheme.teal,
               families: ["Medium"], isPro: false),
         // PRO
         .init(id: "FGFocusGrid", name: "Focus Grid",
               blurb: "Your last six months of real focus days as a living contribution grid — tap to open your Passport.",
-              systemImage: "square.grid.3x3.fill", glow: WGTheme.teal,
+              systemImage: "square.grid.3x3.fill", artwork: "WidgetBG_FocusGrid", glow: WGTheme.teal,
               families: ["Medium", "Large"], isPro: true),
         .init(id: "FGPassportStats", name: "Passport Dashboard",
               blurb: "Journeys, focused time, current + longest streak, your longest session — plus a few unlocked badges.",
-              systemImage: "book.closed.fill", glow: WGTheme.indigo,
+              systemImage: "book.closed.fill", artwork: "WidgetBG_PassportDashboard", glow: WGTheme.indigo,
               families: ["Small", "Medium", "Large"], isPro: true),
     ]
 }
@@ -48,7 +52,7 @@ enum WGTheme {
     static let inkSoft  = Color.white.opacity(0.62)
     static let gold     = Color(red: 0.95, green: 0.78, blue: 0.47)
     static let indigo   = Color(red: 0.40, green: 0.45, blue: 0.96)
-    static let teal     = Color(red: 0.20, green: 0.78, blue: 0.62)
+    static let teal     = Color(red: 88 / 255, green: 214 / 255, blue: 194 / 255)
     static let coral    = Color(red: 0.96, green: 0.47, blue: 0.36)
     static let sky      = Color(red: 0.36, green: 0.56, blue: 0.95)
 }
@@ -67,7 +71,7 @@ struct WidgetsGallerySection: View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
             VStack(alignment: .leading, spacing: 2) {
                 SectionLabel(text: "Widgets")
-                Text("Five widgets for your Home & Lock Screen")
+                Text("Four widgets for your Home & Lock Screen")
                     .font(AppTypography.caption)
                     .foregroundStyle(AppColors.textTertiary)
             }
@@ -104,7 +108,7 @@ private struct WidgetPreviewTile: View {
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            WidgetPreviewCanvas(glow: item.glow)
+            WidgetPreviewCanvas(artwork: item.artwork, glow: item.glow)
             // Signature glyph, top-trailing.
             Image(systemName: item.systemImage)
                 .font(.system(size: side * 0.26, weight: .bold))
@@ -139,29 +143,23 @@ private struct WidgetPreviewTile: View {
 
 /// The dark "space" widget background + starfield + signature glow.
 private struct WidgetPreviewCanvas: View {
+    let artwork: String
     let glow: Color
     var body: some View {
         ZStack {
-            LinearGradient(colors: [WGTheme.bgTop, WGTheme.bgBottom],
-                           startPoint: .top, endPoint: .bottom)
+            if let image = UIImage(named: artwork) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                LinearGradient(colors: [.black.opacity(0.06), .clear, .black.opacity(0.30)],
+                               startPoint: .top, endPoint: .bottom)
+            } else {
+                LinearGradient(colors: [WGTheme.bgTop, WGTheme.bgBottom],
+                               startPoint: .top, endPoint: .bottom)
+            }
             RadialGradient(colors: [glow.opacity(0.5), .clear],
                            center: .topTrailing, startRadius: 2, endRadius: 150)
-            // A few stars.
-            GeometryReader { g in
-                ForEach(0..<10, id: \.self) { i in
-                    Circle().fill(.white.opacity(0.5))
-                        .frame(width: 1.6, height: 1.6)
-                        .position(x: g.size.width * WidgetPreviewCanvas.star(i).x,
-                                  y: g.size.height * WidgetPreviewCanvas.star(i).y)
-                }
-            }
         }
-    }
-    // Deterministic star field (no Math.random).
-    static func star(_ i: Int) -> (x: CGFloat, y: CGFloat) {
-        let xs: [CGFloat] = [0.12, 0.31, 0.52, 0.73, 0.88, 0.20, 0.44, 0.64, 0.80, 0.37]
-        let ys: [CGFloat] = [0.18, 0.42, 0.24, 0.55, 0.33, 0.70, 0.82, 0.68, 0.50, 0.90]
-        return (xs[i % xs.count], ys[i % ys.count])
     }
 }
 

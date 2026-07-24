@@ -14,7 +14,8 @@ struct StreakCompanionWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "FGStreakCompanion", provider: FGProvider()) { entry in
             StreakCompanionView(snapshot: entry.snapshot)
-                .fgWidgetBackground(glow: WTheme.coral)
+                .fgWidgetBackground(artwork: "WidgetBG_StreakCompanion",
+                                    glow: WTheme.coral)
                 .widgetURL(FGLink.url("streak"))
         }
         .configurationDisplayName("Streak Companion")

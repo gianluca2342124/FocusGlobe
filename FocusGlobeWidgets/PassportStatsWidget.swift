@@ -12,7 +12,8 @@ struct PassportStatsWidget: Widget {
         // Kind stays "FGPassportStats" so existing installs keep working.
         StaticConfiguration(kind: "FGPassportStats", provider: FGProvider()) { entry in
             PassportStatsView(snapshot: entry.snapshot)
-                .fgWidgetBackground(glow: WTheme.indigo)
+                .fgWidgetBackground(artwork: "WidgetBG_PassportDashboard",
+                                    glow: WTheme.indigo)
                 .widgetURL(FGLink.url(entry.snapshot.gatedLink("passport")))
         }
         .configurationDisplayName("Passport Dashboard")
