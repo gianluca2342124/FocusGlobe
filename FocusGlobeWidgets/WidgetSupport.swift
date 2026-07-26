@@ -94,18 +94,20 @@ struct FGProvider: TimelineProvider {
 
 // MARK: - Reusable views
 
-/// A small uppercase section label with an icon.
+/// A small uppercase section label with a quiet function glyph.
 struct WHeader: View {
     let icon: String
     let title: String
     var tint: Color = WTheme.gold
     var body: some View {
         HStack(spacing: 5) {
-            Image(systemName: icon).font(.system(size: 11, weight: .bold)).foregroundStyle(tint)
             Text(title.uppercased())
                 .font(.system(size: 11, weight: .heavy, design: .default))
                 .tracking(0.6)
                 .foregroundStyle(WTheme.inkSoft)
+            Image(systemName: icon)
+                .font(.system(size: 9.5, weight: .bold))
+                .foregroundStyle(tint)
         }
     }
 }
@@ -195,7 +197,7 @@ struct LockedTeaser: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
             HStack {
-                Image(systemName: icon).font(.system(size: 15, weight: .bold)).foregroundStyle(accent)
+                Image(systemName: icon).font(.system(size: 12, weight: .bold)).foregroundStyle(accent)
                 Spacer()
                 Image(systemName: "lock.fill").font(.system(size: 12, weight: .bold)).foregroundStyle(WTheme.inkSoft)
             }

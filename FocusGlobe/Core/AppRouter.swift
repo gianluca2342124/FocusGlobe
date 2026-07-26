@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import SwiftUI
 
 /// A journey the user is about to take or is currently on. Always departs from
 /// the user's real current location (`origin`) toward the chosen destination.
@@ -242,20 +243,72 @@ enum PaywallContext: Equatable {
     case infinite         // infinite duration:   "Focus Without Limits with PRO"
     case pause            // pause a flight:       "Pause Your Flight with PRO"
 
-    var headline: String {
+    var benefitTitle: String {
         switch self {
-        case .general:     return "Upgrade to FocusGlobe PRO"
-        case .sky:         return "Unlock All Skies with PRO"
-        case .balloonSkin: return "Unlock Exclusive Balloons with PRO"
-        case .interior:    return "Unlock Premium Cabin Items with PRO"
-        case .sound:       return "Unlock Every Focus Sound with PRO"
-        case .widget:      return "Unlock All Widgets with PRO"
-        case .rewards:     return "Double Every Reward with PRO"
+        case .general:     return "Unlock FocusGlobe"
+        case .sky:         return "Explore Every Sky"
+        case .balloonSkin: return "Make Every Flight Yours"
+        case .interior:    return "Make Your Cabin Yours"
+        case .sound:       return "Find Your Focus Sound"
+        case .widget:      return "Focus at a Glance"
+        case .rewards:     return "Earn More Every Flight"
         case .noAds:       return "Focus Without Interruptions"
-        case .online:      return "Focus Together with PRO"
-        case .invite:      return "Invite Friends with PRO"
-        case .infinite:    return "Focus Without Limits with PRO"
-        case .pause:       return "Pause Your Flight with PRO"
+        case .online:      return "Fly Together"
+        case .invite:      return "Bring Your Crew"
+        case .infinite:    return "Focus Without Limits"
+        case .pause:       return "Pause When Needed"
+        }
+    }
+
+    var supportingCopy: String {
+        switch self {
+        case .general: return "Every Sky, every premium detail, and every way to focus."
+        case .sky: return "Enter the complete collection of living FocusGlobe worlds."
+        case .balloonSkin: return "Choose an iconic balloon that feels unmistakably yours."
+        case .interior: return "Turn the cabin into a calm space built around you."
+        case .sound: return "Unlock the complete sound collection for deeper sessions."
+        case .widget: return "Keep your progress and next focus within easy reach."
+        case .rewards: return "Build your collection faster with richer flight rewards."
+        case .noAds: return "Protect the calm from take-off through landing."
+        case .online: return "Share a living Sky with pilots focusing alongside you."
+        case .invite: return "Create private flights and focus with people you know."
+        case .infinite: return "Stay in the Sky for as long as the work needs."
+        case .pause: return "Hold your journey safely when real life needs a moment."
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .general: return "crown.fill"
+        case .sky: return "sparkles"
+        case .balloonSkin: return "balloon.2.fill"
+        case .interior: return "lamp.table.fill"
+        case .sound: return "waveform"
+        case .widget: return "rectangle.3.group.fill"
+        case .rewards: return "medal.fill"
+        case .noAds: return "eye.slash.fill"
+        case .online, .invite: return "person.2.fill"
+        case .infinite: return "infinity"
+        case .pause: return "pause.fill"
+        }
+    }
+
+    var accent: Color {
+        switch self {
+        case .sky, .general: return ProBrand.c5
+        case .balloonSkin, .interior: return ProBrand.c6
+        case .sound, .widget: return ProBrand.c3
+        case .rewards: return ProBrand.c1
+        case .noAds, .pause: return ProBrand.c4
+        case .online, .invite: return ProBrand.c2
+        case .infinite: return ProBrand.c5
+        }
+    }
+
+    var initialHeroIndex: Int {
+        switch self {
+        case .interior: return 4
+        default: return 0
         }
     }
 
@@ -288,15 +341,12 @@ enum PaywallContext: Equatable {
     /// exactly.
     var comparisonHighlight: String? {
         switch self {
-        case .online:                return "Online Mode"
-        case .invite:                return "Invite Friends"
-        case .infinite:              return "Infinite Focus  ∞"
-        case .widget:                return "Exclusive Widgets"
-        case .sky:                   return "Exclusive Skies"
-        case .balloonSkin:           return "Premium Skins"
-        case .interior, .sound:      return "Premium Items"
+        case .online, .invite:       return "Online & Friends"
+        case .infinite:              return "Unlimited Time  ∞"
+        case .sky:                   return "Every Sky"
+        case .balloonSkin, .interior:return "Exclusive Skins & Items"
         case .noAds:                return "No Ads"
-        case .general, .rewards, .pause: return nil
+        case .general, .sound, .widget, .rewards, .pause: return nil
         }
     }
 }

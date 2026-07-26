@@ -1,6 +1,119 @@
 import SwiftUI
 import UIKit
 
+/// Layout categories derived from the view's real container, not device idiom
+/// or size class. This is the source of truth for window-resizable surfaces.
+enum FocusViewportClass: Equatable, Sendable {
+    case compact
+    case regular
+    case wide
+}
+
+/// FocusGlobe's reusable, container-driven metrics. The values deliberately
+/// scale as a coherent family: text, controls, cards, gaps and modal artwork
+/// grow together, while readable content remains centred on wide windows.
+struct FocusViewportMetrics: Equatable, Sendable {
+    let size: CGSize
+    let kind: FocusViewportClass
+
+    init(size: CGSize) {
+        self.size = size
+        let shortest = min(size.width, size.height)
+        if size.width < 430 || shortest < 360 {
+            kind = .compact
+        } else if size.width < 900 {
+            kind = .regular
+        } else {
+            kind = .wide
+        }
+    }
+
+    var isCompact: Bool { kind == .compact }
+    var isWide: Bool { kind == .wide }
+    var isShort: Bool { size.height < 700 }
+
+    var pagePadding: CGFloat {
+        switch kind { case .compact: 16; case .regular: 24; case .wide: 40 }
+    }
+    var titleSize: CGFloat {
+        switch kind { case .compact: 29; case .regular: 34; case .wide: 39 }
+    }
+    var bodySize: CGFloat {
+        switch kind { case .compact: 15; case .regular: 16.5; case .wide: 18 }
+    }
+    var modalTitleSize: CGFloat {
+        switch kind { case .compact: 29; case .regular: 35; case .wide: 40 }
+    }
+    var modalPadding: CGFloat {
+        switch kind { case .compact: 20; case .regular: 28; case .wide: 34 }
+    }
+    var buttonHeight: CGFloat {
+        switch kind { case .compact: 54; case .regular: 60; case .wide: 64 }
+    }
+    var navigationControlSize: CGFloat {
+        switch kind { case .compact: 46; case .regular: 52; case .wide: 58 }
+    }
+    var cardSpacing: CGFloat {
+        switch kind { case .compact: 12; case .regular: 16; case .wide: 20 }
+    }
+    var sectionSpacing: CGFloat {
+        switch kind { case .compact: 20; case .regular: 28; case .wide: 34 }
+    }
+    var paywallHeroHeight: CGFloat {
+        if isShort { return 190 }
+        return switch kind { case .compact: 230; case .regular: 300; case .wide: 360 }
+    }
+    var carouselCardWidth: CGFloat {
+        switch kind {
+        case .compact: min(270, size.width - pagePadding * 2)
+        case .regular: min(330, size.width * 0.52)
+        case .wide: min(390, size.width * 0.34)
+        }
+    }
+    var homeContentWidth: CGFloat {
+        min(size.width - pagePadding * 2, kind == .wide ? 860 : 720)
+    }
+    var readableContentWidth: CGFloat {
+        min(size.width - pagePadding * 2, kind == .wide ? 920 : 720)
+    }
+    var storeContentWidth: CGFloat {
+        min(size.width - pagePadding * 2, kind == .wide ? 1180 : 900)
+    }
+    var modalWidth: CGFloat {
+        min(size.width - pagePadding * 2,
+            kind == .compact ? 440 : (kind == .regular ? 580 : 660))
+    }
+    var storePanelHeight: CGFloat {
+        let fraction: CGFloat = kind == .wide ? 0.48 : 0.46
+        let cap: CGFloat = kind == .wide ? 520 : 450
+        return min(cap, max(330, size.height * fraction))
+    }
+    var storeCardMinimumWidth: CGFloat {
+        switch kind { case .compact: 100; case .regular: 180; case .wide: 220 }
+    }
+}
+
+private struct FocusViewportMetricsKey: EnvironmentKey {
+    static let defaultValue = FocusViewportMetrics(size: CGSize(width: 390, height: 844))
+}
+
+extension EnvironmentValues {
+    var focusViewport: FocusViewportMetrics {
+        get { self[FocusViewportMetricsKey.self] }
+        set { self[FocusViewportMetricsKey.self] = newValue }
+    }
+}
+
+private struct FocusResponsiveLayoutModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        GeometryReader { proxy in
+            content
+                .environment(\.focusViewport, FocusViewportMetrics(size: proxy.size))
+                .frame(width: proxy.size.width, height: proxy.size.height)
+        }
+    }
+}
+
 /// Centralised responsive layout tokens + a real **iPhone vs iPad/Mac scale
 /// system**, so FocusGlobe reads as an Apple-quality tablet app — not a phone UI
 /// on a big screen — while leaving the premium iPhone-portrait layout unchanged.
@@ -81,16 +194,24 @@ enum Layout {
 /// Mac / wide multitasking) and centres it. On compact (iPhone, and narrow iPad
 /// multitasking) it is a no-op — full width, exactly as before on iPhone.
 private struct RegularMaxWidth: ViewModifier {
-    @Environment(\.horizontalSizeClass) private var hSize
     let regular: CGFloat
     func body(content: Content) -> some View {
         content
-            .frame(maxWidth: hSize == .regular ? regular : .infinity)
+            // Always cap against the actual proposal. Narrow containers are
+            // naturally smaller than the cap; wide windows centre the column.
+            // No size-class assumption is involved.
+            .frame(maxWidth: regular)
             .frame(maxWidth: .infinity)
     }
 }
 
 extension View {
+    /// Install real window/container metrics for the whole app. Re-evaluates
+    /// automatically as an iPad split view or Mac window is resized.
+    func focusResponsiveLayout() -> some View {
+        modifier(FocusResponsiveLayoutModifier())
+    }
+
     /// Centre content within a tablet max width on iPad/Mac (no-op on iPhone).
     func contentMaxWidth(_ width: CGFloat = Layout.content) -> some View {
         modifier(RegularMaxWidth(regular: width))

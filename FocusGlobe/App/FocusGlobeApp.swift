@@ -35,6 +35,7 @@ struct FocusGlobeApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
+                .focusResponsiveLayout()
                 .environmentObject(appModel)
                 .environmentObject(router)
                 .environmentObject(online)

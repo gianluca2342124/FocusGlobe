@@ -40,12 +40,13 @@ struct RootView: View {
                 .environmentObject(router)
                 .environmentObject(online)
         }
-        // The ONE coordinated modal presenter for the whole app: exactly one
-        // sheet at a time (paywall, Online sign-in, Coin Spin, Coins Boost,
-        // Streak, Daily Gift, share). This is what removes the "only presenting a
-        // single sheet is supported" console conflicts — no view owns its own
-        // competing global sheet anymore. Env objects injected explicitly.
-        .sheet(item: $router.activeModal) { modal in
+        // Paywall occupies the complete presentation area. Other coordinated
+        // destinations remain sheets; the filtered bindings still share the
+        // router's one-modal authority, so two presenters can never be active.
+        .fullScreenCover(item: paywallModalBinding) { modal in
+            coordinatedModal(modal)
+        }
+        .sheet(item: sheetModalBinding) { modal in
             coordinatedModal(modal)
         }
         // The take-off curtain: an opaque cover raised the instant the Boarding
@@ -89,7 +90,7 @@ struct RootView: View {
             PaywallView(context: ctx)
                 .environmentObject(appModel)
                 .environmentObject(router)
-                .paywallMaxWidth()
+                .focusResponsiveLayout()
         case .onlineSignIn:
             OnlineSignInView { }
                 .environmentObject(online)
@@ -106,5 +107,39 @@ struct RootView: View {
         case .share(let items):
             ActivityShareSheet(items: items)
         }
+    }
+
+    private var paywallModalBinding: Binding<AppModal?> {
+        Binding(
+            get: {
+                guard case .paywall = router.activeModal else { return nil }
+                return router.activeModal
+            },
+            set: { newValue in
+                if let newValue {
+                    router.activeModal = newValue
+                } else if case .paywall = router.activeModal {
+                    router.activeModal = nil
+                }
+            }
+        )
+    }
+
+    private var sheetModalBinding: Binding<AppModal?> {
+        Binding(
+            get: {
+                guard let modal = router.activeModal else { return nil }
+                if case .paywall = modal { return nil }
+                return modal
+            },
+            set: { newValue in
+                if let newValue {
+                    router.activeModal = newValue
+                } else if let modal = router.activeModal {
+                    if case .paywall = modal { return }
+                    router.activeModal = nil
+                }
+            }
+        )
     }
 }

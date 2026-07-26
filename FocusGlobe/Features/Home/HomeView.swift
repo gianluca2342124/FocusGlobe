@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 import StoreKit
 
@@ -11,10 +12,11 @@ struct HomeView: View {
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var online: FocusOnlineModel
+    @Environment(\.focusViewport) private var viewport
     @StateObject private var viewModel = HomeViewModel()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.requestReview) private var requestReview
-    /// Non-invasive review-prompt tracking (persisted in UserDefaults): every 5th
+    /// Non-invasive review-prompt tracking (persisted in UserDefaults): every 3rd
     /// genuine return to Home we may ask Apple to show its review prompt.
     @AppStorage("home.visitCount") private var homeVisitCount = 0
     @AppStorage("home.lastReviewPromptAt") private var lastReviewPromptAt = 0.0
@@ -37,6 +39,9 @@ struct HomeView: View {
     /// The validated flight, stashed by `beginTakeOff` and launched from the
     /// setup cover's `onDismiss` so the two covers never contend to present.
     @State private var pendingTakeoff: (route: Route, intention: String?)?
+    /// One stable clock is shared by every carousel page, including sentinels.
+    /// Swiping or silently normalising a circular wrap never restarts a Sky.
+    @State private var homeSkyClockOrigin = ProcessInfo.processInfo.systemUptime
 
     private var currentSky: FocusSky {
         FocusSky.all[max(0, min(FocusSky.all.count - 1, skyIndex))]
@@ -47,18 +52,37 @@ struct HomeView: View {
     /// a resume tab hanging off a preview would be nonsensical — so it's hidden.
     private var showResumeTab: Bool { appModel.resumableJourney != nil && currentSkyUnlocked }
 
-    /// Whether a pager page (including the two sentinels) should run its living
-    /// animation: the selected page and its CIRCULAR neighbours. Sentinels share
-    /// liveness with their twins (identical content), so the wrap normalisation
-    /// swaps between two frames on the same live clock — never a visible snap.
-    private func pageIsLive(_ index: Int) -> Bool {
-        guard !reduceMotion else { return false }
+    /// The selected page runs the full production cadence, its circular
+    /// neighbours retain the complete scene at a reduced cadence, and far
+    /// offscreen pages hold a rich settled frame.
+    private func pageQuality(_ index: Int) -> SkyRenderQuality {
+        guard !reduceMotion else { return .still }
         let n = FocusSky.all.count
-        guard n > 0 else { return false }
+        guard n > 0 else { return .still }
         let a = ((index % n) + n) % n
         let b = ((skyIndex % n) + n) % n
         let d = abs(a - b)
-        return min(d, n - d) <= 1
+        switch min(d, n - d) {
+        case 0: return .full
+        case 1: return .reduced
+        default: return .still
+        }
+    }
+
+    private var homeSkyElapsed: () -> Double {
+        { ProcessInfo.processInfo.systemUptime - homeSkyClockOrigin }
+    }
+
+    private func homeSky(_ sky: FocusSky, page index: Int) -> some View {
+        let quality = pageQuality(index)
+        return SkyFlightSceneView(
+            sky: sky,
+            elapsed: homeSkyElapsed,
+            animated: quality != .still,
+            seed: 0x484F4D45,
+            presentationMode: .homeSelector,
+            renderQuality: quality
+        )
     }
 
     var body: some View {
@@ -76,17 +100,20 @@ struct HomeView: View {
             // only switch modes while fully off screen.
             TabView(selection: $skyIndex) {
                 if let last = FocusSky.all.last {
-                    SkyPreviewView(sky: last, animated: pageIsLive(-1))
+                    homeSky(last, page: -1)
+                        .id("sky-page-leading-\(last.id)")
                         .tag(-1)
                         .ignoresSafeArea()
                 }
                 ForEach(Array(FocusSky.all.enumerated()), id: \.element.id) { index, sky in
-                    SkyPreviewView(sky: sky, animated: pageIsLive(index))
+                    homeSky(sky, page: index)
+                        .id("sky-page-\(sky.id)")
                         .tag(index)
                         .ignoresSafeArea()
                 }
                 if let first = FocusSky.all.first {
-                    SkyPreviewView(sky: first, animated: pageIsLive(FocusSky.all.count))
+                    homeSky(first, page: FocusSky.all.count)
+                        .id("sky-page-trailing-\(first.id)")
                         .tag(FocusSky.all.count)
                         .ignoresSafeArea()
                 }
@@ -138,11 +165,12 @@ struct HomeView: View {
                     .environment(\.colorScheme, .dark)
                 Spacer()
                 bottomCluster
-                    .clusterMaxWidth()
                     .environment(\.colorScheme, .dark)
             }
-            .padding(.horizontal, AppSpacing.screen)
-            .padding(.bottom, AppSpacing.lg)
+            .frame(maxWidth: viewport.homeContentWidth)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, viewport.pagePadding)
+            .padding(.bottom, max(AppSpacing.lg, viewport.pagePadding * 0.62))
             .opacity(handingOff ? 0 : 1)
         }
         .animation(.easeOut(duration: 0.3), value: handingOff)
@@ -255,14 +283,14 @@ struct HomeView: View {
         }
     }
 
-    /// Every 5th genuine return to Home, ask StoreKit to consider showing the
+    /// Every 3rd genuine return to Home, ask StoreKit to consider showing the
     /// system review prompt — never during onboarding, an active/ resumable
     /// flight, or while the paywall is up. Apple may still choose not to show it.
     private func maybeRequestReview() {
         guard !router.showPaywall, router.activeJourney == nil,
               appModel.resumableJourney == nil else { return }
         homeVisitCount += 1
-        guard homeVisitCount % 5 == 0 else { return }
+        guard homeVisitCount % 3 == 0 else { return }
         let now = Date().timeIntervalSince1970
         // Don't ask again within ~30 days of the last prompt.
         if lastReviewPromptAt > 0, now - lastReviewPromptAt < 60 * 60 * 24 * 30 { return }
@@ -303,28 +331,29 @@ struct HomeView: View {
     // pill shapes. All targets ≥ 44 pt.
     private var topBar: some View {
         HStack(alignment: .center, spacing: AppSpacing.xs) {
-            StreakCircleButton(streak: appModel.progress.currentStreak, pulsing: streakPulse) {
+            StreakCircleButton(streak: appModel.progress.currentStreak,
+                               pulsing: streakPulse,
+                               size: viewport.navigationControlSize) {
                 appModel.tapFeedback(); router.present(.streak)
             }
-            CoinSpinCircleButton { appModel.tapFeedback(); router.present(.coinSpin) }
+            CoinSpinCircleButton(size: viewport.navigationControlSize) {
+                appModel.tapFeedback(); router.present(.coinSpin)
+            }
             Spacer()
             coinsChip
-            // The PRO control is the real multicolor badge itself — never wrapped
-            // in a circle/capsule. The image carries its own outline + glow; the
-            // tap target stays a full 44×44 invisible rectangle around it.
-            Button {
-                appModel.tapFeedback(); router.presentPaywall(context: .general)
-            } label: {
-                // Visible plaque sized to balance the Coins / Streak controls
-                // (~30–32 pt); the shared renderer compensates the PNG's transparent
-                // padding, and the 44×44 rectangle keeps a comfortable tap target.
-                FocusGlobePROBadge(visibleHeight: Layout.pad(30, 32))
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
+            StatusCircleButton(size: viewport.navigationControlSize,
+                               ring: appModel.isPro ? AppColors.gold.opacity(0.42) : nil,
+                               accessibilityText: appModel.isPro
+                                ? "FocusGlobe PRO is active"
+                                : "Unlock FocusGlobe PRO") {
+                appModel.tapFeedback()
+                router.presentPaywall(context: .general)
+            } content: {
+                Image(systemName: "crown.fill")
+                    .font(.system(size: viewport.navigationControlSize * 0.38, weight: .bold))
+                    .foregroundStyle(ProBrand.gradient)
             }
-            .buttonStyle(SoftPressStyle(scale: 0.94))
             .shadow(color: ProBrand.glow.opacity(0.30), radius: 8, y: 0)
-            .accessibilityLabel(appModel.isPro ? "FocusGlobe PRO is active" : "Unlock FocusGlobe PRO")
         }
         .padding(.top, AppSpacing.xs)
     }
@@ -334,22 +363,23 @@ struct HomeView: View {
     private var coinsChip: some View {
         Button { appModel.tapFeedback(); router.openStore() } label: {
             HStack(spacing: 5) {
-                FocusCoinIcon(size: Layout.pad(22, 25))
+                FocusCoinIcon(size: viewport.navigationControlSize * 0.45)
                 Text(Formatters.miles(appModel.focusCoins))
-                    .font(.system(size: Layout.pad(14, 17), weight: .heavy, design: .default))
+                    .font(.system(size: viewport.bodySize - 1, weight: .heavy, design: .default))
                     .monospacedDigit()
                     .foregroundStyle(AppColors.homeControlGlyph)
                     .lineLimit(1).minimumScaleFactor(0.7)
             }
-            .padding(.leading, Layout.pad(9, 12))
-            .padding(.trailing, Layout.pad(12, 15))
-            .frame(height: Layout.pad(46, 54))
-            // The shared adaptive control surface — a white capsule with dark
-            // digits by day, a premium glass capsule by night (matches the
-            // circular control family and the Start Focus pill).
-            .background(Capsule().fill(AppColors.homeControlFill)
-                .shadow(color: .black.opacity(0.22), radius: 12, y: 6))
-            .overlay(Capsule().strokeBorder(AppColors.homeControlStroke, lineWidth: 1))
+            .padding(.leading, viewport.kind == .wide ? 13 : 10)
+            .padding(.trailing, viewport.kind == .wide ? 16 : 12)
+            .frame(height: viewport.navigationControlSize)
+            .background {
+                FocusLiquidGlassSurface(
+                    shape: Capsule(),
+                    tint: AppColors.homeControlFill,
+                    tintOpacity: 0.52
+                )
+            }
         }
         .buttonStyle(SoftPressStyle(scale: 0.94))
         .accessibilityLabel("\(appModel.focusCoins) Focus Coins. Opens the Store.")
@@ -363,11 +393,11 @@ struct HomeView: View {
     private var greetingBlock: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(viewModel.greeting + (preferredName != nil ? "," : ""))
-                .font(.system(size: Layout.pad(23, 29), weight: .medium, design: .serif))
+                .font(.system(size: viewport.titleSize - 8, weight: .medium, design: .serif))
                 .foregroundStyle(.white.opacity(preferredName != nil ? 0.82 : 1))
             if let preferredName {
                 Text(preferredName)
-                    .font(.system(size: Layout.pad(36, 46), weight: .semibold, design: .serif))
+                    .font(.system(size: viewport.titleSize + 8, weight: .semibold, design: .serif))
                     .foregroundStyle(.white)
                     .lineLimit(1).minimumScaleFactor(0.5)
             }
@@ -427,16 +457,20 @@ struct HomeView: View {
     private func edgeArrow(system: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: system)
-                .font(.system(size: Layout.pad(19, 23), weight: .bold))
+                .font(.system(size: viewport.navigationControlSize * 0.40, weight: .bold))
                 // The shared adaptive control surface: a warm-white disc + dark
                 // chevron by day, a premium translucent glass disc by night.
                 // (This sits OUTSIDE any force-dark chrome, so the `homeControl`
                 // tokens resolve to the pilot's real appearance.)
                 .foregroundStyle(AppColors.homeControlGlyph)
-                .frame(width: Layout.pad(48, 56), height: Layout.pad(48, 56))
-                .background(Circle().fill(AppColors.homeControlFill)
-                    .shadow(color: .black.opacity(0.28), radius: 12, y: 6))
-                .overlay(Circle().strokeBorder(AppColors.homeControlStroke, lineWidth: 1))
+                .frame(width: viewport.navigationControlSize, height: viewport.navigationControlSize)
+                .background {
+                    FocusLiquidGlassSurface(
+                        shape: Circle(),
+                        tint: AppColors.homeControlFill,
+                        tintOpacity: 0.52
+                    )
+                }
         }
         .buttonStyle(SoftPressStyle())
         .accessibilityLabel(system == "chevron.left" ? "Previous Sky" : "Next Sky")
@@ -449,7 +483,7 @@ struct HomeView: View {
             VStack(spacing: 10) {
                 HStack(spacing: 8) {
                     Text(currentSky.name)
-                        .font(.system(size: Layout.pad(27, 33), weight: .semibold, design: .serif))
+                        .font(.system(size: viewport.titleSize - 3, weight: .semibold, design: .serif))
                         .foregroundStyle(AppColors.gold)
                         .lineLimit(1).minimumScaleFactor(0.6)
                     if !currentSkyUnlocked {
@@ -620,7 +654,13 @@ private struct SkyPreviewFlightView: View {
             // A LOCKED-Sky preview shows only the Sky and the pilot's OWN balloon:
             // no public/ambient pilots or labels here (real Global journeys and
             // Private participants are unaffected — this is a preview, not a room).
-            SkyFlightSceneView(sky: sky, elapsed: previewElapsed, animated: !reduceMotion)
+            SkyFlightSceneView(
+                sky: sky,
+                elapsed: previewElapsed,
+                animated: !reduceMotion,
+                presentationMode: .lockedPreview,
+                renderQuality: reduceMotion ? .still : .full
+            )
                 .ignoresSafeArea()
             // A soft premium darkening — light enough to appreciate the living
             // sky, strong enough at the edges for the copy and buttons.
@@ -650,16 +690,11 @@ private struct SkyPreviewFlightView: View {
     private var overlay: some View {
         VStack(spacing: 0) {
             HStack {
-                Button { appModel.tapFeedback(); dismiss() } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(width: 42, height: 42)
-                        .background(Circle().fill(.ultraThinMaterial))
-                        .overlay(Circle().fill(Color.black.opacity(0.22)))
-                        .overlay(Circle().strokeBorder(.white.opacity(0.16), lineWidth: 1))
+                AppIconButton(systemImage: "xmark", size: 44, tint: .white,
+                              accessibilityLabel: "Close") {
+                    appModel.tapFeedback()
+                    dismiss()
                 }
-                .buttonStyle(SoftPressStyle())
                 Spacer()
             }
             .padding(.horizontal, AppSpacing.screen)

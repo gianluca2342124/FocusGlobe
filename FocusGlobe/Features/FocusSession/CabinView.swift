@@ -114,7 +114,8 @@ struct CabinView: View {
                 windowBackdrop.frame(width: W, height: H).clipped()
             } else {
                 ActiveFlightJourneyWorldView(elapsed: elapsed, seed: seed,
-                                             animated: animated, focusSky: focusSky)
+                                             animated: animated, presentationMode: .cabin,
+                                             focusSky: focusSky)
                     .frame(width: W, height: H).clipped()
             }
             // The SAME fellow pilots as the exterior, drifting behind the cabin
@@ -248,7 +249,8 @@ struct CabinView: View {
                     windowBackdrop
                 } else {
                     ActiveFlightJourneyWorldView(elapsed: elapsed, seed: seed,
-                                                 animated: animated, focusSky: focusSky)
+                                                 animated: animated, presentationMode: .cabin,
+                                                 focusSky: focusSky)
                 }
             }
             .frame(width: winW, height: winH)

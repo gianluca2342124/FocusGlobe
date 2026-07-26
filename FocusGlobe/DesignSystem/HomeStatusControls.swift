@@ -17,12 +17,14 @@ struct StatusCircleButton<Content: View>: View {
         Button(action: action) {
             content()
                 .frame(width: size, height: size)
-                // The shared adaptive control surface: a warm-white disc by day
-                // (dark glyphs, matching Start Focus), a premium translucent
-                // dark-glass disc by night — never a white circle in Dark Mode.
-                .background(Circle().fill(AppColors.homeControlFill)
-                    .shadow(color: .black.opacity(0.22), radius: 12, y: 6))
-                .overlay(Circle().strokeBorder(ring ?? AppColors.homeControlStroke, lineWidth: 1))
+                .background {
+                    FocusLiquidGlassSurface(
+                        shape: Circle(),
+                        tint: ring ?? AppColors.homeControlFill,
+                        tintOpacity: ring == nil ? 0.52 : 0.20,
+                        active: ring != nil
+                    )
+                }
                 .contentShape(Circle())
         }
         .buttonStyle(SoftPressStyle(scale: 0.94))
@@ -35,12 +37,14 @@ struct StatusCircleButton<Content: View>: View {
 struct StreakCircleButton: View {
     let streak: Int
     var pulsing: Bool = false
+    var size: CGFloat = Layout.pad(46, 54)
     let action: () -> Void
 
     private var alive: Bool { streak > 0 }
 
     var body: some View {
-        StatusCircleButton(ring: alive ? Color(hex: 0xF2643C).opacity(0.45) : nil,
+        StatusCircleButton(size: size,
+                           ring: alive ? Color(hex: 0xF2643C).opacity(0.45) : nil,
                            accessibilityText: "\(streak) day streak. Opens streak details.",
                            action: action) {
             // The real streak-fire artwork (full-height flame). Desaturated + dimmed
@@ -71,10 +75,12 @@ struct StreakCircleButton: View {
 /// The rewarded Coin Spin entry as a circle — the play glyph wearing its coin,
 /// same footprint as the rest of the family, keeping its gentle invitation shake.
 struct CoinSpinCircleButton: View {
+    var size: CGFloat = Layout.pad(46, 54)
     let action: () -> Void
 
     var body: some View {
-        StatusCircleButton(ring: AppColors.gold.opacity(0.30),
+        StatusCircleButton(size: size,
+                           ring: AppColors.gold.opacity(0.30),
                            accessibilityText: "Free Coin Spin. Watch a video to win Focus Coins.",
                            action: action) {
             // The real free-coin-spin artwork (near full-bleed). No generated

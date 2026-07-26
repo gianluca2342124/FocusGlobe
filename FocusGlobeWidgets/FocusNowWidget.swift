@@ -99,8 +99,8 @@ struct FocusNowView: View {
                     .foregroundStyle(WTheme.ink)
                     .lineLimit(1).minimumScaleFactor(0.7)
                 Spacer()
-                Image(systemName: "balloon.fill")
-                    .font(.system(size: 20, weight: .bold))
+                Image(systemName: "paperplane.fill")
+                    .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(WTheme.teal)
             }
             Spacer(minLength: 0)

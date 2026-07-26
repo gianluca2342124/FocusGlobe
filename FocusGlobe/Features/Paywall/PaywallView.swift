@@ -1,360 +1,418 @@
 import Combine
+import Foundation
 import SwiftUI
+#if canImport(UIKit)
 import UIKit
+#endif
 
-/// The custom FocusGlobe premium paywall — a dark/gold luxury screen that drives
-/// RevenueCat purchases underneath (via `AppModel.subscriptions`). This is the
-/// single premium surface for every trigger (crown, Ultra lock, premium skins,
-/// go-Pro). It never uses the RevenueCatUI template paywall.
-///
-/// Prices are the App Store localized prices from RevenueCat (never hardcoded);
-/// the fallback placeholders only appear in the disabled "products unavailable"
-/// state.
+/// FocusGlobe's single contextual PRO experience. Page one explains the exact
+/// benefit the pilot touched; page two explains the trial and is the only page
+/// capable of starting a RevenueCat purchase.
 struct PaywallView: View {
-    /// WHY this paywall opened — one reusable view renders the right headline
-    /// and hero per context (never a duplicated paywall implementation).
     var context: PaywallContext = .general
 
     @EnvironmentObject private var appModel: AppModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.focusViewport) private var viewport
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    @State private var page: Page = .benefit
     @State private var selectedKind: PlanKind = .annual
-    /// Drives the periodic gloss sweep across the purchase CTA (off-screen at rest).
-    @State private var shineX: CGFloat = -0.5
-    private let shineTimer = Timer.publish(every: 3.6, on: .main, in: .common).autoconnect()
+    @State private var selectedHeroIndex = 0
 
-    // Privacy / Terms links are centralised and configurable in `LegalLinks`
-    // (replace the placeholder URLs there before release — see APP_STORE_READINESS.md).
-
+    private enum Page { case benefit, trial }
+    private static let offeredPlans: [PlanKind] = [.annual, .monthly]
     private var subs: SubscriptionManager { appModel.subscriptions }
 
     var body: some View {
         ZStack {
-            staticBackground
-            // The close button, plans and the gold CTA are pinned so the purchase
-            // button is always visible without scrolling on every iPhone. Only the
-            // hero + benefits live in a flexible scroll area (they compress to fit
-            // on normal devices and scroll only on the very smallest screens).
-            VStack(spacing: AppSpacing.sm) {
-                closeRow
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: AppSpacing.sm) {
-                        // The FocusGlobe PRO identity lockup FIRST — native bold
-                        // wordmark + the real PRO badge (no gold balloon anymore).
-                        FocusGlobePROBrand(size: .hero)
-                        Text(context.headline)
-                            .font(.system(size: Layout.pad(24, 31), weight: .bold, design: .default))
-                            .foregroundStyle(.white)
-                            .multilineTextAlignment(.center)
-                        // The contextual hero image (mapped from the context). Omits
-                        // cleanly when its asset hasn't shipped — never a gold balloon,
-                        // never an empty box.
-                        contextHeroImage
-                        if context != .general {
-                            Text("+ Unlock so much more with PRO")
-                                .font(.system(size: 13, weight: .semibold, design: .default))
-                                .foregroundStyle(.white.opacity(0.65))
-                        }
-                        PaywallComparisonTable(highlighted: context.comparisonHighlight)
-                    }
-                    .padding(.bottom, AppSpacing.xs)
+            background
+            Group {
+                switch page {
+                case .benefit: benefitPage
+                case .trial: trialPage
                 }
-                if appModel.isPro { proState } else { purchaseSection }
             }
-            .padding(.horizontal, AppSpacing.screen)
-            .padding(.bottom, AppSpacing.md)
-            .paywallMaxWidth()   // premium centred panel on iPad/Mac; full-width on iPhone
+            .transition(.asymmetric(
+                insertion: .opacity.combined(with: .move(edge: .trailing)),
+                removal: .opacity.combined(with: .move(edge: .leading))
+            ))
         }
-        // The paywall is a fixed dark/gold luxury surface. Lock it to the dark
-        // rendering so it looks identical in Light Mode — materials, tints and the
-        // gold never lighten. (This is the one screen exempt from Light Mode.)
         .environment(\.colorScheme, .dark)
         .onAppear {
             appModel.analytics.log(.paywallOpened)
             subs.loadOfferings()
             syncSelection()
+            selectedHeroIndex = context.initialHeroIndex
         }
-        // When offerings/prices finish loading, move the selection onto a plan that
-        // actually has a package, so the CTA becomes enabled instead of sitting on
-        // an unavailable default.
         .onChange(of: subs.plans) { _, _ in syncSelection() }
     }
 
-    // MARK: Background — a STABLE dark atmosphere on the #181721 neutral.
-    // No motion, no looping blobs: the hero and the gold plans are the visual.
+    // MARK: - Page one
 
-    private var staticBackground: some View {
-        ZStack {
-            LinearGradient(colors: [AppColors.neutralRaised, AppColors.neutralBase, AppColors.neutralDeep],
-                           startPoint: .top, endPoint: .bottom)
-            RadialGradient(colors: [ProBrand.glow.opacity(0.16), .clear],
-                           center: .top, startRadius: 10, endRadius: 420)
-        }
-        .ignoresSafeArea()
-        .allowsHitTesting(false)
-    }
+    private var benefitPage: some View {
+        VStack(spacing: 0) {
+            paywallHeader(backAction: nil)
 
-    // MARK: Contextual hero image (ONE paywall, many entries)
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: viewport.isWide ? 22 : 15) {
+                    FocusGlobePROBrand(size: .compact)
 
-    /// The contextual hero art, resolved through the centralized
-    /// `PaywallContext.heroAssetName` mapping (`PaywallHero_…`). Rendered
-    /// `scaledToFit` at a compact max height that leaves room for the table + CTA
-    /// on the smallest iPhone. If the asset hasn't shipped it is omitted cleanly —
-    /// no empty box, no SF Symbol, and never the old golden balloon.
-    @ViewBuilder private var contextHeroImage: some View {
-        #if canImport(UIKit)
-        if let ui = UIImage(named: context.heroAssetName) {
-            let cap = min(max(UIScreen.main.bounds.width * 0.30, 108), 150)
-            Image(uiImage: ui)
-                .resizable()
-                .scaledToFit()
+                    VStack(spacing: 7) {
+                        Text(context.benefitTitle)
+                            .font(.system(
+                                size: viewport.isWide ? 43 : (viewport.isCompact ? 31 : 37),
+                                weight: .bold
+                            ))
+                            .foregroundStyle(.white)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.75)
+
+                        Text(context.supportingCopy)
+                            .font(.system(size: viewport.bodySize, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.68))
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: 570)
+                    }
+
+                    contextualHero
+                        .frame(height: viewport.paywallHeroHeight)
+
+                    Text("+ Unlock so much more with PRO")
+                        .font(.system(
+                            size: viewport.isWide ? 22 : (viewport.isCompact ? 17 : 19),
+                            weight: .bold
+                        ))
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+
+                    PaywallComparisonTable(highlighted: context.comparisonHighlight)
+                        .frame(maxWidth: viewport.isWide ? 650 : 560)
+                }
+                .frame(maxWidth: viewport.readableContentWidth)
                 .frame(maxWidth: .infinity)
-                .frame(maxHeight: cap)
-                .padding(.vertical, 2)
-                .accessibilityHidden(true)
-        }
-        #endif
-    }
+                .padding(.horizontal, viewport.pagePadding)
+                .padding(.bottom, 18)
+            }
+            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
 
-    // MARK: Header
-
-    private var closeRow: some View {
-        HStack {
-            Spacer()
-            AppIconButton(systemImage: "xmark", size: 36, tint: .white, accessibilityLabel: "Close") {
-                appModel.tapFeedback(); dismiss()
+            if appModel.isPro {
+                proState
+            } else {
+                Button {
+                    appModel.tapFeedback()
+                    withAnimation(.easeInOut(duration: reduceMotion ? 0 : 0.34)) {
+                        page = .trial
+                    }
+                } label: {
+                    Text("Start 7 days free trial")
+                        .font(.system(size: viewport.isWide ? 20 : 18, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: viewport.buttonHeight)
+                        .background(Capsule().fill(ProBrand.primaryButton))
+                        .overlay(Capsule().strokeBorder(.white.opacity(0.16), lineWidth: 1))
+                        .shadow(color: ProBrand.ctaBlue.opacity(0.42), radius: 18, y: 8)
+                }
+                .buttonStyle(SoftPressStyle())
+                .accessibilityHint("Shows trial timing and subscription options. No purchase is made.")
+                .frame(maxWidth: viewport.modalWidth)
+                .padding(.horizontal, viewport.pagePadding)
+                .padding(.bottom, max(12, viewport.pagePadding * 0.65))
             }
         }
-        .padding(.top, AppSpacing.xs)
     }
 
+    @ViewBuilder private var contextualHero: some View {
+        switch context {
+        case .sky:
+            PaywallSkyCarousel(selectedIndex: $selectedHeroIndex)
+        case .balloonSkin, .interior:
+            PaywallCollectibleCarousel(selectedIndex: $selectedHeroIndex)
+        default:
+            PaywallContextHero(context: context)
+        }
+    }
 
-    // MARK: Already Pro
+    // MARK: - Page two
 
-    private var proState: some View {
-        VStack(spacing: AppSpacing.sm) {
-            Label("Your PRO is active", systemImage: "checkmark.seal.fill")
-                .font(AppTypography.headline)
-                .foregroundStyle(AppColors.success)
-            Button { appModel.tapFeedback(); dismiss() } label: {
-                Text("Close")
-                    .font(AppTypography.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity).frame(height: 54)
-                    .background(Capsule().fill(ProBrand.gradient))
+    private var trialPage: some View {
+        VStack(spacing: 0) {
+            paywallHeader {
+                appModel.tapFeedback()
+                withAnimation(.easeInOut(duration: reduceMotion ? 0 : 0.34)) {
+                    page = .benefit
+                }
+            }
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: viewport.isWide ? 30 : 22) {
+                    trialTitle
+                    TrialTimeline()
+                        .frame(maxWidth: viewport.isWide ? 620 : 540)
+
+                    VStack(spacing: 10) {
+                        ForEach(Self.offeredPlans) { kind in
+                            planCard(kind)
+                        }
+                    }
+                    .frame(maxWidth: viewport.isWide ? 620 : 540)
+                }
+                .frame(maxWidth: viewport.readableContentWidth)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, viewport.pagePadding)
+                .padding(.bottom, 18)
+            }
+            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+
+            if appModel.isPro {
+                proState
+            } else {
+                purchaseFooter
+            }
+        }
+    }
+
+    private var trialTitle: some View {
+        VStack(spacing: 8) {
+            Text("We’ll remind you")
+            + Text(" 2 days").foregroundStyle(ProBrand.softGradient)
+            + Text("\nbefore your trial ends")
+        }
+        .font(.system(
+            size: viewport.isWide ? 42 : (viewport.isCompact ? 31 : 37),
+            weight: .bold
+        ))
+        .foregroundStyle(.white)
+        .multilineTextAlignment(.center)
+        .lineSpacing(2)
+        .minimumScaleFactor(0.75)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("We’ll remind you 2 days before your trial ends")
+    }
+
+    private var purchaseFooter: some View {
+        VStack(spacing: 7) {
+            if selectedKind == .annual {
+                Label("No charge today", systemImage: "checkmark.circle.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(ProBrand.c2)
+            }
+
+            Button { purchase() } label: {
+                ZStack {
+                    if subs.isPurchasing {
+                        ProgressView().tint(.white)
+                    } else {
+                        Text(purchaseButtonTitle)
+                            .font(.system(size: viewport.isWide ? 20 : 18, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: viewport.buttonHeight)
+                .background(Capsule().fill(ProBrand.primaryButton))
+                .overlay(Capsule().strokeBorder(.white.opacity(0.16), lineWidth: 1))
+                .shadow(color: ProBrand.ctaBlue.opacity(0.42), radius: 18, y: 8)
+                .opacity(effectiveKind == nil ? 0.5 : 1)
             }
             .buttonStyle(SoftPressStyle())
-        }
-    }
-
-    // MARK: Plans + purchase
-
-    /// The plans OFFERED to new purchasers: Annual (hero) + Monthly only.
-    /// Lifetime is retired from the purchase UI — existing Lifetime owners keep
-    /// their entitlement (any active entitlement = Pro) and Restore Purchases
-    /// continues to recognise it; nothing about ownership is revoked.
-    private static let offeredPlans: [PlanKind] = [.annual, .monthly]
-
-    private var purchaseSection: some View {
-        VStack(spacing: AppSpacing.sm) {
-            ForEach(Self.offeredPlans) { kind in planCard(kind) }
-
-            purchaseButton
-                .padding(.top, 4)
+            .disabled(effectiveKind == nil || subs.isPurchasing)
 
             if let message = subs.errorMessage {
                 Text(message)
-                    .font(AppTypography.caption)
+                    .font(.system(size: 12.5, weight: .medium))
                     .foregroundStyle(AppColors.danger)
                     .multilineTextAlignment(.center)
             }
 
-            // ONE compact footer line — Restore Purchases • Privacy • Terms —
-            // each independently tappable. RevenueCat restore is unchanged.
+            Text(trialDisclosure)
+                .font(.system(size: 11.5, weight: .regular))
+                .foregroundStyle(.white.opacity(0.5))
+                .multilineTextAlignment(.center)
+
             HStack(spacing: 6) {
-                Button { restore() } label: {
-                    Text("Restore Purchases")
-                }
-                .buttonStyle(SoftPressStyle())
-                Text("•").foregroundStyle(.white.opacity(0.35))
+                Button("Restore Purchases") { restore() }
+                Text("•")
                 Link("Privacy", destination: LegalLinks.privacy)
-                Text("•").foregroundStyle(.white.opacity(0.35))
+                Text("•")
                 Link("Terms", destination: LegalLinks.terms)
             }
-            .font(AppTypography.caption)
-            .foregroundStyle(.white.opacity(0.7))
-            .padding(.top, 4)
+            .font(.system(size: 11.5, weight: .medium))
+            .foregroundStyle(.white.opacity(0.62))
         }
+        .frame(maxWidth: viewport.isWide ? 620 : 540)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, viewport.pagePadding)
+        .padding(.bottom, max(10, viewport.pagePadding * 0.55))
     }
 
     private func planCard(_ kind: PlanKind) -> some View {
         let plan = subs.plan(kind)
         let selected = selectedKind == kind
-        // Only dim/disable an unavailable plan when *other* plans are purchasable,
-        // so a partial offering clearly shows which plans can be bought. Before any
-        // package loads, cards stay as neutral previews (no sad all-dimmed state).
-        let dimmed = subs.hasAnyPackage && !(plan?.available ?? false)
+        let unavailable = subs.hasAnyPackage && !(plan?.available ?? false)
+
         return Button {
             appModel.tapFeedback()
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { selectedKind = kind }
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                selectedKind = kind
+            }
         } label: {
-            HStack(spacing: AppSpacing.sm) {
+            HStack(spacing: 12) {
+                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(selected ? ProBrand.c2 : .white.opacity(0.38))
+
                 VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 7) {
                         Text(kind.title)
-                            .font(.system(size: 17, weight: .bold, design: .default))
+                            .font(.system(size: 17, weight: .bold))
                             .foregroundStyle(.white)
-                        if kind == .annual { discountBadge }
+                        if kind == .annual {
+                            Text("-60%")
+                                .font(.system(size: 10, weight: .heavy))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 3)
+                                .background(Capsule().fill(ProBrand.c1))
+                        }
                     }
-                    if let sub = planSubtitle(kind, plan) {
-                        Text(sub)
-                            .font(AppTypography.caption)
-                            .foregroundStyle(.white.opacity(0.7))
+                    if kind == .annual, let monthly = plan?.monthlyEquivalent {
+                        Text(monthly)
+                            .font(.system(size: 12.5, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.62))
                     }
                 }
+
                 Spacer()
+
                 Text(plan?.localizedPrice ?? "—")
-                    .font(.system(size: 17, weight: .bold, design: .default))
+                    .font(.system(size: 17, weight: .bold))
                     .foregroundStyle(.white)
             }
-            .padding(.vertical, AppSpacing.sm)
-            .padding(.horizontal, AppSpacing.md)
+            .padding(.horizontal, 18)
+            .frame(height: viewport.isWide ? 72 : 64)
             .background(
-                RoundedRectangle(cornerRadius: AppSpacing.pillRadius, style: .continuous)
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .fill(.ultraThinMaterial)
-                    .overlay(RoundedRectangle(cornerRadius: AppSpacing.pillRadius, style: .continuous)
-                        .fill(Color.black.opacity(selected ? 0.10 : 0.28)))
+                    .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(Color.black.opacity(selected ? 0.06 : 0.22)))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: AppSpacing.pillRadius, style: .continuous)
-                    .strokeBorder(selected ? AnyShapeStyle(ProBrand.borderGradient)
-                                           : AnyShapeStyle(Color.white.opacity(0.16)),
-                                  lineWidth: selected ? 2 : 1)
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .strokeBorder(
+                        selected ? AnyShapeStyle(ProBrand.borderGradient)
+                                 : AnyShapeStyle(Color.white.opacity(0.13)),
+                        lineWidth: selected ? 2 : 1
+                    )
             )
-            .shadow(color: selected ? ProBrand.glow.opacity(0.35) : .clear, radius: 12, y: 0)
+            .shadow(color: selected ? ProBrand.glow.opacity(0.28) : .clear, radius: 14)
         }
         .buttonStyle(SoftPressStyle(scale: 0.99))
-        .opacity(dimmed ? 0.45 : 1)
-        .disabled(dimmed)
+        .opacity(unavailable ? 0.42 : 1)
+        .disabled(unavailable)
     }
 
-    private func planSubtitle(_ kind: PlanKind, _ plan: PlanOption?) -> String? {
-        switch kind {
-        case .annual:   return plan?.monthlyEquivalent
-        case .lifetime: return "Pay once."
-        case .monthly:  return nil
-        }
-    }
+    // MARK: - Shared chrome and actions
 
-    private var discountBadge: some View {
-        Text("-60%")
-            .font(.system(size: 10, weight: .heavy, design: .default))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 6).padding(.vertical, 2)
-            .background(Capsule().fill(ProBrand.c1))   // savings green (PRO spectrum, not gold)
-    }
-
-    private var purchaseButton: some View {
-        // Drive the CTA from the plan it will actually buy (`effectiveKind`): the
-        // user's selection when it has a package, otherwise the preferred available
-        // plan. So the CTA is enabled and shows real copy whenever ANY real package
-        // is loaded — it can only read "Products unavailable" when zero packages
-        // exist, never while a purchasable plan is on screen.
-        let kind = effectiveKind
-        let available = kind != nil
-        let working = subs.isPurchasing
-        return Button { purchase() } label: {
-            ZStack {
-                if working {
-                    ProgressView().tint(.white)
-                } else {
-                    Text(available ? buttonTitle(for: kind) : "Products unavailable")
-                        .font(AppTypography.headline)
-                        .foregroundStyle(.white)
-                }
+    private func paywallHeader(backAction: (() -> Void)?) -> some View {
+        HStack {
+            if let backAction {
+                AppIconButton(systemImage: "chevron.left", size: viewport.navigationControlSize,
+                              tint: .white, accessibilityLabel: "Back", action: backAction)
+            } else {
+                Color.clear.frame(width: viewport.navigationControlSize,
+                                  height: viewport.navigationControlSize)
             }
-            .frame(maxWidth: .infinity).frame(height: 56)
-            // The primary subscription CTA is a premium, restrained near-solid
-            // royal-blue — NOT the multicolor spectrum (reserved for the badge,
-            // the PRO column and selected outlines). White label keeps strong
-            // contrast on the dark navy; a subtle lower shadow gives depth.
-            // Purchase behaviour unchanged.
-            .background(Capsule().fill(ProBrand.primaryButton))
-            .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 1))
-            // Subtle gloss sweep every few seconds (only on the live CTA).
-            .overlay {
-                if available && !working {
-                    shineSweep.clipShape(Capsule()).allowsHitTesting(false)
-                }
+            Spacer()
+            AppIconButton(systemImage: "xmark", size: viewport.navigationControlSize,
+                          tint: .white, accessibilityLabel: "Close") {
+                appModel.tapFeedback()
+                dismiss()
             }
-            .shadow(color: ProBrand.ctaBlue.opacity(0.45), radius: 16, y: 8)
-            .opacity(available ? 1 : 0.5)
         }
-        .buttonStyle(SoftPressStyle())
-        .disabled(!available || working)
-        .onReceive(shineTimer) { _ in triggerShine() }
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { triggerShine() }
-        }
+        .frame(maxWidth: viewport.isWide ? 1040 : 760)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, viewport.pagePadding)
+        .padding(.top, max(6, viewport.pagePadding * 0.25))
+        .padding(.bottom, 4)
     }
 
-    /// A diagonal highlight band that sweeps across the CTA, brightening the gold.
-    private var shineSweep: some View {
-        GeometryReader { geo in
-            let w = geo.size.width
-            LinearGradient(colors: [.clear, .white.opacity(0.55), .clear],
-                           startPoint: .leading, endPoint: .trailing)
-                .frame(width: w * 0.45, height: geo.size.height * 2)
-                .rotationEffect(.degrees(20))
-                .position(x: w * shineX, y: geo.size.height / 2)
-                .blendMode(.plusLighter)
+    private var proState: some View {
+        VStack(spacing: 10) {
+            Label("Your PRO is active", systemImage: "checkmark.seal.fill")
+                .font(.system(size: 17, weight: .bold))
+                .foregroundStyle(AppColors.success)
+            Button("Close") { dismiss() }
+                .font(.system(size: 17, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: viewport.buttonHeight)
+                .background(Capsule().fill(ProBrand.primaryButton))
+                .buttonStyle(SoftPressStyle())
         }
+        .frame(maxWidth: viewport.modalWidth)
+        .padding(.horizontal, viewport.pagePadding)
+        .padding(.bottom, viewport.pagePadding)
     }
 
-    private func triggerShine() {
-        shineX = -0.5
-        withAnimation(.easeInOut(duration: 1.05)) { shineX = 1.5 }
+    private var background: some View {
+        ZStack {
+            LinearGradient(
+                colors: [Color(hex: 0x111329), AppColors.neutralBase, Color(hex: 0x080A16)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            RadialGradient(
+                colors: [context.accent.opacity(0.22), .clear],
+                center: page == .benefit ? .top : .bottomTrailing,
+                startRadius: 10,
+                endRadius: viewport.isWide ? 760 : 500
+            )
+            RadialGradient(
+                colors: [ProBrand.glow.opacity(0.12), .clear],
+                center: .bottomLeading,
+                startRadius: 10,
+                endRadius: 520
+            )
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
     }
 
-    /// The plan the CTA actually purchases: the current selection when it has a
-    /// loaded package, else the first OFFERED plan with a package (annual →
-    /// monthly). Restricted to `offeredPlans`, so the CTA can never sell the
-    /// retired Lifetime plan. `nil` only when no offered package exists — so the
-    /// CTA stays enabled and truthful even for the brief partial-offering frame
-    /// before `syncSelection` moves the highlighted card onto an available plan.
     private var effectiveKind: PlanKind? {
-        if Self.offeredPlans.contains(selectedKind), subs.plan(selectedKind)?.available == true {
+        if Self.offeredPlans.contains(selectedKind),
+           subs.plan(selectedKind)?.available == true {
             return selectedKind
         }
         return Self.offeredPlans.first { subs.plan($0)?.available == true }
     }
 
-    private func buttonTitle(for kind: PlanKind?) -> String {
-        kind == .annual ? "Start 7 days free trial" : "Continue"
+    private var purchaseButtonTitle: String {
+        guard let kind = effectiveKind else { return "Products unavailable" }
+        return kind == .annual ? "Start 7 days free trial" : "Continue with Monthly"
     }
 
+    private var trialDisclosure: String {
+        effectiveKind == .annual
+            ? "7 days free, then the selected annual price. Cancel anytime before renewal."
+            : "The selected monthly subscription renews automatically until cancelled."
+    }
 
-    // MARK: Actions
-
-    /// Keep the selection on a purchasable plan. Once offerings load, if the
-    /// current selection has no package but another plan does, move to the
-    /// preferred available one (annual → monthly → lifetime). This ensures the CTA
-    /// is enabled whenever any package exists, instead of sitting disabled on an
-    /// unavailable default. No-op until at least one package is available, so the
-    /// user's manual choice is never overridden once real plans are on screen.
     private func syncSelection() {
         guard subs.hasAnyPackage else { return }
-        if !Self.offeredPlans.contains(selectedKind) || subs.plan(selectedKind)?.available != true,
-           let preferred = Self.offeredPlans.first(where: { subs.plan($0)?.available == true }) {
+        if !Self.offeredPlans.contains(selectedKind)
+            || subs.plan(selectedKind)?.available != true,
+           let preferred = Self.offeredPlans.first(where: {
+               subs.plan($0)?.available == true
+           }) {
             selectedKind = preferred
         }
     }
 
     private func purchase() {
-        // Buy the plan the CTA is actually offering (the selection, or the
-        // preferred available plan if the selection has no package yet). Guarded so
-        // a tap with zero packages loaded is a no-op rather than a failed purchase.
-        guard let kind = effectiveKind else { return }
+        guard page == .trial, let kind = effectiveKind else { return }
         Task { @MainActor in
             let ok = await subs.purchase(kind)
             if ok {
@@ -373,113 +431,404 @@ struct PaywallView: View {
     }
 }
 
-// MARK: - Shared Free-vs-PRO comparison
+// MARK: - Context heroes
 
-/// The ONE Free-vs-PRO comparison used by every paywall context. Nine direct,
-/// benefit-led rows (No Ads deliberately second), checkmark / dash values only.
-/// It is NOT a boxed table card: it sits straight on the paywall background, and
-/// the PRO column is a full-height MULTICOLOR wash behind its checkmarks — the
-/// strong, conversion-focused emphasis. The row matching the opening context is
-/// highlighted with the PRO spectrum. Free includes only Solo Mode; every other
-/// benefit is a PRO unlock, so the PRO column is all checks.
-struct PaywallComparisonTable: View {
-    /// The benefit row to spotlight (nil = broad entry → nothing highlighted).
-    var highlighted: String? = nil
+private struct PaywallContextHero: View {
+    let context: PaywallContext
+    @Environment(\.focusViewport) private var viewport
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var floating = false
 
-    /// (title, includedInFree). Order is fixed. PRO includes everything.
-    private static let rows: [(title: String, free: Bool)] = [
-        ("Solo Mode",         true),
-        ("No Ads",            false),
-        ("Online Mode",       false),
-        ("Invite Friends",    false),
-        ("Infinite Focus  ∞", false),
-        ("Exclusive Skies",   false),
-        ("Premium Skins",     false),
-        ("Premium Items",     false),
-        ("Exclusive Widgets", false),
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    .fill(context.accent.opacity(0.08)))
+                .overlay(RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    .strokeBorder(.white.opacity(0.12), lineWidth: 1))
+
+            RadialGradient(
+                colors: [context.accent.opacity(0.25), .clear],
+                center: .center,
+                startRadius: 5,
+                endRadius: viewport.paywallHeroHeight * 0.65
+            )
+
+            #if canImport(UIKit)
+            if let image = UIImage(named: context.heroAssetName) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .padding(viewport.isWide ? 22 : 14)
+                    .offset(y: floating ? -5 : 5)
+                    .shadow(color: context.accent.opacity(0.22), radius: 20)
+            } else {
+                fallback
+            }
+            #else
+            fallback
+            #endif
+        }
+        .frame(maxWidth: viewport.isWide ? 720 : 590)
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 3.2).repeatForever(autoreverses: true)) {
+                floating = true
+            }
+        }
+    }
+
+    private var fallback: some View {
+        Image(systemName: context.systemImage)
+            .font(.system(size: viewport.isWide ? 92 : 72, weight: .light))
+            .foregroundStyle(context.accent)
+            .symbolEffect(.pulse, options: .repeating, isActive: !reduceMotion)
+    }
+}
+
+private enum PaywallCollectible: Identifiable {
+    case skin(BalloonSkin)
+    case item(StoreItem)
+
+    var id: String {
+        switch self {
+        case .skin(let skin): return "skin.\(skin.id)"
+        case .item(let item): return "item.\(item.id)"
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .skin(let skin): return skin.name
+        case .item(let item): return item.name
+        }
+    }
+}
+
+private struct PaywallCollectibleCarousel: View {
+    @Binding var selectedIndex: Int
+
+    private let items: [PaywallCollectible] =
+        BalloonSkin.all.filter(\.isPremium).map(PaywallCollectible.skin)
+        + StoreItem.all.prefix(5).map(PaywallCollectible.item)
+
+    var body: some View {
+        PaywallThreeUpCarousel(items: items, selectedIndex: $selectedIndex) { item, centered in
+            VStack(spacing: 8) {
+                collectibleArt(item)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                Text(item.title)
+                    .font(.system(size: centered ? 16 : 13, weight: .bold))
+                    .foregroundStyle(.white.opacity(centered ? 1 : 0.68))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .fill(ProBrand.glow.opacity(centered ? 0.10 : 0.035)))
+            )
+            .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .strokeBorder(.white.opacity(centered ? 0.18 : 0.08), lineWidth: 1))
+            .shadow(color: centered ? ProBrand.glow.opacity(0.24) : .clear, radius: 18, y: 8)
+        }
+    }
+
+    @ViewBuilder private func collectibleArt(_ item: PaywallCollectible) -> some View {
+        switch item {
+        case .skin(let skin):
+            BalloonView(height: 170, showBurner: false, showGlow: false, skin: skin)
+                .padding(.vertical, 4)
+        case .item(let item):
+            #if canImport(UIKit)
+            if let image = UIImage(named: item.bestAssetName) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .padding(12)
+            } else {
+                Image(systemName: item.systemImage)
+                    .font(.system(size: 56, weight: .medium))
+                    .foregroundStyle(item.tint)
+            }
+            #else
+            Image(systemName: item.systemImage)
+                .font(.system(size: 56, weight: .medium))
+                .foregroundStyle(item.tint)
+            #endif
+        }
+    }
+}
+
+private struct PaywallSkyCarousel: View {
+    @Binding var selectedIndex: Int
+    @EnvironmentObject private var appModel: AppModel
+
+    private var skies: [FocusSky] {
+        let lockedWorlds = FocusSky.all.filter { !$0.isDefaultFree }
+        return lockedWorlds.isEmpty ? FocusSky.all : lockedWorlds
+    }
+
+    var body: some View {
+        PaywallThreeUpCarousel(items: skies, selectedIndex: $selectedIndex) { sky, centered in
+            ZStack {
+                SkyFlightSceneView(
+                    sky: sky,
+                    elapsed: { ProcessInfo.processInfo.systemUptime },
+                    animated: centered,
+                    seed: 0x50524F,
+                    presentationMode: .paywall,
+                    renderQuality: centered ? .reduced : .still
+                )
+
+                LinearGradient(colors: [.clear, .black.opacity(0.46)],
+                               startPoint: .center, endPoint: .bottom)
+
+                BalloonView(
+                    height: centered ? 72 : 52,
+                    showBurner: true,
+                    showGlow: true,
+                    skin: appModel.selectedSkin
+                )
+                .offset(y: centered ? 4 : 10)
+
+                VStack {
+                    Spacer()
+                    Text(sky.name)
+                        .font(.system(size: centered ? 16 : 13, weight: .bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .padding(.bottom, 12)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .strokeBorder(.white.opacity(centered ? 0.20 : 0.09), lineWidth: 1))
+            .shadow(color: centered ? sky.glowColor.opacity(0.28) : .clear, radius: 18, y: 8)
+        }
+    }
+}
+
+/// A gesture-friendly, circular three-card carousel. It never resets an index:
+/// modulo selection gives a continuous loop, and the auto advance waits after
+/// every drag so it never fights the pilot's hand.
+private struct PaywallThreeUpCarousel<Item: Identifiable, Card: View>: View {
+    let items: [Item]
+    @Binding var selectedIndex: Int
+    @ViewBuilder let card: (Item, Bool) -> Card
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var resumeAutomaticAt = Date.distantPast
+    @State private var dragOffset: CGFloat = 0
+    private let timer = Timer.publish(every: 4.2, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        GeometryReader { geo in
+            let width = geo.size.width
+            let centerWidth = min(width * 0.58, 390)
+            let sideWidth = min(width * 0.24, 180)
+
+            HStack(spacing: 10) {
+                carouselCard(offset: -1, width: sideWidth, centered: false)
+                carouselCard(offset: 0, width: centerWidth, centered: true)
+                carouselCard(offset: 1, width: sideWidth, centered: false)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .offset(x: dragOffset * 0.22)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 10)
+                    .onChanged { value in
+                        resumeAutomaticAt = Date().addingTimeInterval(6)
+                        dragOffset = value.translation.width
+                    }
+                    .onEnded { value in
+                        let direction = value.predictedEndTranslation.width
+                        if abs(direction) > 38 {
+                            advance(direction < 0 ? 1 : -1)
+                        }
+                        withAnimation(.spring(response: 0.36, dampingFraction: 0.84)) {
+                            dragOffset = 0
+                        }
+                    }
+            )
+        }
+        .clipped()
+        .onReceive(timer) { now in
+            guard !reduceMotion, items.count > 1, now >= resumeAutomaticAt else { return }
+            advance(1)
+        }
+        .onAppear {
+            selectedIndex = normalized(selectedIndex)
+            resumeAutomaticAt = Date().addingTimeInterval(2.6)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: advance(1)
+            case .decrement: advance(-1)
+            @unknown default: break
+            }
+        }
+    }
+
+    private func carouselCard(offset: Int, width: CGFloat, centered: Bool) -> some View {
+        card(item(offset: offset), centered)
+            .frame(width: width)
+            .scaleEffect(centered ? 1 : 0.82)
+            .opacity(centered ? 1 : 0.56)
+            .blur(radius: centered ? 0 : 0.25)
+            .id("\(selectedIndex).\(offset)")
+            .transition(.opacity.combined(with: .scale(scale: 0.94)))
+    }
+
+    private func item(offset: Int) -> Item {
+        items[normalized(selectedIndex + offset)]
+    }
+
+    private func normalized(_ index: Int) -> Int {
+        guard !items.isEmpty else { return 0 }
+        return ((index % items.count) + items.count) % items.count
+    }
+
+    private func advance(_ delta: Int) {
+        guard items.count > 1 else { return }
+        withAnimation(.easeInOut(duration: reduceMotion ? 0 : 0.55)) {
+            selectedIndex = normalized(selectedIndex + delta)
+        }
+    }
+}
+
+// MARK: - Trial and comparison
+
+private struct TrialTimeline: View {
+    private let steps: [(icon: String, title: String, detail: String, color: Color)] = [
+        ("lock.open.fill", "Today", "Unlock all FocusGlobe PRO features.", ProBrand.c1),
+        ("bell.fill", "2 days before", "We’ll remind you before your free trial ends.", ProBrand.c2),
+        ("star.fill", "Trial end date", "Your selected subscription begins unless cancelled beforehand.", ProBrand.c4),
     ]
-
-    private var freeWidth: CGFloat { Layout.pad(56, 68) }
-    private var proWidth: CGFloat { Layout.pad(80, 96) }
 
     var body: some View {
         VStack(spacing: 0) {
-            // Column captions — no boxed header, no "What you get".
+            ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
+                HStack(alignment: .top, spacing: 16) {
+                    VStack(spacing: 0) {
+                        ZStack {
+                            Circle().fill(step.color)
+                            Image(systemName: step.icon)
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                        .frame(width: 42, height: 42)
+
+                        if index < steps.count - 1 {
+                            Rectangle()
+                                .fill(LinearGradient(
+                                    colors: [step.color, steps[index + 1].color],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                ))
+                                .frame(width: 4, height: 52)
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(step.title)
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundStyle(.white)
+                        Text(step.detail)
+                            .font(.system(size: 15, weight: .regular))
+                            .foregroundStyle(.white.opacity(0.66))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.top, 2)
+
+                    Spacer(minLength: 0)
+                }
+            }
+        }
+        .accessibilityElement(children: .contain)
+    }
+}
+
+struct PaywallComparisonTable: View {
+    var highlighted: String? = nil
+    @Environment(\.focusViewport) private var viewport
+
+    private static let rows: [String] = [
+        "No Ads",
+        "Online & Friends",
+        "Unlimited Time  ∞",
+        "Every Sky",
+        "Exclusive Skins & Items",
+    ]
+
+    private var freeWidth: CGFloat { viewport.isCompact ? 52 : 66 }
+    private var proWidth: CGFloat { viewport.isCompact ? 68 : 84 }
+
+    var body: some View {
+        VStack(spacing: 0) {
             HStack(spacing: 0) {
                 Spacer(minLength: 0)
                 Text("FREE")
-                    .font(.system(size: 12, weight: .heavy, design: .default)).tracking(0.5)
+                    .font(.system(size: 11, weight: .heavy))
+                    .tracking(0.5)
                     .foregroundStyle(.white.opacity(0.5))
                     .frame(width: freeWidth)
-                // The real PRO badge crowns the column (no "PRO" text).
-                FocusGlobePROBadge(visibleHeight: Layout.pad(15, 18))
+                FocusGlobePROBadge(visibleHeight: 16)
                     .frame(width: proWidth)
             }
-            .padding(.top, Layout.pad(12, 15))
-            .padding(.bottom, Layout.pad(10, 12))
+            .padding(.vertical, 8)
 
-            // Rows and dividers are SIBLINGS in the VStack(spacing: 0): each row is
-            // a fixed-height cell (content vertically centred), and a divider is its
-            // OWN 1-pt row placed BETWEEN cells — so a separator can never cross a
-            // label baseline, and it always sits exactly midway between two rows.
-            ForEach(Array(Self.rows.enumerated()), id: \.offset) { idx, row in
-                comparisonRow(row)
-                if idx < Self.rows.count - 1 { rowDivider }
+            ForEach(Array(Self.rows.enumerated()), id: \.offset) { index, title in
+                row(title)
+                if index < Self.rows.count - 1 {
+                    HStack(spacing: 0) {
+                        Rectangle().fill(.white.opacity(0.09)).frame(height: 1)
+                        Color.clear.frame(width: proWidth)
+                    }
+                }
             }
         }
-        // The full-height PRO column, trailing-aligned behind the checks — a
-        // subtle vertical MULTICOLOR wash (low opacity so the white checks stay
-        // perfectly readable) with a restrained gradient outline + soft glow.
-        // Integrated onto the paywall, no boxed table card, no gold.
         .background(alignment: .trailing) {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(ProBrand.columnWash)
-                .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .strokeBorder(ProBrand.borderGradient, lineWidth: 1).opacity(0.6))
+                .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .strokeBorder(ProBrand.borderGradient, lineWidth: 1).opacity(0.55))
                 .frame(width: proWidth)
-                .shadow(color: ProBrand.glow.opacity(0.35), radius: 20, y: 8)
+                .shadow(color: ProBrand.glow.opacity(0.28), radius: 16, y: 6)
         }
     }
 
-    /// A consistent fixed row height, so every label / Free / PRO value is
-    /// vertically centred and every divider lands exactly halfway between rows.
-    private var rowHeight: CGFloat { Layout.pad(46, 52) }
-
-    @ViewBuilder private func comparisonRow(_ row: (title: String, free: Bool)) -> some View {
-        let isHi = row.title == highlighted
-        HStack(spacing: 0) {
-            Text(row.title)
-                .font(.system(size: Layout.pad(16.5, 19),
-                              weight: isHi ? .heavy : .semibold, design: .default))
-                // The context row is highlighted with a restrained multicolor fill.
-                .foregroundStyle(isHi ? AnyShapeStyle(ProBrand.softGradient)
-                                      : AnyShapeStyle(Color.white))
-                .lineLimit(1).minimumScaleFactor(0.7)
+    private func row(_ title: String) -> some View {
+        let isHighlighted = title == highlighted
+        return HStack(spacing: 0) {
+            Text(title)
+                .font(.system(size: viewport.isCompact ? 14.5 : 16.5,
+                              weight: isHighlighted ? .bold : .semibold))
+                .foregroundStyle(isHighlighted
+                    ? AnyShapeStyle(ProBrand.softGradient)
+                    : AnyShapeStyle(Color.white))
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            // Free — a dash for everything except Solo Mode.
-            Image(systemName: row.free ? "checkmark" : "minus")
-                .font(.system(size: Layout.pad(16, 18), weight: .heavy))
-                .foregroundStyle(row.free ? .white.opacity(0.55) : .white.opacity(0.22))
+
+            Image(systemName: "minus")
+                .font(.system(size: 15, weight: .heavy))
+                .foregroundStyle(.white.opacity(0.24))
                 .frame(width: freeWidth)
-            // PRO — a crisp white check over the soft multicolor column.
+
             Image(systemName: "checkmark")
-                .font(.system(size: Layout.pad(17, 20), weight: .heavy))
+                .font(.system(size: 17, weight: .heavy))
                 .foregroundStyle(.white)
-                .shadow(color: ProBrand.deepNavy.opacity(0.35), radius: 2, y: 1)
                 .frame(width: proWidth)
         }
-        .frame(height: rowHeight)
+        .frame(height: viewport.isCompact ? 39 : 44)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(row.title). \(row.free ? "Included in Free and PRO" : "PRO only").")
-    }
-
-    /// A 1-pt separator that spans ONLY the label + Free region and stops before
-    /// the PRO column, so it never crosses the gradient bar or any checkmark.
-    private var rowDivider: some View {
-        HStack(spacing: 0) {
-            Rectangle().fill(.white.opacity(0.10)).frame(height: 1)
-                .frame(maxWidth: .infinity)
-            Color.clear.frame(width: proWidth)
-        }
+        .accessibilityLabel("\(title). PRO only.")
     }
 }

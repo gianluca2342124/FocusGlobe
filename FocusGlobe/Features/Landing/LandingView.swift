@@ -12,6 +12,7 @@ struct LandingView: View {
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.focusViewport) private var viewport
 
     @State private var earnedMiles: Int
     @State private var adState: AdState = .available
@@ -34,7 +35,13 @@ struct LandingView: View {
     var body: some View {
         ZStack {
             // The Sky the pilot just flew, held frozen behind a soft scrim.
-            SkyPreviewView(sky: matchedSky, animated: false)
+            SkyFlightSceneView(
+                sky: matchedSky,
+                elapsed: { 24 },
+                animated: false,
+                presentationMode: .completion,
+                renderQuality: .still
+            )
                 .overlay(Color.black.opacity(0.5).ignoresSafeArea())
                 .allowsHitTesting(false)
 
@@ -49,8 +56,8 @@ struct LandingView: View {
                 case .streak:  streakCard
                 }
             }
-            .padding(AppSpacing.screen)
-            .frame(maxWidth: 460)
+            .padding(viewport.pagePadding)
+            .frame(maxWidth: viewport.modalWidth)
             .frame(maxWidth: .infinity)
             .scaleEffect(appeared ? 1 : 0.96)
             .opacity(appeared ? 1 : 0)
@@ -69,7 +76,7 @@ struct LandingView: View {
             Text("Success!")
                 // The app's modern display language (bold rounded, like every
                 // page title) — not the old serif treatment.
-                .font(.system(size: Layout.pad(32, 38), weight: .bold, design: .default))
+                .font(.system(size: viewport.modalTitleSize, weight: .bold, design: .default))
                 .foregroundStyle(AppColors.textPrimary)
 
             HStack(spacing: 0) {
@@ -95,10 +102,11 @@ struct LandingView: View {
                     appModel.uiSound.play(.claim)
                     withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) { phase = .streak }
                 }
+                .frame(minHeight: viewport.buttonHeight)
                 if !appModel.isPro { doubleReward }
             }
         }
-        .padding(AppSpacing.lg)
+        .padding(viewport.modalPadding)
         .glassBackground(cornerRadius: 28, tint: AppColors.goldFoil, tintOpacity: 0.12,
                          shadowRadius: 26, shadowY: 14)
     }
@@ -107,7 +115,7 @@ struct LandingView: View {
         VStack(spacing: 3) {
             FocusCoinIcon(size: 22)
             Text(Formatters.miles(earnedMiles))
-                .font(.system(size: 19 * Layout.fontScale, weight: .bold, design: .default))
+                .font(.system(size: viewport.isWide ? 23 : 19, weight: .bold, design: .default))
                 .foregroundStyle(AppColors.textPrimary)
                 .contentTransition(.numericText())
             Text(adState == .doubled ? "Coins ×2" : "Focus Coins")
@@ -120,7 +128,7 @@ struct LandingView: View {
         VStack(spacing: 3) {
             Image(systemName: icon).font(.system(size: 18, weight: .semibold)).foregroundStyle(tint)
             Text(value)
-                .font(.system(size: 19 * Layout.fontScale, weight: .bold, design: .default))
+                .font(.system(size: viewport.isWide ? 23 : 19, weight: .bold, design: .default))
                 .foregroundStyle(AppColors.textPrimary)
                 .lineLimit(1).minimumScaleFactor(0.6)
             Text(label).font(AppTypography.micro).foregroundStyle(AppColors.textTertiary)
@@ -165,7 +173,7 @@ struct LandingView: View {
                     adBadge
                 }
             }
-            .frame(maxWidth: .infinity).frame(height: 52)
+            .frame(maxWidth: .infinity).frame(height: max(52, viewport.buttonHeight - 4))
             .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.18, shadowRadius: 8, shadowY: 4)
             .overlay(RoundedRectangle(cornerRadius: AppSpacing.pillRadius, style: .continuous)
                 .strokeBorder(AppColors.gold.opacity(adState == .doubled ? 0 : 0.35), lineWidth: 1))
@@ -192,13 +200,14 @@ struct LandingView: View {
                                              center: .center, startRadius: 2, endRadius: 80))
                     .frame(width: 140, height: 140)
                 Image(systemName: "flame.fill")
-                    .font(.system(size: Layout.pad(60, 74), weight: .bold))
+                    .font(.system(size: viewport.isWide ? 82 : (viewport.isCompact ? 60 : 72),
+                                  weight: .bold))
                     .foregroundStyle(LinearGradient(colors: [Color(hex: 0xFFB65C), Color(hex: 0xF2643C)],
                                                     startPoint: .top, endPoint: .bottom))
                     .shadow(color: Color(hex: 0xF2643C).opacity(0.5), radius: 16)
             }
             Text("\(summary.streak)-day streak")
-                .font(.system(size: Layout.pad(26, 30), weight: .bold, design: .default))
+                .font(.system(size: viewport.titleSize - 3, weight: .bold, design: .default))
                 .foregroundStyle(AppColors.textPrimary)
             // The recent week at a glance — the SAME strip as the Streak popup,
             // so the day just landed glows here immediately.
@@ -217,8 +226,9 @@ struct LandingView: View {
             AppPrimaryButton(title: "Continue", systemImage: "arrow.right", iconTrailing: true) {
                 finish()
             }
+            .frame(minHeight: viewport.buttonHeight)
         }
-        .padding(AppSpacing.lg)
+        .padding(viewport.modalPadding)
         .glassBackground(cornerRadius: 28, tint: AppColors.goldFoil, tintOpacity: 0.1,
                          shadowRadius: 26, shadowY: 14)
     }

@@ -181,7 +181,13 @@ struct FlightSetupView: View {
             // (the same living renderer as the flight, held static), so the
             // pre-flight ritual, the take-off curtain and the flight are one
             // continuous place with no visual identity change.
-            SkyFlightSceneView(sky: focusSky, elapsed: { 8 }, animated: false)
+            SkyFlightSceneView(
+                sky: focusSky,
+                elapsed: { 8 },
+                animated: false,
+                presentationMode: .ritual,
+                renderQuality: .still
+            )
                 .ignoresSafeArea()
             LinearGradient(colors: [.black.opacity(0.34), .clear, .black.opacity(0.60)],
                            startPoint: .top, endPoint: .bottom)
@@ -239,21 +245,24 @@ struct FlightSetupView: View {
             }
         }
         .preferredColorScheme(.dark)   // the ritual is always a night-cinema moment
-        // The ritual's OWN sheet — presented from INSIDE the full-screen cover,
-        // so it never conflicts with the app-wide router coordinator and always
-        // returns cleanly to the current step.
-        .sheet(item: $setupModal) { modal in
+        // The ritual's OWN presenter remains inside its full-screen boundary.
+        // Paywalls are full-screen; sign-in remains a sheet. Both filtered
+        // bindings still use one local modal state.
+        .fullScreenCover(item: setupPaywallBinding) { modal in
             switch modal {
             case .infinitePaywall:
                 PaywallView(context: .infinite)
-                    .environmentObject(appModel).environmentObject(router).paywallMaxWidth()
+                    .environmentObject(appModel).environmentObject(router).focusResponsiveLayout()
             case .onlinePaywall:
                 PaywallView(context: .online)
-                    .environmentObject(appModel).environmentObject(router).paywallMaxWidth()
+                    .environmentObject(appModel).environmentObject(router).focusResponsiveLayout()
             case .onlineSignIn:
-                OnlineSignInView { }
-                    .environmentObject(online).environmentObject(appModel)
+                EmptyView()
             }
+        }
+        .sheet(item: setupSignInBinding) { _ in
+            OnlineSignInView { }
+                .environmentObject(online).environmentObject(appModel)
         }
     }
 
@@ -262,6 +271,31 @@ struct FlightSetupView: View {
     private func present(_ modal: SetupModal) {
         guard setupModal == nil else { return }
         setupModal = modal
+    }
+
+    private var setupPaywallBinding: Binding<SetupModal?> {
+        Binding(
+            get: {
+                switch setupModal {
+                case .infinitePaywall, .onlinePaywall: return setupModal
+                case .onlineSignIn, .none: return nil
+                }
+            },
+            set: { newValue in
+                if let newValue { setupModal = newValue }
+                else if setupModal != .onlineSignIn { setupModal = nil }
+            }
+        )
+    }
+
+    private var setupSignInBinding: Binding<SetupModal?> {
+        Binding(
+            get: { setupModal == .onlineSignIn ? setupModal : nil },
+            set: { newValue in
+                if let newValue { setupModal = newValue }
+                else if setupModal == .onlineSignIn { setupModal = nil }
+            }
+        )
     }
 
     /// A soft, deep step change: the outgoing step sinks away as the incoming

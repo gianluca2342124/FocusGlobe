@@ -1,9 +1,7 @@
 import SwiftUI
 
-/// A small, calm entry point to the Premium modal. Used in screen corners (Home,
-/// Choose Journey, Passport). It keeps the shared adaptive glass disc but now
-/// wears the real multicolor **PRO** badge instead of a gold crown — present but
-/// never loud.
+/// A small, calm entry point to the Premium modal. The crown carries the PRO
+/// spectrum while its outer control uses the shared liquid-glass substrate.
 struct CrownButton: View {
     var size: CGFloat = 44
     /// `true` on Home, where the whole control family shares the adaptive
@@ -14,18 +12,17 @@ struct CrownButton: View {
 
     var body: some View {
         Button(action: action) {
-            FocusGlobePROBadge(visibleHeight: size * 0.34)
+            Image(systemName: "crown.fill")
+                .font(.system(size: size * 0.39, weight: .bold))
+                .foregroundStyle(ProBrand.gradient)
                 .frame(width: size, height: size)
                 .background {
-                    if onWhite {
-                        Circle().fill(AppColors.homeControlFill)
-                            .overlay(Circle().strokeBorder(AppColors.homeControlStroke, lineWidth: 1))
-                            .shadow(color: .black.opacity(0.22), radius: 12, y: 6)
-                    } else {
-                        Circle().fill(.regularMaterial)
-                            .overlay(Circle().strokeBorder(ProBrand.borderGradient, lineWidth: 1))
-                            .shadow(color: ProBrand.glow.opacity(0.28), radius: 10, y: 5)
-                    }
+                    FocusLiquidGlassSurface(
+                        shape: Circle(),
+                        tint: onWhite ? AppColors.homeControlFill : ProBrand.softNavy,
+                        tintOpacity: onWhite ? 0.52 : 0.22,
+                        active: true
+                    )
                 }
                 .contentShape(Circle())
         }

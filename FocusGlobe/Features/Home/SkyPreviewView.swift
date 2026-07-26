@@ -31,7 +31,9 @@ struct SkyPreviewView: View {
                     content(W: W, H: H, t: ctx.date.timeIntervalSinceReferenceDate, art: art)
                 }
             } else {
-                content(W: W, H: H, t: 0, art: art)
+                // A settled still frame keeps Reduce Motion rich without
+                // advancing any animation or landing on an empty event phase.
+                content(W: W, H: H, t: 24, art: art)
             }
         }
         .ignoresSafeArea()
@@ -41,9 +43,9 @@ struct SkyPreviewView: View {
     private func content(W: CGFloat, H: CGFloat, t: Double, art: UIImage?) -> some View {
         ZStack {
             background(W: W, H: H, t: t, art: art)
-            if sky.stars > 0.01 {
+            if previewStarDensity > 0.01 {
                 starField(W: W, H: H, t: t)
-                    .opacity(art == nil ? 1 : 0.32)
+                    .opacity(art == nil ? 1 : artworkStarOpacity)
             }
             if art == nil {
                 accent(W: W, H: H, t: t)
@@ -116,19 +118,27 @@ struct SkyPreviewView: View {
     private func starField(W: CGFloat, H: CGFloat, t: Double) -> some View {
         Canvas { ctx, size in
             var rng = SeededRNG(seed: skySeed &+ 0x57AB)
-            let count = Int(30 + sky.stars * 120)
+            let density = previewStarDensity
+            let count = Int(48 + density * 150)
             for i in 0..<count {
                 let x = CGFloat(rng.unit()) * size.width
-                let y = CGFloat(rng.unit()) * size.height * 0.72
-                let r = CGFloat(0.5 + rng.unit() * 1.6)
+                let y = CGFloat(rng.unit()) * size.height * 0.84
+                let r = CGFloat(0.45 + rng.unit() * 1.7)
                 let u = rng.unit()
-                let tw = t == 0 ? 1.0
-                    : 0.6 + 0.4 * Foundation.sin(t * (0.35 + u * 1.1) + Double(i) * 1.37)
-                let a = (0.18 + u * 0.6) * sky.stars * tw
+                let pulse = 0.5 + 0.5 * Foundation.sin(t * (0.30 + u * 1.1) + Double(i) * 1.37)
+                let tw = 0.34 + 0.66 * pow(pulse, u > 0.88 ? 2.2 : 1)
+                let a = (0.16 + u * 0.62) * density * tw
                 ctx.fill(Path(ellipseIn: CGRect(x: x, y: y, width: r, height: r)),
                          with: .color(.white.opacity(a)))
-                if u > 0.94 && sky.stars > 0.4 {
+                if u > 0.92 && density > 0.4 {
                     softHalo(&ctx, x: x, y: y, r: r * 3.2, color: .white.opacity(a * 0.35))
+                }
+                if u > 0.968 && density > 0.4 {
+                    let glint = CGFloat(4.5 + u * 4.5) * CGFloat(tw)
+                    var p = Path()
+                    p.move(to: CGPoint(x: x - glint, y: y)); p.addLine(to: CGPoint(x: x + glint, y: y))
+                    p.move(to: CGPoint(x: x, y: y - glint)); p.addLine(to: CGPoint(x: x, y: y + glint))
+                    ctx.stroke(p, with: .color(.white.opacity(a * 0.34)), lineWidth: 0.65)
                 }
             }
         }
@@ -181,20 +191,61 @@ struct SkyPreviewView: View {
     }
 
     /// Finished artwork already owns every landmark and celestial body. Only the
-    /// effects that genuinely move remain above it, at a deliberately restrained
-    /// strength; this avoids duplicate planets/moons and decorative clutter.
+    /// effects that genuinely move remain above it. These mirror the active
+    /// journey's signature behavior, so Home is an honest window into the same
+    /// world without duplicating painted planets, terrain or architecture.
     @ViewBuilder private func artworkAccent(W: CGFloat, H: CGFloat, t: Double) -> some View {
-        switch sky.accent {
-        case .aurora:
-            auroraAccent(W: W, H: H, t: t).opacity(0.24)
-        case .lanterns:
-            lanternAccent(W: W, H: H, t: t).opacity(0.58)
-        case .rain:
-            rainAccent(W: W, H: H, t: t).opacity(0.82)
-        case .bigStars:
-            bigStarAccent(W: W, H: H, t: t).opacity(0.34)
-        case .none, .moon, .planet:
-            EmptyView()
+        switch sky.id {
+        case "sahara-night":
+            ZStack {
+                bigStarAccent(W: W, H: H, t: t).opacity(0.62)
+                previewShootingStars(W: W, H: H, t: t,
+                                     periods: [14, 23], offsets: [0.08, 0.58])
+                previewHaze(W: W, H: H, t: t, tint: Color(hex: 0xE8A06A), y: 0.72)
+            }
+        case "fiji-lagoon":
+            lagoonAccent(W: W, H: H, t: t)
+        case "kyoto-lanterns":
+            ZStack {
+                lanternAccent(W: W, H: H, t: t)
+                previewHaze(W: W, H: H, t: t, tint: Color(hex: 0xE6A67A), y: 0.68)
+            }
+        case "aurora-snowfield":
+            ZStack {
+                auroraAccent(W: W, H: H, t: t).opacity(0.42)
+                previewSnow(W: W, H: H, t: t)
+            }
+        case "rainy-tokyo":
+            ZStack {
+                rainAccent(W: W, H: H, t: t)
+                cityGlowAccent(W: W, H: H, t: t)
+                previewHaze(W: W, H: H, t: t, tint: Color(hex: 0x8FA6D8), y: 0.62)
+            }
+        case "swiss-alps":
+            ZStack {
+                previewHaze(W: W, H: H, t: t, tint: Color(hex: 0xE7F1F4), y: 0.66)
+                previewCloudWisps(W: W, H: H, t: t, tint: Color(hex: 0xF0F7F8))
+            }
+        case "galaxy-drift":
+            ZStack {
+                cosmicAccent(W: W, H: H, t: t, tint: Color(hex: 0xB49CE8))
+                previewShootingStars(W: W, H: H, t: t,
+                                     periods: [12, 19], offsets: [0.10, 0.62])
+            }
+        case "deep-space":
+            ZStack {
+                cosmicAccent(W: W, H: H, t: t, tint: Color(hex: 0x8AA6E8))
+                previewShootingStars(W: W, H: H, t: t,
+                                     periods: [16, 27], offsets: [0.18, 0.70])
+            }
+        default:
+            switch sky.accent {
+            case .aurora: auroraAccent(W: W, H: H, t: t).opacity(0.32)
+            case .lanterns: lanternAccent(W: W, H: H, t: t)
+            case .rain: rainAccent(W: W, H: H, t: t)
+            case .bigStars: bigStarAccent(W: W, H: H, t: t).opacity(0.45)
+            case .none, .moon, .planet: EmptyView()
+            }
         }
     }
 
@@ -223,26 +274,63 @@ struct SkyPreviewView: View {
         }
     }
 
-    /// Warm lantern lights, each pulsing on its own slow rhythm.
+    /// The same illustrated Kyoto lantern family used in flight. Lanterns start
+    /// below the horizon, rise through staggered depth lanes and fade beyond the
+    /// top; a quiet anchored row keeps the architecture warmly inhabited.
     private func lanternAccent(W: CGFloat, H: CGFloat, t: Double) -> some View {
         Canvas { ctx, size in
-            var rng = SeededRNG(seed: skySeed &+ 0x1A17)
-            for i in 0..<9 {
-                let x = CGFloat(0.1 + rng.unit() * 0.8) * size.width
-                let y = CGFloat(0.16 + rng.unit() * 0.42) * size.height
-                let r = CGFloat(2.5 + rng.unit() * 3.5)
-                // Consume the rate draw UNCONDITIONALLY so the seeded layout is
-                // byte-identical between the still (t == 0) and live frames.
-                let rate = 0.3 + rng.unit() * 0.4
-                let pulse = t == 0 ? 1.0
-                    : 0.7 + 0.3 * Foundation.sin(t * rate + Double(i) * 1.9)
-                let bob = t == 0 ? 0.0 : Foundation.sin(t * 0.12 + Double(i) * 1.3) * 4
-                let warm = Color(hex: 0xFFC873)
-                softHalo(&ctx, x: x, y: y + CGFloat(bob), r: r * 3,
-                         color: warm.opacity(0.85 * pulse))
-                ctx.fill(Path(ellipseIn: CGRect(x: x - r / 2, y: y + CGFloat(bob) - r / 2,
-                                                width: r, height: r)),
-                         with: .color(warm.opacity(0.95 * pulse)))
+            let sprites = [
+                ctx.resolve(Image("SkyOverlay_KyotoLantern_Ivory")),
+                ctx.resolve(Image("SkyOverlay_KyotoLantern_Vermilion")),
+                ctx.resolve(Image("SkyOverlay_KyotoLantern_Coral")),
+            ]
+            for slot in 0..<13 {
+                let period = 52.0
+                let shifted = t / period + Double(slot) / 13.0
+                let cycle = shifted.rounded(.down)
+                let local = shifted - cycle
+                let fadeIn = previewSmoothStep(0.03, 0.16, local)
+                let fadeOut = 1 - previewSmoothStep(0.78, 0.98, local)
+                let env = fadeIn * fadeOut
+                guard env > 0.01 else { continue }
+                var rng = SeededRNG(seed: skySeed &+ UInt64(bitPattern: Int64(cycle)) &* 53 &+ UInt64(slot) &* 11)
+                let depth = rng.unit()
+                let startX = 0.06 + rng.unit() * 0.88
+                let endDrift = (rng.unit() - 0.5) * (0.10 + depth * 0.08)
+                let startY = 1.06 + rng.unit() * 0.10
+                let endY = -0.16 + (1 - depth) * 0.22
+                let progress = local * local * (3 - 2 * local)
+                let sway = Foundation.sin(t * (0.09 + rng.unit() * 0.10) + Double(slot) * 1.27)
+                    * (2 + depth * 7)
+                let x = (startX + endDrift * progress) * Double(size.width) + sway
+                let y = (startY + (endY - startY) * progress) * Double(size.height)
+                let side = CGFloat(9 + depth * 18)
+                let flicker = 0.82 + 0.18 * Foundation.sin(t * (1 + rng.unit()) + Double(slot) * 1.9)
+                let alpha = env * flicker * (0.40 + depth * 0.56)
+                softHalo(&ctx, x: CGFloat(x), y: CGFloat(y), r: side * 0.45,
+                         color: Color(hex: 0xFFC873).opacity(0.24 * alpha))
+                let rect = CGRect(x: CGFloat(x) - side / 2, y: CGFloat(y) - side / 2,
+                                  width: side, height: side)
+                ctx.drawLayer { layer in
+                    layer.opacity = alpha
+                    layer.draw(sprites[slot % sprites.count], in: rect)
+                }
+            }
+
+            var anchoredRNG = SeededRNG(seed: skySeed &+ 0xA11C)
+            for i in 0..<6 {
+                let x = CGFloat(0.08 + anchoredRNG.unit() * 0.84) * size.width
+                let y = CGFloat(0.69 + anchoredRNG.unit() * 0.15) * size.height
+                let side = CGFloat(7 + anchoredRNG.unit() * 7)
+                let pulse = 0.72 + 0.28 * Foundation.sin(t * (0.55 + anchoredRNG.unit() * 0.7) + Double(i))
+                softHalo(&ctx, x: x, y: y, r: side * 0.7,
+                         color: Color(hex: 0xFFB95E).opacity(0.30 * pulse))
+                ctx.drawLayer { layer in
+                    layer.opacity = 0.42 + 0.46 * pulse
+                    layer.draw(sprites[i % sprites.count],
+                               in: CGRect(x: x - side / 2, y: y - side / 2,
+                                          width: side, height: side))
+                }
             }
         }
     }
@@ -252,19 +340,183 @@ struct SkyPreviewView: View {
         Canvas { ctx, size in
             var rng = SeededRNG(seed: skySeed &+ 0x0A1D)
             let span = size.height * 0.8 + 30
-            for _ in 0..<34 {
+            for _ in 0..<72 {
                 let fx = rng.unit()
                 let fy = rng.unit()
-                let speed = 26.0 + rng.unit() * 22.0
-                let x = CGFloat(fx) * size.width
+                let depth = rng.unit()
+                let speed = 30.0 + depth * 52.0
                 let y = CGFloat((fy * Double(span) + t * speed)
                     .truncatingRemainder(dividingBy: Double(span))) - 15
-                let len = CGFloat(7 + rng.unit() * 9)
+                let x = CGFloat(fx) * size.width - y * CGFloat(0.02 + depth * 0.035)
+                let len = CGFloat(7 + depth * 14)
                 var p = Path()
                 p.move(to: CGPoint(x: x, y: y))
                 p.addLine(to: CGPoint(x: x - len * 0.18, y: y + len))
-                ctx.stroke(p, with: .color(Color(hex: 0xBFD0EC).opacity(0.16 + rng.unit() * 0.14)),
-                           lineWidth: 1)
+                ctx.stroke(p, with: .color(Color(hex: 0xC9DCF6).opacity(0.10 + depth * 0.25)),
+                           lineWidth: CGFloat(0.65 + depth * 0.65))
+            }
+        }
+    }
+
+    private func previewShootingStars(W: CGFloat, H: CGFloat, t: Double,
+                                      periods: [Double], offsets: [Double]) -> some View {
+        Canvas { ctx, size in
+            for lane in periods.indices {
+                let period = periods[lane]
+                let shifted = t / period + offsets[min(lane, offsets.count - 1)]
+                let cycle = shifted.rounded(.down)
+                let phase = shifted - cycle
+                guard phase < 0.16 else { continue }
+                let local = phase / 0.16
+                var rng = SeededRNG(seed: skySeed &+ UInt64(bitPattern: Int64(cycle)) &* 131
+                                    &+ UInt64(lane) &* 41)
+                let x0 = size.width * CGFloat(0.12 + rng.unit() * 0.76)
+                let y0 = size.height * CGFloat(0.05 + rng.unit() * 0.36)
+                let dir: CGFloat = rng.unit() < 0.5 ? -1 : 1
+                let travel = size.width * 0.38 * CGFloat(local)
+                let head = CGPoint(x: x0 - dir * travel, y: y0 + travel * 0.36)
+                let tail = CGPoint(x: head.x + dir * 64, y: head.y - 27)
+                let alpha = Foundation.sin(.pi * local) * 0.78
+                var path = Path()
+                path.move(to: tail); path.addLine(to: head)
+                ctx.stroke(path, with: .linearGradient(
+                    Gradient(colors: [.clear, Color(hex: 0xEAF4FF).opacity(alpha)]),
+                    startPoint: tail, endPoint: head), lineWidth: 1.25)
+                softHalo(&ctx, x: head.x, y: head.y, r: 1.1,
+                         color: .white.opacity(alpha))
+            }
+        }
+    }
+
+    private func previewHaze(W: CGFloat, H: CGFloat, t: Double,
+                             tint: Color, y: Double) -> some View {
+        Canvas { ctx, size in
+            var rng = SeededRNG(seed: skySeed &+ 0xA2_113)
+            for i in 0..<3 {
+                let baseX = 0.10 + rng.unit() * 0.80
+                let drift = Foundation.sin(t * (0.010 + rng.unit() * 0.012) + Double(i) * 1.8)
+                    * Double(size.width) * 0.05
+                let breathe = 0.64 + 0.36 * Foundation.sin(t * (0.025 + rng.unit() * 0.018) + Double(i))
+                softHalo(&ctx, x: CGFloat(baseX * Double(size.width) + drift),
+                         y: CGFloat(y + (rng.unit() - 0.5) * 0.07) * size.height,
+                         r: size.width * CGFloat(0.065 + rng.unit() * 0.035),
+                         color: tint.opacity(0.12 * breathe))
+            }
+        }
+    }
+
+    private func lagoonAccent(W: CGFloat, H: CGFloat, t: Double) -> some View {
+        ZStack {
+            previewCloudWisps(W: W, H: H, t: t, tint: Color(hex: 0xEAFBF4))
+            previewHaze(W: W, H: H, t: t, tint: Color(hex: 0x9BE8DA), y: 0.63)
+            Canvas { ctx, size in
+                var rng = SeededRNG(seed: skySeed &+ 0xF1_711)
+                for i in 0..<26 {
+                    let fx = rng.unit()
+                    let fy = 0.66 + rng.unit() * 0.29
+                    let depth = (fy - 0.66) / 0.29
+                    let pulse = pow(0.5 + 0.5 * Foundation.sin(t * (0.22 + rng.unit() * 0.65)
+                                                                  + Double(i) * 1.37), 2.1)
+                    let x = fx * Double(size.width) + Foundation.sin(t * 0.045 + Double(i)) * 4
+                    let y = fy * Double(size.height)
+                    let width = 3 + depth * 11 + rng.unit() * 6
+                    var line = Path()
+                    line.move(to: CGPoint(x: x - width / 2, y: y))
+                    line.addLine(to: CGPoint(x: x + width / 2, y: y))
+                    ctx.stroke(line, with: .linearGradient(
+                        Gradient(colors: [.clear,
+                                          Color(hex: 0xD8FFF3).opacity(0.10 + pulse * 0.34),
+                                          .clear]),
+                        startPoint: CGPoint(x: x - width / 2, y: y),
+                        endPoint: CGPoint(x: x + width / 2, y: y)),
+                        lineWidth: CGFloat(0.6 + depth))
+                }
+                for i in 0..<12 {
+                    let x = CGFloat(0.06 + rng.unit() * 0.88) * size.width
+                    let y = CGFloat(0.16 + rng.unit() * 0.58) * size.height
+                    let pulse = pow(0.5 + 0.5 * Foundation.sin(t * (0.24 + rng.unit() * 0.5) + Double(i)), 2.5)
+                    softHalo(&ctx, x: x, y: y, r: CGFloat(1.0 + rng.unit() * 1.4),
+                             color: Color(hex: 0xE2FFF4).opacity(0.20 * pulse))
+                }
+            }
+        }
+    }
+
+    private func previewCloudWisps(W: CGFloat, H: CGFloat, t: Double,
+                                   tint: Color) -> some View {
+        Canvas { ctx, size in
+            var rng = SeededRNG(seed: skySeed &+ 0xC10D)
+            for i in 0..<3 {
+                let y = Double(size.height) * (0.12 + rng.unit() * 0.34)
+                let cx = Double(size.width) * (0.16 + rng.unit() * 0.68)
+                    + Foundation.sin(t * (0.008 + rng.unit() * 0.008) + Double(i)) * Double(size.width) * 0.06
+                let breathe = 0.70 + 0.30 * Foundation.sin(t * 0.025 + Double(i) * 1.9)
+                for k in 0..<6 {
+                    let f = Double(k) / 5.0 - 0.5
+                    softHalo(&ctx, x: CGFloat(cx + f * Double(size.width) * 0.28),
+                             y: CGFloat(y + Foundation.sin(f * 3 + Double(i)) * 4),
+                             r: size.width * CGFloat(0.035 + 0.018 * Foundation.cos(f * .pi)),
+                             color: tint.opacity(0.075 * breathe))
+                }
+            }
+        }
+    }
+
+    private func previewSnow(W: CGFloat, H: CGFloat, t: Double) -> some View {
+        Canvas { ctx, size in
+            var rng = SeededRNG(seed: skySeed &+ 0x5A0F)
+            let span = Double(size.height) + 30
+            for i in 0..<44 {
+                let fx = rng.unit(), fy = rng.unit(), depth = rng.unit()
+                let speed = 8 + depth * 16
+                let y = (fy * span + t * speed).truncatingRemainder(dividingBy: span) - 15
+                let x = fx * Double(size.width) + Foundation.sin(t * (0.3 + rng.unit() * 0.6)
+                                                                 + Double(i)) * (2 + depth * 7)
+                softHalo(&ctx, x: CGFloat(x), y: CGFloat(y), r: CGFloat(0.55 + depth * 1.3),
+                         color: .white.opacity(0.18 + depth * 0.40))
+            }
+        }
+    }
+
+    private func cityGlowAccent(W: CGFloat, H: CGFloat, t: Double) -> some View {
+        Canvas { ctx, size in
+            var rng = SeededRNG(seed: skySeed &+ 0xC17A)
+            let colors = [Color(hex: 0xF48DB8), Color(hex: 0x77D6EE),
+                          Color(hex: 0xB39AF4), Color(hex: 0xFFD089)]
+            for i in 0..<18 {
+                let x = CGFloat(0.04 + rng.unit() * 0.92) * size.width
+                let y = CGFloat(0.48 + rng.unit() * 0.36) * size.height
+                let pulse = 0.35 + 0.65 * pow(0.5 + 0.5 * Foundation.sin(
+                    t * (0.10 + rng.unit() * 0.28) + Double(i) * 1.7), 2)
+                softHalo(&ctx, x: x, y: y, r: CGFloat(2.5 + rng.unit() * 6),
+                         color: colors[i % colors.count].opacity(0.08 + pulse * 0.19))
+            }
+        }
+    }
+
+    private func cosmicAccent(W: CGFloat, H: CGFloat, t: Double,
+                              tint: Color) -> some View {
+        Canvas { ctx, size in
+            var rng = SeededRNG(seed: skySeed &+ 0xC05D)
+            for i in 0..<42 {
+                let baseX = rng.unit() * Double(size.width)
+                let baseY = rng.unit() * Double(size.height) * 0.88
+                let depth = rng.unit()
+                let orbit = 2 + depth * 7
+                let angle = t * (0.025 + rng.unit() * 0.055) + Double(i) * 2.17
+                let x = baseX + Foundation.sin(angle) * orbit
+                let y = baseY + Foundation.cos(angle * 0.83) * orbit * 0.6
+                let pulse = 0.45 + 0.55 * Foundation.sin(t * (0.18 + rng.unit() * 0.34) + Double(i))
+                softHalo(&ctx, x: CGFloat(x), y: CGFloat(y), r: CGFloat(0.55 + depth),
+                         color: tint.opacity((0.07 + depth * 0.16) * max(0.12, pulse)))
+            }
+            for i in 0..<3 {
+                let x = CGFloat(0.16 + rng.unit() * 0.68) * size.width
+                let y = CGFloat(0.12 + rng.unit() * 0.50) * size.height
+                let drift = Foundation.sin(t * 0.014 + Double(i) * 2.2) * size.width * 0.02
+                let breathe = 0.65 + 0.35 * Foundation.sin(t * 0.03 + Double(i) * 1.9)
+                softHalo(&ctx, x: x + drift, y: y, r: size.width * 0.10,
+                         color: tint.opacity(0.08 * breathe))
             }
         }
     }
@@ -313,6 +565,28 @@ struct SkyPreviewView: View {
         }
     }
 
+    private var previewStarDensity: Double {
+        switch sky.id {
+        case "sahara-night":     return 1.00
+        case "fiji-lagoon":      return 0.07
+        case "kyoto-lanterns":   return 0.38
+        case "aurora-snowfield": return 0.82
+        case "rainy-tokyo":      return 0.16
+        case "swiss-alps":       return 0.42
+        case "galaxy-drift", "deep-space": return 1.00
+        default:                 return sky.stars
+        }
+    }
+
+    private var artworkStarOpacity: Double {
+        switch sky.id {
+        case "sahara-night", "galaxy-drift", "deep-space": return 0.72
+        case "aurora-snowfield": return 0.60
+        case "swiss-alps", "kyoto-lanterns": return 0.48
+        default: return 0.38
+        }
+    }
+
     private var skySeed: UInt64 {
         var h: UInt64 = 0x5EED
         for u in sky.id.unicodeScalars { h = (h &* 31) &+ UInt64(u.value) }
@@ -327,6 +601,12 @@ private func softHalo(_ ctx: inout GraphicsContext, x: CGFloat, y: CGFloat,
     ctx.fill(Path(ellipseIn: CGRect(x: x - r * 3, y: y - r * 3, width: r * 6, height: r * 6)),
              with: .radialGradient(g, center: CGPoint(x: x, y: y),
                                    startRadius: 0, endRadius: r * 3))
+}
+
+private func previewSmoothStep(_ edge0: Double, _ edge1: Double, _ x: Double) -> Double {
+    guard edge1 > edge0 else { return x < edge0 ? 0 : 1 }
+    let v = max(0, min(1, (x - edge0) / (edge1 - edge0)))
+    return v * v * (3 - 2 * v)
 }
 
 /// A soft, wavy horizontal aurora band (preview-only; the flight has the real one).

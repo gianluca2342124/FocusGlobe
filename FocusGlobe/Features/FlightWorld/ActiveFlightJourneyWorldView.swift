@@ -17,12 +17,14 @@ struct ActiveFlightJourneyWorldView: View {
     /// Stable per-session seed: effect placement varies between flights.
     var seed: UInt64 = 1
     var animated: Bool = true
+    var presentationMode: SkyPresentationMode = .activeJourney
     /// The flight's Sky. Legacy resumes without a resolvable Sky fall back to
     /// the free Sky rather than to any separate renderer.
     var focusSky: FocusSky? = nil
 
     var body: some View {
         SkyFlightSceneView(sky: focusSky ?? .defaultFree,
-                           elapsed: elapsed, animated: animated, seed: seed)
+                           elapsed: elapsed, animated: animated, seed: seed,
+                           presentationMode: presentationMode)
     }
 }

@@ -104,10 +104,7 @@ struct GlassCircle: View {
             .foregroundStyle(tint)
             .frame(width: size, height: size)
             .background {
-                Circle().fill(.regularMaterial)
-                    .overlay(Circle().fill(AppColors.islandTint.opacity(0.28)))
-                    .overlay(Circle().strokeBorder(AppColors.glassStroke, lineWidth: 1))
-                    .shadow(color: AppColors.shadow, radius: 12, y: 6)
+                FocusLiquidGlassSurface(shape: Circle())
             }
     }
 }
@@ -132,10 +129,7 @@ struct AppIconButton: View {
                         Circle().fill(AppColors.ctaFill)
                             .shadow(color: Color.black.opacity(0.28), radius: 12, y: 6)
                     } else {
-                        Circle().fill(.regularMaterial)
-                            .overlay(Circle().fill(AppColors.islandTint.opacity(0.28)))
-                            .overlay(Circle().strokeBorder(AppColors.glassStroke, lineWidth: 1))
-                            .shadow(color: AppColors.shadow, radius: 12, y: 6)
+                        FocusLiquidGlassSurface(shape: Circle())
                     }
                 }
         }

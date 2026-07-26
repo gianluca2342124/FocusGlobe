@@ -111,7 +111,7 @@ private struct WidgetPreviewTile: View {
             WidgetPreviewCanvas(artwork: item.artwork, glow: item.glow)
             // Signature glyph, top-trailing.
             Image(systemName: item.systemImage)
-                .font(.system(size: side * 0.26, weight: .bold))
+                .font(.system(size: side * 0.22, weight: .bold))
                 .foregroundStyle(item.glow)
                 .shadow(color: item.glow.opacity(0.6), radius: 12)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)

@@ -10,6 +10,37 @@ import UIKit
 private let livingSkyInspectorEnabled = false
 #endif
 
+/// Where the authoritative Sky is being shown. Presentation mode deliberately
+/// does not select different artwork: Home, ritual, preview, Cabin and the
+/// active journey always enter the same world.
+enum SkyPresentationMode {
+    case activeJourney
+    case homeSelector
+    case ritual
+    case lockedPreview
+    case cabin
+    case completion
+    case socialPreview
+    case paywall
+}
+
+/// Rendering cadence for multiple simultaneous Sky surfaces. Reduced keeps the
+/// complete composition and all real effects, but refreshes less often; still
+/// renders the same settled frame without maintaining an animation timeline.
+enum SkyRenderQuality {
+    case full
+    case reduced
+    case still
+
+    var minimumInterval: TimeInterval {
+        switch self {
+        case .full: return 1.0 / 30.0
+        case .reduced: return 1.0 / 15.0
+        case .still: return 600
+        }
+    }
+}
+
 /// **The living animated sky** — FocusGlobe's authoritative flight renderer,
 /// shared by real flights, Cabin View and locked-Sky previews.
 ///
@@ -37,18 +68,21 @@ struct SkyFlightSceneView: View {
     /// Stable per-session seed (shared with Cabin) — varies effect placement
     /// between flights while staying fixed across pause/resume.
     var seed: UInt64 = 1
+    var presentationMode: SkyPresentationMode = .activeJourney
+    var renderQuality: SkyRenderQuality = .full
 
     var body: some View {
         GeometryReader { geo in
             let W = geo.size.width
             let H = max(1, geo.size.height)
             let artwork = SkyArtworkResolver.image(for: sky, landscape: W > H)
-            TimelineView(.animation(minimumInterval: animated ? 1.0 / 30.0 : 600)) { _ in
+            let isLive = animated && renderQuality != .still
+            TimelineView(.animation(minimumInterval: isLive ? renderQuality.minimumInterval : 600)) { _ in
                 // Static frame: a fixed, SETTLED moment (celestial faded in,
                 // scenery composed) — a constant, so Reduce Motion and off-
                 // screen previews show no movement at all, never the bare t=0
                 // frame that hides the celestial bodies.
-                let t = animated ? max(0, elapsed()) : 24
+                let t = isLive ? max(0, elapsed()) : 24
                 ZStack {
                     gradientField(W: W, H: H, t: t)
                     if let artwork {
@@ -56,14 +90,14 @@ struct SkyFlightSceneView: View {
                         artworkGrade(W: W, H: H, t: t)
                     }
                     atmosphere(W: W, H: H, t: t)
-                        .opacity(artwork == nil ? 1 : 0.42)
+                        .opacity(artwork == nil ? 1 : artworkAtmosphereOpacity)
                     // Finished artwork already owns the moon/planets. The
                     // procedural celestial layer remains only for missing art.
                     if artwork == nil {
                         celestial(W: W, H: H, t: t)
                     }
                     effects(W: W, H: H, t: t)
-                        .opacity(artwork == nil ? 1 : 0.52)
+                        .opacity(artwork == nil ? 1 : artworkEffectsOpacity)
                     if artwork == nil {
                         // A future/missing artwork pair still gets the complete
                         // legacy world rather than a blank background.
@@ -103,9 +137,56 @@ struct SkyFlightSceneView: View {
     /// Weather remains legible over detailed art without becoming visual noise.
     private var artworkWeatherOpacity: Double {
         switch sky.flightParticles {
-        case .rain: return 0.88
-        case .snow: return 0.68
+        case .rain: return 0.98
+        case .snow: return sky.id == "aurora-snowfield" ? 0.92 : 0.76
         case .none, .lanterns: return 1
+        }
+    }
+
+    /// Authored art is the visual foundation, but it must not mute the living
+    /// sky into a still poster. Each value is tuned for the contrast of that
+    /// specific painting; these layers are light/particles only and never
+    /// redraw terrain, water or architecture.
+    private var artworkAtmosphereOpacity: Double {
+        switch sky.id {
+        case "sahara-night":     return 0.82
+        case "fiji-lagoon":      return 0.70
+        case "kyoto-lanterns":   return 0.68
+        case "aurora-snowfield": return 0.76
+        case "rainy-tokyo":      return 0.72
+        case "swiss-alps":       return 0.70
+        case "galaxy-drift":     return 0.84
+        case "deep-space":       return 0.88
+        default:                 return 0.58
+        }
+    }
+
+    private var artworkEffectsOpacity: Double {
+        switch sky.id {
+        case "fiji-lagoon":      return 0.86
+        case "kyoto-lanterns":   return 0.94
+        case "aurora-snowfield": return 0.78
+        case "rainy-tokyo":      return 0.90
+        case "sahara-night":     return 0.82
+        case "swiss-alps":       return 0.72
+        case "galaxy-drift":     return 0.86
+        case "deep-space":       return 0.88
+        default:                 return 0.62
+        }
+    }
+
+    /// Per-Sky live star density. This deliberately does not alter the catalog
+    /// model (unlocking, persistence and product IDs stay untouched).
+    private var liveStarDensity: Double {
+        switch sky.id {
+        case "sahara-night":     return 1.00
+        case "fiji-lagoon":      return 0.08
+        case "kyoto-lanterns":   return 0.42
+        case "aurora-snowfield": return 0.88
+        case "rainy-tokyo":      return 0.18
+        case "swiss-alps":       return 0.46
+        case "galaxy-drift", "deep-space": return 1.00
+        default:                 return sky.stars
         }
     }
 
@@ -154,7 +235,7 @@ struct SkyFlightSceneView: View {
     // MARK: 2 — Ambient atmosphere (stars, near-ground shimmer)
 
     @ViewBuilder private func atmosphere(W: CGFloat, H: CGFloat, t: Double) -> some View {
-        if sky.stars > 0.01 { starField(W: W, H: H, t: t) }
+        if liveStarDensity > 0.01 { starField(W: W, H: H, t: t) }
         switch sky.id {
         case "fiji-lagoon":
             groundShimmer(W: W, H: H, t: t, tint: Color(hex: 0xBFF2E0))
@@ -192,22 +273,25 @@ struct SkyFlightSceneView: View {
     private func starField(W: CGFloat, H: CGFloat, t: Double) -> some View {
         Canvas { ctx, s in
             var rng = SeededRNG(seed: skySeed &+ 0x57A2)
-            let count = Int(40 + sky.stars * 140)
+            let density = liveStarDensity
+            let count = Int(56 + density * 178)
             for i in 0..<count {
                 let x = CGFloat(rng.unit()) * s.width
-                let y = CGFloat(rng.unit()) * s.height * 0.85
+                let depth = rng.unit()
+                let y = CGFloat(rng.unit()) * s.height * (depth < 0.28 ? 0.96 : 0.82)
                 let u = rng.unit()
-                let tw = 0.55 + 0.45 * Foundation.sin(t * (0.4 + u * 1.4) + Double(i) * 1.31)
-                let a = (0.14 + u * 0.5) * sky.stars * tw
-                let r = CGFloat(0.5 + u * 1.5)
+                let pulse = 0.5 + 0.5 * Foundation.sin(t * (0.30 + u * 1.26) + Double(i) * 1.31)
+                let tw = 0.32 + 0.68 * pow(pulse, u > 0.86 ? 2.2 : 1.0)
+                let a = (0.13 + u * 0.58) * density * tw
+                let r = CGFloat(0.45 + u * (depth < 0.28 ? 0.9 : 1.65))
                 ctx.fill(Path(ellipseIn: CGRect(x: x, y: y, width: r, height: r)),
                          with: .color(.white.opacity(a)))
-                if u > 0.93 && sky.stars > 0.5 {
+                if u > 0.91 && density > 0.4 {
                     softGlow(&ctx, x: x, y: y, r: r * 3.4, color: .white.opacity(a * 0.4))
                 }
                 // Hero stars: rare, brighter, with a delicate 4-point glint that
                 // swells and fades with the twinkle — never a hard sparkle.
-                if u > 0.972 && sky.stars > 0.4 {
+                if u > 0.958 && density > 0.4 {
                     let glint = CGFloat(6 + u * 5) * CGFloat(0.6 + 0.4 * tw)
                     var cross = Path()
                     cross.move(to: CGPoint(x: x - glint, y: y)); cross.addLine(to: CGPoint(x: x + glint, y: y))
@@ -216,13 +300,15 @@ struct SkyFlightSceneView: View {
                 }
             }
             // The dust plane: dense micro-stars for the deep cosmic Skies only.
-            if sky.stars > 0.75 {
+            if density > 0.72 {
                 var dustRNG = SeededRNG(seed: skySeed &+ 0xD0_57A2)
-                for _ in 0..<110 {
+                for i in 0..<150 {
                     let x = CGFloat(dustRNG.unit()) * s.width
                     let y = CGFloat(dustRNG.unit()) * s.height
-                    let a = 0.05 + dustRNG.unit() * 0.12
-                    ctx.fill(Path(ellipseIn: CGRect(x: x, y: y, width: 0.7, height: 0.7)),
+                    let tw = 0.65 + 0.35 * Foundation.sin(t * 0.16 + Double(i) * 0.73)
+                    let a = (0.045 + dustRNG.unit() * 0.13) * tw
+                    let r = 0.55 + dustRNG.unit() * 0.35
+                    ctx.fill(Path(ellipseIn: CGRect(x: x, y: y, width: r, height: r)),
                              with: .color(.white.opacity(a)))
                 }
             }
@@ -275,10 +361,17 @@ struct SkyFlightSceneView: View {
                 let len = Double(s.width) * 1.3
                 let g = Gradient(colors: [Color(hex: 0xD8CCF0).opacity(0.10),
                                           Color(hex: 0x9A88C8).opacity(0.04), .clear])
-                l.fill(Path(ellipseIn: CGRect(x: -len / 2, y: -len * 0.09,
-                                              width: len, height: len * 0.18)),
-                       with: .radialGradient(g, center: .zero, startRadius: 0,
-                                             endRadius: CGFloat(len / 2)))
+                // Desert Night's authored foundation already contains its
+                // luminous Milky Way. Drawing this broad elliptical haze over
+                // it read as a giant translucent spotlight on wide layouts.
+                // Keep the fine star river below, but reserve the additional
+                // glow plate for the two fully cosmic Skies.
+                if sky.id != "sahara-night" {
+                    l.fill(Path(ellipseIn: CGRect(x: -len / 2, y: -len * 0.09,
+                                                  width: len, height: len * 0.18)),
+                           with: .radialGradient(g, center: .zero, startRadius: 0,
+                                                 endRadius: CGFloat(len / 2)))
+                }
                 for _ in 0..<70 {
                     let x = (rng.unit() - 0.5) * len
                     let y = (rng.unit() - 0.5) * len * 0.13
@@ -414,11 +507,18 @@ struct SkyFlightSceneView: View {
                 sunBloom(W: W, H: H, t: t)
                 cirrus(W: W, H: H, t: t, tint: Color(hex: 0xEAFBF4))
                 flockCrossing(W: W, H: H, t: t)
+                lagoonLight(W: W, H: H, t: t)
+                horizonHaze(W: W, H: H, t: t, tint: Color(hex: 0x9BE8DA), y: 0.64)
+                dustMotes(W: W, H: H, t: t, tint: Color(hex: 0xD9FFF0), count: 18)
             }
         case "kyoto-lanterns":
             ZStack {
+                horizonHaze(W: W, H: H, t: t, tint: Color(hex: 0xF2AA6A), y: 0.68)
+                anchoredLanternGlow(W: W, H: H, t: t)
                 lanternMoments(W: W, H: H, t: t)
                 petals(W: W, H: H, t: t, tint: Color(hex: 0xF2C4C8))
+                dustMotes(W: W, H: H, t: t, tint: Color(hex: 0xFFD08A), count: 18)
+                mistBreath(W: W, H: H, t: t, tint: Color(hex: 0xCFA4B8))
                 moonGlow(W: W, H: H, t: t)
             }
         case "aurora-snowfield":
@@ -426,9 +526,17 @@ struct SkyFlightSceneView: View {
                 auroraCurtains(W: W, H: H, t: t)
                 moonGlow(W: W, H: H, t: t)
                 lightPillar(W: W, H: H, t: t)
+                horizonHaze(W: W, H: H, t: t, tint: Color(hex: 0x8FE8D0), y: 0.70)
+                icyAir(W: W, H: H, t: t)
             }
         case "rainy-tokyo":
-            cloudGlow(W: W, H: H, t: t)
+            ZStack {
+                cloudGlow(W: W, H: H, t: t)
+                cityLightPulse(W: W, H: H, t: t)
+                horizonHaze(W: W, H: H, t: t, tint: Color(hex: 0x6A8ED8), y: 0.64)
+                mistBreath(W: W, H: H, t: t, tint: Color(hex: 0xB5C7E8))
+                distantBeacon(W: W, H: H, t: t, period: 112, salt: 0x701)
+            }
         case "moon-garden":
             ZStack {
                 mistBreath(W: W, H: H, t: t, tint: Color(hex: 0xB4C4D8))
@@ -439,23 +547,36 @@ struct SkyFlightSceneView: View {
                 sunBloom(W: W, H: H, t: t)
                 cirrus(W: W, H: H, t: t, tint: Color(hex: 0xEEF6F8))
                 flockCrossing(W: W, H: H, t: t)
+                horizonHaze(W: W, H: H, t: t, tint: Color(hex: 0xD9EDF4), y: 0.68)
+                mistBreath(W: W, H: H, t: t, tint: Color(hex: 0xE7F1F4))
+                distantBeacon(W: W, H: H, t: t, period: 98, salt: 0xA17)
             }
         case "sahara-night":
             ZStack {
-                shootingStar(W: W, H: H, t: t, period: 26)
-                dustMotes(W: W, H: H, t: t, tint: Color(hex: 0xE8B080), count: 10)
+                moonGlow(W: W, H: H, t: t)
+                shootingStar(W: W, H: H, t: t, period: 15, phaseOffset: 0.08, salt: 0x11)
+                shootingStar(W: W, H: H, t: t, period: 23, phaseOffset: 0.56, salt: 0x29)
+                dustMotes(W: W, H: H, t: t, tint: Color(hex: 0xE8B080), count: 20)
+                horizonHaze(W: W, H: H, t: t, tint: Color(hex: 0xE8A06A), y: 0.72)
+                distantBeacon(W: W, H: H, t: t, period: 126, salt: 0xD35)
             }
         case "galaxy-drift":
             ZStack {
                 nebulaBreath(W: W, H: H, t: t,
                              tints: [Color(hex: 0x8A6CE8), Color(hex: 0x4C6CE8), Color(hex: 0xE870B4)])
-                shootingStar(W: W, H: H, t: t, period: 21)
+                cosmicDust(W: W, H: H, t: t, tint: Color(hex: 0xC9B7FF), count: 54)
+                shootingStar(W: W, H: H, t: t, period: 12, phaseOffset: 0.10, salt: 0x41)
+                shootingStar(W: W, H: H, t: t, period: 19, phaseOffset: 0.62, salt: 0x53)
+                rareCelestialFragment(W: W, H: H, t: t, period: 74, salt: 0x6B)
             }
         case "deep-space":
             ZStack {
                 nebulaBreath(W: W, H: H, t: t,
                              tints: [Color(hex: 0x2E3E64), Color(hex: 0x46567E), Color(hex: 0x6E7EC8)])
-                shootingStar(W: W, H: H, t: t, period: 34)
+                cosmicDust(W: W, H: H, t: t, tint: Color(hex: 0xAFC7FF), count: 62)
+                shootingStar(W: W, H: H, t: t, period: 16, phaseOffset: 0.18, salt: 0x71)
+                shootingStar(W: W, H: H, t: t, period: 27, phaseOffset: 0.70, salt: 0x89)
+                rareCelestialFragment(W: W, H: H, t: t, period: 92, salt: 0xA3)
             }
         default:
             EmptyView()
@@ -482,9 +603,9 @@ struct SkyFlightSceneView: View {
     /// chain of overlapping ultra-soft glows — organic, no visible ellipse.
     private func cirrus(W: CGFloat, H: CGFloat, t: Double, tint: Color) -> some View {
         Canvas { ctx, s in
-            for slot in 0..<2 {
-                let period = 46.0
-                let shifted = t / period + Double(slot) * 0.5
+            for slot in 0..<3 {
+                let period = 58.0
+                let shifted = t / period + Double(slot) / 3.0
                 let cycle = shifted.rounded(.down)
                 let local = shifted - cycle
                 let env = Foundation.sin(.pi * local)                // fade in → out
@@ -559,30 +680,134 @@ struct SkyFlightSceneView: View {
         }
     }
 
-    /// Lantern moments: each lantern fades in low, rises only a short distance
-    /// with a gentle sway, and fades out (~22 s lives, staggered slots).
+    /// Fiji's water is already authored in the painting. These are only fine
+    /// reflected highlights: short, soft strokes that breathe in place at
+    /// different depths, plus a few humid glints near the island line.
+    private func lagoonLight(W: CGFloat, H: CGFloat, t: Double) -> some View {
+        Canvas { ctx, s in
+            var rng = SeededRNG(seed: skySeed &+ 0xF1_711)
+            for i in 0..<34 {
+                let fx = rng.unit()
+                let fy = 0.66 + rng.unit() * 0.29
+                let depth = (fy - 0.66) / 0.29
+                let rate = 0.24 + rng.unit() * 0.72
+                let pulse = pow(0.5 + 0.5 * Foundation.sin(t * rate + Double(i) * 1.37), 2.1)
+                let drift = Foundation.sin(t * 0.045 + Double(i)) * (2 + depth * 5)
+                let x = fx * Double(s.width) + drift
+                let y = fy * Double(s.height)
+                let width = 3.0 + depth * 12.0 + rng.unit() * 7.0
+                var line = Path()
+                line.move(to: CGPoint(x: x - width / 2, y: y))
+                line.addLine(to: CGPoint(x: x + width / 2, y: y))
+                ctx.stroke(line, with: .linearGradient(
+                    Gradient(colors: [.clear,
+                                      Color(hex: 0xD8FFF3).opacity(0.10 + pulse * 0.34),
+                                      .clear]),
+                    startPoint: CGPoint(x: x - width / 2, y: y),
+                    endPoint: CGPoint(x: x + width / 2, y: y)),
+                    lineWidth: CGFloat(0.6 + depth * 1.2))
+            }
+            for i in 0..<10 {
+                let x = CGFloat(0.08 + rng.unit() * 0.84) * s.width
+                let y = CGFloat(0.56 + rng.unit() * 0.18) * s.height
+                let pulse = pow(0.5 + 0.5 * Foundation.sin(t * (0.28 + rng.unit() * 0.5) + Double(i)), 2.8)
+                softGlow(&ctx, x: x, y: y, r: CGFloat(2.5 + rng.unit() * 3),
+                         color: Color(hex: 0xD8FFF3).opacity(0.24 * pulse))
+            }
+        }
+    }
+
+    /// Low, wide haze masses support the painted horizon without producing a
+    /// visible band. Each mass has a different long drift and breathing rhythm.
+    private func horizonHaze(W: CGFloat, H: CGFloat, t: Double,
+                             tint: Color, y: Double) -> some View {
+        Canvas { ctx, s in
+            var rng = SeededRNG(seed: skySeed &+ 0xA2_113)
+            for i in 0..<4 {
+                let baseX = 0.08 + rng.unit() * 0.84
+                let drift = Foundation.sin(t * (0.010 + rng.unit() * 0.012) + Double(i) * 1.8)
+                    * Double(s.width) * 0.055
+                let breathe = 0.64 + 0.36 * Foundation.sin(t * (0.025 + rng.unit() * 0.018) + Double(i))
+                softGlow(&ctx, x: CGFloat(baseX * Double(s.width) + drift),
+                         y: CGFloat(y + (rng.unit() - 0.5) * 0.08) * s.height,
+                         r: s.width * CGFloat(0.19 + rng.unit() * 0.12),
+                         color: tint.opacity(0.055 * breathe))
+            }
+        }
+    }
+
+    /// Warm fixed lanterns near the architecture/path. They never travel; only
+    /// their illustrated paper and the pool of light breathe independently.
+    private func anchoredLanternGlow(W: CGFloat, H: CGFloat, t: Double) -> some View {
+        Canvas { ctx, s in
+            let sprites = [
+                ctx.resolve(Image("SkyOverlay_KyotoLantern_Ivory")),
+                ctx.resolve(Image("SkyOverlay_KyotoLantern_Vermilion")),
+                ctx.resolve(Image("SkyOverlay_KyotoLantern_Coral")),
+            ]
+            var rng = SeededRNG(seed: skySeed &+ 0xA11C)
+            for i in 0..<8 {
+                let x = CGFloat(0.08 + rng.unit() * 0.84) * s.width
+                let y = CGFloat(0.68 + rng.unit() * 0.18) * s.height
+                let side = CGFloat(8 + rng.unit() * 8)
+                let pulse = 0.72 + 0.28 * Foundation.sin(t * (0.55 + rng.unit() * 0.7) + Double(i) * 1.7)
+                softGlow(&ctx, x: x, y: y, r: side * 1.8,
+                         color: Color(hex: 0xFFB95E).opacity(0.32 * pulse))
+                let rect = CGRect(x: x - side / 2, y: y - side / 2, width: side, height: side)
+                ctx.drawLayer { layer in
+                    layer.opacity = 0.42 + 0.46 * pulse
+                    layer.draw(sprites[i % sprites.count], in: rect)
+                }
+            }
+        }
+    }
+
+    /// Kyoto's signature lantern river. Real illustrated lantern sprites emerge
+    /// below the horizon, cross the whole sky on long staggered paths, flicker
+    /// independently and disappear beyond the top. A new seeded layout is chosen
+    /// only while a lantern is fully invisible, so nothing pops or teleports.
     private func lanternMoments(W: CGFloat, H: CGFloat, t: Double) -> some View {
         Canvas { ctx, s in
+            let sprites = [
+                ctx.resolve(Image("SkyOverlay_KyotoLantern_Ivory")),
+                ctx.resolve(Image("SkyOverlay_KyotoLantern_Vermilion")),
+                ctx.resolve(Image("SkyOverlay_KyotoLantern_Coral")),
+            ]
             let warm = Color(hex: 0xFFC873)
-            for slot in 0..<7 {
-                let period = 22.0
-                let shifted = t / period + Double(slot) / 7.0
+            for slot in 0..<18 {
+                let period = 52.0
+                let shifted = t / period + Double(slot) / 18.0
                 let cycle = shifted.rounded(.down)
                 let local = shifted - cycle
-                let env = Foundation.sin(.pi * local)
-                guard env > 0.03 else { continue }
+                let fadeIn = smoothStep(0.03, 0.16, local)
+                let fadeOut = 1 - smoothStep(0.78, 0.98, local)
+                let env = fadeIn * fadeOut
+                guard env > 0.01 else { continue }
                 var rng = SeededRNG(seed: skySeed &+ UInt64(bitPattern: Int64(cycle)) &* 53 &+ UInt64(slot) &* 11)
-                let fx = 0.08 + rng.unit() * 0.84
-                let baseY = 0.36 + rng.unit() * 0.44
-                let rise = local * 0.11                          // ~a tenth of the screen, no more
-                let sway = Foundation.sin(t * (0.3 + rng.unit() * 0.3) + rng.unit() * 6) * 7
-                let x = fx * Double(s.width) + sway
-                let y = (baseY - rise) * Double(s.height)
-                let r = 2.2 + rng.unit() * 2.4
-                softGlow(&ctx, x: CGFloat(x), y: CGFloat(y), r: CGFloat(r * 3.6),
-                         color: warm.opacity(0.55 * env))
-                ctx.fill(Path(ellipseIn: CGRect(x: x - r / 2, y: y - r * 0.7, width: r, height: r * 1.4)),
-                         with: .color(warm.opacity(0.8 * env)))
+                let depth = rng.unit()
+                let startX = 0.06 + rng.unit() * 0.88
+                let endDrift = (rng.unit() - 0.5) * (0.10 + depth * 0.08)
+                let startY = 1.06 + rng.unit() * 0.12
+                let endY = -0.18 + (1 - depth) * 0.24
+                let progress = local * local * (3 - 2 * local)
+                let sway = Foundation.sin(t * (0.09 + rng.unit() * 0.10) + Double(slot) * 1.27)
+                    * (3 + depth * 8)
+                let x = (startX + endDrift * progress) * Double(s.width) + sway
+                let y = (startY + (endY - startY) * progress) * Double(s.height)
+                let side = CGFloat(10 + depth * 21)
+                let flicker = 0.82 + 0.18 * Foundation.sin(t * (1.0 + rng.unit() * 1.2) + Double(slot) * 1.9)
+                let alpha = env * flicker * (0.38 + depth * 0.58)
+                softGlow(&ctx, x: CGFloat(x), y: CGFloat(y), r: side * 1.15,
+                         color: warm.opacity(0.28 * alpha))
+                let rect = CGRect(x: CGFloat(x) - side / 2, y: CGFloat(y) - side / 2,
+                                  width: side, height: side)
+                ctx.drawLayer { layer in
+                    layer.opacity = alpha
+                    layer.translateBy(x: CGFloat(x), y: CGFloat(y))
+                    layer.rotate(by: .degrees(Foundation.sin(t * 0.12 + Double(slot)) * (1.2 + depth)))
+                    layer.translateBy(x: -CGFloat(x), y: -CGFloat(y))
+                    layer.draw(sprites[slot % sprites.count], in: rect)
+                }
             }
         }
     }
@@ -626,16 +851,20 @@ struct SkyFlightSceneView: View {
     /// a true hanging curtain rather than a coloured band.
     private func auroraCurtains(W: CGFloat, H: CGFloat, t: Double) -> some View {
         Canvas { ctx, s in
-            let colors = [Color(hex: 0x54E0A8), Color(hex: 0x4FC9DD), Color(hex: 0x8F7BE8)]
-            for band in 0..<3 {
-                let baseY = s.height * (0.14 + CGFloat(band) * 0.13)
-                let amp = s.height * 0.045
-                let thick = s.height * 0.15
-                let phase = t * 0.09 + Double(band) * 2.1
+            let colors = [Color(hex: 0x54E0A8), Color(hex: 0x78F0C2),
+                          Color(hex: 0x4FC9DD), Color(hex: 0xA58AEC)]
+            for band in 0..<4 {
+                let depth = Double(band) / 3.0
+                let baseY = s.height * (0.09 + CGFloat(band) * 0.105)
+                let amp = s.height * CGFloat(0.035 + depth * 0.018)
+                let thick = s.height * CGFloat(0.13 + depth * 0.035)
+                let phase = t * (0.055 + depth * 0.045) + Double(band) * 1.73
                 let path = flightAuroraRibbon(width: s.width, baseY: baseY,
                                               amp: amp, thickness: thick, phase: phase)
                 let c = colors[band]
-                let g = Gradient(colors: [c.opacity(0), c.opacity(0.38), c.opacity(0)])
+                let breathe = 0.76 + 0.24 * Foundation.sin(t * (0.035 + depth * 0.02) + Double(band))
+                let g = Gradient(colors: [c.opacity(0), c.opacity((0.28 + depth * 0.14) * breathe),
+                                          c.opacity(0.12 * breathe), c.opacity(0)])
                 ctx.fill(path, with: .linearGradient(
                     g, startPoint: CGPoint(x: 0, y: baseY - amp),
                     endPoint: CGPoint(x: 0, y: baseY + thick + amp)))
@@ -649,7 +878,7 @@ struct SkyFlightSceneView: View {
                         + 0.4 * Foundation.sin(Double(x) / 51.0 + phase * 1.6)
                     let topY = baseY + CGFloat(wave) * amp
                     let pulse = 0.5 + 0.5 * Foundation.sin(t * (0.16 + Double(k) * 0.04) + Double(k) * 2.3 + Double(band) * 1.1)
-                    let rayA = 0.10 * pulse
+                    let rayA = (0.075 + depth * 0.045) * pulse
                     guard rayA > 0.015 else { continue }
                     var ray = Path()
                     ray.move(to: CGPoint(x: x, y: topY))
@@ -738,14 +967,137 @@ struct SkyFlightSceneView: View {
         }
     }
 
-    /// An occasional shooting star — a natural streak with a gradient tail.
-    private func shootingStar(W: CGFloat, H: CGFloat, t: Double, period: Double) -> some View {
+    /// Fine cosmic dust sits on a nearer visual plane than the starfield. Every
+    /// speck keeps a permanent home and only orbits it by a few points.
+    private func cosmicDust(W: CGFloat, H: CGFloat, t: Double,
+                            tint: Color, count: Int) -> some View {
+        Canvas { ctx, s in
+            var rng = SeededRNG(seed: skySeed &+ 0xC05D)
+            for i in 0..<count {
+                let baseX = rng.unit() * Double(s.width)
+                let baseY = rng.unit() * Double(s.height) * 0.9
+                let depth = rng.unit()
+                let orbit = 2.0 + depth * 9.0
+                let rate = 0.025 + rng.unit() * 0.055
+                let angle = t * rate + Double(i) * 2.17
+                let x = baseX + Foundation.sin(angle) * orbit
+                let y = baseY + Foundation.cos(angle * 0.83) * orbit * 0.6
+                let pulse = 0.45 + 0.55 * Foundation.sin(t * (0.18 + rng.unit() * 0.34) + Double(i))
+                let r = CGFloat(0.55 + depth * 1.45)
+                softGlow(&ctx, x: CGFloat(x), y: CGFloat(y), r: r * 2.2,
+                         color: tint.opacity((0.06 + depth * 0.15) * max(0.12, pulse)))
+            }
+        }
+    }
+
+    /// Aurora-only suspended ice crystals. The falling weather is a separate,
+    /// nearer layer; these particles drift locally in the luminous cold air.
+    private func icyAir(W: CGFloat, H: CGFloat, t: Double) -> some View {
+        Canvas { ctx, s in
+            var rng = SeededRNG(seed: skySeed &+ 0x1CE)
+            for i in 0..<28 {
+                let fx = rng.unit()
+                let fy = 0.06 + rng.unit() * 0.70
+                let depth = rng.unit()
+                let sway = Foundation.sin(t * (0.08 + rng.unit() * 0.09) + Double(i)) * (3 + depth * 8)
+                let bob = Foundation.cos(t * (0.06 + rng.unit() * 0.08) + Double(i) * 1.5) * 4
+                let tw = pow(0.5 + 0.5 * Foundation.sin(t * (0.30 + rng.unit()) + Double(i)), 2.2)
+                softGlow(&ctx, x: CGFloat(fx * Double(s.width) + sway),
+                         y: CGFloat(fy * Double(s.height) + bob),
+                         r: CGFloat(0.9 + depth * 2.2),
+                         color: Color(hex: 0xD8FFF4).opacity(0.10 + tw * 0.30))
+            }
+        }
+    }
+
+    /// Tokyo's windows and neon pools do not switch abruptly. Small seeded
+    /// groups wax and wane on unrelated long rhythms, reflected softly below.
+    private func cityLightPulse(W: CGFloat, H: CGFloat, t: Double) -> some View {
+        Canvas { ctx, s in
+            var rng = SeededRNG(seed: skySeed &+ 0xC17A)
+            let colors = [Color(hex: 0xF48DB8), Color(hex: 0x77D6EE),
+                          Color(hex: 0xB39AF4), Color(hex: 0xFFD089)]
+            for i in 0..<24 {
+                let x = CGFloat(0.04 + rng.unit() * 0.92) * s.width
+                let y = CGFloat(0.48 + rng.unit() * 0.36) * s.height
+                let rate = 0.10 + rng.unit() * 0.28
+                let pulse = 0.35 + 0.65 * pow(0.5 + 0.5 * Foundation.sin(t * rate + Double(i) * 1.7), 2.0)
+                let color = colors[i % colors.count]
+                softGlow(&ctx, x: x, y: y, r: CGFloat(3 + rng.unit() * 8),
+                         color: color.opacity(0.08 + pulse * 0.18))
+                if i % 3 == 0 {
+                    var reflection = Path()
+                    reflection.move(to: CGPoint(x: x, y: y + 2))
+                    reflection.addLine(to: CGPoint(x: x, y: min(s.height, y + CGFloat(12 + rng.unit() * 22))))
+                    ctx.stroke(reflection, with: .linearGradient(
+                        Gradient(colors: [color.opacity(0.16 * pulse), .clear]),
+                        startPoint: CGPoint(x: x, y: y),
+                        endPoint: CGPoint(x: x, y: y + 34)), lineWidth: 1)
+                }
+            }
+        }
+    }
+
+    /// A tiny far-away navigation light. It is visible only for part of a long
+    /// cycle and fades at both ends; no aircraft silhouette is imposed on art.
+    private func distantBeacon(W: CGFloat, H: CGFloat, t: Double,
+                               period: Double, salt: UInt64) -> some View {
         Canvas { ctx, s in
             let cycle = (t / period).rounded(.down)
             let phase = t / period - cycle
+            guard phase < 0.52 else { return }
+            let local = phase / 0.52
+            let env = Foundation.sin(.pi * local)
+            var rng = SeededRNG(seed: skySeed &+ UInt64(bitPattern: Int64(cycle)) &* 107 &+ salt)
+            let leftToRight = rng.unit() > 0.5
+            let x = (leftToRight ? -0.04 + local * 1.08 : 1.04 - local * 1.08) * Double(s.width)
+            let y = (0.14 + rng.unit() * 0.22) * Double(s.height)
+            let blink = pow(max(0, Foundation.sin(t * 2.7)), 10)
+            softGlow(&ctx, x: CGFloat(x), y: CGFloat(y), r: 4,
+                     color: Color(hex: 0xFF745F).opacity(0.5 * env * blink))
+            softGlow(&ctx, x: CGFloat(x + (leftToRight ? -4 : 4)), y: CGFloat(y), r: 2.5,
+                     color: Color.white.opacity(0.34 * env))
+        }
+    }
+
+    /// A rare distant cosmic fragment: small, slow and softly lit. It crosses a
+    /// short arc, never the whole frame, and is completely invisible at reset.
+    private func rareCelestialFragment(W: CGFloat, H: CGFloat, t: Double,
+                                       period: Double, salt: UInt64) -> some View {
+        Canvas { ctx, s in
+            let cycle = (t / period).rounded(.down)
+            let phase = t / period - cycle
+            guard phase > 0.18, phase < 0.62 else { return }
+            let local = (phase - 0.18) / 0.44
+            let env = Foundation.sin(.pi * local)
+            var rng = SeededRNG(seed: skySeed &+ UInt64(bitPattern: Int64(cycle)) &* 157 &+ salt)
+            let x0 = 0.14 + rng.unit() * 0.58
+            let y0 = 0.12 + rng.unit() * 0.42
+            let x = (x0 + local * 0.12) * Double(s.width)
+            let y = (y0 + local * 0.05) * Double(s.height)
+            let r = CGFloat(1.8 + rng.unit() * 2.4)
+            var shard = Path()
+            shard.move(to: CGPoint(x: x - Double(r), y: y))
+            shard.addLine(to: CGPoint(x: x, y: y - Double(r) * 0.55))
+            shard.addLine(to: CGPoint(x: x + Double(r) * 1.35, y: y + Double(r) * 0.35))
+            shard.addLine(to: CGPoint(x: x - Double(r) * 0.25, y: y + Double(r) * 0.72))
+            shard.closeSubpath()
+            ctx.fill(shard, with: .color(Color(hex: 0xBFD0EC).opacity(0.26 * env)))
+            softGlow(&ctx, x: CGFloat(x), y: CGFloat(y), r: r * 3,
+                     color: Color(hex: 0x8AA6E8).opacity(0.10 * env))
+        }
+    }
+
+    /// An occasional shooting star — a natural streak with a gradient tail.
+    private func shootingStar(W: CGFloat, H: CGFloat, t: Double, period: Double,
+                              phaseOffset: Double = 0, salt: UInt64 = 0) -> some View {
+        Canvas { ctx, s in
+            let shifted = t / period + phaseOffset
+            let cycle = shifted.rounded(.down)
+            let phase = shifted - cycle
             guard phase < 0.16 else { return }
             let local = phase / 0.16
-            var rng = SeededRNG(seed: skySeed &+ UInt64(bitPattern: Int64(cycle)) &* 131 &+ 7)
+            var rng = SeededRNG(seed: skySeed &+ UInt64(bitPattern: Int64(cycle)) &* 131 &+ 7 &+ salt)
             let x0 = s.width * CGFloat(0.12 + rng.unit() * 0.76)
             let y0 = s.height * CGFloat(0.05 + rng.unit() * 0.4)
             let dir: CGFloat = rng.unit() < 0.5 ? -1 : 1
@@ -773,33 +1125,36 @@ struct SkyFlightSceneView: View {
             Canvas { ctx, s in
                 var rng = SeededRNG(seed: skySeed &+ 0x5A0F)
                 let span = Double(s.height) + 40
-                for i in 0..<36 {
+                let count = sky.id == "aurora-snowfield" ? 68 : 42
+                for i in 0..<count {
                     let di = Double(i)
                     let fx = rng.unit(); let fy = rng.unit()
-                    let speed = 12.0 + rng.unit() * 16.0
+                    let depth = rng.unit()
+                    let speed = 10.0 + depth * 25.0
                     let y = (fy * span + t * speed).truncatingRemainder(dividingBy: span) - 20
-                    let sway = Foundation.sin(t * (0.4 + rng.unit()) + di) * (4 + rng.unit() * 7)
+                    let sway = Foundation.sin(t * (0.30 + rng.unit() * 0.75) + di) * (3 + depth * 11)
                     let x = fx * Double(s.width) + sway
-                    let r = 0.9 + rng.unit() * 1.7
+                    let r = 0.65 + depth * 2.25
                     softGlow(&ctx, x: CGFloat(x), y: CGFloat(y), r: CGFloat(r),
-                             color: .white.opacity(0.28 + rng.unit() * 0.34))
+                             color: .white.opacity(0.20 + depth * 0.48))
                 }
             }
         case .rain:
             Canvas { ctx, s in
                 var rng = SeededRNG(seed: skySeed &+ 0x0A17)
                 let span = Double(s.height) + 40
-                for _ in 0..<44 {
+                for _ in 0..<92 {
                     let fx = rng.unit(); let fy = rng.unit()
-                    let speed = 140.0 + rng.unit() * 100.0
+                    let depth = rng.unit()
+                    let speed = 150.0 + depth * 175.0
                     let y = (fy * span + t * speed).truncatingRemainder(dividingBy: span) - 20
-                    let x = fx * Double(s.width) - y * 0.05
-                    let len = 8.0 + rng.unit() * 9.0
+                    let x = fx * Double(s.width) - y * (0.035 + depth * 0.035)
+                    let len = 7.0 + depth * 17.0
                     var p = Path()
                     p.move(to: CGPoint(x: x, y: y))
-                    p.addLine(to: CGPoint(x: x - len * 0.12, y: y + len))
-                    ctx.stroke(p, with: .color(Color(hex: 0xBFD0EC).opacity(0.09 + rng.unit() * 0.12)),
-                               lineWidth: 1)
+                    p.addLine(to: CGPoint(x: x - len * (0.10 + depth * 0.06), y: y + len))
+                    ctx.stroke(p, with: .color(Color(hex: 0xC9DCF6).opacity(0.08 + depth * 0.23)),
+                               lineWidth: CGFloat(0.65 + depth * 0.75))
                 }
             }
         }
@@ -969,6 +1324,12 @@ private func softGlow(_ ctx: inout GraphicsContext, x: CGFloat, y: CGFloat, r: C
     let g = Gradient(colors: [color, color.opacity(0)])
     ctx.fill(Path(ellipseIn: CGRect(x: x - r, y: y - r, width: r * 2, height: r * 2)),
              with: .radialGradient(g, center: CGPoint(x: x, y: y), startRadius: 0, endRadius: r))
+}
+
+private func smoothStep(_ edge0: Double, _ edge1: Double, _ x: Double) -> Double {
+    guard edge1 > edge0 else { return x < edge0 ? 0 : 1 }
+    let v = max(0, min(1, (x - edge0) / (edge1 - edge0)))
+    return v * v * (3 - 2 * v)
 }
 
 /// An organic aurora ribbon: both edges wave independently, in small typed

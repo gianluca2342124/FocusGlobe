@@ -86,6 +86,64 @@ extension View {
 
 // MARK: - Buttons
 
+/// The one FocusGlobe liquid-glass substrate for compact controls. It uses a
+/// native material for depth, a soft internal light pass and a tiny specular
+/// bloom instead of a conspicuous white outline. Reduce Transparency switches
+/// to a fully opaque neutral while retaining the same hierarchy and contrast.
+struct FocusLiquidGlassSurface<S: InsettableShape>: View {
+    let shape: S
+    var tint: Color = AppColors.islandTint
+    var tintOpacity: Double = 0.18
+    var active = false
+
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorSchemeContrast) private var contrast
+
+    var body: some View {
+        ZStack {
+            if reduceTransparency {
+                shape.fill(AppColors.neutralRaised)
+            } else {
+                shape.fill(.ultraThinMaterial)
+            }
+
+            shape.fill(tint.opacity(reduceTransparency ? 0.26 : tintOpacity))
+
+            shape.fill(
+                LinearGradient(
+                    colors: [
+                        .white.opacity(active ? 0.20 : 0.13),
+                        .white.opacity(0.035),
+                        .black.opacity(0.08),
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .blendMode(.softLight)
+
+            shape.fill(
+                RadialGradient(
+                    colors: [.white.opacity(active ? 0.18 : 0.10), .clear],
+                    center: UnitPoint(x: 0.30, y: 0.16),
+                    startRadius: 0,
+                    endRadius: 42
+                )
+            )
+            .blendMode(.plusLighter)
+        }
+        // An optical edge, not a visible ring. Increased Contrast strengthens it
+        // slightly without changing the control's colour or footprint.
+        .overlay(
+            shape.strokeBorder(
+                .white.opacity(contrast == .increased ? 0.20 : 0.075),
+                lineWidth: contrast == .increased ? 1 : 0.65
+            )
+        )
+        .shadow(color: .black.opacity(0.18), radius: 8, y: 4)
+    }
+}
+
 /// A secondary glass button (rounded-rect, translucent) for non-primary actions.
 struct GlassButton: View {
     let title: String
@@ -118,7 +176,9 @@ struct GlassIconButton: View {
                 .font(.system(size: size * 0.4, weight: .semibold))
                 .foregroundStyle(AppColors.textPrimary)
                 .frame(width: size, height: size)
-                .background { liquidGlassCircle(active: active) }
+                .background {
+                    FocusLiquidGlassSurface(shape: Circle(), active: active)
+                }
         }
         .buttonStyle(SoftPressStyle())
         .accessibilityLabel(accessibilityLabel)
@@ -139,21 +199,11 @@ struct GlassTextButton: View {
                 .font(.system(size: 15, weight: .heavy, design: .default))
                 .foregroundStyle(AppColors.textPrimary)
                 .frame(width: size, height: size)
-                .background { liquidGlassCircle(active: active) }
+                .background {
+                    FocusLiquidGlassSurface(shape: Circle(), active: active)
+                }
         }
         .buttonStyle(SoftPressStyle())
         .accessibilityLabel(accessibilityLabel)
     }
-}
-
-/// Shared glass circle background for the icon/text controls. `active` adds a
-/// subtle white luminous glow + brighter border (never a colour) so toggled
-/// controls read as "on" while staying in the glass language.
-@ViewBuilder
-private func liquidGlassCircle(active: Bool) -> some View {
-    Circle().fill(.regularMaterial)
-        .overlay(Circle().fill(AppColors.islandTint.opacity(active ? 0.10 : 0.28)))
-        .overlay(Circle().fill(Color.white.opacity(active ? 0.16 : 0)))
-        .overlay(Circle().strokeBorder(Color.white.opacity(active ? 0.50 : 0.18), lineWidth: active ? 1.5 : 1))
-        .shadow(color: AppColors.shadow, radius: 12, y: 6)
 }

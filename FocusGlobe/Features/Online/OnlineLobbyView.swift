@@ -22,7 +22,13 @@ struct OnlineLobbyView: View {
 
     var body: some View {
         ZStack {
-            SkyFlightSceneView(sky: sky, elapsed: { 30 }, animated: false)
+            SkyFlightSceneView(
+                sky: sky,
+                elapsed: { 30 },
+                animated: false,
+                presentationMode: .socialPreview,
+                renderQuality: .still
+            )
                 .ignoresSafeArea()
             LinearGradient(colors: [.black.opacity(0.5), .black.opacity(0.25), .black.opacity(0.6)],
                            startPoint: .top, endPoint: .bottom)

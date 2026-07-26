@@ -127,7 +127,9 @@ struct OnlineFriendsSettingsSection: View {
             router.presentPaywall(context: .online)
         } label: {
             SettingsRow(systemImage: icon, title: title, subtitle: subtitle, tint: AppColors.brand,
-                        trailing: AnyView(FocusGlobePROBadge(visibleHeight: 14)))
+                        trailing: AnyView(Image(systemName: "lock.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(AppColors.textTertiary)))
         }
         .buttonStyle(SoftPressStyle())
     }

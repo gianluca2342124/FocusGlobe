@@ -8,8 +8,10 @@ import UIKit
 /// **once** (gated by `appModel.needsOnboarding`; pre-existing pilots are
 /// auto-skipped in `AppModel.init`). Eleven gentle steps over one continuous
 /// night-sky scene: promise → goal → name → age → struggle → focus style →
-/// soundscape → Focus Shield → notifications → a small favour (review) →
-/// premium intro. Everything lands in the local `UserProfile`; no backend, no
+/// soundscape → a small favour (review) → Focus Shield → notifications →
+/// premium intro. The review ask now follows the first meaningful product taste
+/// instead of arriving at the very end. Everything lands in the local
+/// `UserProfile`; no backend, no
 /// sign-in — "Continue free" simply opens the app.
 struct OnboardingView: View {
     @EnvironmentObject private var appModel: AppModel
@@ -72,7 +74,7 @@ struct OnboardingView: View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
                 Capsule().fill(.white.opacity(0.12))
-                Capsule().fill(AppColors.gold)
+                Capsule().fill(AppColors.brand)
                     .frame(width: geo.size.width * CGFloat(step + 1) / CGFloat(Self.stepCount))
             }
         }
@@ -92,9 +94,9 @@ struct OnboardingView: View {
             case 4:  struggleStep
             case 5:  styleStep
             case 6:  soundscapeStep
-            case 7:  shieldStep
-            case 8:  notificationsStep
-            case 9:  favourStep
+            case 7:  favourStep
+            case 8:  shieldStep
+            case 9:  notificationsStep
             default: premiumStep
             }
         }
@@ -191,7 +193,7 @@ struct OnboardingView: View {
                 .focused($textFocused)
                 .font(AppTypography.body)
                 .foregroundStyle(Color(hex: 0x26221D))
-                .tint(AppColors.gold)
+                .tint(AppColors.brand)
                 .padding(AppSpacing.md)
                 .background(RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(Color(hex: 0xF4EFE4)))
@@ -211,7 +213,7 @@ struct OnboardingView: View {
                 .textInputAutocapitalization(.words)
                 .font(.system(size: 22, weight: .semibold, design: .default))
                 .foregroundStyle(Color(hex: 0x26221D))
-                .tint(AppColors.gold)
+                .tint(AppColors.brand)
                 .multilineTextAlignment(.center)
                 .padding(AppSpacing.md)
                 .background(RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -321,7 +323,7 @@ struct OnboardingView: View {
             HStack(spacing: 6) {
                 ForEach(opts.indices, id: \.self) { i in
                     Capsule()
-                        .fill(i == soundIndex ? AppColors.gold : .white.opacity(0.28))
+                        .fill(i == soundIndex ? AppColors.brand : .white.opacity(0.28))
                         .frame(width: i == soundIndex ? 18 : 6, height: 6)
                 }
             }
@@ -362,7 +364,7 @@ struct OnboardingView: View {
         }
         .padding(.horizontal, 15).padding(.vertical, 9)
         .background(Capsule().fill(.white.opacity(0.08)))
-        .overlay(Capsule().strokeBorder(AppColors.gold.opacity(0.28), lineWidth: 1))
+        .overlay(Capsule().strokeBorder(AppColors.brand.opacity(0.32), lineWidth: 1))
         .accessibilityLabel("Now playing a preview")
     }
 

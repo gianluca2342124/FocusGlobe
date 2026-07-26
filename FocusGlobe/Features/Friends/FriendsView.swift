@@ -53,7 +53,7 @@ struct FriendsView: View {
     var body: some View {
         ZStack {
             AppBackground()
-            ScrollView {
+            ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
                     ScreenHeader(title: "Friends", showsBack: false)
                     if !online.availability.isAvailable {
@@ -94,15 +94,17 @@ struct FriendsView: View {
                     }
                     if !online.crew.isEmpty { crewSection }
                     inviteHero
+                    howItWorks
                     // Online / social controls now live here (moved from Settings).
                     OnlineFriendsSettingsSection()
-                    if !hasAnySocialContent { howItWorks }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(AppSpacing.screen)
                 .padding(.top, AppSpacing.xs)
                 .padding(.bottom, AppSpacing.xxl)
                 .contentMaxWidth()
             }
+            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
             .refreshable { await refresh() }
         }
         .focusScreenChrome()

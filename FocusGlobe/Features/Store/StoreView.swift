@@ -16,7 +16,7 @@ import UIKit
 struct StoreView: View {
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
-    @Environment(\.horizontalSizeClass) private var hSize
+    @Environment(\.focusViewport) private var viewport
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     enum Mode: String, CaseIterable { case balloon = "Balloon", interior = "Interior" }
@@ -55,13 +55,14 @@ struct StoreView: View {
                 // to clean warm paper in Light Mode.
                 Group {
                     header
-                        .padding(.horizontal, AppSpacing.screen)
                     stage
                         .frame(maxHeight: .infinity)
                     statusRow
-                        .padding(.horizontal, AppSpacing.screen)
                         .padding(.bottom, AppSpacing.sm)
                 }
+                .frame(maxWidth: viewport.storeContentWidth)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, viewport.pagePadding)
                 .environment(\.colorScheme, .dark)
                 itemPanel
             }
@@ -87,7 +88,7 @@ struct StoreView: View {
     private var header: some View {
         HStack(alignment: .center, spacing: AppSpacing.xs) {
             Text("Store")
-                .font(AppTypography.hero)
+                .font(.system(size: viewport.titleSize, weight: .bold, design: .default))
                 .foregroundStyle(AppColors.textPrimary)
             Spacer()
             HStack(spacing: 5) {
@@ -148,7 +149,7 @@ struct StoreView: View {
                                         previewSkin.theme.accent.opacity(0.08), .clear],
                                center: .center, startRadius: 4, endRadius: 190)
                     .blur(radius: 12)
-                BalloonView(height: Layout.pad(164, 215), showBurner: false, showGlow: false,
+                BalloonView(height: storeBalloonHeight, showBurner: false, showGlow: false,
                             skin: previewSkin)
                     .offset(y: float)
                     .shadow(color: .black.opacity(0.25), radius: 16, y: 10)
@@ -179,7 +180,6 @@ struct StoreView: View {
             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .strokeBorder(.white.opacity(0.12), lineWidth: 1))
-            .padding(.horizontal, AppSpacing.screen)
             .accessibilityLabel("Cabin interior preview")
             .transition(.opacity)
         }
@@ -190,6 +190,14 @@ struct StoreView: View {
         var ids = Set(appModel.profile.equippedCabinItemIDs ?? [])
         if let previewItemID { ids.insert(previewItemID) }
         return ids
+    }
+
+    private var storeBalloonHeight: CGFloat {
+        switch viewport.kind {
+        case .compact: 164
+        case .regular: 215
+        case .wide: 250
+        }
     }
 
     @ViewBuilder private func lockBadge(premium: Bool) -> some View {
@@ -333,16 +341,21 @@ struct StoreView: View {
     // MARK: The fixed item panel (7C) — an immovable bottom-sheet look.
 
     private var itemPanel: some View {
-        VStack(spacing: AppSpacing.sm) {
-            modePicker
-                .padding(.top, AppSpacing.md)
-            ScrollView {
-                if mode == .balloon { balloonGrid } else { interiorContent }
+        VStack(spacing: 0) {
+            VStack(spacing: viewport.cardSpacing) {
+                modePicker
+                    .padding(.top, AppSpacing.md)
+                ScrollView(.vertical) {
+                    if mode == .balloon { balloonGrid } else { interiorContent }
+                }
+                .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
             }
+            .frame(maxWidth: viewport.storeContentWidth)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, viewport.pagePadding)
         }
-        .padding(.horizontal, AppSpacing.screen)
         .frame(maxWidth: .infinity)
-        .frame(height: panelHeight)
+        .frame(height: viewport.storePanelHeight)
         .background(
             UnevenRoundedRectangle(topLeadingRadius: 28, bottomLeadingRadius: 0,
                                    bottomTrailingRadius: 0, topTrailingRadius: 28,
@@ -358,21 +371,12 @@ struct StoreView: View {
         )
     }
 
-    /// Roughly the lower half on phones; capped on tall/iPad screens so the
-    /// preview always keeps a generous share of the atmosphere.
-    private var panelHeight: CGFloat {
-        #if canImport(UIKit)
-        return min(430, UIScreen.main.bounds.height * 0.46)
-        #else
-        return 420
-        #endif
-    }
-
-    /// Item grids show THREE per row on a standard iPhone; iPad keeps its wider
-    /// adaptive layout so the larger canvas isn't wasted on only three columns.
+    /// Container-driven adaptive columns: three useful cards on a phone, then
+    /// progressively larger cards and more columns as real width becomes available.
     private var storeColumns: [GridItem] {
-        if hSize == .regular { return Layout.cardColumns(regular: true) }
-        return Array(repeating: GridItem(.flexible(), spacing: AppSpacing.sm), count: 3)
+        [GridItem(.adaptive(minimum: viewport.storeCardMinimumWidth,
+                            maximum: viewport.isWide ? 330 : 260),
+                  spacing: viewport.cardSpacing)]
     }
 
     /// A premium segmented control: one recessed track with a single gold pill
@@ -506,6 +510,7 @@ private struct StoreItemCard: View {
     var selected: Bool = false
     let onSelect: () -> Void
     @EnvironmentObject private var appModel: AppModel
+    @Environment(\.focusViewport) private var viewport
 
     private var owned: Bool { appModel.ownsStoreItem(item) }
     private var affordable: Bool { appModel.focusCoins >= item.price }
@@ -513,7 +518,10 @@ private struct StoreItemCard: View {
         item.kind == .cabinDecoration && appModel.isCabinItemEquipped(item)
     }
 
-    private var artHeight: CGFloat { featured ? Layout.pad(96, 130) : Layout.pad(84, 120) }
+    private var artHeight: CGFloat {
+        if featured { return viewport.isWide ? 142 : (viewport.isCompact ? 96 : 126) }
+        return viewport.isWide ? 132 : (viewport.isCompact ? 84 : 112)
+    }
 
     var body: some View {
         Button(action: onSelect) {
@@ -639,12 +647,14 @@ private struct SkinCard: View {
     let selected: Bool
     let statusText: String
     let onSelect: () -> Void
+    @Environment(\.focusViewport) private var viewport
 
     var body: some View {
         Button(action: onSelect) {
             VStack(spacing: AppSpacing.xs) {
                 ZStack(alignment: .topTrailing) {
-                    BalloonView(height: Layout.pad(96, 140), showBurner: false, showGlow: false, skin: skin)
+                    BalloonView(height: viewport.isWide ? 154 : (viewport.isCompact ? 96 : 132),
+                                showBurner: false, showGlow: false, skin: skin)
                         .opacity(unlocked ? 1 : 0.55)
                         .frame(maxWidth: .infinity)
                     if equipped {
@@ -663,7 +673,7 @@ private struct SkinCard: View {
                         }
                     }
                 }
-                .frame(height: Layout.pad(104, 150))
+                .frame(height: viewport.isWide ? 164 : (viewport.isCompact ? 104 : 142))
                 VStack(spacing: 1) {
                     Text(skin.name)
                         .font(.system(size: 14.5, weight: .bold, design: .default))
@@ -708,62 +718,74 @@ private struct SkinCard: View {
 struct DailyGiftSheet: View {
     @EnvironmentObject private var appModel: AppModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.focusViewport) private var viewport
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var bob: CGFloat = 0
 
     var body: some View {
         ZStack {
             AppBackground().ignoresSafeArea()
-            VStack(spacing: AppSpacing.md) {
-                Spacer(minLength: 0)
-                giftHero
-                Text("Daily Gift")
-                    .font(.system(size: 28, weight: .heavy, design: .default))
-                    .foregroundStyle(AppColors.textPrimary)
-                Text("Welcome back — your focus coins are ready.")
-                    .font(AppTypography.callout)
-                    .foregroundStyle(AppColors.textSecondary)
-                    .multilineTextAlignment(.center)
-                HStack(spacing: 9) {
-                    FocusCoinIcon(size: 30)
-                    Text("+\(AppModel.dailyGiftCoins) FocusCoins")
-                        .font(.system(size: 24, weight: .heavy, design: .default))
-                        .foregroundStyle(AppColors.gold)
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: viewport.cardSpacing) {
+                    giftHero
+                    Text("Daily Gift")
+                        .font(.system(size: viewport.modalTitleSize, weight: .heavy, design: .default))
+                        .foregroundStyle(AppColors.textPrimary)
+                    Text("Welcome back — your focus coins are ready.")
+                        .font(.system(size: viewport.bodySize, weight: .medium, design: .default))
+                        .foregroundStyle(AppColors.textSecondary)
+                        .multilineTextAlignment(.center)
+                    HStack(spacing: 10) {
+                        FocusCoinIcon(size: viewport.isWide ? 38 : 32)
+                        Text("+\(AppModel.dailyGiftCoins) Focus Coins")
+                            .font(.system(size: viewport.isWide ? 29 : 24,
+                                          weight: .heavy, design: .default))
+                            .foregroundStyle(AppColors.gold)
+                    }
+                    .padding(.vertical, 6)
+                    AppPrimaryButton(title: "Collect", systemImage: "gift.fill") {
+                        appModel.claimDailyGift()
+                        dismiss()
+                    }
+                    .frame(minHeight: viewport.buttonHeight)
                 }
-                .padding(.vertical, 4)
-                Spacer(minLength: 0)
-                AppPrimaryButton(title: "Collect", systemImage: "gift.fill") {
-                    appModel.claimDailyGift()
-                    dismiss()
-                }
+                .padding(viewport.modalPadding)
+                .frame(maxWidth: viewport.modalWidth)
+                .frame(maxWidth: .infinity)
             }
-            .padding(.horizontal, AppSpacing.screen)
-            .padding(.top, AppSpacing.sm)
-            .padding(.bottom, AppSpacing.lg)
-            .frame(maxWidth: 460)
-            .frame(maxWidth: .infinity)
+            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
         }
-        .presentationDetents([.fraction(0.6), .medium])
+        .frame(minWidth: viewport.isWide ? viewport.modalWidth : 0,
+               minHeight: viewport.isWide ? min(720, viewport.size.height * 0.76) : 0)
+        .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .onAppear {
+            guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) { bob = -9 }
         }
     }
 
     /// The `dailygift` artwork if present; the smiling-balloon mascot otherwise.
     @ViewBuilder private var giftHero: some View {
+        let heroHeight: CGFloat = viewport.isWide ? 250 : (viewport.isCompact ? 180 : 220)
         ZStack {
             Circle()
                 .fill(RadialGradient(colors: [AppColors.gold.opacity(0.3), .clear],
                                      center: .center, startRadius: 2, endRadius: 130))
-                .frame(width: 240, height: 240)
+                .frame(width: heroHeight, height: heroHeight)
                 .blur(radius: 12)
             if let ui = UIImage(named: "dailygift") {
-                Image(uiImage: ui).resizable().scaledToFit().frame(height: 150).offset(y: bob)
+                Image(uiImage: ui).resizable().scaledToFit()
+                    .frame(maxWidth: heroHeight, maxHeight: heroHeight * 0.88)
+                    .offset(y: bob)
             } else {
-                SmilingBalloon().frame(width: 84, height: 104).offset(y: bob)
+                SmilingBalloon()
+                    .frame(width: heroHeight * 0.46, height: heroHeight * 0.58)
+                    .offset(y: bob)
             }
         }
-        .frame(height: 160)
+        .frame(height: heroHeight)
+        .padding(.top, viewport.isWide ? 12 : 4)
     }
 }
 

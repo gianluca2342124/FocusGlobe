@@ -107,9 +107,6 @@ struct FocusGridWidgetView: View {
                         .font(.system(size: 10.5, weight: .bold, design: .default))
                         .foregroundStyle(WTheme.inkSoft)
                     Spacer()
-                    Text("FocusGlobe")
-                        .font(.system(size: 10.5, weight: .heavy, design: .default))
-                        .foregroundStyle(WTheme.teal)
                 }
             }
             .padding(14)

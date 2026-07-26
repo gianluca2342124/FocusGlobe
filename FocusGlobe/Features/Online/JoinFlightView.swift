@@ -31,7 +31,14 @@ struct JoinFlightView: View {
 
     var body: some View {
         ZStack {
-            SkyFlightSceneView(sky: sky, elapsed: { 30 }, animated: false).ignoresSafeArea()
+            SkyFlightSceneView(
+                sky: sky,
+                elapsed: { 30 },
+                animated: false,
+                presentationMode: .socialPreview,
+                renderQuality: .still
+            )
+            .ignoresSafeArea()
             LinearGradient(colors: [.black.opacity(0.55), .black.opacity(0.3), .black.opacity(0.65)],
                            startPoint: .top, endPoint: .bottom).ignoresSafeArea()
             VStack(spacing: AppSpacing.lg) {

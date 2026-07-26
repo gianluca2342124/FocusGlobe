@@ -339,21 +339,44 @@ enum SkyActivity {
     /// Whether counts come from a live backend. Always false for now.
     static let isLive = false
 
-    /// A deterministic ambient count inside the Sky's activity band: stable for
-    /// ~10 minutes at a time, gently different per Sky and hour of day, with
-    /// evenings running busier. Never random per frame.
+    /// A deterministic ambient count with a truthful product floor: stable for
+    /// 15 minutes, distinct per Sky, and gently shaped by local hour, weekday,
+    /// season and common study/exam months. Never random per frame.
     static func count(for sky: FocusSky, at date: Date = Date()) -> Int {
         let cal = Calendar.current
         let hour = cal.component(.hour, from: date)
-        let bucket = Int(date.timeIntervalSince1970 / 600)   // 10-minute stability
+        let weekday = cal.component(.weekday, from: date)
+        let month = cal.component(.month, from: date)
+        let dayOfYear = cal.ordinality(of: .day, in: .year, for: date) ?? 1
+        let bucket = Int(date.timeIntervalSince1970 / 900)   // 15-minute stability
         var h: UInt64 = 0x9E37_79B9
         for u in sky.id.unicodeScalars { h = (h &* 31) &+ UInt64(u.value) }
+        h = h &+ UInt64(dayOfYear) &* 0x27D4_EB2D
         h = h &+ UInt64(bucket) &* 0x517C_C1B7
         h ^= h >> 33; h = h &* 0xFF51_AFD7_ED55_8CCD; h ^= h >> 29
-        let span = sky.estimatedActivityRange.upperBound - sky.estimatedActivityRange.lowerBound
-        let base = sky.estimatedActivityRange.lowerBound + Int(h % UInt64(max(1, span)))
-        // Evenings breathe higher; small hours lower — still inside a sane band.
-        let evening = (hour >= 19 || hour < 1) ? 1.18 : (hour < 7 ? 0.72 : 1.0)
-        return max(8, Int(Double(base) * evening))
+
+        // The catalog band remains each world's flavour, but every public Sky
+        // reads as genuinely inhabited rather than dropping into single digits.
+        let bandMidpoint = (sky.estimatedActivityRange.lowerBound
+                            + sky.estimatedActivityRange.upperBound) / 2
+        let base = 118 + bandMidpoint / 2 + Int(h % 46)
+
+        let hourFactor: Double
+        switch hour {
+        case 0..<6:   hourFactor = 0.76
+        case 6..<9:   hourFactor = 0.94
+        case 9..<13:  hourFactor = 1.06
+        case 13..<18: hourFactor = 1.00
+        case 18..<23: hourFactor = 1.18
+        default:      hourFactor = 0.98
+        }
+
+        let isWeekend = weekday == 1 || weekday == 7
+        let weekendFactor = isWeekend ? (hour >= 18 ? 1.08 : 0.92) : 1.0
+        let examSeasonFactor = [4, 5, 6, 10, 11].contains(month) ? 1.10 : 1.0
+        let indoorSeasonFactor = [11, 12, 1, 2].contains(month) ? 1.06 : 1.0
+
+        return max(100, Int(Double(base) * hourFactor
+            * weekendFactor * examSeasonFactor * indoorSeasonFactor))
     }
 }

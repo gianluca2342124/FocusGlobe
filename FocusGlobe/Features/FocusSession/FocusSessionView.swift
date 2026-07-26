@@ -413,9 +413,9 @@ struct FocusSessionView: View {
         }
         // The flight's OWN paywall (Pause / Invite) — presented from inside the
         // flight cover so it can't collapse it (never via the router coordinator).
-        .sheet(item: $journeyPaywall) { pw in
+        .fullScreenCover(item: $journeyPaywall) { pw in
             PaywallView(context: pw.context)
-                .environmentObject(appModel).environmentObject(router).paywallMaxWidth()
+                .environmentObject(appModel).environmentObject(router).focusResponsiveLayout()
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
@@ -611,19 +611,15 @@ struct FocusSessionView: View {
         VStack {
             HStack {
                 Spacer()
-                Button {
+                AppIconButton(
+                    systemImage: "eye.fill",
+                    size: Layout.pad(40, 48),
+                    tint: .white,
+                    accessibilityLabel: "Show flight controls"
+                ) {
                     appModel.tapFeedback()
                     withAnimation(.easeInOut(duration: 0.3)) { cleanMode = false }
-                } label: {
-                    Image(systemName: "eye.fill")
-                        .font(.system(size: Layout.pad(15, 18), weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.85))
-                        .frame(width: Layout.pad(40, 48), height: Layout.pad(40, 48))
-                        .background(Circle().fill(.ultraThinMaterial))
-                        .overlay(Circle().strokeBorder(.white.opacity(0.14), lineWidth: 1))
                 }
-                .buttonStyle(SoftPressStyle())
-                .accessibilityLabel("Show flight controls")
             }
             Spacer()
             TimelineView(.periodic(from: .now, by: 0.5)) { ctx in
@@ -829,7 +825,11 @@ private struct HoldToGiveUpButton: View {
 
     var body: some View {
         ZStack(alignment: .leading) {
-            Capsule().fill(.white.opacity(0.12))
+            FocusLiquidGlassSurface(
+                shape: Capsule(),
+                tint: Color.black,
+                tintOpacity: 0.12
+            )
             // The fill sweeps across as the hold completes.
             Capsule().fill(Color(hex: 0xE9654B).opacity(0.55))
                 .frame(width: width * progress)
@@ -850,7 +850,6 @@ private struct HoldToGiveUpButton: View {
         }
         .frame(width: width, height: size, alignment: .leading)
         .clipShape(Capsule())
-        .overlay(Capsule().strokeBorder(.white.opacity(0.14), lineWidth: 1))
         .scaleEffect(holding ? 0.97 : 1)
         .animation(.spring(response: 0.28, dampingFraction: 0.8), value: holding)
         .onLongPressGesture(minimumDuration: holdDuration, maximumDistance: 60) {
