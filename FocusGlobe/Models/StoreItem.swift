@@ -90,13 +90,15 @@ struct StoreItem: Identifiable, Hashable {
                   kind: .cabinDecoration, price: 460, isPremium: false, systemImage: "laptopcomputer", tintHex: 0x9AA7B4, imageName: "closed-laptop"),
         StoreItem(id: "sleeping-cat", name: "Sleeping Cat", subtitle: "A calm co-pilot",
                   kind: .cabinDecoration, price: 560, isPremium: false, systemImage: "cat.fill", tintHex: 0xD8C0A0, imageName: "sleeping-cat"),
-        // Cabin companions with dedicated art (Tiny Fern → `TinyFern`,
-        // Ceramic Teapot → `CeramicTeapot`; the renderer falls back to a tinted
-        // procedural piece until those Image Sets ship).
+        // Cabin companions. `imageName` is intentionally nil so `bestAssetName`
+        // resolves their REAL shipped art (`StoreItem_cabin-plant` /
+        // `StoreItem_cabin-teapot`). Pointing these at not-yet-shipped names
+        // orphaned that artwork and silently dropped both items to the procedural
+        // fallback — never name an asset here before it exists in the catalog.
         StoreItem(id: "cabin-plant", name: "Tiny Fern", subtitle: "A cabin companion",
-                  kind: .cabinDecoration, price: 90, isPremium: false, systemImage: "leaf.fill", tintHex: 0x6FD8B8, imageName: "TinyFern"),
+                  kind: .cabinDecoration, price: 90, isPremium: false, systemImage: "leaf.fill", tintHex: 0x6FD8B8),
         StoreItem(id: "cabin-teapot", name: "Ceramic Teapot", subtitle: "For longer flights",
-                  kind: .cabinDecoration, price: 130, isPremium: false, systemImage: "mug.fill", tintHex: 0xE9C07A, imageName: "CeramicTeapot"),
+                  kind: .cabinDecoration, price: 130, isPremium: false, systemImage: "mug.fill", tintHex: 0xE9C07A),
     ]
 
     static func byID(_ id: String) -> StoreItem? { all.first { $0.id == id } }

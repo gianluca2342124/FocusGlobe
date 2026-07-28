@@ -161,9 +161,9 @@ struct FocusSky: Identifiable, Hashable {
     func orientedArtworkAssetName(landscape: Bool) -> String {
         "\(artworkAssetName)_\(landscape ? "Landscape" : "Portrait")"
     }
-    /// The take-off ground plate (`Sky_RainyTokyo_Ground`) — shown only during
-    /// lift-off, never tiled or repeated.
-    var groundAssetName: String { "Sky_\(assetBaseName)_Ground" }
+    // NOTE: the old `groundAssetName` (`Sky_<Base>_Ground`) take-off plate was
+    // removed along with its art — the integrated scenery has been the ground
+    // since build 60 and the property had no remaining call sites.
 
     /// The ritual/backdrop scene this Sky maps to (never nil — falls back gold).
     var scene: SkyScene { SkyScene.all.first { $0.id == visualPresetID } ?? .goldenHour }
