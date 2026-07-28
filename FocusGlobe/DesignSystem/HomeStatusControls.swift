@@ -78,6 +78,11 @@ struct CoinSpinCircleButton: View {
     var size: CGFloat = Layout.pad(46, 54)
     let action: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Drives the occasional attention cue. False keeps the control perfectly at
+    /// rest — there is deliberately no continuous scale, opacity or glow pulse.
+    @State private var animating = false
+
     var body: some View {
         StatusCircleButton(size: size,
                            ring: AppColors.gold.opacity(0.30),
@@ -90,19 +95,41 @@ struct CoinSpinCircleButton: View {
                 .scaledToFit()
                 .frame(width: Layout.pad(30, 34), height: Layout.pad(30, 34))
         }
-        .phaseAnimator([0, 1, 2, 3, 4]) { content, phase in
-            content.rotationEffect(.degrees(spinShake(phase)))
-        } animation: { phase in
-            phase == 0 ? .easeInOut(duration: 3.0) : .spring(response: 0.16, dampingFraction: 0.4)
+        // At rest by default; one brief tilt roughly every 8 s, then fully still
+        // again. The long phase-0 hold IS the rest — the shake phases are a
+        // fraction of a second. Never a heartbeat.
+        .modifier(OccasionalNudge(active: animating && !reduceMotion))
+        .onAppear { animating = true }
+        .onDisappear { animating = false }   // no work while off screen
+    }
+
+}
+
+/// A rare, restrained attention cue: a long completely-still hold followed by one
+/// short tilt, then rest again. Applied only when `active` — so Reduce Motion and
+/// an off-screen control do no animation work at all.
+private struct OccasionalNudge: ViewModifier {
+    let active: Bool
+
+    func body(content: Content) -> some View {
+        if active {
+            content.phaseAnimator([0, 1, 2, 3]) { view, phase in
+                view.rotationEffect(.degrees(tilt(phase)))
+            } animation: { phase in
+                // Phase 0 is the rest: ~8 s of no visible movement.
+                phase == 0 ? .easeInOut(duration: 8.0)
+                           : .spring(response: 0.18, dampingFraction: 0.45)
+            }
+        } else {
+            content
         }
     }
 
-    private func spinShake(_ p: Int) -> Double {
+    private func tilt(_ p: Int) -> Double {
         switch p {
-        case 1: return -6
-        case 2: return 6
-        case 3: return -4
-        case 4: return 4
+        case 1: return -5
+        case 2: return 5
+        case 3: return -2
         default: return 0
         }
     }
