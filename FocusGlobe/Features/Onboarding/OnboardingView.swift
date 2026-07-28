@@ -774,65 +774,91 @@ struct OnboardingView: View {
             maximumCardWidth: 230,
             speed: 10
         ) { preview, prominence in
+            premiumPreviewCard(preview, prominence: prominence)
+        }
+        .frame(height: Layout.pad(170, 190))
+    }
+
+    /// A Sky reads as a place (full landscape card); a balloon skin reads as an
+    /// object (isolated artwork, no scenery, no card) — never a balloon stuffed
+    /// inside a Sky.
+    @ViewBuilder
+    private func premiumPreviewCard(_ preview: OnboardingPremiumPreview,
+                                    prominence: Double) -> some View {
+        switch preview {
+        case .sky(let sky):
             ZStack {
                 SkyFlightSceneView(
-                    sky: preview.sky,
+                    sky: sky,
                     elapsed: { 24 },
                     animated: false,
                     seed: 0x4F4E424F415244,
                     presentationMode: .paywall,
                     renderQuality: .still
                 )
-                LinearGradient(
-                    colors: [.clear, .black.opacity(0.42)],
-                    startPoint: .center,
-                    endPoint: .bottom
-                )
-                BalloonView(
-                    height: 66 + 12 * prominence,
-                    showBurner: true,
-                    showGlow: prominence > 0.5,
-                    skin: preview.skin
-                )
-                Text(preview.sky.name)
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Capsule().fill(.black.opacity(0.34)))
-                    .frame(maxHeight: .infinity, alignment: .bottom)
-                    .padding(.bottom, 9)
+                LinearGradient(colors: [.clear, .black.opacity(0.42)],
+                               startPoint: .center, endPoint: .bottom)
+                previewCaption(sky.name)
             }
             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .strokeBorder(.white.opacity(0.10 + prominence * 0.10), lineWidth: 1)
             )
+
+        case .skin(let skin):
+            // Isolated balloon: transparent artwork floating on the page, lifted
+            // gently as it reaches centre. No landscape, no rectangle, no border.
+            ZStack {
+                BalloonView(height: 104 + 16 * prominence,
+                            showBurner: true,
+                            showGlow: prominence > 0.5,
+                            skin: skin)
+                    .offset(y: -6 - 4 * prominence)
+                    .shadow(color: .black.opacity(0.28), radius: 14, y: 9)
+                previewCaption(skin.name)
+            }
         }
-        .frame(height: Layout.pad(170, 190))
     }
 
+    private func previewCaption(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 13, weight: .bold))
+            .foregroundStyle(.white)
+            .lineLimit(1).minimumScaleFactor(0.8)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(Capsule().fill(.black.opacity(0.34)))
+            .frame(maxHeight: .infinity, alignment: .bottom)
+            .padding(.bottom, 9)
+    }
+
+    /// The showcase reel: the four PRO-exclusive Skies interleaved with real PRO
+    /// balloon skins, so it alternates Sky · Balloon · Sky · Balloon. Both lists
+    /// come from the canonical models — never a hand-maintained duplicate.
     private var premiumPreviewItems: [OnboardingPremiumPreview] {
-        let skies = FocusSky.all.filter { !$0.isDefaultFree }
-        let skinIDs = ["king", "galaxy", "moon", "cloudy"]
-        return Array(skies.prefix(7)).enumerated().map { index, sky in
-            OnboardingPremiumPreview(
-                sky: sky,
-                skin: BalloonSkin.skin(id: skinIDs[index % skinIDs.count])
-            )
+        let skies = FocusSky.proExclusive
+        let skins = BalloonSkin.all.filter(\.isPremium)
+        guard !skies.isEmpty || !skins.isEmpty else { return [] }
+        var reel: [OnboardingPremiumPreview] = []
+        for index in 0..<max(skies.count, skins.count) {
+            if index < skies.count { reel.append(.sky(skies[index])) }
+            if index < skins.count { reel.append(.skin(skins[index])) }
         }
+        return reel
     }
 
     private var premiumBenefits: some View {
         VStack(spacing: AppSpacing.xs) {
-            premiumBenefit("moon.stars.fill", "All premium Skies")
-            premiumBenefit("circle.circle.fill", "Exclusive PRO balloon skins")
-            premiumBenefit("person.2.fill", "Online mode")
-            premiumBenefit("infinity", "Unlimited time ∞")
-            premiumBenefit("bolt.fill", "2x Coins on every flight")
-            premiumBenefit("hand.thumbsup.fill", "No ads, ever")
-            premiumBenefit("heart.fill", "Support FocusGlobe")
+            // Fixed order, consistent Title Case. "Support FocusGlobe" is
+            // deliberately absent — it is a sentiment, not a benefit.
+            premiumBenefit("moon.stars.fill", "Exclusive Skies")
+            premiumBenefit("circle.circle.fill", "Exclusive Skins & Items")
+            premiumBenefit("square.grid.2x2.fill", "Exclusive Widgets")
+            premiumBenefit("person.2.fill", "Online Mode")
+            premiumBenefit("infinity", "Unlimited Time ∞")
+            premiumBenefit("bolt.fill", "2x Coins on Every Flight")
+            premiumBenefit("hand.thumbsup.fill", "No Ads, Ever")
         }
     }
 
@@ -942,11 +968,27 @@ struct OnboardingView: View {
     }
 }
 
-private struct OnboardingPremiumPreview: Identifiable {
-    let sky: FocusSky
-    let skin: BalloonSkin
+/// One entry in the onboarding PRO showcase. Skies and balloon skins are two
+/// DIFFERENT kinds of thing and are presented differently: a Sky gets a full
+/// landscape card, a balloon skin floats free as isolated artwork with no forced
+/// scenery behind it. They alternate so the reel reads as "worlds *and* balloons".
+private enum OnboardingPremiumPreview: Identifiable {
+    case sky(FocusSky)
+    case skin(BalloonSkin)
 
-    var id: String { "\(sky.id).\(skin.id)" }
+    var id: String {
+        switch self {
+        case .sky(let s):  return "sky.\(s.id)"
+        case .skin(let k): return "skin.\(k.id)"
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .sky(let s):  return s.name
+        case .skin(let k): return k.name
+        }
+    }
 }
 
 /// A large soundscape "cover" for the onboarding carousel — the bundled

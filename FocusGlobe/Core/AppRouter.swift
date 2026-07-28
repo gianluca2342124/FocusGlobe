@@ -231,7 +231,7 @@ enum AppModal: Identifiable {
 /// tap never shows Sky imagery (and vice versa).
 enum PaywallContext: Equatable {
     case general          // crown / broad entry: "Upgrade to FocusGlobe PRO"
-    case sky              // locked Sky:          "Unlock All Skies with PRO"
+    case sky              // locked Sky:          "Unlock Exclusive Skies with PRO"
     case balloonSkin      // premium skin:        "Unlock Exclusive Balloons with PRO"
     case interior         // premium cabin item:  "Unlock Premium Cabin Items with PRO"
     case sound            // locked sound:        "Unlock Every Focus Sound with PRO"
@@ -262,8 +262,8 @@ enum PaywallContext: Equatable {
 
     var supportingCopy: String {
         switch self {
-        case .general: return "Every Sky, every premium detail, and every way to focus."
-        case .sky: return "Enter the complete collection of living FocusGlobe worlds."
+        case .general: return "Exclusive Skies, premium collectibles, and every way to focus."
+        case .sky: return "Fly the Skies reserved for FocusGlobe PRO members."
         case .balloonSkin: return "Choose an iconic balloon that feels unmistakably yours."
         case .interior: return "Turn the cabin into a calm space built around you."
         case .sound: return "Unlock the complete sound collection for deeper sessions."
@@ -343,7 +343,7 @@ enum PaywallContext: Equatable {
         switch self {
         case .online, .invite:       return "Online & Friends"
         case .infinite:              return "Unlimited Time  ∞"
-        case .sky:                   return "Every Sky"
+        case .sky:                   return "Exclusive Skies"
         case .balloonSkin, .interior:return "Exclusive Skins & Items"
         case .noAds:                return "No Ads"
         case .general, .sound, .widget, .rewards, .pause: return nil

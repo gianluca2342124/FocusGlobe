@@ -201,13 +201,11 @@ struct PaywallView: View {
     }
 
     private var purchaseFooter: some View {
-        VStack(spacing: 7) {
-            if selectedKind == .annual {
-                Label("No charge today", systemImage: "checkmark.circle.fill")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(ProBrand.c2)
-            }
-
+        // No "No charge today" badge: the trial timeline above already states the
+        // billing story, and the badge is deliberately NOT replaced by another one.
+        // Slightly looser spacing keeps the CTA and legal text from crowding the
+        // bottom edge on short screens.
+        VStack(spacing: 10) {
             Button { purchase() } label: {
                 ZStack {
                     if subs.isPurchasing {
@@ -405,7 +403,9 @@ struct PaywallView: View {
 
     private var purchaseButtonTitle: String {
         guard let kind = effectiveKind else { return "Products unavailable" }
-        return kind == .annual ? "Start 7 days free trial" : "Continue with Monthly"
+        // Monthly is exactly "Continue" — never "Continue with Monthly" or any
+        // other extended wording.
+        return kind == .annual ? "Start 7 days free trial" : "Continue"
     }
 
     private var trialDisclosure: String {
@@ -576,9 +576,12 @@ private struct PaywallSkyCarousel: View {
     @Binding var selectedIndex: Int
     @EnvironmentObject private var appModel: AppModel
 
+    /// ONLY the four PRO-exclusive Skies may be promoted here — a progression Sky
+    /// (Fiji, Northern Aurora, Deep Space) is not something PRO buys, so showing
+    /// it would be a false promise. Single source of truth: `FocusSky.proExclusive`.
     private var skies: [FocusSky] {
-        let lockedWorlds = FocusSky.all.filter { !$0.isDefaultFree }
-        return lockedWorlds.isEmpty ? FocusSky.all : lockedWorlds
+        let exclusive = FocusSky.proExclusive
+        return exclusive.isEmpty ? FocusSky.all.filter { !$0.isDefaultFree } : exclusive
     }
 
     var body: some View {
@@ -689,7 +692,7 @@ struct PaywallComparisonTable: View {
         "No Ads",
         "Online & Friends",
         "Unlimited Time  ∞",
-        "Every Sky",
+        "Exclusive Skies",
         "Exclusive Skins & Items",
     ]
 

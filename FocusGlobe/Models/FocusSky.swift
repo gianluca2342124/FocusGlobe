@@ -74,6 +74,25 @@ struct FocusSky: Identifiable, Hashable {
     var isDefaultFree: Bool { if case .free = unlockRequirement { return true }; return false }
     /// "Premium-gated" in the loose sense: anything that isn't the free Sky.
     var isPremium: Bool { !isDefaultFree }
+
+    /// **The ONE definition of which Skies FocusGlobe PRO unlocks.**
+    ///
+    /// PRO unlocks exactly these four — Kyoto Lantern Night, Rainy Tokyo, Swiss
+    /// Alps and Starfall Nebula. Every other Sky keeps its own independent
+    /// progression path for PRO members too (Deep Space is deliberately NOT a PRO
+    /// unlock). Never duplicate this list inside a screen: the paywall showcase,
+    /// the onboarding carousel, the Store and every entitlement check all read
+    /// `FocusSky.proExclusive` / `isProExclusive` so there is a single truth.
+    var isProExclusive: Bool {
+        switch id {
+        case "kyoto-lanterns", "rainy-tokyo", "swiss-alps", "galaxy-drift": return true
+        default: return false
+        }
+    }
+
+    /// The four PRO-exclusive Skies, in presentation order — the ONLY list any
+    /// promotional surface (paywall carousel, onboarding showcase) may show.
+    static var proExclusive: [FocusSky] { all.filter(\.isProExclusive) }
     var requiresPremiumOrInvites: Bool { !isDefaultFree }
 
     /// The invite count this Sky needs on its free path (nil if not invite-based).
@@ -307,12 +326,17 @@ enum SkyUnlock {
         // `unlockedSkyIDs`), so a later change to the requirement — or a dropped
         // streak — never re-locks a Sky the pilot already reached.
         if unlockedSkyIDs.contains(sky.id) { return true }
+        // FocusGlobe PRO unlocks EXACTLY the four PRO-exclusive Skies. It is NOT a
+        // blanket bypass: a progression Sky (Fiji, Northern Aurora, Deep Space)
+        // still has to be earned, by PRO members too — that is what keeps the
+        // progression meaningful. See `FocusSky.isProExclusive`.
+        if isPro && sky.isProExclusive { return true }
         switch sky.unlockRequirement {
         case .free:                return true
-        case .premium:             return isPro
-        case .invite(let n):       return isPro || invites >= n
-        case .focusMinutes(let n): return isPro || focusMinutes >= n
-        case .streakDays(let n):   return isPro || streakDays >= n
+        case .premium:             return isPro   // PRO-exclusive; handled above
+        case .invite(let n):       return invites >= n
+        case .focusMinutes(let n): return focusMinutes >= n
+        case .streakDays(let n):   return streakDays >= n
         }
     }
 
