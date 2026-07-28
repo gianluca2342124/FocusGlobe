@@ -1465,6 +1465,14 @@ final class AppModel: ObservableObject {
         refreshNotifications()
     }
 
+    /// Explicit onboarding opt-in. Awaiting the system response lets the
+    /// onboarding layer keep its visual guidance aligned with the real prompt.
+    func requestOnboardingNotificationPermission() async {
+        notifications.setEnabled(true)
+        _ = await notifications.requestAuthorization(state: notificationState())
+        refreshNotifications()
+    }
+
     private func persistAll() {
         persistence.save(progress, for: .progress)
         persistence.save(history, for: .history)

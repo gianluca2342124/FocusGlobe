@@ -354,7 +354,7 @@ struct FlightSetupView: View {
 // MARK: - Step 1 · Altitude Dial
 
 /// A refined rotary **Altitude Dial**: drag around the gauge to raise or lower
-/// your flight time, from 1 minute up through 12 hours and then ∞. A huge
+/// your flight time, from 5 minutes up through 12 hours and then ∞. A huge
 /// centre value, ticking haptics at every stop, quick presets and a quiet
 /// symbolic distance preview.
 struct DurationDialView: View {
@@ -368,6 +368,7 @@ struct DurationDialView: View {
 
     @State private var index = 0
     @State private var didInit = false
+    @State private var premiumBoundaryAttemptActive = false
     @Environment(\.horizontalSizeClass) private var hSize
 
     /// Presets. On a compact iPhone width we drop 5 & 15 to keep the row roomy;
@@ -599,31 +600,51 @@ struct DurationDialView: View {
         var rel = deg - 135
         if rel < 0 { rel += 360 }
         let f: Double
-        if rel <= 270 { f = rel / 270 }
-        else if rel <= 315 { f = 1 }         // just past the top → clamp to ∞
-        else { f = 0 }                        // in the bottom gap near the start
+        if rel <= 270 {
+            f = rel / 270
+        } else if rel <= 286 {
+            // Only a deliberate overshoot on the high-duration side reaches
+            // the premium terminal stop. The rest of the inactive lower arc
+            // belongs to the five-minute end and can never open a paywall.
+            f = 1
+        } else {
+            f = 0
+        }
         setIndex(Int((f * Double(DurationScale.count - 1)).rounded()))
     }
 
     private func setIndex(_ newIndex: Int) {
+        let clampedIndex = max(0, min(DurationScale.count - 1, newIndex))
+        let requestedValue = DurationScale.value(at: clampedIndex)
+
         // Infinite is visible on the dial but PRO-locked. Reaching it as a free
         // pilot opens the Infinite paywall and leaves the current selection
         // untouched — the knob never lands on a fake finite value, and never on
-        // ∞ without entitlement. Loading never flashes a paywall.
-        if DurationScale.value(at: newIndex).infinite {
+        // ∞ without entitlement. A continuous drag can request this boundary
+        // many times; one gesture produces at most one purchase prompt.
+        if requestedValue.infinite {
             switch appModel.entitlement {
             case .premium: break
             case .free:
-                appModel.tapFeedback(); onNeedInfinitePaywall(); return
+                guard !premiumBoundaryAttemptActive else { return }
+                premiumBoundaryAttemptActive = true
+                appModel.tapFeedback()
+                onNeedInfinitePaywall()
+                return
             case .loading:
-                appModel.refreshSubscriptionStatus(); return
+                guard !premiumBoundaryAttemptActive else { return }
+                premiumBoundaryAttemptActive = true
+                appModel.refreshSubscriptionStatus()
+                return
             }
+        } else {
+            premiumBoundaryAttemptActive = false
         }
-        guard newIndex != index else { return }
-        index = newIndex
-        let v = DurationScale.value(at: newIndex)
-        minutes = v.minutes
-        infinite = v.infinite
+
+        guard clampedIndex != index else { return }
+        index = clampedIndex
+        minutes = requestedValue.minutes
+        infinite = requestedValue.infinite
         appModel.haptics.tap()
     }
 }

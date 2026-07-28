@@ -52,10 +52,10 @@ struct PaywallView: View {
 
     private var benefitPage: some View {
         VStack(spacing: 0) {
-            paywallHeader(backAction: nil)
+            paywallHeader(backAction: nil, showsClose: true)
 
             ScrollView(showsIndicators: false) {
-                VStack(spacing: viewport.isWide ? 22 : 15) {
+                VStack(spacing: viewport.isWide ? 20 : 13) {
                     FocusGlobePROBrand(size: .compact)
 
                     VStack(spacing: 7) {
@@ -107,13 +107,12 @@ struct PaywallView: View {
                     }
                 } label: {
                     Text("Start 7 days free trial")
-                        .font(.system(size: viewport.isWide ? 20 : 18, weight: .bold))
+                        .font(.system(size: viewport.isWide ? 19 : 17, weight: .bold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
-                        .frame(height: viewport.buttonHeight)
+                        .frame(height: paywallButtonHeight)
                         .background(Capsule().fill(ProBrand.primaryButton))
                         .overlay(Capsule().strokeBorder(.white.opacity(0.16), lineWidth: 1))
-                        .shadow(color: ProBrand.ctaBlue.opacity(0.42), radius: 18, y: 8)
                 }
                 .buttonStyle(SoftPressStyle())
                 .accessibilityHint("Shows trial timing and subscription options. No purchase is made.")
@@ -139,32 +138,20 @@ struct PaywallView: View {
 
     private var trialPage: some View {
         VStack(spacing: 0) {
-            paywallHeader {
+            paywallHeader(backAction: {
                 appModel.tapFeedback()
                 withAnimation(.easeInOut(duration: reduceMotion ? 0 : 0.34)) {
                     page = .benefit
                 }
-            }
+            }, showsClose: false)
 
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: viewport.isWide ? 30 : 22) {
-                    trialTitle
-                    TrialTimeline()
-                        .frame(maxWidth: viewport.isWide ? 620 : 540)
-
-                    VStack(spacing: 10) {
-                        ForEach(Self.offeredPlans) { kind in
-                            planCard(kind)
-                        }
-                    }
-                    .frame(maxWidth: viewport.isWide ? 620 : 540)
+            ViewThatFits(in: .vertical) {
+                trialContent
+                ScrollView(showsIndicators: false) {
+                    trialContent
                 }
-                .frame(maxWidth: viewport.readableContentWidth)
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, viewport.pagePadding)
-                .padding(.bottom, 18)
+                .scrollBounceBehavior(.basedOnSize)
             }
-            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
 
             if appModel.isPro {
                 proState
@@ -174,6 +161,27 @@ struct PaywallView: View {
         }
     }
 
+    private var trialContent: some View {
+        VStack(spacing: viewport.isWide ? 24 : (viewport.isShort ? 13 : 18)) {
+            trialTitle
+
+            TrialTimeline(compact: viewport.isShort || viewport.isCompact)
+                .frame(maxWidth: viewport.isWide ? 620 : 540)
+
+            VStack(spacing: 9) {
+                ForEach(Self.offeredPlans) { kind in
+                    planCard(kind)
+                }
+            }
+            .frame(maxWidth: viewport.isWide ? 620 : 540)
+        }
+        .frame(maxWidth: viewport.readableContentWidth)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, viewport.pagePadding)
+        .padding(.top, viewport.isShort ? 2 : 8)
+        .padding(.bottom, viewport.isShort ? 10 : 16)
+    }
+
     private var trialTitle: some View {
         VStack(spacing: 8) {
             Text("We’ll remind you")
@@ -181,7 +189,7 @@ struct PaywallView: View {
             + Text("\nbefore your trial ends")
         }
         .font(.system(
-            size: viewport.isWide ? 42 : (viewport.isCompact ? 31 : 37),
+            size: viewport.isWide ? 40 : (viewport.isCompact ? 29 : 35),
             weight: .bold
         ))
         .foregroundStyle(.white)
@@ -206,15 +214,14 @@ struct PaywallView: View {
                         ProgressView().tint(.white)
                     } else {
                         Text(purchaseButtonTitle)
-                            .font(.system(size: viewport.isWide ? 20 : 18, weight: .bold))
+                            .font(.system(size: viewport.isWide ? 19 : 17, weight: .bold))
                             .foregroundStyle(.white)
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .frame(height: viewport.buttonHeight)
+                .frame(height: paywallButtonHeight)
                 .background(Capsule().fill(ProBrand.primaryButton))
                 .overlay(Capsule().strokeBorder(.white.opacity(0.16), lineWidth: 1))
-                .shadow(color: ProBrand.ctaBlue.opacity(0.42), radius: 18, y: 8)
                 .opacity(effectiveKind == nil ? 0.5 : 1)
             }
             .buttonStyle(SoftPressStyle())
@@ -292,7 +299,7 @@ struct PaywallView: View {
                     .foregroundStyle(.white)
             }
             .padding(.horizontal, 18)
-            .frame(height: viewport.isWide ? 72 : 64)
+            .frame(height: viewport.isWide ? 66 : (viewport.isShort ? 56 : 60))
             .background(
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .fill(.ultraThinMaterial)
@@ -307,7 +314,6 @@ struct PaywallView: View {
                         lineWidth: selected ? 2 : 1
                     )
             )
-            .shadow(color: selected ? ProBrand.glow.opacity(0.28) : .clear, radius: 14)
         }
         .buttonStyle(SoftPressStyle(scale: 0.99))
         .opacity(unavailable ? 0.42 : 1)
@@ -316,7 +322,10 @@ struct PaywallView: View {
 
     // MARK: - Shared chrome and actions
 
-    private func paywallHeader(backAction: (() -> Void)?) -> some View {
+    private func paywallHeader(
+        backAction: (() -> Void)?,
+        showsClose: Bool
+    ) -> some View {
         HStack {
             if let backAction {
                 AppIconButton(systemImage: "chevron.left", size: viewport.navigationControlSize,
@@ -326,10 +335,15 @@ struct PaywallView: View {
                                   height: viewport.navigationControlSize)
             }
             Spacer()
-            AppIconButton(systemImage: "xmark", size: viewport.navigationControlSize,
-                          tint: .white, accessibilityLabel: "Close") {
-                appModel.tapFeedback()
-                dismiss()
+            if showsClose {
+                AppIconButton(systemImage: "xmark", size: viewport.navigationControlSize,
+                              tint: .white, accessibilityLabel: "Close") {
+                    appModel.tapFeedback()
+                    dismiss()
+                }
+            } else {
+                Color.clear.frame(width: viewport.navigationControlSize,
+                                  height: viewport.navigationControlSize)
             }
         }
         .frame(maxWidth: viewport.isWide ? 1040 : 760)
@@ -396,8 +410,12 @@ struct PaywallView: View {
 
     private var trialDisclosure: String {
         effectiveKind == .annual
-            ? "7 days free, then the selected annual price. Cancel anytime before renewal."
-            : "The selected monthly subscription renews automatically until cancelled."
+            ? "7 days free, then the selected plan. Cancel anytime."
+            : "The selected plan renews automatically. Cancel anytime."
+    }
+
+    private var paywallButtonHeight: CGFloat {
+        viewport.isWide ? 58 : (viewport.isShort ? 50 : 54)
     }
 
     private func syncSelection() {
@@ -441,28 +459,14 @@ private struct PaywallContextHero: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 30, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(RoundedRectangle(cornerRadius: 30, style: .continuous)
-                    .fill(context.accent.opacity(0.08)))
-                .overlay(RoundedRectangle(cornerRadius: 30, style: .continuous)
-                    .strokeBorder(.white.opacity(0.12), lineWidth: 1))
-
-            RadialGradient(
-                colors: [context.accent.opacity(0.25), .clear],
-                center: .center,
-                startRadius: 5,
-                endRadius: viewport.paywallHeroHeight * 0.65
-            )
-
             #if canImport(UIKit)
             if let image = UIImage(named: context.heroAssetName) {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFit()
-                    .padding(viewport.isWide ? 22 : 14)
+                    .padding(viewport.isWide ? 10 : 5)
                     .offset(y: floating ? -5 : 5)
-                    .shadow(color: context.accent.opacity(0.22), radius: 20)
+                    .shadow(color: .black.opacity(0.24), radius: 12, y: 6)
             } else {
                 fallback
             }
@@ -514,13 +518,19 @@ private struct PaywallCollectibleCarousel: View {
         + StoreItem.all.prefix(5).map(PaywallCollectible.item)
 
     var body: some View {
-        PaywallThreeUpCarousel(items: items, selectedIndex: $selectedIndex) { item, centered in
+        FocusContinuousCarousel(
+            items: items,
+            selectedIndex: $selectedIndex,
+            spacing: 12,
+            maximumCardWidth: 330,
+            speed: 13
+        ) { item, prominence in
             VStack(spacing: 8) {
                 collectibleArt(item)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 Text(item.title)
-                    .font(.system(size: centered ? 16 : 13, weight: .bold))
-                    .foregroundStyle(.white.opacity(centered ? 1 : 0.68))
+                    .font(.system(size: prominence > 0.55 ? 16 : 14, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.72 + prominence * 0.28))
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
             }
@@ -529,11 +539,10 @@ private struct PaywallCollectibleCarousel: View {
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
                     .fill(.ultraThinMaterial)
                     .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .fill(ProBrand.glow.opacity(centered ? 0.10 : 0.035)))
+                        .fill(ProBrand.glow.opacity(0.025 + prominence * 0.045)))
             )
             .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .strokeBorder(.white.opacity(centered ? 0.18 : 0.08), lineWidth: 1))
-            .shadow(color: centered ? ProBrand.glow.opacity(0.24) : .clear, radius: 18, y: 8)
+                .strokeBorder(.white.opacity(0.08 + prominence * 0.10), lineWidth: 1))
         }
     }
 
@@ -573,32 +582,38 @@ private struct PaywallSkyCarousel: View {
     }
 
     var body: some View {
-        PaywallThreeUpCarousel(items: skies, selectedIndex: $selectedIndex) { sky, centered in
+        FocusContinuousCarousel(
+            items: skies,
+            selectedIndex: $selectedIndex,
+            spacing: 12,
+            maximumCardWidth: 330,
+            speed: 13
+        ) { sky, prominence in
             ZStack {
                 SkyFlightSceneView(
                     sky: sky,
                     elapsed: { ProcessInfo.processInfo.systemUptime },
-                    animated: centered,
+                    animated: false,
                     seed: 0x50524F,
                     presentationMode: .paywall,
-                    renderQuality: centered ? .reduced : .still
+                    renderQuality: .still
                 )
 
                 LinearGradient(colors: [.clear, .black.opacity(0.46)],
                                startPoint: .center, endPoint: .bottom)
 
                 BalloonView(
-                    height: centered ? 72 : 52,
+                    height: 54 + 18 * prominence,
                     showBurner: true,
-                    showGlow: true,
+                    showGlow: prominence > 0.55,
                     skin: appModel.selectedSkin
                 )
-                .offset(y: centered ? 4 : 10)
+                .offset(y: 10 - 6 * prominence)
 
                 VStack {
                     Spacer()
                     Text(sky.name)
-                        .font(.system(size: centered ? 16 : 13, weight: .bold))
+                        .font(.system(size: prominence > 0.55 ? 16 : 14, weight: .bold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
@@ -607,98 +622,7 @@ private struct PaywallSkyCarousel: View {
             }
             .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .strokeBorder(.white.opacity(centered ? 0.20 : 0.09), lineWidth: 1))
-            .shadow(color: centered ? sky.glowColor.opacity(0.28) : .clear, radius: 18, y: 8)
-        }
-    }
-}
-
-/// A gesture-friendly, circular three-card carousel. It never resets an index:
-/// modulo selection gives a continuous loop, and the auto advance waits after
-/// every drag so it never fights the pilot's hand.
-private struct PaywallThreeUpCarousel<Item: Identifiable, Card: View>: View {
-    let items: [Item]
-    @Binding var selectedIndex: Int
-    @ViewBuilder let card: (Item, Bool) -> Card
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var resumeAutomaticAt = Date.distantPast
-    @State private var dragOffset: CGFloat = 0
-    private let timer = Timer.publish(every: 4.2, on: .main, in: .common).autoconnect()
-
-    var body: some View {
-        GeometryReader { geo in
-            let width = geo.size.width
-            let centerWidth = min(width * 0.58, 390)
-            let sideWidth = min(width * 0.24, 180)
-
-            HStack(spacing: 10) {
-                carouselCard(offset: -1, width: sideWidth, centered: false)
-                carouselCard(offset: 0, width: centerWidth, centered: true)
-                carouselCard(offset: 1, width: sideWidth, centered: false)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .offset(x: dragOffset * 0.22)
-            .contentShape(Rectangle())
-            .gesture(
-                DragGesture(minimumDistance: 10)
-                    .onChanged { value in
-                        resumeAutomaticAt = Date().addingTimeInterval(6)
-                        dragOffset = value.translation.width
-                    }
-                    .onEnded { value in
-                        let direction = value.predictedEndTranslation.width
-                        if abs(direction) > 38 {
-                            advance(direction < 0 ? 1 : -1)
-                        }
-                        withAnimation(.spring(response: 0.36, dampingFraction: 0.84)) {
-                            dragOffset = 0
-                        }
-                    }
-            )
-        }
-        .clipped()
-        .onReceive(timer) { now in
-            guard !reduceMotion, items.count > 1, now >= resumeAutomaticAt else { return }
-            advance(1)
-        }
-        .onAppear {
-            selectedIndex = normalized(selectedIndex)
-            resumeAutomaticAt = Date().addingTimeInterval(2.6)
-        }
-        .accessibilityElement(children: .contain)
-        .accessibilityAdjustableAction { direction in
-            switch direction {
-            case .increment: advance(1)
-            case .decrement: advance(-1)
-            @unknown default: break
-            }
-        }
-    }
-
-    private func carouselCard(offset: Int, width: CGFloat, centered: Bool) -> some View {
-        card(item(offset: offset), centered)
-            .frame(width: width)
-            .scaleEffect(centered ? 1 : 0.82)
-            .opacity(centered ? 1 : 0.56)
-            .blur(radius: centered ? 0 : 0.25)
-            .id("\(selectedIndex).\(offset)")
-            .transition(.opacity.combined(with: .scale(scale: 0.94)))
-    }
-
-    private func item(offset: Int) -> Item {
-        items[normalized(selectedIndex + offset)]
-    }
-
-    private func normalized(_ index: Int) -> Int {
-        guard !items.isEmpty else { return 0 }
-        return ((index % items.count) + items.count) % items.count
-    }
-
-    private func advance(_ delta: Int) {
-        guard items.count > 1 else { return }
-        withAnimation(.easeInOut(duration: reduceMotion ? 0 : 0.55)) {
-            selectedIndex = normalized(selectedIndex + delta)
+                .strokeBorder(.white.opacity(0.09 + prominence * 0.11), lineWidth: 1))
         }
     }
 }
@@ -706,10 +630,12 @@ private struct PaywallThreeUpCarousel<Item: Identifiable, Card: View>: View {
 // MARK: - Trial and comparison
 
 private struct TrialTimeline: View {
+    let compact: Bool
+
     private let steps: [(icon: String, title: String, detail: String, color: Color)] = [
         ("lock.open.fill", "Today", "Unlock all FocusGlobe PRO features.", ProBrand.c1),
         ("bell.fill", "2 days before", "We’ll remind you before your free trial ends.", ProBrand.c2),
-        ("star.fill", "Trial end date", "Your selected subscription begins unless cancelled beforehand.", ProBrand.c4),
+        ("star.fill", "Trial end date", "Your selected plan begins. Cancel anytime.", ProBrand.c4),
     ]
 
     var body: some View {
@@ -723,7 +649,7 @@ private struct TrialTimeline: View {
                                 .font(.system(size: 15, weight: .bold))
                                 .foregroundStyle(.white)
                         }
-                        .frame(width: 42, height: 42)
+                        .frame(width: compact ? 36 : 40, height: compact ? 36 : 40)
 
                         if index < steps.count - 1 {
                             Rectangle()
@@ -732,16 +658,16 @@ private struct TrialTimeline: View {
                                     startPoint: .top,
                                     endPoint: .bottom
                                 ))
-                                .frame(width: 4, height: 52)
+                                .frame(width: 4, height: compact ? 36 : 46)
                         }
                     }
 
-                    VStack(alignment: .leading, spacing: 5) {
+                    VStack(alignment: .leading, spacing: compact ? 3 : 5) {
                         Text(step.title)
-                            .font(.system(size: 20, weight: .bold))
+                            .font(.system(size: compact ? 17 : 19, weight: .bold))
                             .foregroundStyle(.white)
                         Text(step.detail)
-                            .font(.system(size: 15, weight: .regular))
+                            .font(.system(size: compact ? 13 : 14.5, weight: .regular))
                             .foregroundStyle(.white.opacity(0.66))
                             .fixedSize(horizontal: false, vertical: true)
                     }

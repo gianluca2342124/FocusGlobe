@@ -36,6 +36,8 @@ struct OnboardingView: View {
     /// Guards the review request so a double-tap can't fire it twice or race the
     /// transition to the premium page.
     @State private var reviewRequested = false
+    @State private var notificationPromptActive = false
+    @State private var premiumPreviewIndex = 0
     @FocusState private var textFocused: Bool
 
     var body: some View {
@@ -48,6 +50,13 @@ struct OnboardingView: View {
                 }
                 .frame(maxWidth: 560)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+
+            if notificationPromptActive {
+                notificationPromptGuidance
+                    .transition(.opacity)
+                    .allowsHitTesting(false)
+                    .zIndex(20)
             }
         }
         .preferredColorScheme(.dark)
@@ -141,12 +150,23 @@ struct OnboardingView: View {
             Spacer()
             // The hero balloon drifts gently — a magical, alive first impression.
             ZStack {
-                Circle().fill(RadialGradient(colors: [AppColors.gold.opacity(0.3), .clear],
-                                             center: .center, startRadius: 4, endRadius: 170))
-                    .frame(width: 300, height: 300)
+                Ellipse()
+                    .fill(RadialGradient(
+                        colors: [
+                            AppColors.gold.opacity(0.27),
+                            Color(hex: 0x8F7BE8).opacity(0.08),
+                            .clear,
+                        ],
+                        center: UnitPoint(x: 0.48, y: 0.46),
+                        startRadius: 2,
+                        endRadius: 128
+                    ))
+                    .frame(width: 220, height: 270)
+                    .blur(radius: 17)
+                    .rotationEffect(.degrees(-8))
                 introHero
-                    .offset(y: introFloat)
             }
+            .offset(y: introFloat)
             VStack(spacing: AppSpacing.sm) {
                 Text("Your phone becomes\na focus flight.")
                     .font(.system(size: Layout.pad(34, 44), weight: .bold, design: .default))
@@ -540,8 +560,23 @@ struct OnboardingView: View {
                 Rectangle().fill(Color.black.opacity(0.12)).frame(width: 1, height: 46)
                 Button {
                     appModel.tapFeedback()
-                    appModel.setNotificationsEnabled(true)   // the real iOS prompt
-                    advance()
+                    guard !notificationPromptActive else { return }
+                    withAnimation(.easeOut(duration: reduceMotion ? 0 : 0.2)) {
+                        notificationPromptActive = true
+                    }
+                    Task { @MainActor in
+                        // Give SwiftUI one render pass before iOS snapshots the
+                        // presenting hierarchy for its permission alert. Without
+                        // this beat the guidance can be set in state but remain
+                        // absent behind the system sheet.
+                        await Task.yield()
+                        try? await Task.sleep(for: .milliseconds(180))
+                        await appModel.requestOnboardingNotificationPermission()
+                        withAnimation(.easeOut(duration: reduceMotion ? 0 : 0.18)) {
+                            notificationPromptActive = false
+                        }
+                        advance()
+                    }
                 } label: {
                     Text("Allow")
                         .font(.system(size: 16, weight: .semibold))
@@ -554,6 +589,30 @@ struct OnboardingView: View {
         .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color(hex: 0xEDECEF)))
         .shadow(color: .black.opacity(0.4), radius: 24, y: 12)
         .frame(maxWidth: .infinity)
+    }
+
+    /// The real permission prompt belongs to iOS, so this non-interactive cue is
+    /// deliberately light: it points toward the system Allow action and exists
+    /// only while `requestAuthorization` is suspended awaiting the response.
+    private var notificationPromptGuidance: some View {
+        GeometryReader { geometry in
+            VStack(spacing: 3) {
+                Text("👆")
+                    .font(.system(size: 36))
+                Text("Tap Allow to keep gentle reminders")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(Capsule().fill(Color.black.opacity(0.66)))
+            }
+            .position(
+                x: geometry.size.width * 0.68,
+                y: geometry.size.height * 0.68
+            )
+            .accessibilityHidden(true)
+        }
+        .ignoresSafeArea()
     }
 
     /// The REAL FocusGlobe app icon (the `AppLogo` asset) inside the Apple-style
@@ -684,7 +743,6 @@ struct OnboardingView: View {
                             .foregroundStyle(.white.opacity(0.66))
                     }
                     premiumBenefits
-                    premiumSocialProof
                 }
                 .padding(.top, AppSpacing.lg)
                 .padding(.horizontal, 2)
@@ -705,61 +763,74 @@ struct OnboardingView: View {
         }
     }
 
-    /// A branded hero: the premium art if present, else a glowing balloon ringed
-    /// by floating branded chips (coin · sound · Sky).
+    /// A continuously moving window into real PRO worlds. The scene art is a
+    /// still foundation and only the conveyor moves, keeping this first-run
+    /// surface rich without running several living-Sky timelines at once.
     private var premiumHero: some View {
-        ZStack {
-            Circle().fill(RadialGradient(colors: [AppColors.gold.opacity(0.3), .clear],
-                                         center: .center, startRadius: 4, endRadius: 150))
-                .frame(width: 270, height: 200)
-            #if canImport(UIKit)
-            // The golden King balloon (BalloonSkin_King1) via the model mapping
-            // — the premium hero. No PremiumHero_SkiesBundle, no square behind.
-            if let ui = UIImage(named: BalloonSkin.skin(id: "king").assetName) {
-                Image(uiImage: ui).resizable().scaledToFit().frame(maxHeight: 200)
-            } else {
-                proceduralHero
+        FocusContinuousCarousel(
+            items: premiumPreviewItems,
+            selectedIndex: $premiumPreviewIndex,
+            spacing: 10,
+            maximumCardWidth: 230,
+            speed: 10
+        ) { preview, prominence in
+            ZStack {
+                SkyFlightSceneView(
+                    sky: preview.sky,
+                    elapsed: { 24 },
+                    animated: false,
+                    seed: 0x4F4E424F415244,
+                    presentationMode: .paywall,
+                    renderQuality: .still
+                )
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.42)],
+                    startPoint: .center,
+                    endPoint: .bottom
+                )
+                BalloonView(
+                    height: 66 + 12 * prominence,
+                    showBurner: true,
+                    showGlow: prominence > 0.5,
+                    skin: preview.skin
+                )
+                Text(preview.sky.name)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Capsule().fill(.black.opacity(0.34)))
+                    .frame(maxHeight: .infinity, alignment: .bottom)
+                    .padding(.bottom, 9)
             }
-            #else
-            proceduralHero
-            #endif
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .strokeBorder(.white.opacity(0.10 + prominence * 0.10), lineWidth: 1)
+            )
         }
-        .frame(height: 200)
+        .frame(height: Layout.pad(170, 190))
     }
 
-    private var proceduralHero: some View {
-        ZStack {
-            BalloonView(height: 130, showBurner: true, showGlow: true, glow: AppColors.gold.opacity(0.75))
-            heroChip(icon: "crown.fill", tint: AppColors.gold).offset(x: -96, y: -54)
-            heroChipCoin.offset(x: 100, y: -34)
-            heroChip(icon: "music.note", tint: Color(hex: 0x8F7BE8)).offset(x: -104, y: 44)
-            heroChip(icon: "sparkles", tint: Color(hex: 0x54E0A8)).offset(x: 96, y: 56)
+    private var premiumPreviewItems: [OnboardingPremiumPreview] {
+        let skies = FocusSky.all.filter { !$0.isDefaultFree }
+        let skinIDs = ["king", "galaxy", "moon", "cloudy"]
+        return Array(skies.prefix(7)).enumerated().map { index, sky in
+            OnboardingPremiumPreview(
+                sky: sky,
+                skin: BalloonSkin.skin(id: skinIDs[index % skinIDs.count])
+            )
         }
-    }
-
-    private func heroChip(icon: String, tint: Color) -> some View {
-        Image(systemName: icon)
-            .font(.system(size: 15, weight: .bold))
-            .foregroundStyle(.white)
-            .frame(width: 38, height: 38)
-            .background(Circle().fill(tint.opacity(0.9)))
-            .overlay(Circle().strokeBorder(.white.opacity(0.3), lineWidth: 1))
-            .shadow(color: tint.opacity(0.5), radius: 8)
-    }
-
-    private var heroChipCoin: some View {
-        FocusCoinIcon(size: 26)
-            .frame(width: 38, height: 38)
-            .background(Circle().fill(AppColors.gold.opacity(0.22)))
-            .overlay(Circle().strokeBorder(AppColors.gold.opacity(0.5), lineWidth: 1))
     }
 
     private var premiumBenefits: some View {
         VStack(spacing: AppSpacing.xs) {
             premiumBenefit("moon.stars.fill", "All premium Skies")
             premiumBenefit("circle.circle.fill", "Exclusive PRO balloon skins")
-            premiumBenefit("person.2.fill", "Fly with friends")
-            premiumBenefit("bolt.fill", "2× Focus Coins on every flight")
+            premiumBenefit("person.2.fill", "Online mode")
+            premiumBenefit("infinity", "Unlimited time ∞")
+            premiumBenefit("bolt.fill", "2x Coins on every flight")
             premiumBenefit("hand.thumbsup.fill", "No ads, ever")
             premiumBenefit("heart.fill", "Support FocusGlobe")
         }
@@ -780,28 +851,8 @@ struct OnboardingView: View {
                 .foregroundStyle(AppColors.gold)
         }
         .padding(.horizontal, AppSpacing.md)
-        .frame(height: 42)
+        .frame(height: 40)
         .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(.white.opacity(0.06)))
-    }
-
-    private var premiumSocialProof: some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 5) {
-                ForEach(0..<5, id: \.self) { _ in
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 15))
-                        .foregroundStyle(AppColors.gold)
-                        .shadow(color: AppColors.gold.opacity(0.5), radius: 5)
-                }
-            }
-            Text("Built for calm focus sessions")
-                .font(AppTypography.caption)
-                .foregroundStyle(.white.opacity(0.75))
-            Text("Cancel anytime")
-                .font(AppTypography.micro)
-                .foregroundStyle(.white.opacity(0.45))
-        }
-        .padding(.top, AppSpacing.xs)
     }
 
     // MARK: Shared scaffolding
@@ -889,6 +940,13 @@ struct OnboardingView: View {
         }
         .buttonStyle(SoftPressStyle(scale: 0.98))
     }
+}
+
+private struct OnboardingPremiumPreview: Identifiable {
+    let sky: FocusSky
+    let skin: BalloonSkin
+
+    var id: String { "\(sky.id).\(skin.id)" }
 }
 
 /// A large soundscape "cover" for the onboarding carousel — the bundled

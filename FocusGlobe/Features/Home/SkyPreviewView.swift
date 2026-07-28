@@ -122,7 +122,9 @@ struct SkyPreviewView: View {
             let count = Int(48 + density * 150)
             for i in 0..<count {
                 let x = CGFloat(rng.unit()) * size.width
-                let y = CGFloat(rng.unit()) * size.height * 0.84
+                let desertCeiling: CGFloat = size.width > size.height ? 0.64 : 0.67
+                let maxY: CGFloat = sky.id == "sahara-night" ? desertCeiling : 0.84
+                let y = CGFloat(rng.unit()) * size.height * maxY
                 let r = CGFloat(0.45 + rng.unit() * 1.7)
                 let u = rng.unit()
                 let pulse = 0.5 + 0.5 * Foundation.sin(t * (0.30 + u * 1.1) + Double(i) * 1.37)

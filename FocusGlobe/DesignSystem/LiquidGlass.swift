@@ -100,6 +100,42 @@ struct FocusLiquidGlassSurface<S: InsettableShape>: View {
     @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
+        substrate
+            // An optical edge, not a visible ring. Increased Contrast
+            // strengthens it without changing the control's footprint.
+            .overlay(
+                shape.strokeBorder(
+                    .white.opacity(contrast == .increased ? 0.20 : 0.075),
+                    lineWidth: contrast == .increased ? 1 : 0.65
+                )
+            )
+            .shadow(color: .black.opacity(0.18), radius: 8, y: 4)
+    }
+
+    @ViewBuilder private var substrate: some View {
+        if #available(iOS 26.0, *), !reduceTransparency {
+            // Use Apple's public Liquid Glass substrate on current systems.
+            // Shape, tint and interaction stay centralized here so feature
+            // views never need version checks or one-off glass recipes.
+            shape
+                .fill(Color.clear)
+                .glassEffect(
+                    .regular
+                        .tint(tint.opacity(tintOpacity))
+                        .interactive(),
+                    in: shape
+                )
+                .overlay {
+                    if active {
+                        shape.fill(.white.opacity(0.07))
+                    }
+                }
+        } else {
+            legacySubstrate
+        }
+    }
+
+    private var legacySubstrate: some View {
         ZStack {
             if reduceTransparency {
                 shape.fill(AppColors.neutralRaised)
@@ -132,15 +168,6 @@ struct FocusLiquidGlassSurface<S: InsettableShape>: View {
             )
             .blendMode(.plusLighter)
         }
-        // An optical edge, not a visible ring. Increased Contrast strengthens it
-        // slightly without changing the control's colour or footprint.
-        .overlay(
-            shape.strokeBorder(
-                .white.opacity(contrast == .increased ? 0.20 : 0.075),
-                lineWidth: contrast == .increased ? 1 : 0.65
-            )
-        )
-        .shadow(color: .black.opacity(0.18), radius: 8, y: 4)
     }
 }
 

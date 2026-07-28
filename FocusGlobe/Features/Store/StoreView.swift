@@ -725,40 +725,39 @@ struct DailyGiftSheet: View {
     var body: some View {
         ZStack {
             AppBackground().ignoresSafeArea()
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: viewport.cardSpacing) {
-                    giftHero
-                    Text("Daily Gift")
-                        .font(.system(size: viewport.modalTitleSize, weight: .heavy, design: .default))
-                        .foregroundStyle(AppColors.textPrimary)
-                    Text("Welcome back — your focus coins are ready.")
-                        .font(.system(size: viewport.bodySize, weight: .medium, design: .default))
-                        .foregroundStyle(AppColors.textSecondary)
-                        .multilineTextAlignment(.center)
-                    HStack(spacing: 10) {
-                        FocusCoinIcon(size: viewport.isWide ? 38 : 32)
-                        Text("+\(AppModel.dailyGiftCoins) Focus Coins")
-                            .font(.system(size: viewport.isWide ? 29 : 24,
-                                          weight: .heavy, design: .default))
-                            .foregroundStyle(AppColors.gold)
-                    }
-                    .padding(.vertical, 6)
-                    AppPrimaryButton(title: "Collect", systemImage: "gift.fill") {
-                        appModel.claimDailyGift()
-                        dismiss()
-                    }
-                    .frame(minHeight: viewport.buttonHeight)
+            VStack(spacing: viewport.isCompact ? 9 : 12) {
+                giftHero
+                Text("Daily Gift")
+                    .font(.system(size: viewport.isWide ? 30 : 25,
+                                  weight: .heavy, design: .default))
+                    .foregroundStyle(AppColors.textPrimary)
+                Text("Welcome back — your focus coins are ready.")
+                    .font(.system(size: viewport.isWide ? 17 : 15,
+                                  weight: .medium, design: .default))
+                    .foregroundStyle(AppColors.textSecondary)
+                    .multilineTextAlignment(.center)
+                HStack(spacing: 9) {
+                    FocusCoinIcon(size: viewport.isWide ? 34 : 28)
+                    Text("+\(AppModel.dailyGiftCoins) Focus Coins")
+                        .font(.system(size: viewport.isWide ? 25 : 21,
+                                      weight: .heavy, design: .default))
+                        .foregroundStyle(AppColors.gold)
                 }
-                .padding(viewport.modalPadding)
-                .frame(maxWidth: viewport.modalWidth)
-                .frame(maxWidth: .infinity)
+                AppPrimaryButton(title: "Collect", systemImage: "gift.fill") {
+                    appModel.claimDailyGift()
+                    dismiss()
+                }
+                .frame(minHeight: min(viewport.buttonHeight, 54))
             }
-            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+            .padding(.horizontal, viewport.modalPadding)
+            .padding(.vertical, viewport.isWide ? 24 : 18)
+            .frame(maxWidth: viewport.modalWidth)
+            .frame(maxWidth: .infinity)
         }
-        .frame(minWidth: viewport.isWide ? viewport.modalWidth : 0,
-               minHeight: viewport.isWide ? min(720, viewport.size.height * 0.76) : 0)
-        .presentationDetents([.large])
+        .presentationDetents([.fraction(viewport.isWide ? 0.56 : 0.5)])
         .presentationDragIndicator(.visible)
+        .presentationContentInteraction(.resizes)
+        .interactiveDismissDisabled(true)
         .onAppear {
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) { bob = -9 }
@@ -767,7 +766,7 @@ struct DailyGiftSheet: View {
 
     /// The `dailygift` artwork if present; the smiling-balloon mascot otherwise.
     @ViewBuilder private var giftHero: some View {
-        let heroHeight: CGFloat = viewport.isWide ? 250 : (viewport.isCompact ? 180 : 220)
+        let heroHeight: CGFloat = viewport.isWide ? 154 : (viewport.isCompact ? 106 : 126)
         ZStack {
             Circle()
                 .fill(RadialGradient(colors: [AppColors.gold.opacity(0.3), .clear],

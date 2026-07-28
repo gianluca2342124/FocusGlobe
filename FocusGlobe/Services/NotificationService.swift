@@ -100,13 +100,33 @@ final class NotificationService {
     /// Normal, prompting permission — only for an **explicit** opt-in (the Settings
     /// → Reminders toggle). Requests once, when undecided.
     func requestAuthorizationIfNeeded(state: NotificationState) {
-        guard isEnabled else { return }
         Task { @MainActor [weak self] in
             guard let self else { return }
-            let settings = await self.center.notificationSettings()
-            guard settings.authorizationStatus == .notDetermined else { return }
-            let granted = (try? await self.center.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
-            if granted { self.reschedule(state: state) }
+            _ = await self.requestAuthorization(state: state)
+        }
+    }
+
+    /// Awaitable variant used by onboarding so its guidance remains visible
+    /// for exactly as long as the system permission sheet is onscreen.
+    @discardableResult
+    func requestAuthorization(state: NotificationState) async -> Bool {
+        guard isEnabled else { return false }
+        let settings = await center.notificationSettings()
+
+        switch settings.authorizationStatus {
+        case .notDetermined:
+            let granted = (try? await center.requestAuthorization(
+                options: [.alert, .sound, .badge]
+            )) ?? false
+            if granted { reschedule(state: state) }
+            return granted
+        case .authorized, .provisional, .ephemeral:
+            reschedule(state: state)
+            return true
+        case .denied:
+            return false
+        @unknown default:
+            return false
         }
     }
 

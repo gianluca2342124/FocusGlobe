@@ -278,7 +278,11 @@ struct SkyFlightSceneView: View {
             for i in 0..<count {
                 let x = CGFloat(rng.unit()) * s.width
                 let depth = rng.unit()
-                let y = CGFloat(rng.unit()) * s.height * (depth < 0.28 ? 0.96 : 0.82)
+                let desertCeiling: CGFloat = s.width > s.height ? 0.64 : 0.67
+                let maxY: CGFloat = sky.id == "sahara-night"
+                    ? desertCeiling
+                    : (depth < 0.28 ? 0.96 : 0.82)
+                let y = CGFloat(rng.unit()) * s.height * maxY
                 let u = rng.unit()
                 let pulse = 0.5 + 0.5 * Foundation.sin(t * (0.30 + u * 1.26) + Double(i) * 1.31)
                 let tw = 0.32 + 0.68 * pow(pulse, u > 0.86 ? 2.2 : 1.0)

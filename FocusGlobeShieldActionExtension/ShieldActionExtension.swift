@@ -1,35 +1,36 @@
-//
-//  ShieldActionExtension.swift
-//  FocusGlobeShieldActionExtension
-//
-//  Created by Gianluca Crous Capaccio on 26/06/2026.
-//
-
 import ManagedSettings
 
-// Override the functions below to customize the shield actions used in various situations.
-// The system provides a default response for any functions that your subclass doesn't override.
-// Make sure that your class name matches the NSExtensionPrincipalClass in your Info.plist.
-class ShieldActionExtension: ShieldActionDelegate {
-    override func handle(action: ShieldAction, for application: ApplicationToken, completionHandler: @escaping (ShieldActionResponse) -> Void) {
-        // Handle the action as needed.
-        switch action {
-        case .primaryButtonPressed:
-            completionHandler(.close)
-        case .secondaryButtonPressed:
-            completionHandler(.defer)
-        @unknown default:
-            fatalError()
-        }
+/// Apple does not provide a supported URL-opening hook from a shield action.
+/// Both actions therefore close the blocked app without weakening the active
+/// shield. The primary label still guides the pilot back to FocusGlobe.
+final class ShieldActionExtension: ShieldActionDelegate {
+    override func handle(
+        action: ShieldAction,
+        for application: ApplicationToken,
+        completionHandler: @escaping (ShieldActionResponse) -> Void
+    ) {
+        completionHandler(response(for: action))
     }
-    
-    override func handle(action: ShieldAction, for webDomain: WebDomainToken, completionHandler: @escaping (ShieldActionResponse) -> Void) {
-        // Handle the action as needed.
-        completionHandler(.close)
+
+    override func handle(
+        action: ShieldAction,
+        for webDomain: WebDomainToken,
+        completionHandler: @escaping (ShieldActionResponse) -> Void
+    ) {
+        completionHandler(response(for: action))
     }
-    
-    override func handle(action: ShieldAction, for category: ActivityCategoryToken, completionHandler: @escaping (ShieldActionResponse) -> Void) {
-        // Handle the action as needed.
-        completionHandler(.close)
+
+    override func handle(
+        action: ShieldAction,
+        for category: ActivityCategoryToken,
+        completionHandler: @escaping (ShieldActionResponse) -> Void
+    ) {
+        completionHandler(response(for: action))
+    }
+
+    private func response(for _: ShieldAction) -> ShieldActionResponse {
+        // All current and future shield actions must leave the blocked app
+        // without weakening the active focus restriction.
+        .close
     }
 }

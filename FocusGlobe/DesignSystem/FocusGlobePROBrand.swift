@@ -65,7 +65,7 @@ struct FocusGlobePROBadge: View {
     var visibleHeight: CGFloat = 22
 
     // --- Asset padding calibration (MEASURED from the real asset alpha) --------
-    // FocusGlobePROBadge.PNG is 1536×1024; the visible plaque occupies only
+    // FocusGlobePROBadgeAsset.png is 1536×1024; the visible plaque occupies only
     // x[218…1280] y[336…654] → ~31 % of the canvas height and ~69 % of its width,
     // i.e. huge transparent margins. We render the canvas large enough that the
     // visible plaque equals `visibleHeight`, then pull ALL four transparent

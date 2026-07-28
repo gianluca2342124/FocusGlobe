@@ -10,12 +10,14 @@
 		7A67A3282FEB2A3900C4725D /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = 7A67A3272FEB2A3900C4725D /* GoogleMobileAds */; };
 		7AA02B0E2FFC8A2D00B919DC /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7AA02B0D2FFC8A2D00B919DC /* StoreKit.framework */; };
 		7AAFA3F02FE59EC3002F4953 /* GoogleMaps in Frameworks */ = {isa = PBXBuildFile; productRef = 7AAFA3EF2FE59EC3002F4953 /* GoogleMaps */; };
+		7AB5000000000000000000A3 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 7AB5000000000000000000A2 /* Supabase */; };
 		7AE3B1DC2FEBE265008A59DA /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7AE3B1DB2FEBE265008A59DA /* WidgetKit.framework */; };
 		7AE3B1DE2FEBE265008A59DA /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7AE3B1DD2FEBE265008A59DA /* SwiftUI.framework */; };
 		7AE3B1EF2FEBE268008A59DA /* FocusGlobeWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7AE3B1D92FEBE265008A59DA /* FocusGlobeWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		7AE8FE6E2FE865DB00CD10A8 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 7AE8FE6D2FE865DB00CD10A8 /* RevenueCat */; };
 		7AE8FE702FE865DB00CD10A8 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 7AE8FE6F2FE865DB00CD10A8 /* RevenueCatUI */; };
-		7AB5000000000000000000A3 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 7AB5000000000000000000A2 /* Supabase */; };
+		B1000000000000000000000B /* FocusGlobeShieldConfigurationExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B10000000000000000000001 /* FocusGlobeShieldConfigurationExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C1000000000000000000000B /* FocusGlobeShieldActionExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C10000000000000000000001 /* FocusGlobeShieldActionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -25,6 +27,20 @@
 			proxyType = 1;
 			remoteGlobalIDString = 7AE3B1D82FEBE265008A59DA;
 			remoteInfo = FocusGlobeWidgetsExtension;
+		};
+		B1000000000000000000000C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA0000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B10000000000000000000007;
+			remoteInfo = FocusGlobeShieldConfigurationExtension;
+		};
+		C1000000000000000000000C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA0000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C10000000000000000000007;
+			remoteInfo = FocusGlobeShieldActionExtension;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -36,6 +52,8 @@
 			dstSubfolderSpec = 13;
 			files = (
 				7AE3B1EF2FEBE268008A59DA /* FocusGlobeWidgetsExtension.appex in Embed Foundation Extensions */,
+				B1000000000000000000000B /* FocusGlobeShieldConfigurationExtension.appex in Embed Foundation Extensions */,
+				C1000000000000000000000B /* FocusGlobeShieldActionExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -49,6 +67,8 @@
 		7AE3B1DD2FEBE265008A59DA /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		7AE3B3052FEBE9F3008A59DA /* FocusGlobeWidgetsExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FocusGlobeWidgetsExtension.entitlements; sourceTree = "<group>"; };
 		AA0000000000000000000003 /* FocusGlobe.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FocusGlobe.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B10000000000000000000001 /* FocusGlobeShieldConfigurationExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FocusGlobeShieldConfigurationExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		C10000000000000000000001 /* FocusGlobeShieldActionExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FocusGlobeShieldActionExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -66,11 +86,27 @@
 			);
 			target = 7AE3B1D82FEBE265008A59DA /* FocusGlobeWidgetsExtension */;
 		};
+		B10000000000000000000003 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = B10000000000000000000007 /* FocusGlobeShieldConfigurationExtension */;
+		};
+		C10000000000000000000003 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = C10000000000000000000007 /* FocusGlobeShieldActionExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		7AE3B1DF2FEBE265008A59DA /* FocusGlobeWidgets */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (7AE3B1F42FEBE268008A59DA /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = FocusGlobeWidgets; sourceTree = "<group>"; };
 		AA0000000000000000000005 /* FocusGlobe */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (7A67A32A2FEB2AFB00C4725D /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = FocusGlobe; sourceTree = "<group>"; };
+		B10000000000000000000002 /* FocusGlobeShieldConfigurationExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (B10000000000000000000003 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = FocusGlobeShieldConfigurationExtension; sourceTree = "<group>"; };
+		C10000000000000000000002 /* FocusGlobeShieldActionExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (C10000000000000000000003 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = FocusGlobeShieldActionExtension; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -96,6 +132,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B10000000000000000000005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C10000000000000000000005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -114,6 +164,8 @@
 			children = (
 				AA0000000000000000000003 /* FocusGlobe.app */,
 				7AE3B1D92FEBE265008A59DA /* FocusGlobeWidgetsExtension.appex */,
+				B10000000000000000000001 /* FocusGlobeShieldConfigurationExtension.appex */,
+				C10000000000000000000001 /* FocusGlobeShieldActionExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -124,6 +176,8 @@
 				7AE3B3052FEBE9F3008A59DA /* FocusGlobeWidgetsExtension.entitlements */,
 				AA0000000000000000000005 /* FocusGlobe */,
 				7AE3B1DF2FEBE265008A59DA /* FocusGlobeWidgets */,
+				B10000000000000000000002 /* FocusGlobeShieldConfigurationExtension */,
+				C10000000000000000000002 /* FocusGlobeShieldActionExtension */,
 				7AE3B1DA2FEBE265008A59DA /* Frameworks */,
 				AA0000000000000000000004 /* Products */,
 			);
@@ -167,6 +221,8 @@
 			);
 			dependencies = (
 				7AE3B1EE2FEBE268008A59DA /* PBXTargetDependency */,
+				B1000000000000000000000D /* PBXTargetDependency */,
+				C1000000000000000000000D /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				AA0000000000000000000005 /* FocusGlobe */,
@@ -183,6 +239,50 @@
 			productReference = AA0000000000000000000003 /* FocusGlobe.app */;
 			productType = "com.apple.product-type.application";
 		};
+		B10000000000000000000007 /* FocusGlobeShieldConfigurationExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B1000000000000000000000A /* Build configuration list for PBXNativeTarget "FocusGlobeShieldConfigurationExtension" */;
+			buildPhases = (
+				B10000000000000000000004 /* Sources */,
+				B10000000000000000000005 /* Frameworks */,
+				B10000000000000000000006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				B10000000000000000000002 /* FocusGlobeShieldConfigurationExtension */,
+			);
+			name = FocusGlobeShieldConfigurationExtension;
+			packageProductDependencies = (
+			);
+			productName = FocusGlobeShieldConfigurationExtension;
+			productReference = B10000000000000000000001 /* FocusGlobeShieldConfigurationExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		C10000000000000000000007 /* FocusGlobeShieldActionExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C1000000000000000000000A /* Build configuration list for PBXNativeTarget "FocusGlobeShieldActionExtension" */;
+			buildPhases = (
+				C10000000000000000000004 /* Sources */,
+				C10000000000000000000005 /* Frameworks */,
+				C10000000000000000000006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				C10000000000000000000002 /* FocusGlobeShieldActionExtension */,
+			);
+			name = FocusGlobeShieldActionExtension;
+			packageProductDependencies = (
+			);
+			productName = FocusGlobeShieldActionExtension;
+			productReference = C10000000000000000000001 /* FocusGlobeShieldActionExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -194,6 +294,12 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					7AE3B1D82FEBE265008A59DA = {
+						CreatedOnToolsVersion = 26.5;
+					};
+					B10000000000000000000007 = {
+						CreatedOnToolsVersion = 26.5;
+					};
+					C10000000000000000000007 = {
 						CreatedOnToolsVersion = 26.5;
 					};
 					AA0000000000000000000002 = {
@@ -223,6 +329,8 @@
 			targets = (
 				AA0000000000000000000002 /* FocusGlobe */,
 				7AE3B1D82FEBE265008A59DA /* FocusGlobeWidgetsExtension */,
+				B10000000000000000000007 /* FocusGlobeShieldConfigurationExtension */,
+				C10000000000000000000007 /* FocusGlobeShieldActionExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -236,6 +344,20 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		AA0000000000000000000009 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B10000000000000000000006 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C10000000000000000000006 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -259,6 +381,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B10000000000000000000004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C10000000000000000000004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -266,6 +402,16 @@
 			isa = PBXTargetDependency;
 			target = 7AE3B1D82FEBE265008A59DA /* FocusGlobeWidgetsExtension */;
 			targetProxy = 7AE3B1ED2FEBE268008A59DA /* PBXContainerItemProxy */;
+		};
+		B1000000000000000000000D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B10000000000000000000007 /* FocusGlobeShieldConfigurationExtension */;
+			targetProxy = B1000000000000000000000C /* PBXContainerItemProxy */;
+		};
+		C1000000000000000000000D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C10000000000000000000007 /* FocusGlobeShieldActionExtension */;
+			targetProxy = C1000000000000000000000C /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -329,6 +475,118 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		B10000000000000000000008 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = FocusGlobeShieldConfigurationExtension/FocusGlobeShieldConfigurationExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 64;
+				DEVELOPMENT_TEAM = QN8S876767;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FocusGlobeShieldConfigurationExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.focusglobe.app.ShieldConfiguration;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		B10000000000000000000009 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = FocusGlobeShieldConfigurationExtension/FocusGlobeShieldConfigurationExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 64;
+				DEVELOPMENT_TEAM = QN8S876767;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FocusGlobeShieldConfigurationExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.focusglobe.app.ShieldConfiguration;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		C10000000000000000000008 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = FocusGlobeShieldActionExtension/FocusGlobeShieldActionExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 64;
+				DEVELOPMENT_TEAM = QN8S876767;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FocusGlobeShieldActionExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.focusglobe.app.ShieldAction;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		C10000000000000000000009 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = FocusGlobeShieldActionExtension/FocusGlobeShieldActionExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 64;
+				DEVELOPMENT_TEAM = QN8S876767;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FocusGlobeShieldActionExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.focusglobe.app.ShieldAction;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -552,6 +810,24 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		B1000000000000000000000A /* Build configuration list for PBXNativeTarget "FocusGlobeShieldConfigurationExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B10000000000000000000008 /* Debug */,
+				B10000000000000000000009 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C1000000000000000000000A /* Build configuration list for PBXNativeTarget "FocusGlobeShieldActionExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C10000000000000000000008 /* Debug */,
+				C10000000000000000000009 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		AA000000000000000000000A /* Build configuration list for PBXProject "FocusGlobe" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -608,11 +884,6 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		7AB5000000000000000000A2 /* Supabase */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7AB5000000000000000000A1 /* XCRemoteSwiftPackageReference "supabase-swift" */;
-			productName = Supabase;
-		};
 		7A67A3272FEB2A3900C4725D /* GoogleMobileAds */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 7A67A3262FEB2A3900C4725D /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
@@ -622,6 +893,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7AAFA3EE2FE59EC3002F4953 /* XCRemoteSwiftPackageReference "ios-maps-sdk" */;
 			productName = GoogleMaps;
+		};
+		7AB5000000000000000000A2 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7AB5000000000000000000A1 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
 		};
 		7AE8FE6D2FE865DB00CD10A8 /* RevenueCat */ = {
 			isa = XCSwiftPackageProductDependency;

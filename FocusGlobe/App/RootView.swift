@@ -6,7 +6,6 @@ struct RootView: View {
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var online: FocusOnlineModel
-    @State private var ready = false
 
     var body: some View {
         Group {
@@ -71,14 +70,6 @@ struct RootView: View {
         // Install the supported status-bar container once (reparents the window
         // root on first layout; zero-size, no lifecycle impact).
         .installStatusBarContainer()
-        // The branded in-app loading state covers the very first launch frame,
-        // then crossfades away. No artificial delay — it is only ever briefly up.
-        .overlay {
-            if !ready {
-                LoadingView().transition(.opacity)
-            }
-        }
-        .task { withAnimation(.easeInOut(duration: 0.5)) { ready = true } }
     }
 
     /// Renders the single coordinated modal. Every case injects the environment

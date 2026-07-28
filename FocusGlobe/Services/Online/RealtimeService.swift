@@ -87,7 +87,7 @@ actor RealtimeService {
         skyTasks.forEach { $0.cancel() }
         skyTasks = []
         if let channel = skyChannel {
-            try? await channel.untrack()
+            await channel.untrack()
             await client?.removeChannel(channel)
             skyChannel = nil
         }

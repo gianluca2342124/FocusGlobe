@@ -143,6 +143,8 @@ final class SubscriptionManager: ObservableObject {
     private func rcLog(_ message: String) { NSLog("[RevenueCat] \(message)") }
 
     private var configured = false
+    private var lastOfferingsRequestAt: Date?
+    private var customerInfoRefreshInFlight = false
 
     #if canImport(RevenueCat)
     private var packagesByKind: [PlanKind: Package] = [:]
@@ -186,9 +188,18 @@ final class SubscriptionManager: ObservableObject {
 
     // MARK: Offerings / pricing
 
-    func loadOfferings() {
+    func loadOfferings(force: Bool = false) {
         #if canImport(RevenueCat)
-        guard isAvailable else { return }
+        guard isAvailable, !isLoading else { return }
+        if !force, let lastRequest = lastOfferingsRequestAt {
+            // A loaded StoreKit catalog is stable for the session; an empty or
+            // failed response gets a much shorter retry window. This prevents
+            // configure() and an immediately presented paywall from launching
+            // duplicate RevenueCat requests while still recovering promptly.
+            let freshness: TimeInterval = hasAnyPackage ? 15 * 60 : 60
+            guard Date().timeIntervalSince(lastRequest) >= freshness else { return }
+        }
+        lastOfferingsRequestAt = Date()
         isLoading = true
         Task { @MainActor [weak self] in
             do {
@@ -203,9 +214,12 @@ final class SubscriptionManager: ObservableObject {
 
     func refreshCustomerInfo() {
         #if canImport(RevenueCat)
-        guard isAvailable else { return }
+        guard isAvailable, !customerInfoRefreshInFlight else { return }
+        customerInfoRefreshInFlight = true
         Task { @MainActor [weak self] in
-            if let info = try? await Purchases.shared.customerInfo() { self?.apply(info) }
+            guard let self else { return }
+            defer { self.customerInfoRefreshInFlight = false }
+            if let info = try? await Purchases.shared.customerInfo() { self.apply(info) }
         }
         #endif
     }
