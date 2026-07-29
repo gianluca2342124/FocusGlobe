@@ -110,7 +110,16 @@ struct FocusSessionView: View {
     /// global storage.
     @State private var showPilotLabels = false
     @State private var labelIntroActive = true
+    /// The journey the intro has already played for. Keyed on the flight's OWN
+    /// route id (stable for the whole journey, fresh for a new one), so a child
+    /// layer remounting mid-flight cannot replay the reveal, while a genuinely new
+    /// Online journey does get it. Nothing is persisted between journeys.
+    @State private var labelIntroPlayedFor: String?
     private var pilotLabelsVisible: Bool { showPilotLabels || labelIntroActive }
+
+    /// Remote-balloon presentation lifecycle (arrival / active / departure). Owned
+    /// here, at the journey level, so it lives exactly as long as the flight.
+    @StateObject private var pilotStage = OnlinePilotStage()
     /// Clean mode: hide chrome down to a tiny timer + a reveal button.
     @State private var cleanMode = false
     /// FocusGlobe Online: the real pilot whose (compact) profile sheet is open —
@@ -277,7 +286,18 @@ struct FocusSessionView: View {
                                        // local: other pilots keep flying.
                                        elapsed: { sceneElapsed(at: Date()) },
                                        animated: !reduceMotion,
-                                       realPilots: visibleRealPilots,
+                                       // Staged, not raw: an exiting pilot stays in
+                                       // this list (with its slot) until its
+                                       // animation finishes.
+                                       realPilots: pilotStage.entries.map(\.pilot),
+                                       pilotPhases: Dictionary(
+                                           pilotStage.entries.map { ($0.id, $0.phase) },
+                                           uniquingKeysWith: { a, _ in a }),
+                                       arrivingPilotIDs: pilotStage.recentlyEntered,
+                                       onPilotSettled: { id in
+                                           pilotStage.settle(id)
+                                           pilotStage.clearArrivalLabel(id)
+                                       },
                                        labelsVisible: pilotLabelsVisible,
                                        roomMode: roomBubbleMode,
                                        isPrivate: online.isPrivateFlight,
@@ -289,16 +309,39 @@ struct FocusSessionView: View {
                         .transition(.opacity)
                         .animation(.easeInOut(duration: reduceMotion ? 0 : 0.55),
                                    value: pilotLabelsVisible)
-                        // ONE lifecycle-aware task drives the whole five-second
-                        // intro. `.task` is bound to this view's lifetime, so it is
-                        // cancelled automatically when the journey closes — nothing
-                        // survives the exit. No id, so it runs once per entry and
-                        // cannot be restarted by a remote timer tick or a poll.
-                        .task {
+                        // ONE lifecycle-aware task drives the five-second intro,
+                        // keyed to the JOURNEY (route id) rather than to this view.
+                        // `.task(id:)` re-runs only when that key changes, and the
+                        // `labelIntroPlayedFor` guard means a child layer remounting
+                        // mid-flight is a no-op — while a genuinely new journey,
+                        // with a new route id, does replay it. Bound to the view's
+                        // lifetime, so journey teardown cancels it.
+                        .task(id: vm.route.id) {
+                            guard labelIntroPlayedFor != vm.route.id else { return }
+                            labelIntroPlayedFor = vm.route.id
                             try? await Task.sleep(nanoseconds: 5_000_000_000)
                             guard !Task.isCancelled else { return }
                             labelIntroActive = false
                         }
+                        // Reconcile the networking snapshot into presentation
+                        // entries. Driven by the pilot list, NOT by a timer, so a
+                        // countdown tick never touches the lifecycle.
+                        .onChange(of: visibleRealPilots.map(\.id)) { _, _ in
+                            pilotStage.sync(with: visibleRealPilots)
+                        }
+                        .onAppear { pilotStage.sync(with: visibleRealPilots) }
+                        // A pilot can finish while still present in the snapshot, so
+                        // completion is time-based and needs its own low-frequency
+                        // check. 2 s is far below the exit duration and costs one
+                        // dictionary pass — not a per-pilot timer.
+                        .task(id: vm.route.id) {
+                            while !Task.isCancelled {
+                                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                                guard !Task.isCancelled else { return }
+                                pilotStage.sync(with: visibleRealPilots)
+                            }
+                        }
+                        .onDisappear { pilotStage.teardown() }
                 }
                 balloon
                     .transition(.opacity)

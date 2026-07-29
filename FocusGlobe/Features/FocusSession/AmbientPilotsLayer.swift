@@ -19,6 +19,18 @@ struct AmbientPilotsLayer: View {
     /// the exact same size/behaviour as decorative ones; decorative ambient
     /// pilots then fill the remaining visual capacity so the Sky stays alive.
     var realPilots: [OnlinePilot] = []
+    /// Lifecycle phase per pilot id, from `OnlinePilotStage`. Absent = `.active`,
+    /// so this layer still renders correctly if a caller passes nothing.
+    var pilotPhases: [String: OnlinePilotStage.Phase] = [:]
+    /// Pilots whose arrival label should show briefly even while labels are hidden.
+    var arrivingPilotIDs: Set<String> = []
+    /// Called once a pilot's arrival animation has played, so the stage can move
+    /// it to `.active`. The view never mutates the stage directly.
+    var onPilotSettled: ((String) -> Void)? = nil
+
+    /// Reduce Motion turns arrival/departure into an immediate, stable placement
+    /// (the `animation(.none)` below) rather than a rise — never a hidden balloon.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Private-room participants show their identity bubble persistently; public
     /// ambient pilots reveal it on tap.
     var roomMode: Bool = false
@@ -291,6 +303,46 @@ struct AmbientPilotsLayer: View {
         .fixedSize()
     }
 
+    // MARK: - Arrival / departure transforms
+
+    /// `.entering` starts transparent, `.exiting` fades away, `.active` is 1.
+    private func lifecycleOpacity(for id: String) -> Double {
+        switch pilotPhases[id] {
+        case .entering:  return 0
+        case .exiting:   return 0
+        default:         return 1
+        }
+    }
+
+    /// A restrained 0.94 → 1.0 on arrival; a very subtle shrink on departure.
+    private func lifecycleScale(for id: String) -> CGFloat {
+        switch pilotPhases[id] {
+        case .entering: return 0.94
+        case .exiting:  return 0.92
+        default:        return 1
+        }
+    }
+
+    /// Arrives from slightly below its anchor; a completed pilot continues upward.
+    private func lifecycleRise(for id: String) -> CGFloat {
+        switch pilotPhases[id] {
+        case .entering:                 return 26
+        case .exiting(.completed):      return -46
+        case .exiting(.departed):       return -14
+        default:                        return 0
+        }
+    }
+
+    /// Arrival is brisk; a completed flight drifts a little longer than a plain
+    /// departure. Matches `OnlinePilotStage.Reason.duration` so the entry is
+    /// removed only after its animation has finished.
+    private static func exitDuration(phase: OnlinePilotStage.Phase?) -> Double {
+        switch phase {
+        case .exiting(let reason): return reason.duration
+        default:                   return 0.5
+        }
+    }
+
     /// MM:SS from seconds (used by ambient labels).
     static func clock(_ s: Int) -> String {
         let v = max(0, s)
@@ -335,13 +387,35 @@ struct AmbientPilotsLayer: View {
                     // opacity of 0 rather than being torn down and rebuilt, so
                     // toggling labels never disturbs layout or restarts a timer.
                     // A deliberate tap-to-reveal always wins over the auto-hide.
-                    .opacity((labelsVisible || selectedRealID == pilot.id) ? 1 : 0)
+                    // An arriving pilot's label shows briefly even while labels are
+                    // hidden, so a join is noticed without revealing everyone.
+                    .opacity((labelsVisible || arrivingPilotIDs.contains(pilot.id)
+                              || selectedRealID == pilot.id) ? 1 : 0)
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
             }
             BalloonView(height: size, showBurner: false, showGlow: false,
                         skin: BalloonSkin.skin(id: pilot.balloonSkinID))
         }
+        // Arrival and departure. Both are pure transforms of the settled position,
+        // driven by the stage's phase — no extra timer, no layout change, and the
+        // ambient drift underneath is untouched, so a balloon settles straight into
+        // its existing seeded motion.
+        .opacity(lifecycleOpacity(for: pilot.id))
+        .scaleEffect(lifecycleScale(for: pilot.id))
+        .offset(y: lifecycleRise(for: pilot.id))
+        .animation(reduceMotion ? .none
+                   : .easeOut(duration: Self.exitDuration(phase: pilotPhases[pilot.id])),
+                   value: pilotPhases[pilot.id])
         .position(x: slot.x * W + sway, y: slot.y * H + bob)
+        .task(id: pilot.id) {
+            // Settle exactly once per pilot id. Bound to this view's lifetime, so a
+            // journey teardown cancels it; keyed by the STABLE id, so a poll refresh
+            // or a countdown tick cannot restart the arrival.
+            guard pilotPhases[pilot.id] == .entering else { return }
+            try? await Task.sleep(nanoseconds: 460_000_000)
+            guard !Task.isCancelled else { return }
+            onPilotSettled?(pilot.id)
+        }
         .onTapGesture {
             withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
                 selectedRealID = selectedRealID == pilot.id ? nil : pilot.id
