@@ -138,7 +138,18 @@ final class AppModel: ObservableObject {
                 if kept != owned { loadedProfile.ownedStoreItemIDs = kept; dirty = true }
             }
             if let equipped = loadedProfile.equippedCabinItemIDs {
-                let kept = equipped.intersection(valid)
+                var kept = equipped.intersection(valid)
+                // The Cabin now holds at most `StoreItem.maxEquipped` objects. A
+                // profile saved before that cap could carry more, so trim to the
+                // catalog's first N — deterministic, and it keeps the pieces a
+                // pilot is most likely to recognise rather than an arbitrary
+                // subset of an unordered Set.
+                if kept.count > StoreItem.maxEquipped {
+                    kept = Set(StoreItem.cabinDecorations
+                        .filter { kept.contains($0.id) }
+                        .prefix(StoreItem.maxEquipped)
+                        .map(\.id))
+                }
                 if kept != equipped { loadedProfile.equippedCabinItemIDs = kept; dirty = true }
             }
             if let trail = loadedProfile.equippedTrailID, !valid.contains(trail) {
@@ -657,13 +668,34 @@ final class AppModel: ObservableObject {
         (profile.equippedCabinItemIDs ?? []).contains(item.id)
     }
 
+    /// How many decorations are currently placed in the Cabin.
+    var equippedCabinItemCount: Int { (profile.equippedCabinItemIDs ?? []).count }
+
+    /// True when the Cabin is full, so the Store can say so up front instead of
+    /// letting a tap silently do nothing.
+    var isCabinFull: Bool { equippedCabinItemCount >= StoreItem.maxEquipped }
+
     /// Show/hide an owned decoration inside the Cabin View.
-    func toggleCabinItem(_ item: StoreItem) {
-        guard item.kind == .cabinDecoration, ownsStoreItem(item) else { return }
+    ///
+    /// Returns `false` when the tap was refused because the Cabin already holds
+    /// `StoreItem.maxEquipped` objects — the caller shows the "make room first"
+    /// affordance. Removing is always allowed, so a full Cabin is never stuck.
+    @discardableResult
+    func toggleCabinItem(_ item: StoreItem) -> Bool {
+        guard item.kind == .cabinDecoration, ownsStoreItem(item) else { return false }
         var ids = profile.equippedCabinItemIDs ?? []
-        if ids.contains(item.id) { ids.remove(item.id) } else { ids.insert(item.id) }
+        if ids.contains(item.id) {
+            ids.remove(item.id)
+        } else {
+            guard ids.count < StoreItem.maxEquipped else {
+                haptics.refused()
+                return false
+            }
+            ids.insert(item.id)
+        }
         profile.equippedCabinItemIDs = ids
         haptics.tap()
+        return true
     }
 
     // MARK: - Onboarding completion

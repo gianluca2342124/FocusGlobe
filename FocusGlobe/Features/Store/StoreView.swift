@@ -186,10 +186,20 @@ struct StoreView: View {
     }
 
     /// The cabin's real placed decorations plus the highlighted preview item.
+    ///
+    /// The preview item is guaranteed a place: the Cabin only renders
+    /// `StoreItem.maxEquipped` objects (in catalog order), so simply unioning a
+    /// fifth id could push the very piece being previewed out of the picture.
+    /// One equipped object stands aside instead.
     private var previewCabinIDs: Set<String> {
-        var ids = Set(appModel.profile.equippedCabinItemIDs ?? [])
-        if let previewItemID { ids.insert(previewItemID) }
-        return ids
+        let equipped = Set(appModel.profile.equippedCabinItemIDs ?? [])
+        guard let previewItemID, !equipped.contains(previewItemID) else { return equipped }
+        let room = max(0, StoreItem.maxEquipped - 1)
+        let kept = StoreItem.cabinDecorations
+            .filter { equipped.contains($0.id) }
+            .prefix(room)
+            .map(\.id)
+        return Set(kept).union([previewItemID])
     }
 
     private var storeBalloonHeight: CGFloat {
@@ -256,22 +266,34 @@ struct StoreView: View {
         if let item = previewItem {
             let owned = appModel.ownsStoreItem(item)
             let placed = appModel.isCabinItemEquipped(item)
+            // A full Cabin has to be legible BEFORE the tap. Without this the
+            // "Place" button simply did nothing on the fifth object and the
+            // pilot had no way to know why.
+            let blocked = owned && item.kind == .cabinDecoration && !placed && appModel.isCabinFull
             HStack(spacing: AppSpacing.sm) {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(item.name)
                         .font(.system(size: 17, weight: .bold, design: .default))
                         .foregroundStyle(.white)
                         .lineLimit(1).minimumScaleFactor(0.8)
-                    Text(placed ? "In your cabin" : owned ? "Owned"
+                    Text(blocked
+                         ? "Cabin full — remove one to place this"
+                         : placed ? "In your cabin"
+                         : owned ? "Owned"
                          : item.isPremium ? "FocusGlobe PRO" : "Previewing")
                         .font(.system(size: 12.5, weight: .semibold, design: .default))
-                        .foregroundStyle(placed ? AppColors.success : .white.opacity(0.7))
+                        .foregroundStyle(blocked ? AppColors.gold
+                                         : placed ? AppColors.success : .white.opacity(0.7))
+                        .lineLimit(1).minimumScaleFactor(0.75)
                 }
                 Spacer()
                 if owned, item.kind == .cabinDecoration {
                     goldAction(placed ? "Remove" : "Place") {
-                        appModel.toggleCabinItem(item); appModel.tapFeedback()
+                        appModel.toggleCabinItem(item)
+                        appModel.tapFeedback()
                     }
+                    .opacity(blocked ? 0.45 : 1)
+                    .disabled(blocked)
                 } else if owned {
                     Label("Owned", systemImage: "checkmark.circle.fill")
                         .font(.system(size: 13, weight: .bold, design: .default))

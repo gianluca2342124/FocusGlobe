@@ -37,6 +37,13 @@ final class HapticsService {
         UISelectionFeedbackGenerator().selectionChanged()
     }
 
+    /// "That didn't take" — a refused action the pilot should notice without
+    /// being scolded, e.g. equipping a fifth object into a full Cabin.
+    func refused() {
+        guard isEnabled else { return }
+        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+    }
+
     /// A very soft "bubble pop" — for subtle, premium confirmations such as a
     /// drag grab. Lighter than `tap()`; never used repeatedly per frame.
     func bubble() {

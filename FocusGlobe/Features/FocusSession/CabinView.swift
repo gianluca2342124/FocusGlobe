@@ -138,28 +138,65 @@ struct CabinView: View {
         .frame(width: W, height: H)
     }
 
-    // Equipped decorations placed over the cabin sill (approximate per-asset
-    // anchors; subtle and premium, never overcrowded).
     @ViewBuilder private func assetEquippedProps(W: CGFloat, H: CGFloat, t: Double) -> some View {
-        // Tiny Fern + Ceramic Teapot now flow through the SAME asset renderer as
-        // every other cabin object (they carry `imageName` "TinyFern" /
-        // "CeramicTeapot"), so `newArtProps` places them — with a procedural
-        // fallback until those Image Sets ship. No separate hard-coded blocks.
-        newArtProps(W: W, H: H, t: t)
+        slottedProps(W: W, H: H, t: t)
     }
 
-    /// Renders any equipped Cabin objects that ship as their own PNG (the new
-    /// catalog art), anchored to a real surface by their `cabinPlacement` and
-    /// spread along the sill so they don't stack. Never covers the window or timer.
-    @ViewBuilder private func newArtProps(W: CGFloat, H: CGFloat, t: Double) -> some View {
-        let items = StoreItem.all.filter {
-            equippedItemIDs.contains($0.id) && $0.imageName != nil && $0.cabinPlacement != .none
+    /// The equipped objects the pilot will actually see, in a stable order.
+    ///
+    /// Derived from `StoreItem.cabinDecorations` (catalog order) rather than by
+    /// iterating `equippedItemIDs`, because that is a `Set` and its order is not
+    /// guaranteed between launches — arranging from it would let the cabin
+    /// rearrange itself for no reason. The cap is applied here as well as at the
+    /// equip site, so a profile saved before the cap existed still renders a calm
+    /// interior instead of nine stacked objects.
+    private var visibleItems: [StoreItem] {
+        StoreItem.cabinDecorations
+            .filter { equippedItemIDs.contains($0.id) && $0.slot != nil }
+            .prefix(StoreItem.maxEquipped)
+            .sorted { ($0.slot?.depth ?? 0) < ($1.slot?.depth ?? 0) }
+    }
+
+    /// Places every equipped object from the slot layout table. Nothing here
+    /// knows an item's `id`: an object declares a surface, the surface hands out
+    /// seats, and objects sharing a surface take different seats so they never
+    /// stack. Adding a decoration needs no change to this file.
+    @ViewBuilder private func slottedProps(W: CGFloat, H: CGFloat, t: Double) -> some View {
+        let items = visibleItems
+        ForEach(Array(items.enumerated()), id: \.element.id) { _, item in
+            if let slot = item.slot {
+                let seat = seatIndex(of: item, in: items)
+                let size = W * Self.layout(for: slot).size
+                cabinItemImage(item, t: t)
+                    .frame(width: size, height: size)
+                    .position(x: W * seatX(slot, seat: seat),
+                              y: H * Self.layout(for: slot).y)
+            }
         }
-        ForEach(items, id: \.id) { item in
-            cabinItemImage(item, t: t)
-                .frame(width: W * itemScale(item), height: W * itemScale(item))
-                .position(x: W * anchorX(item, in: items), y: H * anchorY(item))
+    }
+
+    /// Which seat on its own surface this object takes — its index among the
+    /// visible objects sharing that slot.
+    private func seatIndex(of item: StoreItem, in items: [StoreItem]) -> Int {
+        items.filter { $0.slot == item.slot }.firstIndex(of: item) ?? 0
+    }
+
+    /// The one layout table. `y` is the surface's height in the cabin, `size` the
+    /// object's width as a fraction of the cabin, and `seats` the positions along
+    /// that surface — ordered so a single object sits in the most natural spot
+    /// and extra objects spread outward rather than crowding the centre.
+    private static func layout(for slot: CabinSlot) -> (y: CGFloat, size: CGFloat, seats: [CGFloat]) {
+        switch slot {
+        case .wall:  return (0.17, 0.26, [0.50, 0.24, 0.76])
+        case .hook:  return (0.10, 0.12, [0.80, 0.20, 0.62])
+        case .shelf: return (0.52, 0.15, [0.26, 0.74, 0.44, 0.62])
+        case .bench: return (0.70, 0.24, [0.72, 0.28, 0.50])
         }
+    }
+
+    private func seatX(_ slot: CabinSlot, seat: Int) -> CGFloat {
+        let seats = Self.layout(for: slot).seats
+        return seats[seat % seats.count]
     }
 
     /// One cabin object drawn from its real asset — with a graceful procedural
@@ -185,37 +222,6 @@ struct CabinView: View {
         case "cabin-plant":  CabinFern(t: animated ? t : 0)
         case "cabin-teapot": CabinTeapot()
         default:             EmptyView()
-        }
-    }
-
-    private func itemScale(_ item: StoreItem) -> CGFloat {
-        switch item.cabinPlacement {
-        case .wall:     return 0.26
-        case .bench:    return 0.24
-        case .hook:     return 0.12
-        case .tabletop: return 0.15
-        case .none:     return 0
-        }
-    }
-    private func anchorY(_ item: StoreItem) -> CGFloat {
-        switch item.cabinPlacement {
-        case .wall:     return 0.17
-        case .bench:    return 0.70
-        case .hook:     return 0.10
-        case .tabletop: return 0.52
-        case .none:     return 0.5
-        }
-    }
-    private static let tabletopSlots: [CGFloat] = [0.26, 0.44, 0.62, 0.78, 0.36, 0.7]
-    private func anchorX(_ item: StoreItem, in items: [StoreItem]) -> CGFloat {
-        switch item.cabinPlacement {
-        case .wall, .bench: return 0.5
-        case .hook:         return 0.8
-        case .tabletop:
-            let tabletop = items.filter { $0.cabinPlacement == .tabletop }
-            let idx = tabletop.firstIndex(of: item) ?? 0
-            return Self.tabletopSlots[idx % Self.tabletopSlots.count]
-        case .none:         return 0.5
         }
     }
 
@@ -360,20 +366,12 @@ struct CabinView: View {
 
     // MARK: 5b — Placed Store decorations (bought + equipped in the Store)
 
+    /// The procedural interior places objects through the SAME slot system as
+    /// the artwork interior — previously this branch hard-coded Tiny Fern and
+    /// Ceramic Teapot at two fixed points, so every other decoration a pilot
+    /// owned simply did not appear here.
     @ViewBuilder private func equippedProps(W: CGFloat, H: CGFloat, t: Double) -> some View {
-        let sillTopY = H * 0.30 + (H * 0.42) / 2 - 6 - (H * 0.045) / 2
-        // Real Tiny Fern / Ceramic Teapot art when present, else the procedural
-        // piece — the SAME asset-or-fallback path as the asset cabin.
-        if equippedItemIDs.contains("cabin-plant"), let fern = StoreItem.byID("cabin-plant") {
-            cabinItemImage(fern, t: t)
-                .frame(width: W * 0.13, height: W * 0.16)
-                .position(x: W * 0.14, y: sillTopY - W * 0.055)
-        }
-        if equippedItemIDs.contains("cabin-teapot"), let teapot = StoreItem.byID("cabin-teapot") {
-            cabinItemImage(teapot, t: t)
-                .frame(width: W * 0.16, height: W * 0.12)
-                .position(x: W * 0.85, y: sillTopY - W * 0.042)
-        }
+        slottedProps(W: W, H: H, t: t)
     }
 
     // MARK: 6 — Floor pet (a curled, softly-breathing cat on a cushion)
