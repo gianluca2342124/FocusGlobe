@@ -93,7 +93,20 @@ final class FocusOnlineModel: ObservableObject {
     /// Full breakdown of the most recent room failure. DEBUG diagnostics only.
     @Published private(set) var lastRoomErrorDetail: String?
 
-    var isSignedIn: Bool { availability == .ready || myUserID != nil }
+    /// Whether a Supabase user is authenticated — the OBSERVABLE half of
+    /// `isSignedIn`.
+    ///
+    /// `myUserID` stays private and unpublished (it is the canonical identity and
+    /// must not be bound to or displayed); this publishes only the boolean fact,
+    /// maintained in that property's `didSet`. Without it, `isSignedIn` changed
+    /// silently and Settings ▸ Account only refreshed because `availability`
+    /// happened to change in the same breath — true today, but not a guarantee.
+    @Published private(set) var isAuthenticated = false
+
+    /// Both operands are now `@Published`, so every consumer re-renders the moment
+    /// a session is restored, Sign in with Apple succeeds, the pilot signs out, or
+    /// the account switches.
+    var isSignedIn: Bool { isAuthenticated || availability == .ready }
 
     /// The ONE canonical online identity: the authenticated Supabase user UUID.
     /// Every self-filter and dedupe uses THIS — never alias, skin or device.
@@ -166,6 +179,10 @@ final class FocusOnlineModel: ObservableObject {
     private var myUserID: String? {
         didSet {
             guard oldValue != myUserID else { return }
+            // Publish the authenticated FACT (never the UUID) so SwiftUI can
+            // observe sign-in state directly. Derived here, in the one place the
+            // identity can change, so it cannot drift from `myUserID`.
+            isAuthenticated = myUserID != nil
             appModel?.subscriptions.syncIdentity(supabaseUserID: myUserID)
         }
     }
