@@ -261,12 +261,11 @@ private struct WidgetDetailSheet: View {
     private var closeRow: some View {
         HStack {
             Spacer()
-            Button { appModel.tapFeedback(); dismiss() } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(AppColors.textPrimary)
-                    .frame(width: 34, height: 34)
-                    .glassBackground(cornerRadius: 17, tintOpacity: 0.2, shadowRadius: 6, shadowY: 3)
+            // The shared utility control — same liquid-glass substrate, press
+            // behaviour and hit target as every other close/back button.
+            AppIconButton(systemImage: "xmark", size: 38,
+                          accessibilityLabel: "Close") {
+                appModel.tapFeedback(); dismiss()
             }
         }
     }

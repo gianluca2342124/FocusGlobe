@@ -61,11 +61,12 @@ struct OnlineLobbyView: View {
                     .font(.system(size: 13, weight: .heavy, design: .default))
                     .tracking(1).foregroundStyle(.white.opacity(0.6))
                 Spacer()
-                Button { appModel.tapFeedback(); dismiss() } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 15, weight: .bold)).foregroundStyle(.white)
-                        .frame(width: 38, height: 38)
-                        .background(Circle().fill(.ultraThinMaterial))
+                // Liquid glass rather than bare `.ultraThinMaterial`: the shared
+                // surface adds the tint, optical edge and specular bloom, and
+                // honours Reduce Transparency / Increased Contrast.
+                AppIconButton(systemImage: "xmark", size: 38, tint: .white,
+                              accessibilityLabel: "Close") {
+                    appModel.tapFeedback(); dismiss()
                 }
             }
             Text(sky.name)

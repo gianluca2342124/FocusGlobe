@@ -213,12 +213,11 @@ struct VisitedPlacesMapView: View {
                 .font(AppTypography.headline).foregroundStyle(.white)
                 .shadow(color: .black.opacity(0.5), radius: 6, y: 1)
             Spacer()
-            Button { appModel.tapFeedback(); dismiss() } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 34, height: 34)
-                    .background(Circle().fill(.black.opacity(0.35)))
+            // Liquid glass, not a flat black disc. Keeps the white glyph because
+            // this control floats over the map.
+            AppIconButton(systemImage: "xmark", size: 38, tint: .white,
+                          accessibilityLabel: "Close") {
+                appModel.tapFeedback(); dismiss()
             }
         }
         .padding(.horizontal, AppSpacing.screen)
