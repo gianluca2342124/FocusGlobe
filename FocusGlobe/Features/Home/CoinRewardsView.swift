@@ -120,11 +120,14 @@ struct CoinSpinSheet: View {
             Image(uiImage: ui).resizable().scaledToFit()
         } else {
             ZStack {
-                Circle()
-                    .fill(RadialGradient(colors: [AppColors.gold.opacity(0.28), .clear],
-                                         center: .center, startRadius: 2, endRadius: 130))
+                // endRadius must stay UNDER the frame's half-extent or the shape
+                // crops the gradient while it is still opaque and the glow reads
+                // as a hard gold disc. (Was 130 against a 110 pt half-width.)
+                RadialGradient(colors: [AppColors.gold.opacity(0.28), .clear],
+                               center: .center, startRadius: 2, endRadius: 100)
                     .frame(width: 220, height: 220)
                     .blur(radius: 10)
+                    .allowsHitTesting(false)
                 Image(systemName: "video.fill")
                     .font(.system(size: 52, weight: .bold))
                     .foregroundStyle(AppColors.brand)
@@ -182,11 +185,13 @@ struct CoinSpinSheet: View {
     private var result: some View {
         VStack(spacing: AppSpacing.sm) {
             ZStack {
-                Circle()
-                    .fill(RadialGradient(colors: [AppColors.gold.opacity(0.4), .clear],
-                                         center: .center, startRadius: 2, endRadius: 120))
+                // Same rule: 190 pt frame → 95 pt half-extent, so the falloff has
+                // to finish before that (was 120, leaving a visible gold disc).
+                RadialGradient(colors: [AppColors.gold.opacity(0.4), .clear],
+                               center: .center, startRadius: 2, endRadius: 86)
                     .frame(width: 190, height: 190)
                     .blur(radius: 6)
+                    .allowsHitTesting(false)
                 FocusCoinIcon(size: 88)
             }
             .frame(height: 170)

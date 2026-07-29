@@ -768,11 +768,15 @@ struct DailyGiftSheet: View {
     @ViewBuilder private var giftHero: some View {
         let heroHeight: CGFloat = viewport.isWide ? 154 : (viewport.isCompact ? 106 : 126)
         ZStack {
-            Circle()
-                .fill(RadialGradient(colors: [AppColors.gold.opacity(0.3), .clear],
-                                     center: .center, startRadius: 2, endRadius: 130))
-                .frame(width: heroHeight, height: heroHeight)
+            // The falloff has to finish inside the frame, otherwise the Circle
+            // clips it mid-gradient and the gift sits on a gold coin-shaped
+            // plate. (Was endRadius 130 inside a 106–154 pt circle, so it was
+            // cut at roughly half opacity at every size.)
+            RadialGradient(colors: [AppColors.gold.opacity(0.3), .clear],
+                           center: .center, startRadius: 2, endRadius: heroHeight * 0.58)
+                .frame(width: heroHeight * 1.9, height: heroHeight * 1.9)
                 .blur(radius: 12)
+                .allowsHitTesting(false)
             if let ui = UIImage(named: "dailygift") {
                 Image(uiImage: ui).resizable().scaledToFit()
                     .frame(maxWidth: heroHeight, maxHeight: heroHeight * 0.88)

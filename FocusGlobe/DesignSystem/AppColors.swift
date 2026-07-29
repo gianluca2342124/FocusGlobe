@@ -76,6 +76,21 @@ enum AppColors {
     static let homeControlStroke = Color.dynamic(light: 0x26221D, lightAlpha: 0.08,
                                                  dark: 0xFFFFFF, darkAlpha: 0.16)
 
+    // MARK: Selection
+    /// The ONE colour that means "this is the thing you picked" — chips, the
+    /// chosen preset, the chosen Sky, system-drawn checkmarks.
+    ///
+    /// Warm gold, deliberately: FocusGlobe is a cream-and-gold world lit by
+    /// lanterns and burners, and an electric blue selection (the old
+    /// `AccentColor`, #3E63E6) read as borrowed system chrome dropped on top of
+    /// the artwork. Distinct from `brand`/`celestialTeal`, which stays the
+    /// *interaction* accent (links, navigation, ordinary progress) — chosen and
+    /// tappable are different states and keep different colours.
+    static let selection = Color.dynamic(light: 0xC08A2E, dark: 0xD8B56D)
+    /// The label/glyph colour to use ON a filled `selection` surface. Never
+    /// white — white on gold is roughly 1.9:1 and fails at any text size.
+    static let selectionInk = Color.dynamic(light: 0xFFF8EA, dark: 0x2B2510)
+
     // MARK: Accents / status
     /// Premium gold — Ultra, streak embers, rare moments.
     static let gold    = Color.dynamic(light: 0xD9A94F, dark: 0xD8B56D)

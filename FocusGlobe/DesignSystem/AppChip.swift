@@ -6,7 +6,7 @@ struct AppChip: View {
     let title: String
     var systemImage: String? = nil
     var isSelected: Bool = false
-    var accent: Color = AppColors.brand
+    var accent: Color = AppColors.selection
 
     var body: some View {
         HStack(spacing: Layout.pad(5, 7)) {
@@ -17,7 +17,9 @@ struct AppChip: View {
             Text(title)
                 .font(AppTypography.caption)
         }
-        .foregroundStyle(isSelected ? Color.white : AppColors.textSecondary)
+        // `selectionInk`, not white: the selected fill is warm gold, and white
+        // on gold is unreadable (~1.9:1).
+        .foregroundStyle(isSelected ? AppColors.selectionInk : AppColors.textSecondary)
         .padding(.horizontal, Layout.pad(AppSpacing.sm, AppSpacing.md + 2))
         .padding(.vertical, Layout.pad(7, 11))
         .background {
