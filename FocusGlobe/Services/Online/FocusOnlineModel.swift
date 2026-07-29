@@ -199,6 +199,16 @@ final class FocusOnlineModel: ObservableObject {
 
     // Friend-bonus overlap tracking for the CURRENT flight.
     private var flightSessionID: String?
+    /// An online flight whose `flightDidStart` arrived before the session/profile
+    /// was ready. Replayed exactly once by `refreshAvailability()`. Nil whenever
+    /// there is nothing outstanding.
+    private struct PendingFlightStart {
+        let skyID: String
+        let sessionID: String
+        let expectedEndAt: Date?
+        let category: String
+    }
+    private var pendingFlightStart: PendingFlightStart?
     private var flightRoom: FocusRoom?
     private var serverSessionID: String?
     /// The CURRENT flight's shared end (nil = infinite). Captured at take-off so
@@ -266,6 +276,31 @@ final class FocusOnlineModel: ObservableObject {
         // failed on a flaky network. `syncIdentity` is idempotent, so when the
         // identity is already correct this costs nothing.
         appModel?.subscriptions.syncIdentity(supabaseUserID: myUserID)
+        // Readiness has landed — replay an online flight start that had to bail.
+        // Cleared first so a replay that still can't proceed re-arms itself rather
+        // than looping here.
+        if availability.isAvailable, profile != nil, let pending = pendingFlightStart {
+            pendingFlightStart = nil
+            flightDidStart(skyID: pending.skyID, sessionID: pending.sessionID,
+                           expectedEndAt: pending.expectedEndAt, category: pending.category)
+        }
+    }
+
+    /// Wait (briefly) until an invite can actually be prepared.
+    ///
+    /// Returns true once `inviteBlockedReason` clears, false on timeout. Polls the
+    /// existing state rather than adding a publisher: this runs at most a few times,
+    /// only while the pilot is waiting on a tap they already made.
+    func awaitInviteReadiness(timeout: TimeInterval = 6) async -> Bool {
+        if inviteBlockedReason == nil { return true }
+        // Nudge the session along — this is also what replays a bailed flight start.
+        await refreshAvailability()
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if inviteBlockedReason == nil { return true }
+            try? await Task.sleep(nanoseconds: 300_000_000)
+        }
+        return inviteBlockedReason == nil
     }
 
     /// The ONE authoritative reaction to a failed backend operation: a genuine
@@ -463,7 +498,18 @@ final class FocusOnlineModel: ObservableObject {
         // Every flight resets the social state; online ones then set their own.
         socialState = .solo
         hostCanonicalDeadline = nil       // this flight's server deadline arrives from publish
-        guard flightMode.isOnline, availability.isAvailable, let profile else { return }
+        // An ONLINE flight that starts before the session/profile is ready used to
+        // be lost here: the guard returned and `flightSessionID` stayed nil for the
+        // rest of the flight, with no retry — which is what made Invite Friends
+        // permanently inert on a fast take-off, not merely slow. Remember the
+        // request so `refreshAvailability()` can replay it once readiness lands.
+        guard flightMode.isOnline else { pendingFlightStart = nil; return }
+        guard availability.isAvailable, let profile else {
+            pendingFlightStart = PendingFlightStart(skyID: skyID, sessionID: sessionID,
+                                                   expectedEndAt: expectedEndAt, category: category)
+            return
+        }
+        pendingFlightStart = nil
         flightSessionID = sessionID
         flightRoom = flightMode == .privateRoom ? pendingRoom : nil
         flightExpectedEnd = expectedEndAt

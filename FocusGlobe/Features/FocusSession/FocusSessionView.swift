@@ -153,15 +153,19 @@ struct FocusSessionView: View {
         guard appModel.isPro else {
             appModel.tapFeedback(); journeyPaywall = JourneyPaywall(context: .invite); return
         }
-        // Say WHY when an invite can't be created. `prepareInvite` returns nil from
-        // two places — a precondition guard (offline / no session id yet) and a
-        // network failure — and this discarded both, so the button flashed
-        // "Preparing…" and then did nothing at all. That silent no-op WAS the bug.
-        if let blocked = online.inviteBlockedReason {
-            note(blocked)
-            return
-        }
+        // The tap is HONOURED even if the flight session isn't established yet:
+        // show the restrained "Preparing…" state, wait briefly for readiness — which
+        // also replays a `flightDidStart` that had to bail — then continue
+        // automatically. The pilot never has to guess when to tap again. Only a
+        // genuine timeout surfaces a message.
         invitePreparing = true
+        if online.inviteBlockedReason != nil {
+            guard await online.awaitInviteReadiness() else {
+                invitePreparing = false
+                note(online.inviteBlockedReason ?? "Couldn't reach FocusGlobe Online. Please try again.")
+                return
+            }
+        }
         let skyID = (matchedSky ?? appModel.selectedSky).id
         // Creates/reuses the private-flight record and mints one fresh link —
         // the flight STAYS Global until a real pilot joins.
