@@ -1,20 +1,19 @@
 import SwiftUI
-import AuthenticationServices
 
-/// The FocusGlobe account sheet — clean and premium. Shown ONLY when the user
-/// explicitly chooses an online feature; Solo never requires an account, and
-/// cancelling changes nothing. One Apple authorization signs in completely and
-/// the sheet dismisses itself back to the original context.
+/// The FocusGlobe account sheet — clean and premium. Reached from an online
+/// feature; Solo never requires an account, and cancelling changes nothing. One
+/// Apple authorization signs in completely and the sheet dismisses itself back to
+/// the original context.
+///
+/// Signing in is also offered permanently and free in Settings ▸ Account, which
+/// is the path that does not depend on reaching an online surface first. Both use
+/// the same `FocusAppleSignInButton`.
 struct OnlineSignInView: View {
-    @EnvironmentObject private var online: FocusOnlineModel
-    @EnvironmentObject private var appModel: AppModel
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var colorScheme
     /// Called after a successful sign-in (sheet dismisses itself).
     var onSignedIn: (() -> Void)? = nil
 
     @State private var errorMessage: String?
-    @State private var working = false
     @State private var succeeded = false
 
     var body: some View {
@@ -42,40 +41,22 @@ struct OnlineSignInView: View {
                 }
 
                 if !succeeded {
-                    ZStack {
-                        SignInWithAppleButton(.signIn) { request in
-                            request.requestedScopes = [.fullName]
-                            request.nonce = online.makeAppleNonce()
-                        } onCompletion: { result in
-                            guard !working else { return }
-                            working = true
+                    // The shared button — one authentication path for this sheet
+                    // and for Settings ▸ Account.
+                    FocusAppleSignInButton { error in
+                        if let error {
+                            errorMessage = error
+                        } else {
                             errorMessage = nil
+                            withAnimation(.snappy) { succeeded = true }
+                            // Brief confirmation, then return to context.
                             Task { @MainActor in
-                                let error = await online.completeAppleSignIn(result)
-                                working = false
-                                if error == nil, online.availability.isAvailable {
-                                    appModel.tapFeedback()
-                                    withAnimation(.snappy) { succeeded = true }
-                                    // Brief confirmation, then return to context.
-                                    try? await Task.sleep(nanoseconds: 700_000_000)
-                                    onSignedIn?()
-                                    dismiss()
-                                } else if let error, !error.isEmpty {
-                                    errorMessage = error
-                                }
+                                try? await Task.sleep(nanoseconds: 700_000_000)
+                                onSignedIn?()
+                                dismiss()
                             }
                         }
-                        .signInWithAppleButtonStyle(colorScheme == .light ? .black : .white)
-                        .frame(height: 52)
-                        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.pillRadius, style: .continuous))
-                        .disabled(working)
-                        .opacity(working ? 0 : 1)
-
-                        if working {
-                            ProgressView().tint(AppColors.gold)
-                        }
                     }
-                    .frame(height: 52)
                     .padding(.horizontal, AppSpacing.md)
                 }
 

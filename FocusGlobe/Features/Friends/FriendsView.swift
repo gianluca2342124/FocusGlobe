@@ -60,8 +60,17 @@ struct FriendsView: View {
                         // One compact banner near the top — the unavailable
                         // state never dominates the whole page. Signed-out
                         // offers Sign in with Apple right here.
+                        // Signing in is NOT a PRO action and must not be routed
+                        // through `gate(_:run:)`: its `.free` branch opened the
+                        // Online paywall and never showed the sheet, so a
+                        // signed-out free pilot could not sign in — or recover an
+                        // account that already owns the entitlement. Online
+                        // FEATURES stay PRO-gated; authentication itself is free.
                         OnlineUnavailableView(availability: online.availability, compact: true,
-                                              onSignIn: { gate(.online) { showSignIn = true } })
+                                              onSignIn: {
+                                                  appModel.tapFeedback()
+                                                  showSignIn = true
+                                              })
                     }
                     if let message = online.inviteJoinMessage {
                         // Outcome of an invitation link that couldn't be joined

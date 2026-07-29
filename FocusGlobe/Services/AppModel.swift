@@ -50,28 +50,19 @@ final class AppModel: ObservableObject {
         }
     }
 
-    /// THE canonical effective PRO access for the whole app.
+    /// THE canonical PRO access for the whole app — the real RevenueCat
+    /// entitlement, and nothing else.
     ///
-    /// `effectiveProAccess = revenueCatEntitlementIsActive || debugForcePro`,
-    /// with the override existing only in Debug. Every gate — Skies, skins, cabin
-    /// items, Online Mode, Unlimited Time, widgets, ads, 2x coins, Store, Friends,
-    /// Settings, journey setup, paywalls, onboarding — reads this one value, so
-    /// the expression is never repeated in a screen.
+    /// Every gate — Skies, skins, cabin items, Online Mode, Unlimited Time,
+    /// widgets, ads, 2x coins, Store, Friends, Settings, journey setup, paywalls,
+    /// onboarding — reads this one value.
     ///
-    /// Written as two explicit whole expressions rather than an early `return
-    /// true` followed by a `#if`, so each configuration's behaviour is readable
-    /// on one line and cannot be misread as "Release always returns false":
-    ///   Debug   → `revenueCatPro || debugForcePro`
-    ///   Release → `revenueCatPro`
-    /// A real active RevenueCat entitlement therefore grants PRO in Release, and
-    /// the override cannot contribute there because it is not compiled in.
-    var isPro: Bool {
-        #if DEBUG
-        return revenueCatPro || subscriptions.debugForcePro
-        #else
-        return revenueCatPro
-        #endif
-    }
+    /// There is deliberately no local override of any kind, in any build
+    /// configuration. The temporary Debug "Force FocusGlobe PRO" switch has been
+    /// removed now that the developer account holds a real lifetime entitlement;
+    /// testing PRO means signing into an account that owns it (Settings ▸
+    /// Account), which exercises the same path a customer takes.
+    var isPro: Bool { revenueCatPro }
 
     /// Side effects of an effective-access change, from either source.
     ///
@@ -308,18 +299,6 @@ final class AppModel: ObservableObject {
             .receive(on: RunLoop.main)
             .sink { [weak self] in self?.objectWillChange.send() }
             .store(in: &cancellables)
-        #if DEBUG
-        // Toggling the local Force PRO override changes effective access, so it
-        // must run the same side effects a real entitlement change does — widgets
-        // resync, badges re-evaluate, and turning it OFF re-locks any premium
-        // selection. `dropFirst` skips the value delivered on subscribe.
-        subscriptions.$debugForcePro
-            .dropFirst()
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _ in self?.proAccessDidChange() }
-            .store(in: &cancellables)
-        #endif
-
         // AdMob: configure analytics + resolve UMP consent and initialise the SDK
         // (safe no-op without the Google Mobile Ads package). No ad is requested
         // before consent is resolved/allowed; ads never show for Pro users.

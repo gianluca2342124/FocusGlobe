@@ -1,7 +1,4 @@
 import SwiftUI
-#if canImport(UIKit)
-import UIKit          // UIPasteboard, for the Debug "Copy App User ID" row
-#endif
 #if canImport(RevenueCatUI)
 import RevenueCatUI
 #endif
@@ -12,6 +9,9 @@ struct SettingsView: View {
     @EnvironmentObject private var online: FocusOnlineModel
     @State private var restoreMessage: String?
     @State private var showManageOnlineData = false
+    /// Account section state (free, always available — never Debug-only).
+    @State private var showAccountSignOutConfirm = false
+    @State private var accountError: String?
     #if canImport(RevenueCatUI)
     @State private var showCustomerCenter = false
     #endif
@@ -37,6 +37,7 @@ struct SettingsView: View {
                     // Friends PRO lock — they are no longer duplicated here.
                     FocusShieldSettingsSection(service: appModel.focusShield)
                     ultraSection
+                    accountSection
                     privacyDataSection
                     #if DEBUG
                     debugSection
@@ -195,6 +196,81 @@ struct SettingsView: View {
     // Privacy & Data — the privacy statement, the legal links (real hosted
     // pages, same `LegalLinks` used by the paywall footer), and the route to
     // manage/delete FocusGlobe Online data.
+    /// The public FocusGlobe account. Visible to EVERY pilot — free, PRO, signed
+    /// in, signed out, Debug and Release alike.
+    ///
+    /// This exists because every other route to Sign in with Apple sits behind an
+    /// online/PRO gate (Friends' `gate(.online)`, the Online flight mode, the
+    /// Online settings card's `.premium` branch), which left a signed-out FREE
+    /// pilot with no way to sign back in and recover an entitlement they already
+    /// own. Authentication is not a premium feature and is never gated here.
+    ///
+    /// Ordinary account styling on purpose: no PRO gradient, no paywall framing.
+    @ViewBuilder private var accountSection: some View {
+        SettingsCard(title: "Account") {
+            if online.isSignedIn {
+                signedInAccountRows
+            } else {
+                signedOutAccountRows
+            }
+        }
+        .confirmationDialog("Sign out of FocusGlobe?",
+                            isPresented: $showAccountSignOutConfirm,
+                            titleVisibility: .visible) {
+            Button("Sign Out", role: .destructive) {
+                Task { await online.signOut() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("You can sign in again anytime to restore your account and PRO access.")
+        }
+    }
+
+    private var signedOutAccountRows: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            SettingsRow(systemImage: "person.crop.circle.badge.plus",
+                        title: "Sign in to FocusGlobe",
+                        subtitle: "Restore your account, progress and PRO access.",
+                        tint: AppColors.brand,
+                        trailing: AnyView(EmptyView()))
+            if let accountError {
+                Text(accountError)
+                    .font(AppTypography.caption)
+                    .foregroundStyle(AppColors.danger.opacity(0.9))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            // The shared native button. A successful authorization sets the
+            // Supabase user id, which drives RevenueCat `logIn` → CustomerInfo →
+            // `revenueCatPro` → widgets, so an owned entitlement returns on its
+            // own with no purchase and no restart. We stay on Settings.
+            FocusAppleSignInButton { error in accountError = error }
+                .padding(.top, 2)
+        }
+    }
+
+    private var signedInAccountRows: some View {
+        VStack(spacing: 0) {
+            // Deliberately no Supabase UUID, RevenueCat App User ID, token or
+            // relay address — none of that belongs in normal Settings.
+            SettingsRow(systemImage: "checkmark.circle.fill",
+                        title: "Signed in with Apple",
+                        subtitle: "Your FocusGlobe account and purchases are connected.",
+                        tint: AppColors.success,
+                        trailing: AnyView(EmptyView()))
+            RowDivider()
+            Button {
+                appModel.tapFeedback()
+                showAccountSignOutConfirm = true
+            } label: {
+                SettingsRow(systemImage: "rectangle.portrait.and.arrow.right",
+                            title: "Sign Out",
+                            tint: AppColors.danger,
+                            trailing: AnyView(EmptyView()))
+            }
+            .buttonStyle(SoftPressStyle())
+        }
+    }
+
     private var privacyDataSection: some View {
         SettingsCard(title: "Privacy & Data") {
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
@@ -251,58 +327,18 @@ struct SettingsView: View {
     private var debugSection: some View {
         SettingsCard(title: "Developer") {
             VStack(spacing: 0) {
-                // Local entitlement override. Never a purchase, never sent to
-                // RevenueCat or Supabase — see `DebugProOverride`.
-                ToggleRow(systemImage: "crown.fill",
-                          title: "Force FocusGlobe PRO",
-                          subtitle: "Local Debug override. Does not create a purchase.",
-                          isOn: Binding(
-                            get: { appModel.subscriptions.debugForcePro },
-                            set: { appModel.subscriptions.debugForcePro = $0 }))
-                RowDivider()
-                // The exact customer to search for in the RevenueCat dashboard.
-                // An App User ID is not a secret; no API key or access token is
-                // shown anywhere in this section.
-                SettingsRow(systemImage: "person.text.rectangle",
-                            title: "RevenueCat App User ID",
-                            subtitle: appModel.subscriptions.appUserID ?? "Not configured",
-                            tint: AppColors.brand,
-                            trailing: AnyView(EmptyView()))
-                RowDivider()
-                Button {
-                    appModel.tapFeedback()
-                    #if canImport(UIKit)
-                    UIPasteboard.general.string = appModel.subscriptions.appUserID ?? ""
-                    #endif
-                } label: {
-                    SettingsRow(systemImage: "doc.on.doc", title: "Copy App User ID",
-                                subtitle: appModel.subscriptions.appUserID == nil
-                                    ? "Nothing to copy yet" : nil,
-                                tint: AppColors.brand,
-                                trailing: AnyView(EmptyView()))
-                }
-                .buttonStyle(SoftPressStyle())
-                .disabled(appModel.subscriptions.appUserID == nil)
-                RowDivider()
-                Button {
-                    appModel.tapFeedback()
-                    appModel.refreshSubscriptionStatus()
-                } label: {
-                    SettingsRow(systemImage: "arrow.clockwise", title: "Refresh Entitlements",
-                                subtitle: "Re-fetch RevenueCat CustomerInfo",
-                                tint: AppColors.brand,
-                                trailing: AnyView(EmptyView()))
-                }
-                .buttonStyle(SoftPressStyle())
-                RowDivider()
-                // States which of the two sources is granting access right now, so
-                // a real entitlement is never mistaken for the local override.
-                SettingsRow(systemImage: "checkmark.seal",
-                            title: "Entitlement status",
-                            subtitle: appModel.subscriptions.debugAccessSummary,
-                            tint: appModel.isPro ? AppColors.success : AppColors.textTertiary,
-                            trailing: AnyView(EmptyView()))
-                RowDivider()
+                // The temporary PRO controls that lived here (Force FocusGlobe
+                // PRO, RevenueCat App User ID, Copy App User ID, Refresh
+                // Entitlements, Entitlement status) are GONE. They existed only to
+                // identify and configure the administrator account; that account
+                // now holds a real lifetime entitlement, so PRO is exercised by
+                // signing in via Settings ▸ Account like any customer.
+                //
+                // Only the pre-existing, unrelated internal diagnostics remain —
+                // still Debug-only, still absent from Release/TestFlight/App Store.
+                // Entitlement refreshing continues automatically (app becomes
+                // active, after login, purchase, restore and account changes); the
+                // manual button was a convenience, not the mechanism.
                 Button {
                     appModel.tapFeedback()
                     showOnlineDiagnostics = true
