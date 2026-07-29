@@ -22,6 +22,11 @@ struct AmbientPilotsLayer: View {
     /// Private-room participants show their identity bubble persistently; public
     /// ambient pilots reveal it on tap.
     var roomMode: Bool = false
+    /// Whether pilot labels are currently shown. Owned by the journey (which runs
+    /// the five-second auto-hide and the Show Pilot Labels setting) so ONE
+    /// lifecycle-aware task drives every label — this layer only renders the
+    /// opacity, and never starts a timer of its own.
+    var labelsVisible: Bool = true
     /// A Private Flight shows ONLY invited pilots — no decorative strangers.
     /// Distinct from `roomMode` (which also turns off in Clean Mode): decorative
     /// suppression must hold even in Clean Mode.
@@ -169,9 +174,14 @@ struct AmbientPilotsLayer: View {
     /// The gentle per-pilot idle motion around a slot — small enough that the
     /// verified slot spacing can never be closed by two balloons drifting
     /// toward each other.
-    private static func drift(phase: Double, t: Double) -> (CGFloat, CGFloat) {
-        (CGFloat(Foundation.sin(t * 0.14 + phase * 1.3)) * 5,
-         CGFloat(Foundation.sin(t * 0.22 + phase)) * 6)
+    /// Amplitudes stay at/below the original 5×6 pt for `.middle` and shrink for
+    /// `.distant`; `.near` is scaled to 6.25×7.5 pt. The verified ≥70 pt slot
+    /// spacing is far larger than the worst-case pair sum, so no amount of drift
+    /// can bring two balloons into contact.
+    private static func drift(phase: Double, t: Double, depth: Depth) -> (CGFloat, CGFloat) {
+        let k = depth.driftScale
+        return (CGFloat(Foundation.sin(t * 0.14 + phase * 1.3)) * 5 * k,
+                CGFloat(Foundation.sin(t * 0.22 + phase)) * 6 * k)
     }
 
     var body: some View {
@@ -209,18 +219,52 @@ struct AmbientPilotsLayer: View {
     /// presented as a real account.
     @ViewBuilder
     private func ambientPilotView(_ a: AmbientRender, W: CGFloat, H: CGFloat, t: Double) -> some View {
-        let (sway, bob) = Self.drift(phase: a.phase, t: t)
-        let size = Self.balloonSize(H)
+        let depth = Self.depth(for: a.id)
+        let (sway, bob) = Self.drift(phase: a.phase, t: t, depth: depth)
+        let size = Self.balloonSize(H) * depth.scale
         VStack(spacing: 3) {
             // Labels track the SAME switch as real pilots (`roomMode` = social
-            // labels on), so Clean Mode hides every label uniformly.
+            // labels on), so Clean Mode hides every label uniformly. Kept in the
+            // tree and faded (never removed) so the layout never jumps.
             if roomMode {
                 ambientBubble(alias: a.alias, remaining: a.remaining)
+                    .opacity(labelsVisible ? 1 : 0)
             }
             BalloonView(height: size, showBurner: false, showGlow: false, skin: a.skin)
         }
+        .opacity(depth.opacity)
         .position(x: a.slot.x * W + sway, y: a.slot.y * H + bob)
         .allowsHitTesting(false)
+    }
+
+    /// Three depth bands so the sky reads as a space rather than one flat plane.
+    /// Assigned from the STABLE slot index (not the pilot list order), so a pilot
+    /// keeps its depth for the whole flight and joins/leaves never re-band anyone.
+    /// Distant pilots stay clearly legible — 0.86 scale, not microscopic.
+    enum Depth {
+        case near, middle, distant
+        var scale: CGFloat {
+            switch self { case .near: 1.06; case .middle: 1.0; case .distant: 0.86 }
+        }
+        var opacity: Double {
+            switch self { case .near: 1.0; case .middle: 0.94; case .distant: 0.82 }
+        }
+        /// Nearer balloons swing a little wider — a cheap parallax cue.
+        var driftScale: CGFloat {
+            switch self { case .near: 1.25; case .middle: 1.0; case .distant: 0.7 }
+        }
+    }
+
+    static func depth(for slotIndex: Int) -> Depth {
+        depth(forSlot: skySlots[slotIndex % skySlots.count])
+    }
+
+    /// Higher in the sky reads as further away. Purely a function of the slot's
+    /// normalised y, so it is deterministic and cannot change between redraws.
+    static func depth(forSlot slot: CGPoint) -> Depth {
+        if slot.y < 0.30 { return .distant }
+        if slot.y > 0.58 { return .near }
+        return .middle
     }
 
     /// The persistent ambient label: alias (full Unicode) + a decrementing
@@ -272,12 +316,13 @@ struct AmbientPilotsLayer: View {
     private func realPilotView(_ pilot: OnlinePilot, slot: CGPoint, W: CGFloat, H: CGFloat, t: Double) -> some View {
         var rng = SeededRNG(seed: stablePilotSeed(for: pilot))
         let phase = rng.unit() * 6.28
-        let (sway, bob) = Self.drift(phase: phase, t: t)
-        // Identical size, full opacity and NO outer glow — exactly like every
-        // other balloon; a real pilot is never faded or shrunk; only their
-        // POSITION differs. Their identity bubble stays up in a Private Flight;
-        // in the Global sky it reveals on tap.
-        let size = Self.balloonSize(H)
+        // Depth comes from the pilot's assigned SLOT, so it is stable for the whole
+        // flight — a remote timer tick or a poll refresh never re-bands anyone.
+        let depth = Self.depth(forSlot: slot)
+        let (sway, bob) = Self.drift(phase: phase, t: t, depth: depth)
+        // A real pilot keeps full opacity and its own identity — only scale varies
+        // gently with depth so the sky reads as a space, never a flat plane.
+        let size = Self.balloonSize(H) * depth.scale
         // Persistent identity: every REAL pilot carries a compact alias +
         // live-countdown bubble for the whole online flight — never tap-to-
         // reveal. (`roomMode` = "social labels on"; decorative pilots get none.)
@@ -286,6 +331,11 @@ struct AmbientPilotsLayer: View {
             if showBubble {
                 realBubble(pilot)
                     .offset(y: -size - 14)
+                    // Faded, not removed: the countdown keeps ticking behind an
+                    // opacity of 0 rather than being torn down and rebuilt, so
+                    // toggling labels never disturbs layout or restarts a timer.
+                    // A deliberate tap-to-reveal always wins over the auto-hide.
+                    .opacity((labelsVisible || selectedRealID == pilot.id) ? 1 : 0)
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
             }
             BalloonView(height: size, showBurner: false, showGlow: false,

@@ -100,6 +100,17 @@ struct FocusSessionView: View {
     @State private var journeyPaywall: JourneyPaywall?
     /// The single compact flight-controls panel (replaces the old button cluster).
     @State private var showControlsPanel = false
+    /// Pilot-label visibility.
+    ///
+    /// `showPilotLabels` is the pilot's explicit choice from journey settings;
+    /// `labelIntroActive` is the automatic five-second reveal on entry. Labels show
+    /// while EITHER is true, so the intro can fade without contradicting the
+    /// setting, and the setting can bring them back at any time. Session-local: the
+    /// journey panel holds no other persisted visual preference, so this adds no
+    /// global storage.
+    @State private var showPilotLabels = false
+    @State private var labelIntroActive = true
+    private var pilotLabelsVisible: Bool { showPilotLabels || labelIntroActive }
     /// Clean mode: hide chrome down to a tiny timer + a reveal button.
     @State private var cleanMode = false
     /// FocusGlobe Online: the real pilot whose (compact) profile sheet is open —
@@ -267,6 +278,7 @@ struct FocusSessionView: View {
                                        elapsed: { sceneElapsed(at: Date()) },
                                        animated: !reduceMotion,
                                        realPilots: visibleRealPilots,
+                                       labelsVisible: pilotLabelsVisible,
                                        roomMode: roomBubbleMode,
                                        isPrivate: online.isPrivateFlight,
                                        onSelectReal: { selectedRealPilot = $0 },
@@ -275,6 +287,18 @@ struct FocusSessionView: View {
                                        onBlock: quickBlock,
                                        onReport: { selectedRealPilot = $0 })
                         .transition(.opacity)
+                        .animation(.easeInOut(duration: reduceMotion ? 0 : 0.55),
+                                   value: pilotLabelsVisible)
+                        // ONE lifecycle-aware task drives the whole five-second
+                        // intro. `.task` is bound to this view's lifetime, so it is
+                        // cancelled automatically when the journey closes — nothing
+                        // survives the exit. No id, so it runs once per entry and
+                        // cannot be restarted by a remote timer tick or a poll.
+                        .task {
+                            try? await Task.sleep(nanoseconds: 5_000_000_000)
+                            guard !Task.isCancelled else { return }
+                            labelIntroActive = false
+                        }
                 }
                 balloon
                     .transition(.opacity)
@@ -812,6 +836,7 @@ struct FocusSessionView: View {
                 isOnline: isOnlineFlight,
                 isPrivate: online.isPrivateFlight || online.isInviteReady,
                 preparingInvite: invitePreparing,
+                showPilotLabels: showPilotLabels,
                 onToggleMute: {
                     vm.toggleMute()
                     // Every panel action closes the panel immediately (Phase 9).
@@ -823,6 +848,18 @@ struct FocusSessionView: View {
                         viewMode = (viewMode == .cabin ? .exterior : .cabin)
                     }
                     withAnimation(.easeOut(duration: 0.2)) { showControlsPanel = false }
+                },
+                onTogglePilotLabels: {
+                    appModel.tapFeedback()
+                    // Turning labels ON ends the automatic intro so the setting is
+                    // the single source of truth from here on; turning them OFF
+                    // must also clear the intro or a fresh entry would keep them up.
+                    withAnimation(.easeInOut(duration: reduceMotion ? 0 : 0.55)) {
+                        showPilotLabels.toggle()
+                        labelIntroActive = false
+                    }
+                    // The panel stays open: this is a visual toggle the pilot may
+                    // want to try both ways without reopening settings.
                 },
                 onInvite: {
                     withAnimation(.easeOut(duration: 0.2)) { showControlsPanel = false }
@@ -937,8 +974,11 @@ private struct FlightControlsPanel: View {
     /// A Private Flight (someone was invited) also shows Participants.
     var isPrivate: Bool = false
     var preparingInvite: Bool = false
+    /// Online only: whether pilot labels are currently forced visible.
+    var showPilotLabels: Bool = false
     let onToggleMute: () -> Void
     let onToggleCabin: () -> Void
+    var onTogglePilotLabels: () -> Void = {}
     let onInvite: () -> Void
     var onParticipants: () -> Void = {}
     let onCleanMode: () -> Void
@@ -962,6 +1002,16 @@ private struct FlightControlsPanel: View {
                 action: onToggleMute)
 
             soundChips
+
+            // Online only: pilot labels auto-hide five seconds after take-off; this
+            // brings them back (and hides them again) at any point in the flight.
+            if isOnline {
+                row(icon: showPilotLabels ? "tag.fill" : "tag",
+                    title: "Show pilot labels",
+                    subtitle: showPilotLabels ? "Names and times stay visible"
+                                              : "Names and times are hidden",
+                    action: onTogglePilotLabels)
+            }
 
             row(icon: "eye.slash", title: "Clean mode",
                 subtitle: "Hide controls, keep a tiny timer", action: onCleanMode)
