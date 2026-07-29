@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit          // UIPasteboard, for the Debug "Copy App User ID" row
+#endif
 #if canImport(RevenueCatUI)
 import RevenueCatUI
 #endif
@@ -248,6 +251,58 @@ struct SettingsView: View {
     private var debugSection: some View {
         SettingsCard(title: "Developer") {
             VStack(spacing: 0) {
+                // Local entitlement override. Never a purchase, never sent to
+                // RevenueCat or Supabase — see `DebugProOverride`.
+                ToggleRow(systemImage: "crown.fill",
+                          title: "Force FocusGlobe PRO",
+                          subtitle: "Local Debug override. Does not create a purchase.",
+                          isOn: Binding(
+                            get: { appModel.subscriptions.debugForcePro },
+                            set: { appModel.subscriptions.debugForcePro = $0 }))
+                RowDivider()
+                // The exact customer to search for in the RevenueCat dashboard.
+                // An App User ID is not a secret; no API key or access token is
+                // shown anywhere in this section.
+                SettingsRow(systemImage: "person.text.rectangle",
+                            title: "RevenueCat App User ID",
+                            subtitle: appModel.subscriptions.appUserID ?? "Not configured",
+                            tint: AppColors.brand,
+                            trailing: AnyView(EmptyView()))
+                RowDivider()
+                Button {
+                    appModel.tapFeedback()
+                    #if canImport(UIKit)
+                    UIPasteboard.general.string = appModel.subscriptions.appUserID ?? ""
+                    #endif
+                } label: {
+                    SettingsRow(systemImage: "doc.on.doc", title: "Copy App User ID",
+                                subtitle: appModel.subscriptions.appUserID == nil
+                                    ? "Nothing to copy yet" : nil,
+                                tint: AppColors.brand,
+                                trailing: AnyView(EmptyView()))
+                }
+                .buttonStyle(SoftPressStyle())
+                .disabled(appModel.subscriptions.appUserID == nil)
+                RowDivider()
+                Button {
+                    appModel.tapFeedback()
+                    appModel.refreshSubscriptionStatus()
+                } label: {
+                    SettingsRow(systemImage: "arrow.clockwise", title: "Refresh Entitlements",
+                                subtitle: "Re-fetch RevenueCat CustomerInfo",
+                                tint: AppColors.brand,
+                                trailing: AnyView(EmptyView()))
+                }
+                .buttonStyle(SoftPressStyle())
+                RowDivider()
+                // States which of the two sources is granting access right now, so
+                // a real entitlement is never mistaken for the local override.
+                SettingsRow(systemImage: "checkmark.seal",
+                            title: "Entitlement status",
+                            subtitle: appModel.subscriptions.debugAccessSummary,
+                            tint: appModel.isPro ? AppColors.success : AppColors.textTertiary,
+                            trailing: AnyView(EmptyView()))
+                RowDivider()
                 Button {
                     appModel.tapFeedback()
                     showOnlineDiagnostics = true

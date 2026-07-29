@@ -30,22 +30,54 @@ final class AppModel: ObservableObject {
     }
     @Published private(set) var progress: UserProgress
     @Published private(set) var history: [FocusSessionRecord]
-    @Published private(set) var isPro: Bool {
+    /// The REAL entitlement, mirrored from RevenueCat and persisted.
+    ///
+    /// This is the only Pro value that is ever written to disk. The Debug-only
+    /// override deliberately does NOT flow into it: `fg.isPro` is read back at
+    /// launch by every configuration, so letting a local override persist here
+    /// would let a Debug session grant Pro to a Release build on the same device.
+    /// Read `isPro` (below) for access decisions; assign this only from a real
+    /// RevenueCat / purchase result.
+    @Published private(set) var revenueCatPro: Bool {
         didSet {
-            guard oldValue != isPro else { return }
+            guard oldValue != revenueCatPro else { return }
             // Persist the local Pro mirror so a returning Pro user isn't briefly
             // un-Pro at cold launch before RevenueCat re-resolves the entitlement.
             // RevenueCat remains the source of truth and corrects this if it ever
             // disagrees (e.g. a lapse detected once back online).
-            persistence.setBool(isPro, for: .isPro)
-            // When Pro lapses, premium skins/audio must re-lock immediately and
-            // any premium selection falls back to its free default. Premium
-            // content is never permanently unlocked. (didSet doesn't fire during
-            // `init`, so launch-time safety relies on the resolvers below.)
-            if !isPro { reconcilePremiumSelections() }
-            syncWidgets()
-            recordNewBadgeUnlocks()
+            persistence.setBool(revenueCatPro, for: .isPro)
+            proAccessDidChange()
         }
+    }
+
+    /// THE canonical effective PRO access for the whole app.
+    ///
+    /// `effectiveProAccess = revenueCatEntitlementIsActive || debugForcePro`,
+    /// with the override existing only in Debug. Every gate — Skies, skins, cabin
+    /// items, Online Mode, Unlimited Time, widgets, ads, 2x coins, Store, Friends,
+    /// Settings, journey setup, paywalls, onboarding — reads this one value, so
+    /// the expression is never repeated in a screen.
+    ///
+    /// In Release the `#else` branch makes the override unreachable: only an
+    /// active RevenueCat entitlement can return `true`.
+    var isPro: Bool {
+        if revenueCatPro { return true }
+        #if DEBUG
+        return subscriptions.debugForcePro
+        #else
+        return false
+        #endif
+    }
+
+    /// Side effects of an effective-access change, from either source.
+    ///
+    /// When Pro lapses, premium skins/audio must re-lock immediately and any
+    /// premium selection falls back to its free default — premium content is
+    /// never permanently unlocked.
+    private func proAccessDidChange() {
+        if !isPro { reconcilePremiumSelections() }
+        syncWidgets()
+        recordNewBadgeUnlocks()
     }
 
     /// The premium entitlement as a tri-state. Monthly / Annual / Lifetime all
@@ -102,7 +134,7 @@ final class AppModel: ObservableObject {
         let loadedHistory = persistence.load([FocusSessionRecord].self, for: .history) ?? []
         self.progress = loadedProgress
         self.history = loadedHistory
-        self.isPro = persistence.bool(for: .isPro)
+        self.revenueCatPro = persistence.bool(for: .isPro)
         self.resumableJourney = persistence.load(ResumableJourney.self, for: .resumableJourney)
 
         // Profile: first-run onboarding shows only for genuinely new pilots.
@@ -260,7 +292,7 @@ final class AppModel: ObservableObject {
             .receive(on: RunLoop.main)
             .sink { [weak self] pro in
                 guard let self, self.subscriptions.isAvailable else { return }
-                self.isPro = pro
+                self.revenueCatPro = pro
             }
             .store(in: &cancellables)
         // Bridge the nested SubscriptionManager's own @Published changes (plans,
@@ -272,6 +304,17 @@ final class AppModel: ObservableObject {
             .receive(on: RunLoop.main)
             .sink { [weak self] in self?.objectWillChange.send() }
             .store(in: &cancellables)
+        #if DEBUG
+        // Toggling the local Force PRO override changes effective access, so it
+        // must run the same side effects a real entitlement change does — widgets
+        // resync, badges re-evaluate, and turning it OFF re-locks any premium
+        // selection. `dropFirst` skips the value delivered on subscribe.
+        subscriptions.$debugForcePro
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.proAccessDidChange() }
+            .store(in: &cancellables)
+        #endif
 
         // AdMob: configure analytics + resolve UMP consent and initialise the SDK
         // (safe no-op without the Google Mobile Ads package). No ad is requested
@@ -472,7 +515,7 @@ final class AppModel: ObservableObject {
         settings = .default
         progress = .empty
         history = []
-        isPro = false
+        revenueCatPro = false
         resumableJourney = nil
         profile = .empty        // hasCompletedOnboarding = false → onboarding returns
         syncWidgets()
@@ -1461,18 +1504,18 @@ final class AppModel: ObservableObject {
 
     func goPro() async -> Bool {
         let ok = await purchases.purchasePro()
-        if ok { isPro = true }
+        if ok { revenueCatPro = true }
         return ok
     }
 
     func restorePurchases() async -> Bool {
         if subscriptions.isAvailable {
             let ok = await subscriptions.restorePurchases()
-            isPro = subscriptions.isPro
+            revenueCatPro = subscriptions.isPro
             return ok
         }
         let ok = await purchases.restore()
-        isPro = purchases.isPro
+        revenueCatPro = purchases.isPro
         return ok
     }
 
@@ -1527,7 +1570,7 @@ final class AppModel: ObservableObject {
         purchases.clear()
         progress = .empty
         history = []
-        isPro = false
+        revenueCatPro = false
         resumableJourney = nil
         settings = .default
     }

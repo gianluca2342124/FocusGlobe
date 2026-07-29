@@ -36,6 +36,29 @@ enum RevenueCatKeys {
     }
 }
 
+#if DEBUG
+/// Storage for the local "Force FocusGlobe PRO" developer override.
+///
+/// SECURITY: this whole namespace — the key, the getter and the setter — is
+/// inside `#if DEBUG`, so it does not exist as a symbol in a Release build.
+/// Release therefore cannot read this `UserDefaults` value even if a previous
+/// Debug run on the same device left it set to `true`. That matters because the
+/// app persists a real Pro mirror under a *different* key (`fg.isPro`) and reads
+/// it at launch; the override is deliberately kept out of that mirror so it can
+/// never be mistaken for, or promoted into, a real entitlement.
+///
+/// It is a developer convenience for exercising PRO-gated UI. It creates no
+/// purchase, is never sent to RevenueCat or Supabase, and never fabricates
+/// `CustomerInfo`.
+enum DebugProOverride {
+    static let storageKey = "fg.debug.forcePro"
+    static var isOn: Bool {
+        get { UserDefaults.standard.bool(forKey: storageKey) }
+        set { UserDefaults.standard.set(newValue, forKey: storageKey) }
+    }
+}
+#endif
+
 /// The three plans shown on the custom paywall.
 enum PlanKind: String, CaseIterable, Identifiable {
     case annual, lifetime, monthly
@@ -110,6 +133,24 @@ final class SubscriptionManager: ObservableObject {
     @Published private(set) var errorMessage: String?
     @Published private(set) var plans: [PlanOption] = SubscriptionManager.fallbackPlans
 
+    /// The RevenueCat App User ID currently in force — an anonymous
+    /// `$RCAnonymousID:…` until a Supabase session identifies the pilot, then the
+    /// Supabase user UUID. Surfaced in Debug Settings so a developer can find the
+    /// exact customer in the RevenueCat dashboard; never shown in Release.
+    @Published private(set) var appUserID: String?
+
+    #if DEBUG
+    /// Local developer override — see `DebugProOverride`. DEBUG-only in every
+    /// sense: the property, its storage and every read of it are compiled out of
+    /// Release, so `hasProAccess` in Release depends solely on RevenueCat.
+    @Published var debugForcePro: Bool = DebugProOverride.isOn {
+        didSet {
+            guard oldValue != debugForcePro else { return }
+            DebugProOverride.isOn = debugForcePro
+        }
+    }
+    #endif
+
     static let fallbackPlans: [PlanOption] = [
         // Pre-load placeholders only (available:false); the REAL localized prices
         // always come from StoreKit via RevenueCat (`product.localizedPriceString`)
@@ -145,6 +186,12 @@ final class SubscriptionManager: ObservableObject {
     private var configured = false
     private var lastOfferingsRequestAt: Date?
     private var customerInfoRefreshInFlight = false
+    /// The Supabase UUID last handed to RevenueCat. This is what makes
+    /// `syncIdentity` idempotent: availability refreshes, session restores and
+    /// SwiftUI redraws can all call it repeatedly without issuing another
+    /// `logIn`. `nil` means "RevenueCat is anonymous as far as we identified it".
+    private var identifiedSupabaseUserID: String?
+    private var identitySyncInFlight = false
 
     #if canImport(RevenueCat)
     private var packagesByKind: [PlanKind: Package] = [:]
@@ -176,6 +223,9 @@ final class SubscriptionManager: ObservableObject {
         Purchases.logLevel = .warn
         Purchases.configure(withAPIKey: apiKey)
         isAvailable = true
+        // Anonymous to begin with; `syncIdentity` promotes this to the Supabase
+        // UUID as soon as a session is available.
+        appUserID = Purchases.shared.appUserID
         Task { @MainActor [weak self] in
             for await info in Purchases.shared.customerInfoStream {
                 self?.apply(info)
@@ -183,6 +233,80 @@ final class SubscriptionManager: ObservableObject {
         }
         refreshCustomerInfo()
         loadOfferings()
+        #endif
+    }
+
+    // MARK: Identity (RevenueCat App User ID)
+
+    /// Keep RevenueCat's App User ID in step with the authenticated Supabase user.
+    ///
+    /// This is the ONE place RevenueCat identity changes. `FocusOnlineModel` calls
+    /// it whenever `myUserID` changes — session restore, Sign in with Apple, and
+    /// sign-out all route through that single mutation — so no SwiftUI view ever
+    /// calls `logIn` and no redraw can trigger one.
+    ///
+    /// Passing the Supabase UUID (never an email, alias, or device identifier)
+    /// means the same person maps to the same RevenueCat customer across
+    /// reinstalls and devices, which is what lets an entitlement granted by hand
+    /// in the dashboard reach the right account.
+    ///
+    /// Idempotent: re-calling with the same id returns immediately, so the
+    /// repeated `refreshAvailability()` passes cost nothing and there is no
+    /// logout/login loop.
+    func syncIdentity(supabaseUserID: String?) {
+        #if canImport(RevenueCat)
+        guard isAvailable, !identitySyncInFlight else { return }
+
+        let target = supabaseUserID?.lowercased()
+
+        if let target, !target.isEmpty {
+            guard identifiedSupabaseUserID != target else { return }
+            identitySyncInFlight = true
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                defer { self.identitySyncInFlight = false }
+                do {
+                    let result = try await Purchases.shared.logIn(target)
+                    self.identifiedSupabaseUserID = target
+                    self.appUserID = Purchases.shared.appUserID
+                    // The logIn response already carries this customer's
+                    // entitlements — apply it rather than firing a second fetch.
+                    self.apply(result.customerInfo)
+                    self.rcLog("identified appUserID=\(Purchases.shared.appUserID) created=\(result.created)")
+                } catch {
+                    // Leave `identifiedSupabaseUserID` untouched so the next
+                    // availability refresh retries. Deliberately NOT applying any
+                    // CustomerInfo here: a transport failure must not revoke a
+                    // valid cached entitlement.
+                    self.rcLog("logIn failed — keeping the current identity and cached entitlement")
+                }
+            }
+        } else {
+            // Signed out. Only log out if WE identified someone; calling logOut on
+            // an already-anonymous RevenueCat user throws and would also mint a
+            // fresh anonymous id on every call.
+            guard identifiedSupabaseUserID != nil, !Purchases.shared.isAnonymous else {
+                identifiedSupabaseUserID = nil
+                return
+            }
+            identitySyncInFlight = true
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                defer { self.identitySyncInFlight = false }
+                self.identifiedSupabaseUserID = nil
+                do {
+                    // Returns the new anonymous customer. Applying it is what
+                    // stops the previous account's Pro state leaking into the
+                    // next one.
+                    let info = try await Purchases.shared.logOut()
+                    self.appUserID = Purchases.shared.appUserID
+                    self.apply(info)
+                    self.rcLog("signed out → anonymous appUserID=\(Purchases.shared.appUserID)")
+                } catch {
+                    self.rcLog("logOut failed — RevenueCat identity unchanged")
+                }
+            }
+        }
         #endif
     }
 
@@ -367,6 +491,25 @@ final class SubscriptionManager: ObservableObject {
             // Single-entitlement app: any active entitlement means Pro. This keeps
             // us correct even if the dashboard identifier differs from the name.
             isPro = !info.entitlements.active.isEmpty
+        }
+    }
+    #endif
+
+    #if DEBUG
+    // MARK: Debug diagnostics (never compiled into Release)
+
+    /// One line describing where PRO access is coming from right now, so a real
+    /// entitlement is never mistaken for the local override. `isPro` here is
+    /// RevenueCat's own value — the override is reported separately.
+    var debugAccessSummary: String {
+        switch (isPro, debugForcePro) {
+        case (true, true):   return "RevenueCat PRO: Active · Debug Override: Active"
+        case (true, false):  return "RevenueCat PRO: Active"
+        case (false, true):  return "RevenueCat PRO: Inactive · Debug Override: Active"
+        case (false, false):
+            return isAvailable
+                ? (hasResolvedEntitlement ? "RevenueCat PRO: Inactive" : "RevenueCat PRO: Resolving…")
+                : "RevenueCat: not configured"
         }
     }
     #endif

@@ -157,7 +157,18 @@ final class FocusOnlineModel: ObservableObject {
     private let rewardService = OnlineRewardService()
 
     private weak var appModel: AppModel?
-    private var myUserID: String?
+    /// The authenticated Supabase user UUID (lowercased) — nil when signed out.
+    ///
+    /// Every mutation routes through this one property (session restore, Sign in
+    /// with Apple, sign-out), so its `didSet` is the single, centralized place
+    /// RevenueCat identity is kept in step. `syncIdentity` is idempotent, so the
+    /// repeated `refreshAvailability()` passes never issue a redundant `logIn`.
+    private var myUserID: String? {
+        didSet {
+            guard oldValue != myUserID else { return }
+            appModel?.subscriptions.syncIdentity(supabaseUserID: myUserID)
+        }
+    }
     private var pilotPollTask: Task<Void, Never>?
     private var lobbyRoomID: String?
 
@@ -232,6 +243,12 @@ final class FocusOnlineModel: ObservableObject {
             availability = (lastErrorCategory == "network") ? .networkUnavailable : .projectUnavailable
         }
         OnlineCache.lastOnlineStatus = availability.userMessage
+        // Re-assert RevenueCat identity. `myUserID`'s `didSet` already handles a
+        // CHANGE; this covers the two cases it cannot: the first pass running
+        // before RevenueCat finished configuring, and retrying a `logIn` that
+        // failed on a flaky network. `syncIdentity` is idempotent, so when the
+        // identity is already correct this costs nothing.
+        appModel?.subscriptions.syncIdentity(supabaseUserID: myUserID)
     }
 
     /// The ONE authoritative reaction to a failed backend operation: a genuine
