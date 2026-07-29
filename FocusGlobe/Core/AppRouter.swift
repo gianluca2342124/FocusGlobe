@@ -344,8 +344,12 @@ enum PaywallContext: Equatable {
         case .online, .invite:       return "Online & Friends"
         case .infinite:              return "Unlimited Time  ∞"
         case .sky:                   return "Exclusive Skies"
-        case .balloonSkin, .interior:return "Exclusive Skins & Items"
+        case .balloonSkin:           return "Exclusive Balloon Skins"
         case .noAds:                return "No Ads"
+        // `.interior` deliberately highlights nothing: no StoreItem is
+        // `isPremium`, so PRO buys no cabin item. Pointing the pilot at the
+        // skins row from a cabin entry would promise the wrong thing.
+        case .interior: return nil
         case .general, .sound, .widget, .rewards, .pause: return nil
         }
     }

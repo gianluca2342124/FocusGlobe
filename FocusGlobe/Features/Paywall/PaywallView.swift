@@ -523,7 +523,7 @@ private struct PaywallCollectibleCarousel: View {
             selectedIndex: $selectedIndex,
             spacing: 12,
             maximumCardWidth: 330,
-            speed: 13
+            speed: 34
         ) { item, prominence in
             VStack(spacing: 8) {
                 collectibleArt(item)
@@ -590,17 +590,12 @@ private struct PaywallSkyCarousel: View {
             selectedIndex: $selectedIndex,
             spacing: 12,
             maximumCardWidth: 330,
-            speed: 13
+            speed: 34
         ) { sky, prominence in
             ZStack {
-                SkyFlightSceneView(
-                    sky: sky,
-                    elapsed: { ProcessInfo.processInfo.systemUptime },
-                    animated: false,
-                    seed: 0x50524F,
-                    presentationMode: .paywall,
-                    renderQuality: .still
-                )
+                // Static artwork, not a live scene graph: four of these are on
+                // screen at once, and the conveyor is the only thing that moves.
+                SkyStillPreview(sky: sky)
 
                 LinearGradient(colors: [.clear, .black.opacity(0.46)],
                                startPoint: .center, endPoint: .bottom)
@@ -693,7 +688,9 @@ struct PaywallComparisonTable: View {
         "Online & Friends",
         "Unlimited Time  ∞",
         "Exclusive Skies",
-        "Exclusive Skins & Items",
+        // Every StoreItem is `isPremium: false`, so PRO unlocks no item — only
+        // the four `.pro` balloon skins. The row must name what it delivers.
+        "Exclusive Balloon Skins",
     ]
 
     private var freeWidth: CGFloat { viewport.isCompact ? 52 : 66 }

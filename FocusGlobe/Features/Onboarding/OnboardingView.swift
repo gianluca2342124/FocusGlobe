@@ -36,7 +36,9 @@ struct OnboardingView: View {
     /// Guards the review request so a double-tap can't fire it twice or race the
     /// transition to the premium page.
     @State private var reviewRequested = false
-    @State private var notificationPromptActive = false
+    /// Guards the permission request so a double-tap can't call
+    /// `requestAuthorization` twice or advance the step twice.
+    @State private var notificationRequestInFlight = false
     @State private var premiumPreviewIndex = 0
     @FocusState private var textFocused: Bool
 
@@ -50,13 +52,6 @@ struct OnboardingView: View {
                 }
                 .frame(maxWidth: 560)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-
-            if notificationPromptActive {
-                notificationPromptGuidance
-                    .transition(.opacity)
-                    .allowsHitTesting(false)
-                    .zIndex(20)
             }
         }
         .preferredColorScheme(.dark)
@@ -150,20 +145,28 @@ struct OnboardingView: View {
             Spacer()
             // The hero balloon drifts gently — a magical, alive first impression.
             ZStack {
-                Ellipse()
-                    .fill(RadialGradient(
-                        colors: [
-                            AppColors.gold.opacity(0.27),
-                            Color(hex: 0x8F7BE8).opacity(0.08),
-                            .clear,
-                        ],
-                        center: UnitPoint(x: 0.48, y: 0.46),
-                        startRadius: 2,
-                        endRadius: 128
-                    ))
-                    .frame(width: 220, height: 270)
-                    .blur(radius: 17)
-                    .rotationEffect(.degrees(-8))
+                // Light, not a lit shape. The gradient must reach fully clear
+                // BEFORE it meets its own frame, otherwise the frame crops a
+                // still-visible ring and the balloon appears to sit on a disc.
+                // (The previous ellipse was 220×270 with endRadius 128 — 128 is
+                // larger than the 105 pt half-width, so the shape sliced the
+                // glow at ~8% alpha and a 17 pt blur only softened that arc.)
+                // Here the shortest centre-to-edge distance is 150 pt against a
+                // 128 pt falloff, so every edge is genuinely transparent.
+                RadialGradient(
+                    colors: [
+                        AppColors.gold.opacity(0.27),
+                        Color(hex: 0x8F7BE8).opacity(0.08),
+                        .clear,
+                    ],
+                    center: .center,
+                    startRadius: 2,
+                    endRadius: 128
+                )
+                .frame(width: 300, height: 300)
+                .scaleEffect(x: 1, y: 1.14)      // the soft vertical bloom, kept
+                .blur(radius: 18)
+                .allowsHitTesting(false)
                 introHero
             }
             .offset(y: introFloat)
@@ -435,30 +438,21 @@ struct OnboardingView: View {
         }
     }
 
-    /// A premium pre-permission explainer card — a shield hero over the three
-    /// promises, framed like an app preview rather than a plain feature list.
+    /// The pre-permission explainer: the shield artwork floating free above the
+    /// three promises. Deliberately NOT a bordered card — a single hero image
+    /// boxed inside a gold-outlined rectangle reads as a widget preview or an
+    /// ad, and the frame competes with the artwork it is supposed to present.
     private var shieldPreviewCard: some View {
         VStack(spacing: AppSpacing.md) {
-            ZStack {
-                Circle().fill(RadialGradient(colors: [AppColors.gold.opacity(0.28), .clear],
-                                             center: .center, startRadius: 2, endRadius: 90))
-                    .frame(width: 150, height: 150)
-                shieldHero
-            }
+            shieldHero
             VStack(spacing: AppSpacing.sm) {
                 bulletPoint(icon: "airplane", text: "Your flight becomes a protected space")
                 bulletPoint(icon: "app.badge", text: "Distracting apps stay on the ground")
                 bulletPoint(icon: "checkmark.seal", text: "You choose exactly what is blocked")
             }
         }
-        .padding(AppSpacing.lg)
+        .padding(.vertical, AppSpacing.md)
         .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(.white.opacity(0.06))
-                .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .strokeBorder(AppColors.gold.opacity(0.22), lineWidth: 1))
-        )
     }
 
     /// The shield hero — the real `focusshield` art (transparent PNG, soft
@@ -468,12 +462,14 @@ struct OnboardingView: View {
         if let ui = UIImage(named: "focusshield")
             ?? UIImage(named: "protectyourflight")
             ?? UIImage(named: "OnboardingHero_FocusShield") {
-            // Slightly smaller + centred so it breathes inside the card.
+            // Floats free. The art already carries its own natural glow, so this
+            // adds only a grounding drop shadow — a 24 pt gold bloom on top of a
+            // glowing PNG is what made the shield look like a sticker.
             Image(uiImage: ui).resizable().scaledToFit()
                 .frame(maxHeight: 158)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 6)
-                .shadow(color: AppColors.gold.opacity(0.35), radius: 24)
+                .shadow(color: .black.opacity(0.28), radius: 14, y: 8)
         } else {
             shieldGlyph
         }
@@ -560,21 +556,13 @@ struct OnboardingView: View {
                 Rectangle().fill(Color.black.opacity(0.12)).frame(width: 1, height: 46)
                 Button {
                     appModel.tapFeedback()
-                    guard !notificationPromptActive else { return }
-                    withAnimation(.easeOut(duration: reduceMotion ? 0 : 0.2)) {
-                        notificationPromptActive = true
-                    }
+                    guard !notificationRequestInFlight else { return }
+                    notificationRequestInFlight = true
                     Task { @MainActor in
-                        // Give SwiftUI one render pass before iOS snapshots the
-                        // presenting hierarchy for its permission alert. Without
-                        // this beat the guidance can be set in state but remain
-                        // absent behind the system sheet.
-                        await Task.yield()
-                        try? await Task.sleep(for: .milliseconds(180))
+                        // Straight to the system prompt. There is nothing of ours
+                        // left to render first, so no artificial delay.
                         await appModel.requestOnboardingNotificationPermission()
-                        withAnimation(.easeOut(duration: reduceMotion ? 0 : 0.18)) {
-                            notificationPromptActive = false
-                        }
+                        notificationRequestInFlight = false
                         advance()
                     }
                 } label: {
@@ -591,29 +579,13 @@ struct OnboardingView: View {
         .frame(maxWidth: .infinity)
     }
 
-    /// The real permission prompt belongs to iOS, so this non-interactive cue is
-    /// deliberately light: it points toward the system Allow action and exists
-    /// only while `requestAuthorization` is suspended awaiting the response.
-    private var notificationPromptGuidance: some View {
-        GeometryReader { geometry in
-            VStack(spacing: 3) {
-                Text("👆")
-                    .font(.system(size: 36))
-                Text("Tap Allow to keep gentle reminders")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 7)
-                    .background(Capsule().fill(Color.black.opacity(0.66)))
-            }
-            .position(
-                x: geometry.size.width * 0.68,
-                y: geometry.size.height * 0.68
-            )
-            .accessibilityHidden(true)
-        }
-        .ignoresSafeArea()
-    }
+    // The 👆 "Tap Allow" cue that used to live here has been removed. iOS
+    // presents its permission alert in a system-owned `UIWindow` above the app's
+    // own window, so an overlay drawn inside our hierarchy can never sit on top
+    // of it — no `zIndex` applies across windows. It could only ever appear
+    // BEHIND the alert, or flash as a stray hand on the onboarding page as the
+    // alert dismissed. The Apple-styled preview card above already shows the
+    // pilot exactly which button is coming.
 
     /// The REAL FocusGlobe app icon (the `AppLogo` asset) inside the Apple-style
     /// permission card, so the branding is correct — never a procedural mock.
@@ -738,7 +710,12 @@ struct OnboardingView: View {
                         Text("Focus, elevated.")
                             .font(.system(size: Layout.pad(30, 40), weight: .bold, design: .default))
                             .foregroundStyle(.white)
-                        Text("Everything in FocusGlobe, unlocked.")
+                        // NOT "Everything in FocusGlobe, unlocked." — PRO opens
+                        // the four exclusive Skies, not the progression ones
+                        // (Fiji, Northern Aurora, Deep Space are still earned by
+                        // flying). Promising "everything" here is a claim the
+                        // app then refuses to honour on the Sky selector.
+                        Text("The exclusive Skies, skins and features.")
                             .font(AppTypography.callout)
                             .foregroundStyle(.white.opacity(0.66))
                     }
@@ -772,7 +749,7 @@ struct OnboardingView: View {
             selectedIndex: $premiumPreviewIndex,
             spacing: 10,
             maximumCardWidth: 230,
-            speed: 10
+            speed: 28
         ) { preview, prominence in
             premiumPreviewCard(preview, prominence: prominence)
         }
@@ -788,14 +765,7 @@ struct OnboardingView: View {
         switch preview {
         case .sky(let sky):
             ZStack {
-                SkyFlightSceneView(
-                    sky: sky,
-                    elapsed: { 24 },
-                    animated: false,
-                    seed: 0x4F4E424F415244,
-                    presentationMode: .paywall,
-                    renderQuality: .still
-                )
+                SkyStillPreview(sky: sky)
                 LinearGradient(colors: [.clear, .black.opacity(0.42)],
                                startPoint: .center, endPoint: .bottom)
                 previewCaption(sky.name)
@@ -853,7 +823,10 @@ struct OnboardingView: View {
             // Fixed order, consistent Title Case. "Support FocusGlobe" is
             // deliberately absent — it is a sentiment, not a benefit.
             premiumBenefit("moon.stars.fill", "Exclusive Skies")
-            premiumBenefit("circle.circle.fill", "Exclusive Skins & Items")
+            // "Skins", not "Skins & Items": four balloon skins are gated behind
+            // `.pro`, but every StoreItem is `isPremium: false` — buying PRO
+            // unlocks no item at all, so naming them here is a false promise.
+            premiumBenefit("circle.circle.fill", "Exclusive Balloon Skins")
             premiumBenefit("square.grid.2x2.fill", "Exclusive Widgets")
             premiumBenefit("person.2.fill", "Online Mode")
             premiumBenefit("infinity", "Unlimited Time ∞")

@@ -11,7 +11,10 @@ struct FocusContinuousCarousel<Item: Identifiable, Card: View>: View {
     @Binding var selectedIndex: Int
     var spacing: CGFloat = 12
     var maximumCardWidth: CGFloat = 340
-    var speed: CGFloat = 14
+    /// Points per second. A card advances one position every
+    /// `(cardWidth + spacing) / speed` seconds — on a 390 pt phone that is ~7.5 s
+    /// at 34, versus ~19.5 s at the previous 14, which read as a static row.
+    var speed: CGFloat = 34
     var resumeDelay: TimeInterval = 2.4
     @ViewBuilder let card: (Item, Double) -> Card
 
@@ -48,7 +51,7 @@ struct FocusContinuousCarousel<Item: Identifiable, Card: View>: View {
                         let prominence = max(0, 1 - abs(delta))
 
                         if abs(delta) <= 2.25 {
-                            card(items[index], prominence)
+                            card(items[index], quantized(prominence))
                                 .frame(width: cardWidth, height: geometry.size.height)
                                 .scaleEffect(0.88 + 0.12 * prominence)
                                 .opacity(0.54 + 0.46 * prominence)
@@ -169,6 +172,21 @@ struct FocusContinuousCarousel<Item: Identifiable, Card: View>: View {
         motionOrigin = Date()
         isAutomatic = false
         scheduleAutomaticResume()
+    }
+
+    /// Prominence handed to the CARD BUILDER is stepped; the engine keeps the
+    /// exact value for its own `scaleEffect`/`opacity`, which are cheap
+    /// per-frame transforms of an already-built card.
+    ///
+    /// This matters because the builder's output is a whole view tree. Passing a
+    /// raw `Double` that moves every frame means SwiftUI can never find two
+    /// consecutive frames equal, so each card's body is rebuilt 30×/s purely
+    /// because a border opacity shifted by 0.003. Twelve steps across a card's
+    /// travel is far finer than the eye resolves on these gradients, and it lets
+    /// the diffing engine skip the subtree on the ~11 frames out of 12 where
+    /// nothing the builder reads has actually changed.
+    private func quantized(_ prominence: Double) -> Double {
+        (prominence * 12).rounded() / 12
     }
 
     private func normalized(_ index: Int) -> Int {
