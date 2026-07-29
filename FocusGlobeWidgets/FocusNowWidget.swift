@@ -54,8 +54,14 @@ struct FocusNowView: View {
             skyArtwork
             LinearGradient(colors: [.black.opacity(0.20), .black.opacity(0.08), .black.opacity(0.72)],
                            startPoint: .top, endPoint: .bottom)
-            content
+            if family == .systemSmall {
+                smallLayout
+            } else {
+                mediumLayout
+            }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipShape(ContainerRelativeShape())
     }
 
     @ViewBuilder private var skyArtwork: some View {
@@ -73,74 +79,110 @@ struct FocusNowView: View {
         #endif
     }
 
-    @ViewBuilder private var content: some View {
+    private var displayedSkyName: String {
         if snapshot.activeFlight {
-            activeContent
-        } else {
-            idleContent
+            return snapshot.activeSkyName ?? snapshot.selectedSkyName ?? "Focus"
         }
+        return snapshot.selectedSkyName ?? "Ready to focus"
     }
 
-    // ACTIVE: sky name + live remaining + category.
-    private var activeContent: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            WHeader(icon: "dot.radiowaves.left.and.right", title: "In flight", tint: WTheme.teal)
+    private var actionTitle: String {
+        snapshot.activeFlight || snapshot.hasResumable ? "Resume" : "Start Focus"
+    }
+
+    private var actionIcon: String {
+        snapshot.activeFlight || snapshot.hasResumable ? "arrow.uturn.up" : "arrow.up"
+    }
+
+    /// Small is a true edge-to-edge widget, not a resized phone card. Every
+    /// element stays inside the family container and the CTA uses compact copy.
+    private var smallLayout: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Text(displayedSkyName)
+                .font(.system(size: 15, weight: .heavy, design: .default))
+                .foregroundStyle(WTheme.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+
             Spacer(minLength: 0)
-            if snapshot.activeInfinite || snapshot.activeEndDate == nil {
-                Text("∞")
-                    .font(.system(size: 46, weight: .black, design: .default))
-                    .foregroundStyle(WTheme.ink)
-            } else if let end = snapshot.activeEndDate {
-                Text(timerInterval: Date()...max(Date(), end), countsDown: true)
-                    .font(.system(size: 40, weight: .black, design: .default))
-                    .foregroundStyle(WTheme.ink)
-                    .monospacedDigit()
-                    .minimumScaleFactor(0.6).lineLimit(1)
+
+            if snapshot.activeFlight {
+                remainingTime(fontSize: 28)
             }
-            HStack(spacing: 6) {
-                Text(snapshot.activeSkyName ?? snapshot.selectedSkyName ?? "Focus")
-                    .font(.system(size: 12.5, weight: .bold, design: .default))
+
+            actionCapsule(compact: true)
+        }
+        .padding(13)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+
+    /// Medium uses its horizontal room intentionally: state and remaining time
+    /// stay on the left; the compact action remains safely inset on the right.
+    private var mediumLayout: some View {
+        HStack(alignment: .bottom, spacing: 14) {
+            VStack(alignment: .leading, spacing: 5) {
+                Text(snapshot.activeFlight ? "IN FLIGHT" : "FOCUS NOW")
+                    .font(.system(size: 10, weight: .heavy, design: .default))
+                    .tracking(1.1)
+                    .foregroundStyle(snapshot.activeFlight ? WTheme.teal : WTheme.inkSoft)
+                    .lineLimit(1)
+
+                Text(displayedSkyName)
+                    .font(.system(size: 19, weight: .heavy, design: .default))
                     .foregroundStyle(WTheme.ink)
-                if let cat = snapshot.activeCategory {
-                    Text("· \(cat)")
-                        .font(.system(size: 12, weight: .semibold, design: .default))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+
+                if snapshot.activeFlight {
+                    remainingTime(fontSize: 27)
+                } else {
+                    Text(snapshot.hasResumable ? "Your flight is ready to continue." : "A quiet flight is one tap away.")
+                        .font(.system(size: 11.5, weight: .semibold))
                         .foregroundStyle(WTheme.inkSoft)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.82)
                 }
-                Spacer(minLength: 0)
             }
-            .lineLimit(1).minimumScaleFactor(0.7)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            actionCapsule(compact: false)
         }
         .padding(15)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
     }
 
-    // IDLE: sky name + a Start Focus (or Resume) CTA.
-    private var idleContent: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(snapshot.selectedSkyName ?? "Ready to focus")
-                    .font(.system(size: 15, weight: .heavy, design: .default))
-                    .foregroundStyle(WTheme.ink)
-                    .lineLimit(1).minimumScaleFactor(0.7)
-                Spacer()
-                Image(systemName: "paperplane.fill")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(WTheme.teal)
-            }
-            Spacer(minLength: 0)
-            HStack(spacing: 7) {
-                Image(systemName: snapshot.hasResumable ? "arrow.uturn.up" : "arrow.up")
-                    .font(.system(size: 13, weight: .heavy))
-                Text(snapshot.hasResumable ? "Resume flight" : "Start Focus")
-                    .font(.system(size: 14, weight: .heavy, design: .default))
-            }
-            .foregroundStyle(Color(red: 0.08, green: 0.07, blue: 0.05))
-            .padding(.horizontal, 14).padding(.vertical, 9)
-            .frame(maxWidth: family == .systemSmall ? .infinity : nil)
-            .background(Capsule().fill(WTheme.gold))
+    @ViewBuilder
+    private func remainingTime(fontSize: CGFloat) -> some View {
+        if snapshot.activeInfinite || snapshot.activeEndDate == nil {
+            Text("∞")
+                .font(.system(size: fontSize, weight: .black, design: .default))
+                .foregroundStyle(WTheme.ink)
+        } else if let end = snapshot.activeEndDate {
+            Text(timerInterval: Date()...max(Date(), end), countsDown: true)
+                .font(.system(size: fontSize, weight: .black, design: .default))
+                .foregroundStyle(WTheme.ink)
+                .monospacedDigit()
+                .minimumScaleFactor(0.65)
+                .lineLimit(1)
         }
-        .padding(15)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+
+    private func actionCapsule(compact: Bool) -> some View {
+        HStack(spacing: compact ? 5 : 7) {
+            Image(systemName: actionIcon)
+                .font(.system(size: compact ? 11 : 12, weight: .heavy))
+            ViewThatFits(in: .horizontal) {
+                Text(actionTitle)
+                Text(snapshot.activeFlight || snapshot.hasResumable ? "Resume" : "Start")
+            }
+            .font(.system(size: compact ? 12 : 13, weight: .heavy, design: .default))
+            .lineLimit(1)
+        }
+        .foregroundStyle(Color(red: 0.08, green: 0.07, blue: 0.05))
+        .padding(.horizontal, compact ? 10 : 13)
+        .padding(.vertical, compact ? 7 : 9)
+        .frame(maxWidth: compact ? .infinity : nil)
+        .background(Capsule().fill(WTheme.gold))
     }
 }
 

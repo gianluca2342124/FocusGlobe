@@ -193,35 +193,25 @@ struct StoreView: View {
         }
     }
 
-    /// The cabin's real placed decorations plus the highlighted preview item.
-    ///
-    /// The preview item is guaranteed a place: the Cabin only renders
-    /// `StoreItem.maxEquipped` objects (in catalog order), so simply unioning a
-    /// fifth id could push the very piece being previewed out of the picture.
-    /// One equipped object stands aside instead.
+    /// The selected product is the sole preview focus. With no active product
+    /// selection, the stage falls back to the pilot's equipped Cabin. This keeps
+    /// Store calibration honest: the highlighted piece uses exactly its final
+    /// production transform and is never displaced by an unrelated object.
     private var previewCabinIDs: Set<String> {
+        if let previewItemID { return [previewItemID] }
         let equipped = Set(appModel.profile.equippedCabinItemIDs ?? [])
-        guard let previewItemID, !equipped.contains(previewItemID) else { return equipped }
-        let room = max(0, StoreItem.maxEquipped - 1)
-        let kept = StoreItem.cabinDecorations
-            .filter { equipped.contains($0.id) }
-            .prefix(room)
-            .map(\.id)
-        return Set(kept).union([previewItemID])
+        return equipped
     }
 
-    /// Preview the highlighted object in a real compatible free slot without
-    /// mutating the pilot's saved layout.
+    /// A highlighted product always previews in its canonical preferred slot,
+    /// without mutating the pilot's saved layout. Equipped-only fallback uses
+    /// the real persisted placements.
     private var previewCabinPlacements: [String: CabinSlot] {
-        var placements = appModel.cabinPlacements.filter { previewCabinIDs.contains($0.key) }
-        guard let item = previewItem, previewCabinIDs.contains(item.id),
-              placements[item.id] == nil else { return placements }
-        let occupied = Set(placements.values)
-        if let slot = ([item.preferredSlot].compactMap { $0 } + item.allowedSlots)
-            .first(where: { !occupied.contains($0) }) {
-            placements[item.id] = slot
+        if let item = previewItem,
+           let slot = item.preferredSlot ?? item.allowedSlots.first {
+            return [item.id: slot]
         }
-        return placements
+        return appModel.cabinPlacements.filter { previewCabinIDs.contains($0.key) }
     }
 
     private var storeBalloonHeight: CGFloat {
@@ -656,7 +646,7 @@ private struct CabinPlacementSheet: View {
                 #endif
                 Color.black.opacity(0.12)
                 ForEach(item.allowedSlots) { slot in
-                    let p = slot.normalizedPosition
+                    let p = slot.transform(for: .portrait).contact
                     let open = !occupiedSlots.contains(slot)
                     Image(systemName: open ? "plus.circle.fill" : "xmark.circle.fill")
                         .font(.system(size: 24, weight: .bold))

@@ -29,7 +29,7 @@ struct WidgetGalleryItem: Identifiable {
         .init(id: "FGFocusNow", name: "Focus Now",
               blurb: "Start a flight in a tap when idle, or watch the live time remaining on the flight you're on.",
               systemImage: "paperplane.fill", glow: WGTheme.teal,
-              families: ["Medium"], isPro: false),
+              families: ["Small", "Medium"], isPro: false),
         // PRO
         .init(id: "FGFocusGrid", name: "Focus Grid",
               blurb: "Your last six months of real focus days as a living contribution grid — tap to open your Passport.",
@@ -174,29 +174,30 @@ private struct WidgetPreviewTile: View {
     }
 
     private var focusNowPreview: some View {
-        ZStack {
+        let resumable = appModel.resumableJourney != nil
+        return ZStack {
             SkyStillPreview(sky: appModel.selectedSky)
-            LinearGradient(colors: [.black.opacity(0.06), .black.opacity(0.64)],
+            LinearGradient(colors: [.black.opacity(0.14), .black.opacity(0.10), .black.opacity(0.72)],
                            startPoint: .top, endPoint: .bottom)
-            VStack(alignment: .leading, spacing: 5) {
-                HStack {
-                    Text(appModel.selectedSky.name)
-                        .font(.system(size: side * 0.09, weight: .heavy))
-                        .lineLimit(1)
-                    Spacer()
-                    Image(systemName: "paperplane.fill")
-                        .foregroundStyle(WGTheme.teal)
-                }
+            VStack(alignment: .leading, spacing: side * 0.045) {
+                Text(appModel.selectedSky.name)
+                    .font(.system(size: side * 0.095, weight: .heavy))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
                 Spacer()
-                Label("Start Focus", systemImage: "arrow.up")
-                    .font(.system(size: side * 0.08, weight: .heavy))
+                Label(resumable ? "Resume" : "Start Focus",
+                      systemImage: resumable ? "arrow.uturn.up" : "arrow.up")
+                    .font(.system(size: side * 0.075, weight: .heavy))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
                     .foregroundStyle(Color(red: 0.08, green: 0.07, blue: 0.05))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 7)
+                    .padding(.horizontal, side * 0.07)
+                    .padding(.vertical, side * 0.05)
+                    .frame(maxWidth: .infinity)
                     .background(Capsule().fill(WGTheme.gold))
             }
             .foregroundStyle(.white)
-            .padding(side * 0.10)
+            .padding(side * 0.085)
         }
     }
 

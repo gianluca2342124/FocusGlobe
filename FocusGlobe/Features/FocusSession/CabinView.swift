@@ -145,7 +145,7 @@ struct CabinView: View {
         slottedProps(W: W, H: H, t: t)
     }
 
-    /// The equipped objects the pilot will actually see, in a stable order.
+    /// The equipped objects the pilot will actually see, in catalog order.
     ///
     /// Derived from `StoreItem.cabinDecorations` (catalog order) rather than by
     /// iterating `equippedItemIDs`, because that is a `Set` and its order is not
@@ -153,42 +153,124 @@ struct CabinView: View {
     /// rearrange itself for no reason. The cap is applied here as well as at the
     /// equip site, so a profile saved before the cap existed still renders a calm
     /// interior instead of nine stacked objects.
-    private var visibleItems: [StoreItem] {
+    private var baseVisibleItems: [StoreItem] {
         StoreItem.cabinDecorations
             .filter { equippedItemIDs.contains($0.id) && !$0.allowedSlots.isEmpty }
             .prefix(StoreItem.maxEquipped)
-            .sorted { placement(for: $0).depth < placement(for: $1).depth }
+            .map { $0 }
     }
 
-    /// Places every equipped object from the slot layout table. Nothing here
-    /// knows an item's `id`: an object declares a surface, the surface hands out
-    /// seats, and objects sharing a surface take different seats so they never
-    /// stack. Adding a decoration needs no change to this file.
+    /// Resolve corrupt/legacy duplicate placements deterministically. The saved
+    /// slot is honoured first; otherwise the next valid unoccupied slot wins.
+    /// A decoration with no free physical surface is omitted instead of stacked.
+    private var resolvedPlacements: [String: CabinSlot] {
+        var occupied = Set<CabinSlot>()
+        var result: [String: CabinSlot] = [:]
+        var tabletopCount = 0
+        var hasTableCenter = false
+        var hasLargeBenchItem = false
+
+        func canOccupy(_ slot: CabinSlot, item: StoreItem) -> Bool {
+            guard !occupied.contains(slot) else { return false }
+            switch slot {
+            case .tableCenter:
+                return tabletopCount == 0
+            case .tableLeft, .tableRight:
+                return !hasTableCenter && tabletopCount < 2
+            case .benchLeft, .benchCenter:
+                return item.footprint != .soft || !hasLargeBenchItem
+            default:
+                return true
+            }
+        }
+
+        for item in baseVisibleItems {
+            let saved = equippedItemPlacements[item.id].flatMap {
+                item.supports($0) ? $0 : nil
+            }
+            let candidates = ([saved, item.preferredSlot].compactMap { $0 } + item.allowedSlots)
+                .reduce(into: [CabinSlot]()) { unique, slot in
+                    if !unique.contains(slot) { unique.append(slot) }
+                }
+            guard let slot = candidates.first(where: { canOccupy($0, item: item) }) else { continue }
+            result[item.id] = slot
+            occupied.insert(slot)
+            switch slot {
+            case .tableCenter:
+                tabletopCount = 1
+                hasTableCenter = true
+            case .tableLeft, .tableRight:
+                tabletopCount += 1
+            case .benchLeft, .benchCenter where item.footprint == .soft:
+                hasLargeBenchItem = true
+            default:
+                break
+            }
+        }
+        return result
+    }
+
+    private var visibleItems: [StoreItem] {
+        baseVisibleItems
+            .filter { resolvedPlacements[$0.id] != nil }
+            .sorted {
+                (resolvedPlacements[$0.id]?.depth ?? 0)
+                    < (resolvedPlacements[$1.id]?.depth ?? 0)
+            }
+    }
+
+    /// Places every object from the same normalized physical transform table in
+    /// Store and flight. Slot coordinates represent a real contact/attachment
+    /// point; item anchors convert that point into the SwiftUI frame's centre.
     @ViewBuilder private func slottedProps(W: CGFloat, H: CGFloat, t: Double) -> some View {
         ForEach(visibleItems) { item in
-            let slot = placement(for: item)
-            let layout = Self.layout(for: slot)
-            let size = W * layout.size * item.normalizedScale
+            let slot = resolvedPlacements[item.id] ?? item.preferredSlot ?? .tableCenter
+            let layout = slot.transform(for: Self.artworkLayout(W: W, H: H))
+            let width = min(W * layout.defaultScale * item.normalizedScale,
+                            W * layout.maximumFootprint)
+            let height = width / Self.assetAspectRatio(for: item)
+            let anchor = item.anchorPoint ?? layout.anchor
+            let x = W * (layout.contact.x + item.offsetAdjustment.x)
+                + (0.5 - anchor.x) * width
+            let y = H * (layout.contact.y + item.offsetAdjustment.y)
+                + (0.5 - anchor.y) * height
             cabinItemImage(item, t: t)
-                .frame(width: size, height: size)
-                .rotationEffect(.degrees(item.rotationDegrees))
-                .position(x: W * layout.x, y: H * layout.y)
-                .zIndex(item.zIndex + Double(slot.depth))
+                .frame(width: width, height: height)
+                .mask(alignment: .top) {
+                    Rectangle()
+                        .frame(width: width,
+                               height: height * max(0, 1 - item.clippedBottomFraction))
+                }
+                .rotation3DEffect(
+                    .degrees(item.perspectivePitchDegrees),
+                    axis: (x: 1, y: 0, z: 0),
+                    anchor: UnitPoint(x: anchor.x, y: anchor.y),
+                    perspective: 0.45
+                )
+                .rotationEffect(.degrees(layout.rotationDegrees + item.rotationDegrees))
+                .position(x: x, y: y)
+                .zIndex(layout.zIndex + item.zIndex)
         }
     }
 
-    /// A profile created before persisted placement still gets a deterministic,
-    /// compatible preferred slot. The AppModel migration writes this choice.
-    private func placement(for item: StoreItem) -> CabinSlot {
-        if let saved = equippedItemPlacements[item.id], item.supports(saved) { return saved }
-        return item.preferredSlot ?? item.allowedSlots.first ?? .tableCenter
+    /// The three production Cabin artworks share semantic slots, while their
+    /// painted furniture sits at slightly different normalized heights.
+    private static func artworkLayout(W: CGFloat, H: CGFloat) -> CabinArtworkLayout {
+        let aspect = W / max(1, H)
+        if aspect > 1.2 { return .landscape }
+        if min(W, H) > 700 { return .tablet }
+        return .portrait
     }
 
-    /// The one responsive layout table. Ground/surface placements stay below the
-    /// protected main window; wall placements sit outside its left/right edges.
-    private static func layout(for slot: CabinSlot) -> (x: CGFloat, y: CGFloat, size: CGFloat) {
-        let p = slot.normalizedPosition
-        return (CGFloat(p.x), CGFloat(p.y), CGFloat(slot.normalizedBaseSize))
+    /// UIKit caches named catalog images, so reading the source aspect avoids
+    /// forcing a wide laptop into a square frame without repeated decoding.
+    private static func assetAspectRatio(for item: StoreItem) -> CGFloat {
+        #if canImport(UIKit)
+        if let image = UIImage(named: item.bestAssetName), image.size.height > 0 {
+            return max(0.35, image.size.width / image.size.height)
+        }
+        #endif
+        return 1
     }
 
     /// One cabin object drawn from its real asset — with a graceful procedural

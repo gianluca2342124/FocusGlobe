@@ -160,7 +160,7 @@ final class AppModel: ObservableObject {
                 var occupied = Set<CabinSlot>()
                 var placedIDs = Set<String>()
                 for item in StoreItem.cabinDecorations where kept.contains(item.id) {
-                    let saved = placements[item.id].flatMap(CabinSlot.init(rawValue:))
+                    let saved = placements[item.id].flatMap(CabinSlot.persisted)
                     let candidates = ([item.preferredSlot].compactMap { $0 } + item.allowedSlots)
                         .reduce(into: [CabinSlot]()) { result, slot in
                             if !result.contains(slot) { result.append(slot) }
@@ -707,7 +707,7 @@ final class AppModel: ObservableObject {
         return raw.reduce(into: [:]) { result, pair in
             guard equipped.contains(pair.key),
                   let item = StoreItem.byID(pair.key),
-                  let slot = CabinSlot(rawValue: pair.value),
+                  let slot = CabinSlot.persisted(pair.value),
                   item.supports(slot) else { return }
             result[pair.key] = slot
         }
@@ -753,7 +753,8 @@ final class AppModel: ObservableObject {
             return false
         }
         let occupiedByAnother = placements.contains {
-            $0.key != item.id && ids.contains($0.key) && $0.value == slot.rawValue
+            $0.key != item.id && ids.contains($0.key)
+                && CabinSlot.persisted($0.value) == slot
         }
         guard !occupiedByAnother else {
             haptics.refused()
