@@ -32,8 +32,15 @@ struct FocusNowView: View {
         return "start"
     }
 
+    /// The pilot's chosen Sky, as its own colours.
+    ///
+    /// The snapshot carries one palette (`skyTopHex`/`skyBottomHex`, written from
+    /// the selected Sky's `moodPalette`) — there is deliberately no separate
+    /// active-flight palette, so this reads it directly. The previous
+    /// `activeFlight ? skyTopHex : skyTopHex` picked the same value on both
+    /// branches: it looked like an in-flight variant existed when none does.
     private var skyGradient: LinearGradient {
-        let top = s(snapshot.activeFlight ? snapshot.skyTopHex : snapshot.skyTopHex, 0x181721)
+        let top = s(snapshot.skyTopHex, 0x181721)
         let bottom = s(snapshot.skyBottomHex, 0x100F16)
         return LinearGradient(colors: [top, bottom], startPoint: .topLeading, endPoint: .bottomTrailing)
     }
