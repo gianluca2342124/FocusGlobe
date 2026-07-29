@@ -19,14 +19,17 @@ struct AmbientPilotsLayer: View {
     /// the exact same size/behaviour as decorative ones; decorative ambient
     /// pilots then fill the remaining visual capacity so the Sky stays alive.
     var realPilots: [OnlinePilot] = []
-    /// Lifecycle phase per pilot id, from `OnlinePilotStage`. Absent = `.active`,
-    /// so this layer still renders correctly if a caller passes nothing.
-    var pilotPhases: [String: OnlinePilotStage.Phase] = [:]
-    /// Pilots whose arrival label should show briefly even while labels are hidden.
-    var arrivingPilotIDs: Set<String> = []
-    /// Called once a pilot's arrival animation has played, so the stage can move
-    /// it to `.active`. The view never mutates the stage directly.
+    /// Lifecycle state per pilot id, from `OnlinePilotStage` — phase, staggered
+    /// arrival delay, and whether the arrival label is still up. ONE value per
+    /// pilot rather than three parallel dictionaries; an absent entry renders as a
+    /// settled pilot, so this layer is still correct if a caller passes nothing.
+    var pilotLifecycle: [String: OnlinePilotStage.Presentation] = [:]
+    /// Called once a pilot's pre-arrival transform has been committed, so the stage
+    /// can move it to `.active` and the fade-and-rise can play. The view never
+    /// mutates the stage directly.
     var onPilotSettled: ((String) -> Void)? = nil
+    /// Called when a new arrival's brief self-reveal window has elapsed.
+    var onArrivalLabelDone: ((String) -> Void)? = nil
 
     /// Reduce Motion turns arrival/departure into an immediate, stable placement
     /// (the `animation(.none)` below) rather than a rise — never a hidden balloon.
@@ -154,23 +157,33 @@ struct AmbientPilotsLayer: View {
         CGPoint(x: 0.40, y: 0.68), CGPoint(x: 0.60, y: 0.69), CGPoint(x: 0.90, y: 0.70),
     ]
 
-    /// Deterministic slot assignment: REAL pilots (sorted by stable id) claim
-    /// slots first, each scanning forward from its seed-preferred slot. Returns
-    /// the real→slot map AND the ordered list of slot indices left free for
-    /// ambient fill (capped so real + ambient never exceeds the capacity). The
-    /// same participant set therefore always produces the SAME layout (poll
-    /// refreshes never shuffle anyone); only a genuine join/leave shifts anyone.
+    /// Deterministic slot assignment. Returns the real→slot map AND the ordered
+    /// list of slot indices left free for ambient fill (capped so real + ambient
+    /// never exceeds the capacity).
+    ///
+    /// A REAL pilot uses the anchor `OnlinePilotStage` pinned for them when they
+    /// arrived, so a join or a departure moves NOBODY who stays — the anchor is
+    /// theirs for the whole flight. Callers with no stage (Cabin View) fall back to
+    /// the original stateless seeded claim, which is still stable for any fixed
+    /// participant set.
     private func assignRealSlots(real: [OnlinePilot], capacity: Int)
         -> (real: [String: CGPoint], freeAmbient: [Int]) {
         var taken = Set<Int>()
         func claim(from preferred: Int) -> Int {
-            var i = preferred % Self.skySlots.count
+            var i = ((preferred % Self.skySlots.count) + Self.skySlots.count) % Self.skySlots.count
             while taken.contains(i) { i = (i + 1) % Self.skySlots.count }
             taken.insert(i)
             return i
         }
         var realSlots: [String: CGPoint] = [:]
-        for pilot in real.sorted(by: { $0.id < $1.id }) {
+        let ordered = real.sorted { $0.id < $1.id }
+        // Pinned anchors first — the stage already guarantees they are unique, so
+        // `claim` returns each one unchanged and simply records it as held.
+        for pilot in ordered {
+            guard let pinned = pilotLifecycle[pilot.id]?.slotIndex else { continue }
+            realSlots[pilot.id] = Self.skySlots[claim(from: pinned)]
+        }
+        for pilot in ordered where realSlots[pilot.id] == nil {
             let preferred = Int(stablePilotSeed(for: pilot) % UInt64(Self.skySlots.count))
             realSlots[pilot.id] = Self.skySlots[claim(from: preferred)]
         }
@@ -241,6 +254,11 @@ struct AmbientPilotsLayer: View {
             if roomMode {
                 ambientBubble(alias: a.alias, remaining: a.remaining)
                     .opacity(labelsVisible ? 1 : 0)
+                    // Same local fade as a real pilot's label, from the same
+                    // constant, so every label in the Sky cross-fades together.
+                    .animation(reduceMotion ? .none
+                               : .easeInOut(duration: OnlinePilotLifecycle.labelFade),
+                               value: labelsVisible)
             }
             BalloonView(height: size, showBurner: false, showGlow: false, skin: a.skin)
         }
@@ -305,41 +323,60 @@ struct AmbientPilotsLayer: View {
 
     // MARK: - Arrival / departure transforms
 
+    /// Everything about one pilot's lifecycle, in one lookup. An unknown id reads
+    /// as a settled pilot, so a caller that passes nothing gets a static sky.
+    private func lifecycle(_ id: String) -> OnlinePilotStage.Presentation {
+        pilotLifecycle[id] ?? OnlinePilotStage.Presentation(phase: .active,
+                                                           arrivalDelay: 0,
+                                                           showsArrivalLabel: false,
+                                                           slotIndex: 0)
+    }
+
     /// `.entering` starts transparent, `.exiting` fades away, `.active` is 1.
     private func lifecycleOpacity(for id: String) -> Double {
-        switch pilotPhases[id] {
+        switch lifecycle(id).phase {
         case .entering:  return 0
         case .exiting:   return 0
-        default:         return 1
+        case .active:    return 1
         }
     }
 
     /// A restrained 0.94 → 1.0 on arrival; a very subtle shrink on departure.
+    ///
+    /// This is the ONLY `scaleEffect` on a real pilot. Depth is a *layout* size
+    /// (`balloonSize(H) * depth.scale` feeds `BalloonView(height:)`), so the two
+    /// never compete for the same modifier — they compose as
+    /// "a depth-sized balloon, scaled by where it is in its lifecycle".
     private func lifecycleScale(for id: String) -> CGFloat {
-        switch pilotPhases[id] {
+        switch lifecycle(id).phase {
         case .entering: return 0.94
         case .exiting:  return 0.92
-        default:        return 1
+        case .active:   return 1
         }
     }
 
     /// Arrives from slightly below its anchor; a completed pilot continues upward.
+    ///
+    /// Returned in the `.middle` band's units — the call site multiplies by
+    /// `depth.scale`, so a distant balloon travels proportionally less and the rise
+    /// reads as the same world distance at every depth.
     private func lifecycleRise(for id: String) -> CGFloat {
-        switch pilotPhases[id] {
+        switch lifecycle(id).phase {
         case .entering:                 return 26
         case .exiting(.completed):      return -46
         case .exiting(.departed):       return -14
-        default:                        return 0
+        case .active:                   return 0
         }
     }
 
-    /// Arrival is brisk; a completed flight drifts a little longer than a plain
-    /// departure. Matches `OnlinePilotStage.Reason.duration` so the entry is
-    /// removed only after its animation has finished.
-    private static func exitDuration(phase: OnlinePilotStage.Phase?) -> Double {
+    /// How long the transform animation to the CURRENT phase should take. Arrival
+    /// and both exits come from `OnlinePilotLifecycle`, the same definition the
+    /// stage schedules against — so an entry is never dropped mid-fade and the two
+    /// can no longer drift apart.
+    private static func phaseDuration(_ phase: OnlinePilotStage.Phase) -> Double {
         switch phase {
         case .exiting(let reason): return reason.duration
-        default:                   return 0.5
+        case .entering, .active:   return OnlinePilotLifecycle.arrival
         }
     }
 
@@ -379,6 +416,11 @@ struct AmbientPilotsLayer: View {
         // live-countdown bubble for the whole online flight — never tap-to-
         // reveal. (`roomMode` = "social labels on"; decorative pilots get none.)
         let showBubble = roomMode || selectedRealID == pilot.id
+        let life = lifecycle(pilot.id)
+        // A deliberate tap-to-reveal always wins over the auto-hide, and a new
+        // arrival shows its own label briefly even while labels are hidden — so a
+        // join is noticed without revealing the whole Sky.
+        let bubbleVisible = labelsVisible || life.showsArrivalLabel || selectedRealID == pilot.id
         return ZStack(alignment: .bottom) {
             if showBubble {
                 realBubble(pilot)
@@ -386,11 +428,14 @@ struct AmbientPilotsLayer: View {
                     // Faded, not removed: the countdown keeps ticking behind an
                     // opacity of 0 rather than being torn down and rebuilt, so
                     // toggling labels never disturbs layout or restarts a timer.
-                    // A deliberate tap-to-reveal always wins over the auto-hide.
-                    // An arriving pilot's label shows briefly even while labels are
-                    // hidden, so a join is noticed without revealing everyone.
-                    .opacity((labelsVisible || arrivingPilotIDs.contains(pilot.id)
-                              || selectedRealID == pilot.id) ? 1 : 0)
+                    .opacity(bubbleVisible ? 1 : 0)
+                    // The fade lives HERE rather than on the whole layer, so a
+                    // label change animates the label and nothing else — an
+                    // ancestor `.animation(value:)` would also have caught slot
+                    // re-placement and depth geometry.
+                    .animation(reduceMotion ? .none
+                               : .easeInOut(duration: OnlinePilotLifecycle.labelFade),
+                               value: bubbleVisible)
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
             }
             BalloonView(height: size, showBurner: false, showGlow: false,
@@ -400,21 +445,40 @@ struct AmbientPilotsLayer: View {
         // driven by the stage's phase — no extra timer, no layout change, and the
         // ambient drift underneath is untouched, so a balloon settles straight into
         // its existing seeded motion.
+        //
+        // Transform hierarchy, innermost → outermost:
+        //   depth size (BalloonView height)  →  lifecycle opacity/scale/offset  →
+        //   slot position + ambient drift (.position)
+        // Depth never uses `scaleEffect` and the lifecycle never uses `.position`,
+        // so no two stages of that chain compete for the same modifier. The rise is
+        // depth-weighted so a distant balloon covers proportionally less screen.
         .opacity(lifecycleOpacity(for: pilot.id))
         .scaleEffect(lifecycleScale(for: pilot.id))
-        .offset(y: lifecycleRise(for: pilot.id))
-        .animation(reduceMotion ? .none
-                   : .easeOut(duration: Self.exitDuration(phase: pilotPhases[pilot.id])),
-                   value: pilotPhases[pilot.id])
+        .offset(y: lifecycleRise(for: pilot.id) * depth.scale)
+        .animation(reduceMotion ? .none : .easeOut(duration: Self.phaseDuration(life.phase)),
+                   value: life.phase)
         .position(x: slot.x * W + sway, y: slot.y * H + bob)
-        .task(id: pilot.id) {
-            // Settle exactly once per pilot id. Bound to this view's lifetime, so a
-            // journey teardown cancels it; keyed by the STABLE id, so a poll refresh
-            // or a countdown tick cannot restart the arrival.
-            guard pilotPhases[pilot.id] == .entering else { return }
-            try? await Task.sleep(nanoseconds: 460_000_000)
+        // Keyed by pilot id AND session id: a poll refresh or a countdown tick
+        // cannot restart the arrival, while the same account taking off on a NEW
+        // flight does get a fresh one. Bound to this view's lifetime, so journey
+        // teardown cancels it.
+        .task(id: pilot.id + "#" + pilot.sessionID) {
+            guard life.phase == .entering else { return }
+            // A short beat (plus this pilot's stagger within the arriving batch) so
+            // SwiftUI commits the pre-arrival transform before we animate away from
+            // it. The balloon is invisible for exactly this long — it is NOT the
+            // arrival duration, which begins once the phase flips.
+            let hold = OnlinePilotLifecycle.arrivalCommit + life.arrivalDelay
+            try? await Task.sleep(nanoseconds: OnlinePilotLifecycle.nanoseconds(hold))
             guard !Task.isCancelled else { return }
             onPilotSettled?(pilot.id)
+            // Then hold their self-reveal label for a readable moment. Same task, so
+            // there is still one per arrival and a departure cancels both halves.
+            try? await Task.sleep(
+                nanoseconds: OnlinePilotLifecycle.nanoseconds(
+                    OnlinePilotLifecycle.arrival + OnlinePilotLifecycle.arrivalLabelReveal))
+            guard !Task.isCancelled else { return }
+            onArrivalLabelDone?(pilot.id)
         }
         .onTapGesture {
             withAnimation(.spring(response: 0.32, dampingFraction: 0.8)) {
@@ -442,7 +506,13 @@ struct AmbientPilotsLayer: View {
                 .font(.system(size: 12, weight: .bold, design: .default))
                 .foregroundStyle(.white)
             if pilot.hasLiveSession {
-                TimelineView(.periodic(from: .now, by: 1)) { ctx in
+                // Anchored to the pilot's OWN start, not `.now`: this body is
+                // rebuilt by the enclosing 20 Hz timeline, and a `.now` anchor
+                // re-based the schedule on every one of those rebuilds. Anchoring to
+                // a value that is constant for the whole flight also puts the tick
+                // on the pilot's real second boundary, which is what a countdown to
+                // their server-canonical end should follow.
+                TimelineView(.periodic(from: pilot.startedAt, by: 1)) { ctx in
                     Text(pilot.liveCountdown(at: ctx.date))
                         .font(.system(size: 10.5, weight: .semibold, design: .default))
                         .foregroundStyle(.white.opacity(0.72))

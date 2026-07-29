@@ -160,6 +160,13 @@ struct FocusSessionView: View {
         let hidden = appModel.profile.hiddenPilotIDs ?? []
         return online.realPilots.filter { !hidden.contains($0.id) }
     }
+    /// The reconciliation trigger for the presentation stage: every pilot id AND
+    /// their session id. Watching ids alone missed the case that matters most —
+    /// the same account landing and taking off again, which keeps the id set
+    /// identical while genuinely being a new flight.
+    private var realPilotSignature: String {
+        visibleRealPilots.map { "\($0.id)#\($0.sessionID)" }.joined(separator: ",")
+    }
     /// Invite Friends: promote a Global Flight into a Private Flight in place —
     /// no restart, same timer/sky/sound/shield — then hand ONE fresh single-use
     /// link to the native iOS share sheet. If already private, just shares a new
@@ -290,14 +297,9 @@ struct FocusSessionView: View {
                                        // this list (with its slot) until its
                                        // animation finishes.
                                        realPilots: pilotStage.entries.map(\.pilot),
-                                       pilotPhases: Dictionary(
-                                           pilotStage.entries.map { ($0.id, $0.phase) },
-                                           uniquingKeysWith: { a, _ in a }),
-                                       arrivingPilotIDs: pilotStage.recentlyEntered,
-                                       onPilotSettled: { id in
-                                           pilotStage.settle(id)
-                                           pilotStage.clearArrivalLabel(id)
-                                       },
+                                       pilotLifecycle: pilotStage.presentation,
+                                       onPilotSettled: { pilotStage.settle($0) },
+                                       onArrivalLabelDone: { pilotStage.clearArrivalLabel($0) },
                                        labelsVisible: pilotLabelsVisible,
                                        roomMode: roomBubbleMode,
                                        isPrivate: online.isPrivateFlight,
@@ -307,41 +309,22 @@ struct FocusSessionView: View {
                                        onBlock: quickBlock,
                                        onReport: { selectedRealPilot = $0 })
                         .transition(.opacity)
-                        .animation(.easeInOut(duration: reduceMotion ? 0 : 0.55),
-                                   value: pilotLabelsVisible)
-                        // ONE lifecycle-aware task drives the five-second intro,
-                        // keyed to the JOURNEY (route id) rather than to this view.
-                        // `.task(id:)` re-runs only when that key changes, and the
-                        // `labelIntroPlayedFor` guard means a child layer remounting
-                        // mid-flight is a no-op — while a genuinely new journey,
-                        // with a new route id, does replay it. Bound to the view's
-                        // lifetime, so journey teardown cancels it.
+                        // ONE lifecycle-aware task drives the automatic label
+                        // reveal, keyed to the JOURNEY (route id) rather than to
+                        // this view. `.task(id:)` re-runs only when that key
+                        // changes, and the `labelIntroPlayedFor` guard means a
+                        // remount — including coming back from Cabin View — is a
+                        // no-op, while a genuinely new journey does replay it.
+                        // Bound to the view's lifetime, so teardown cancels it.
                         .task(id: vm.route.id) {
                             guard labelIntroPlayedFor != vm.route.id else { return }
                             labelIntroPlayedFor = vm.route.id
-                            try? await Task.sleep(nanoseconds: 5_000_000_000)
+                            try? await Task.sleep(
+                                nanoseconds: OnlinePilotLifecycle.nanoseconds(
+                                    OnlinePilotLifecycle.labelIntro))
                             guard !Task.isCancelled else { return }
                             labelIntroActive = false
                         }
-                        // Reconcile the networking snapshot into presentation
-                        // entries. Driven by the pilot list, NOT by a timer, so a
-                        // countdown tick never touches the lifecycle.
-                        .onChange(of: visibleRealPilots.map(\.id)) { _, _ in
-                            pilotStage.sync(with: visibleRealPilots)
-                        }
-                        .onAppear { pilotStage.sync(with: visibleRealPilots) }
-                        // A pilot can finish while still present in the snapshot, so
-                        // completion is time-based and needs its own low-frequency
-                        // check. 2 s is far below the exit duration and costs one
-                        // dictionary pass — not a per-pilot timer.
-                        .task(id: vm.route.id) {
-                            while !Task.isCancelled {
-                                try? await Task.sleep(nanoseconds: 2_000_000_000)
-                                guard !Task.isCancelled else { return }
-                                pilotStage.sync(with: visibleRealPilots)
-                            }
-                        }
-                        .onDisappear { pilotStage.teardown() }
                 }
                 balloon
                     .transition(.opacity)
@@ -568,6 +551,26 @@ struct FocusSessionView: View {
             withAnimation(.easeInOut(duration: 4.4).repeatForever(autoreverses: true)) { balloonBob = -14 }
             withAnimation(.easeInOut(duration: 7.5).repeatForever(autoreverses: true)) { balloonDrift = 9 }
         }
+        // The remote-balloon presentation stage lives at the JOURNEY level, not on
+        // the sky layer. Switching to Cabin View unmounts that layer, and owning the
+        // stage there meant tearing it down and re-adding everyone as a brand-new
+        // arrival — labels and all — the moment the pilot came back outside. Bound
+        // here, the stage spans the whole flight and only a genuinely new route (or
+        // leaving the flight) resets it.
+        .task(id: vm.route.id) {
+            guard isOnlineFlight else { return }
+            pilotStage.begin(journeyID: vm.route.id)
+            pilotStage.sync(with: visibleRealPilots)
+        }
+        // Reconcile on ids AND session ids, so a pilot who lands and takes off again
+        // is picked up even though the id set never changed. Completion is NOT polled:
+        // the stage arms one wake for the next `expectedEndAt`, so an exit begins on
+        // the same tick the countdown reads 0:00.
+        .onChange(of: realPilotSignature) { _, _ in
+            guard isOnlineFlight else { return }
+            pilotStage.sync(with: visibleRealPilots)
+        }
+        .onDisappear { pilotStage.teardown() }
         // Keep the screen awake for the whole active journey — finite, Infinite or
         // paused — and restore normal auto-lock the instant the flight leaves the
         // screen (end, cancel, or returning Home). Scoped to this view only.
