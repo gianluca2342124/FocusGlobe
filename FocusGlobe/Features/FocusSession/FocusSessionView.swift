@@ -850,6 +850,10 @@ private struct HoldToGiveUpButton: View {
         }
         .frame(width: width, height: size, alignment: .leading)
         .clipShape(Capsule())
+        // The glass layer beneath is non-interactive, so state the hold target
+        // explicitly rather than inheriting it from whatever happens to be
+        // opaque (the progress fill is zero-width until the hold starts).
+        .contentShape(Capsule())
         .scaleEffect(holding ? 0.97 : 1)
         .animation(.spring(response: 0.28, dampingFraction: 0.8), value: holding)
         .onLongPressGesture(minimumDuration: holdDuration, maximumDistance: 60) {

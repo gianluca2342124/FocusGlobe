@@ -110,6 +110,18 @@ struct FocusLiquidGlassSurface<S: InsettableShape>: View {
                 )
             )
             .shadow(color: .black.opacity(0.18), radius: 8, y: 4)
+            // CRITICAL: this surface is ONLY ever used as decoration inside
+            // `.background { }`. On iOS 26 the substrate below uses
+            // `.glassEffect(….interactive(), …)`, and `.interactive()` installs
+            // the glass's OWN touch handling on a descendant of the host
+            // Button's label — a descendant gesture beats the ancestor Button, so
+            // the press is swallowed and the Button's action never fires. That is
+            // exactly what broke the Home Sky arrows: the disc lit up but nothing
+            // happened. Controls that still worked (StatusCircleButton, the PRO
+            // circle) were only saved by their own `.contentShape(Circle())`.
+            // Every caller already gives press feedback via SoftPressStyle, so the
+            // glass never needs to receive touches at all.
+            .allowsHitTesting(false)
     }
 
     @ViewBuilder private var substrate: some View {
@@ -206,6 +218,7 @@ struct GlassIconButton: View {
                 .background {
                     FocusLiquidGlassSurface(shape: Circle(), active: active)
                 }
+                .contentShape(Circle())
         }
         .buttonStyle(SoftPressStyle())
         .accessibilityLabel(accessibilityLabel)
@@ -229,6 +242,7 @@ struct GlassTextButton: View {
                 .background {
                     FocusLiquidGlassSurface(shape: Circle(), active: active)
                 }
+                .contentShape(Circle())
         }
         .buttonStyle(SoftPressStyle())
         .accessibilityLabel(accessibilityLabel)

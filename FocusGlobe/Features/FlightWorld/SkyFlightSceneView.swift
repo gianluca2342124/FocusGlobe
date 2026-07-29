@@ -89,7 +89,7 @@ struct SkyFlightSceneView: View {
                         SkyArtworkFoundation(image: artwork)
                         artworkGrade(W: W, H: H, t: t)
                     }
-                    atmosphere(W: W, H: H, t: t)
+                    atmosphere(W: W, H: H, t: t, hasArtwork: artwork != nil)
                         .opacity(artwork == nil ? 1 : artworkAtmosphereOpacity)
                     // Finished artwork already owns the moon/planets. The
                     // procedural celestial layer remains only for missing art.
@@ -234,7 +234,8 @@ struct SkyFlightSceneView: View {
 
     // MARK: 2 — Ambient atmosphere (stars, near-ground shimmer)
 
-    @ViewBuilder private func atmosphere(W: CGFloat, H: CGFloat, t: Double) -> some View {
+    @ViewBuilder private func atmosphere(W: CGFloat, H: CGFloat, t: Double,
+                                         hasArtwork: Bool) -> some View {
         if liveStarDensity > 0.01 { starField(W: W, H: H, t: t) }
         switch sky.id {
         case "fiji-lagoon":
@@ -245,11 +246,11 @@ struct SkyFlightSceneView: View {
         case "paris-sunset":
             groundShimmer(W: W, H: H, t: t, tint: Color(hex: 0xF6C88A))
         case "sahara-night":
-            milkyWay(W: W, H: H, t: t)
+            milkyWay(W: W, H: H, t: t, hasArtwork: hasArtwork)
         case "galaxy-drift", "deep-space":
             // The great diagonal star-river gives the cosmos its sense of
             // immense, structured depth — the emptiest Skies feel the largest.
-            milkyWay(W: W, H: H, t: t)
+            milkyWay(W: W, H: H, t: t, hasArtwork: hasArtwork)
         default:
             EmptyView()
         }
@@ -270,15 +271,30 @@ struct SkyFlightSceneView: View {
     /// Stars twinkle **in place** — the world does not scroll. Star-heavy Skies
     /// gain a second plane of fine background dust (depth through density) and
     /// a handful of hero stars with soft cross glints (depth through hierarchy).
+    /// Desert Night's painted dune crest, measured on the shipped artwork
+    /// (portrait crest ≈0.677, landscape hill crest ≈0.621 of the frame), minus
+    /// headroom so a hero star's glint or soft glow cannot graze the dune tops.
+    /// Every other Sky is unbounded (1 = the whole frame).
+    private func skyCeiling(_ s: CGSize) -> CGFloat {
+        guard sky.id == "sahara-night" else { return 1 }
+        return s.width > s.height ? 0.60 : 0.65
+    }
+
     private func starField(W: CGFloat, H: CGFloat, t: Double) -> some View {
         Canvas { ctx, s in
+            // ONE horizon-aware bound for everything drawn below. Clipping the
+            // context (rather than only each particle's centre) is what keeps
+            // glints, soft glows and the dust plane off the dunes.
+            ctx.clip(to: Path(CGRect(x: 0, y: 0,
+                                     width: s.width,
+                                     height: s.height * skyCeiling(s))))
             var rng = SeededRNG(seed: skySeed &+ 0x57A2)
             let density = liveStarDensity
             let count = Int(56 + density * 178)
             for i in 0..<count {
                 let x = CGFloat(rng.unit()) * s.width
                 let depth = rng.unit()
-                let desertCeiling: CGFloat = s.width > s.height ? 0.64 : 0.67
+                let desertCeiling: CGFloat = skyCeiling(s)
                 let maxY: CGFloat = sky.id == "sahara-night"
                     ? desertCeiling
                     : (depth < 0.28 ? 0.96 : 0.82)
@@ -308,7 +324,7 @@ struct SkyFlightSceneView: View {
                 var dustRNG = SeededRNG(seed: skySeed &+ 0xD0_57A2)
                 for i in 0..<150 {
                     let x = CGFloat(dustRNG.unit()) * s.width
-                    let y = CGFloat(dustRNG.unit()) * s.height
+                    let y = CGFloat(dustRNG.unit()) * s.height * skyCeiling(s)
                     let tw = 0.65 + 0.35 * Foundation.sin(t * 0.16 + Double(i) * 0.73)
                     let a = (0.045 + dustRNG.unit() * 0.13) * tw
                     let r = 0.55 + dustRNG.unit() * 0.35
@@ -353,7 +369,7 @@ struct SkyFlightSceneView: View {
 
     /// A faint diagonal Milky-Way glow: a tilted band of dense micro-stars
     /// inside a very soft luminous haze — no edges, no geometry.
-    private func milkyWay(W: CGFloat, H: CGFloat, t: Double) -> some View {
+    private func milkyWay(W: CGFloat, H: CGFloat, t: Double, hasArtwork: Bool) -> some View {
         Canvas { ctx, s in
             var rng = SeededRNG(seed: skySeed &+ 0x3117)
             let cx = Double(s.width) * 0.5
@@ -365,12 +381,15 @@ struct SkyFlightSceneView: View {
                 let len = Double(s.width) * 1.3
                 let g = Gradient(colors: [Color(hex: 0xD8CCF0).opacity(0.10),
                                           Color(hex: 0x9A88C8).opacity(0.04), .clear])
-                // Desert Night's authored foundation already contains its
-                // luminous Milky Way. Drawing this broad elliptical haze over
-                // it read as a giant translucent spotlight on wide layouts.
-                // Keep the fine star river below, but reserve the additional
-                // glow plate for the two fully cosmic Skies.
-                if sky.id != "sahara-night" {
+                // This broad glow plate is a MISSING-ARTWORK fallback only.
+                // Its radial runs to endRadius len/2 while the clipping ellipse
+                // is just ±0.09·len tall, so the fill terminates abruptly at
+                // ~8% alpha instead of fading out — and the whole layer is
+                // rotated -0.5 rad. Over finished art that reads as exactly the
+                // artificial translucent oval / rotated beam reported on
+                // Starfall Nebula and Deep Space. Every shipping Sky now has
+                // art, so this only ever draws for a Sky whose art is absent.
+                if !hasArtwork {
                     l.fill(Path(ellipseIn: CGRect(x: -len / 2, y: -len * 0.09,
                                                   width: len, height: len * 0.18)),
                            with: .radialGradient(g, center: .zero, startRadius: 0,

@@ -110,27 +110,35 @@ struct CoinSpinCircleButton: View {
 /// an off-screen control do no animation work at all.
 private struct OccasionalNudge: ViewModifier {
     let active: Bool
+    /// Bumped once per cue. The TRIGGER overload of `phaseAnimator` runs the
+    /// sequence once and then holds — which is what makes the rest a genuine
+    /// idle state. The untriggered overload loops forever with no gap, so a long
+    /// phase-0 animation only *looks* still while a display link keeps ticking:
+    /// that is motion, not a pause.
+    @State private var cue = 0
 
     func body(content: Content) -> some View {
-        if active {
-            content.phaseAnimator([0, 1, 2, 3]) { view, phase in
+        content
+            .phaseAnimator([0, 1, 2, 3], trigger: cue) { view, phase in
                 view.rotationEffect(.degrees(tilt(phase)))
-            } animation: { phase in
-                // Phase 0 is the rest: ~8 s of no visible movement.
-                phase == 0 ? .easeInOut(duration: 8.0)
-                           : .spring(response: 0.18, dampingFraction: 0.45)
+            } animation: { _ in .spring(response: 0.18, dampingFraction: 0.45) }
+            .task(id: active) {
+                // Cancelled automatically when `active` flips or the view goes
+                // away, so an off-screen control schedules nothing at all.
+                guard active else { return }
+                while !Task.isCancelled {
+                    try? await Task.sleep(nanoseconds: 9_000_000_000)
+                    guard !Task.isCancelled else { return }
+                    cue &+= 1
+                }
             }
-        } else {
-            content
-        }
     }
 
     private func tilt(_ p: Int) -> Double {
         switch p {
         case 1: return -5
         case 2: return 5
-        case 3: return -2
-        default: return 0
+        default: return 0   // phases 0 and 3 are the rest pose
         }
     }
 }

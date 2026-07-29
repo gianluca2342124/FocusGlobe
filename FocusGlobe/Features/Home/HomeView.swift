@@ -43,8 +43,21 @@ struct HomeView: View {
     /// Swiping or silently normalising a circular wrap never restarts a Sky.
     @State private var homeSkyClockOrigin = ProcessInfo.processInfo.systemUptime
 
+    /// The normalised cursor into `FocusSky.all`. `skyIndex` is legitimately -1 or
+    /// `count` while a circular wrap settles, so every consumer must read through
+    /// this — never the raw index.
+    private var skyCursor: Int {
+        let n = FocusSky.all.count
+        guard n > 0 else { return 0 }
+        return ((skyIndex % n) + n) % n
+    }
+
+    /// WRAPS (it used to clamp). While the pager rested on a sentinel, clamping
+    /// made `currentSky` disagree with the page actually on screen — so the Sky
+    /// name, lock badge, Resume tab and, worst of all, Start Focus's
+    /// `selectSky(currentSky)` all referred to the opposite end of the list.
     private var currentSky: FocusSky {
-        FocusSky.all[max(0, min(FocusSky.all.count - 1, skyIndex))]
+        FocusSky.all[skyCursor]
     }
     private var currentSkyUnlocked: Bool { appModel.isSkyUnlocked(currentSky) }
     /// The Resume tab may ONLY appear when the main CTA is the real "Start Focus"
@@ -380,6 +393,10 @@ struct HomeView: View {
                     tintOpacity: 0.52
                 )
             }
+            // The glass is decoration only (`allowsHitTesting(false)`), so the
+            // whole capsule — not just the glyph + digits — must be declared
+            // tappable here or the target collapses to the text bounds.
+            .contentShape(Capsule())
         }
         .buttonStyle(SoftPressStyle(scale: 0.94))
         .accessibilityLabel("\(appModel.focusCoins) Focus Coins. Opens the Store.")
@@ -439,7 +456,15 @@ struct HomeView: View {
     private func stepSky(_ delta: Int) {
         let n = FocusSky.all.count
         guard n > 0 else { return }
-        let target = skyIndex + delta
+        // Ignore a tap that lands mid-wrap: the in-flight normaliser below is
+        // about to force `skyIndex`, so a second step would be computed off a
+        // sentinel and then clobbered.
+        guard !arrowWrapping else { return }
+        // Step off the NORMALISED cursor, never the raw index. `skyIndex` is
+        // legitimately -1 or n while a circular wrap is settling; stepping off
+        // that raw value produced target == n+1, which matched neither sentinel
+        // and fell through to the clamp below — sending the pilot BACKWARDS.
+        let target = skyCursor + delta
         if target == -1 || target == n {
             appModel.haptics.bubble()
             arrowWrapping = true
@@ -471,6 +496,9 @@ struct HomeView: View {
                         tintOpacity: 0.52
                     )
                 }
+                // Required: the glass no longer takes touches, and a bare
+                // chevron glyph is a ~18 pt target. This restores the full disc.
+                .contentShape(Circle())
         }
         .buttonStyle(SoftPressStyle())
         .accessibilityLabel(system == "chevron.left" ? "Previous Sky" : "Next Sky")

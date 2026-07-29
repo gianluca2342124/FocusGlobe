@@ -106,6 +106,9 @@ struct GlassCircle: View {
             .background {
                 FocusLiquidGlassSurface(shape: Circle())
             }
+            // The glass substrate is decoration only; this keeps the whole disc
+            // tappable for the `Menu` that hosts it.
+            .contentShape(Circle())
     }
 }
 
@@ -132,6 +135,7 @@ struct AppIconButton: View {
                         FocusLiquidGlassSurface(shape: Circle())
                     }
                 }
+                .contentShape(Circle())
         }
         .buttonStyle(SoftPressStyle())
         .accessibilityLabel(accessibilityLabel)
