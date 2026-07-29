@@ -889,6 +889,19 @@ final class FocusOnlineModel: ObservableObject {
     /// timer/sky/sound/shield never change. Idempotent: repeated taps reuse the
     /// one flight (server-keyed by clientSessionID) and mint a fresh link.
     @discardableResult
+    /// Why `prepareInvite` cannot run right now — `nil` when it can.
+    ///
+    /// Mirrors `prepareInvite`'s precondition guard so the caller can say something
+    /// TRUE instead of failing silently. `flightSessionID` is the usual culprit: it
+    /// is set by `flightDidStart`, so an invite tapped in the first moments of a
+    /// flight (before the first presence heartbeat lands) has no session to promote.
+    var inviteBlockedReason: String? {
+        if !availability.isAvailable { return availability.userMessage }
+        if myUserID == nil { return "Sign in to invite friends." }
+        if flightSessionID == nil { return "Your flight is still connecting — try again in a moment." }
+        return nil
+    }
+
     func prepareInvite(skyID: String) async -> URL? {
         guard availability.isAvailable, let myID = myUserID, let sessionID = flightSessionID else { return nil }
         // Already private → just mint a fresh link for the existing flight.

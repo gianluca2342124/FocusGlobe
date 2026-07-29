@@ -1268,8 +1268,16 @@ final class AppModel: ObservableObject {
     /// Persist a lightweight snapshot of an unfinished journey so it can be
     /// resumed (or discarded) from Home. Does not change the virtual origin —
     /// that only moves when a journey actually lands.
+    /// ONLINE journeys are never resumable. A Global/Private flight is a live room
+    /// with real pilots and server presence — once you leave it, there is nothing
+    /// to rejoin, so offering "Resume your flight" on Home is a promise the app
+    /// cannot keep. `FocusSessionViewModel` has no concept of flight mode, so it
+    /// asked for a snapshot on every journey; the mode is checked HERE, at the one
+    /// place snapshots are written, using the canonical `FocusOnlineModel.flightMode`
+    /// rather than a duplicated boolean.
     func saveResumableJourney(origin: JourneyOrigin, route: Route, intention: String?,
                               elapsedSeconds: Int, skinAssetName: String, soundID: String?) {
+        guard onlineRef?.flightMode.isOnline != true else { return }
         let snapshot = ResumableJourney(origin: origin, route: route, intention: intention,
                                         elapsedSeconds: elapsedSeconds, skinAssetName: skinAssetName,
                                         soundID: soundID, savedAt: Date())

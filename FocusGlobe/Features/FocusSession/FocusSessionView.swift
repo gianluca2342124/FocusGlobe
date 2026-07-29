@@ -153,14 +153,35 @@ struct FocusSessionView: View {
         guard appModel.isPro else {
             appModel.tapFeedback(); journeyPaywall = JourneyPaywall(context: .invite); return
         }
+        // Say WHY when an invite can't be created. `prepareInvite` returns nil from
+        // two places — a precondition guard (offline / no session id yet) and a
+        // network failure — and this discarded both, so the button flashed
+        // "Preparing…" and then did nothing at all. That silent no-op WAS the bug.
+        if let blocked = online.inviteBlockedReason {
+            note(blocked)
+            return
+        }
         invitePreparing = true
         let skyID = (matchedSky ?? appModel.selectedSky).id
         // Creates/reuses the private-flight record and mints one fresh link —
         // the flight STAYS Global until a real pilot joins.
-        if let url = await online.prepareInvite(skyID: skyID) {
-            shareInviteURL = url
-        }
+        let url = await online.prepareInvite(skyID: skyID)
         invitePreparing = false
+        if let url {
+            shareInviteURL = url
+        } else {
+            note(online.inviteBlockedReason ?? "Couldn't create an invite link. Please try again.")
+        }
+    }
+
+    /// Show a transient pill, then clear it. Reuses the same surface the friend
+    /// actions already use — never an alert, never an empty message.
+    private func note(_ message: String) {
+        socialNote = message
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 2_600_000_000)
+            if socialNote == message { withAnimation { socialNote = nil } }
+        }
     }
     /// True while the give-up button is being held. Used only to fade the centre
     /// watermark on compact iPhone so the expanding capsule never crowds it.
@@ -185,10 +206,23 @@ struct FocusSessionView: View {
 
     // MARK: The display clock — pure wall-clock arithmetic, no publishers.
 
+    /// The LOCAL pilot's clock: freezes while paused, so our own timer, balloon and
+    /// progress hold still.
     private func displayElapsed(at now: Date) -> Double {
         guard let start = flightStartedAt else { return 0 }
         let effective = pausedAt ?? now
         return max(0, effective.timeIntervalSince(start))
+    }
+
+    /// The SHARED scene clock: wall-clock, never pause-shifted.
+    ///
+    /// Everything that belongs to the world rather than to us — remote balloons,
+    /// their motion, ambient pilots — reads this, so a local pause can never stop
+    /// other pilots. (Real remote countdowns were already safe: they tick from
+    /// their own `expectedEndAt` inside a periodic `TimelineView`.)
+    private func sceneElapsed(at now: Date) -> Double {
+        guard let start = flightStartedAt else { return 0 }
+        return max(0, now.timeIntervalSince(start))
     }
 
     /// The per-session world seed: fixed once the flight anchors, so the world
@@ -219,7 +253,14 @@ struct FocusSessionView: View {
                 // decorative). Online (public/private) keeps the living Sky.
                 if isOnlineFlight {
                     AmbientPilotsLayer(skyID: matchedSky?.id ?? "classic",
-                                       elapsed: { displayElapsed(at: Date()) },
+                                       // The SCENE clock, not the local pilot's.
+                                       // `displayElapsed` freezes at `pausedAt` so
+                                       // OUR timer holds still — feeding it here
+                                       // also froze every remote balloon and the
+                                       // ambient pilots, so pausing appeared to
+                                       // stop the whole Online world. Pausing is
+                                       // local: other pilots keep flying.
+                                       elapsed: { sceneElapsed(at: Date()) },
                                        animated: !reduceMotion,
                                        realPilots: visibleRealPilots,
                                        roomMode: roomBubbleMode,

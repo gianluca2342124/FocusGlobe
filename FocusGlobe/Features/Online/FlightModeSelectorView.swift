@@ -21,7 +21,6 @@ struct FlightModeSelectorView: View {
     var onContinue: (OnlineFlightMode) -> Void
 
     @State private var selection: OnlineFlightMode = OnlineCache.lastFlightMode == .solo ? .solo : .publicSky
-    @State private var showDisclosure = false
     /// Set when a PRO pilot presses Continue while signed out — after Sign in with
     /// Apple succeeds we continue exactly once (never a second time).
     @State private var pendingOnlineContinue = false
@@ -56,6 +55,15 @@ struct FlightModeSelectorView: View {
             if onlineSelected && canSignIn && appModel.entitlement == .premium {
                 signInPrompt
                     .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
+            // The public-presence disclosure, shown HERE — on the Online setup
+            // step, before take-off — instead of as an alert after Continue.
+            // Same wording, same information, no interruption between choosing
+            // Online and the Sky opening.
+            if onlineSelected {
+                publicSkyDisclosure
+                    .transition(.opacity)
             }
 
             AppPrimaryButton(title: "Continue", systemImage: "arrow.right", iconTrailing: true) {
@@ -93,16 +101,30 @@ struct FlightModeSelectorView: View {
         // Online paywall + Sign in with Apple present through the setup ritual's
         // OWN local coordinator (see FlightSetupView) — never the app-wide router,
         // which would collapse this full-screen cover.
-        .alert("Fly in Public Skies?", isPresented: $showDisclosure) {
-            Button("Continue Online") {
-                OnlineCache.disclosureSeen = true
-                online.setDiscoverable(true)
-                finish(.publicSky)
-            }
-            Button("Not now", role: .cancel) {}
-        } message: {
-            Text("Other pilots will see your anonymous alias, your balloon skin, your Sky and roughly how long you're focusing — plus an optional country flag. Your name, email and personal goals are never shared.")
+        //
+        // The "Fly in Public Skies?" alert that used to live here is gone. It fired
+        // from `continueTapped()` AFTER the pilot had already chosen Online and
+        // pressed Continue, so it interrupted the one moment that should feel
+        // immediate. Its two jobs are preserved: the wording is now the always-
+        // visible `publicSkyDisclosure` above (read before take-off, not after),
+        // and its side effects are committed in `continueTapped()`.
+    }
+
+    /// The public-presence disclosure. Calm, secondary, and never a modal —
+    /// exactly what the alert used to say.
+    private var publicSkyDisclosure: some View {
+        HStack(alignment: .top, spacing: AppSpacing.xs) {
+            Image(systemName: "eye")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.5))
+                .padding(.top, 1)
+            Text("Other pilots see your anonymous alias, balloon, Sky and roughly how long you're focusing. Your name, email and goals are never shared.")
+                .font(AppTypography.caption)
+                .foregroundStyle(.white.opacity(0.62))
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .frame(maxWidth: 420)
+        .padding(.horizontal, AppSpacing.xs)
     }
 
     private func continueTapped() {
@@ -133,9 +155,18 @@ struct FlightModeSelectorView: View {
             }
             return
         }
-        // A one-time public-sky consent, then every future Online flight is
-        // instant — no lobby, no waiting.
-        if !OnlineCache.disclosureSeen { showDisclosure = true; return }
+        // Take off immediately. The disclosure was read on this very step (it is
+        // shown inline whenever Online is selected), so the acknowledgement is
+        // simply recorded here rather than demanded through a modal.
+        //
+        // `setDiscoverable(true)` is called ONLY on the first Online flight — it
+        // is the pilot's public-presence preference, and re-asserting it on every
+        // launch would silently undo a later opt-out in
+        // Friends ▸ Online & Friends Settings ▸ Appear in Public Skies.
+        if !OnlineCache.disclosureSeen {
+            OnlineCache.disclosureSeen = true
+            online.setDiscoverable(true)
+        }
         finish(.publicSky)
     }
 
