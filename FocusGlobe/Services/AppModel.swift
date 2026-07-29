@@ -58,14 +58,18 @@ final class AppModel: ObservableObject {
     /// Settings, journey setup, paywalls, onboarding — reads this one value, so
     /// the expression is never repeated in a screen.
     ///
-    /// In Release the `#else` branch makes the override unreachable: only an
-    /// active RevenueCat entitlement can return `true`.
+    /// Written as two explicit whole expressions rather than an early `return
+    /// true` followed by a `#if`, so each configuration's behaviour is readable
+    /// on one line and cannot be misread as "Release always returns false":
+    ///   Debug   → `revenueCatPro || debugForcePro`
+    ///   Release → `revenueCatPro`
+    /// A real active RevenueCat entitlement therefore grants PRO in Release, and
+    /// the override cannot contribute there because it is not compiled in.
     var isPro: Bool {
-        if revenueCatPro { return true }
         #if DEBUG
-        return subscriptions.debugForcePro
+        return revenueCatPro || subscriptions.debugForcePro
         #else
-        return false
+        return revenueCatPro
         #endif
     }
 

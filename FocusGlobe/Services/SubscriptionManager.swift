@@ -93,10 +93,13 @@ struct PlanOption: Identifiable, Equatable {
 @MainActor
 final class SubscriptionManager: ObservableObject {
 
-    /// The entitlement identifier checked inside `CustomerInfo.entitlements`.
-    /// This must match the entitlement **identifier** in the RevenueCat dashboard
-    /// (the user-facing name). As a safety net we also treat *any* active
-    /// entitlement as Pro, since FocusGlobe ships a single entitlement.
+    /// The entitlement identifier checked inside `CustomerInfo.entitlements` —
+    /// the ONE identifier that grants FocusGlobe PRO. It must match the
+    /// entitlement **identifier** in the RevenueCat dashboard.
+    ///
+    /// This is the single source of truth for the check: `apply(_:)` reads only
+    /// this key, with no "any active entitlement" fallback, so a future unrelated
+    /// entitlement can never unlock the whole product.
     static let entitlementID = "FocusGlobe Pro"
 
     // The RevenueCat public SDK key lives in the nonisolated `RevenueCatKeys`
@@ -186,11 +189,15 @@ final class SubscriptionManager: ObservableObject {
     private var configured = false
     private var lastOfferingsRequestAt: Date?
     private var customerInfoRefreshInFlight = false
-    /// The Supabase UUID last handed to RevenueCat. This is what makes
-    /// `syncIdentity` idempotent: availability refreshes, session restores and
-    /// SwiftUI redraws can all call it repeatedly without issuing another
+    /// The Supabase UUID last SUCCESSFULLY handed to RevenueCat. This is what
+    /// makes `syncIdentity` idempotent: availability refreshes, session restores
+    /// and SwiftUI redraws can all call it repeatedly without issuing another
     /// `logIn`. `nil` means "RevenueCat is anonymous as far as we identified it".
     private var identifiedSupabaseUserID: String?
+    /// The identity we WANT (nil = signed out). Recorded synchronously on every
+    /// `syncIdentity` call so a request arriving mid-flight is never lost — the
+    /// worker re-checks this when it finishes and drains toward it.
+    private var desiredIdentity: String?
     private var identitySyncInFlight = false
 
     #if canImport(RevenueCat)
@@ -255,60 +262,125 @@ final class SubscriptionManager: ObservableObject {
     /// logout/login loop.
     func syncIdentity(supabaseUserID: String?) {
         #if canImport(RevenueCat)
-        guard isAvailable, !identitySyncInFlight else { return }
-
+        // Always lowercase. RevenueCat App User IDs are CASE-SENSITIVE, so the
+        // whole app must send one canonical form or the same person would become
+        // two customers. `SupabaseAuthService` already lowercases all three of its
+        // UUID exits; this is the belt-and-braces normalisation.
         let target = supabaseUserID?.lowercased()
 
-        if let target, !target.isEmpty {
-            guard identifiedSupabaseUserID != target else { return }
-            identitySyncInFlight = true
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                defer { self.identitySyncInFlight = false }
-                do {
-                    let result = try await Purchases.shared.logIn(target)
-                    self.identifiedSupabaseUserID = target
-                    self.appUserID = Purchases.shared.appUserID
-                    // The logIn response already carries this customer's
-                    // entitlements — apply it rather than firing a second fetch.
-                    self.apply(result.customerInfo)
-                    self.rcLog("identified appUserID=\(Purchases.shared.appUserID) created=\(result.created)")
-                } catch {
-                    // Leave `identifiedSupabaseUserID` untouched so the next
-                    // availability refresh retries. Deliberately NOT applying any
-                    // CustomerInfo here: a transport failure must not revoke a
-                    // valid cached entitlement.
-                    self.rcLog("logIn failed — keeping the current identity and cached entitlement")
-                }
-            }
-        } else {
-            // Signed out. Only log out if WE identified someone; calling logOut on
-            // an already-anonymous RevenueCat user throws and would also mint a
-            // fresh anonymous id on every call.
-            guard identifiedSupabaseUserID != nil, !Purchases.shared.isAnonymous else {
-                identifiedSupabaseUserID = nil
+        // An explicit sign-out or account CHANGE must not leave the previous
+        // account's PRO on screen while RevenueCat catches up. Clearing happens
+        // synchronously, here, before any await. It is deliberately NOT done when
+        // going anonymous → authenticated (RevenueCat aliases an anonymous
+        // purchaser into the new identity, so clearing would flicker a legitimate
+        // owner), nor on a repeat call for the same user.
+        if let current = identifiedSupabaseUserID, current != target {
+            clearProAccessNow(anotherUserIncoming: target != nil)
+        }
+
+        desiredIdentity = target
+        driveIdentitySync()
+        #endif
+    }
+
+    /// Drop cached PRO immediately, without waiting for a network round trip.
+    ///
+    /// `AppModel` observes `$isPro`, mirrors it into `revenueCatPro` (persisting
+    /// `false`) and — from that `didSet` — re-locks premium selections and
+    /// rewrites the App Group widget snapshot. So one assignment here clears the
+    /// mirror, the canonical effective access and the widget state.
+    ///
+    /// This is only ever called for a deliberate identity change, never for a
+    /// network error, so a temporary failure cannot revoke a valid entitlement.
+    private func clearProAccessNow(anotherUserIncoming: Bool) {
+        isPro = false
+        // With a new user resolving, report `.loading` rather than `.free`: gates
+        // must not flash a paywall at an incoming PRO owner. On a plain sign-out
+        // there is nobody to resolve, so "confirmed free" is the honest state.
+        hasResolvedEntitlement = !anotherUserIncoming
+    }
+
+    #if canImport(RevenueCat)
+    /// Single-flight worker that drains RevenueCat's identity toward
+    /// `desiredIdentity`.
+    ///
+    /// The previous version returned early while a sync was in flight, which
+    /// silently DROPPED a request: switching A → B → C could leave RevenueCat
+    /// identified as B forever. Now the latest wanted identity is recorded and
+    /// re-checked when the in-flight call finishes.
+    private func driveIdentitySync() {
+        guard isAvailable, !identitySyncInFlight else { return }
+        let started = desiredIdentity
+
+        if let target = started, !target.isEmpty {
+            // Already exactly right? Compare against RevenueCat's OWN id as well
+            // as our record, so a reassertion after a successful login issues no
+            // request at all.
+            if identifiedSupabaseUserID == target, Purchases.shared.appUserID == target {
+                appUserID = Purchases.shared.appUserID
                 return
             }
             identitySyncInFlight = true
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                defer { self.identitySyncInFlight = false }
-                self.identifiedSupabaseUserID = nil
                 do {
-                    // Returns the new anonymous customer. Applying it is what
-                    // stops the previous account's Pro state leaking into the
-                    // next one.
+                    let result = try await Purchases.shared.logIn(target)
+                    // Apply ONLY if this is still the identity we want — the pilot
+                    // may have switched again, or signed out, while this was in
+                    // flight. Adopting a superseded result would show the wrong
+                    // account's entitlement.
+                    if self.desiredIdentity == target {
+                        self.identifiedSupabaseUserID = target
+                        self.appUserID = Purchases.shared.appUserID
+                        // The logIn response already carries this customer's
+                        // entitlements — apply it rather than firing a second fetch.
+                        self.apply(result.customerInfo)
+                        self.rcLog("identified appUserID=\(Purchases.shared.appUserID) created=\(result.created)")
+                    } else {
+                        self.rcLog("discarded logIn result for a superseded identity")
+                    }
+                } catch {
+                    // Leave `identifiedSupabaseUserID` untouched so the next
+                    // `refreshAvailability()` retries. Deliberately NOT applying
+                    // any CustomerInfo: a transport failure must not revoke a
+                    // valid cached entitlement.
+                    self.rcLog("logIn failed — cached entitlement kept, will retry")
+                }
+                self.identitySyncInFlight = false
+                // Only re-drive when the wanted identity CHANGED while we were
+                // awaiting. A failure with an unchanged target does not loop here;
+                // it retries on the next availability refresh.
+                if self.desiredIdentity != started { self.driveIdentitySync() }
+            }
+        } else {
+            // Signed out. Only log out if there is something to log out of:
+            // calling logOut on an already-anonymous user throws and would mint a
+            // fresh anonymous id every time.
+            guard identifiedSupabaseUserID != nil || !Purchases.shared.isAnonymous else {
+                identifiedSupabaseUserID = nil
+                appUserID = Purchases.shared.appUserID
+                return
+            }
+            identitySyncInFlight = true
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                do {
                     let info = try await Purchases.shared.logOut()
+                    self.identifiedSupabaseUserID = nil
                     self.appUserID = Purchases.shared.appUserID
-                    self.apply(info)
+                    // Access was already cleared synchronously; this settles the
+                    // real anonymous state — but only if nobody signed in since.
+                    if self.desiredIdentity == nil { self.apply(info) }
                     self.rcLog("signed out → anonymous appUserID=\(Purchases.shared.appUserID)")
                 } catch {
-                    self.rcLog("logOut failed — RevenueCat identity unchanged")
+                    self.rcLog("logOut failed — identity unchanged; local access already cleared")
                 }
+                self.identitySyncInFlight = false
+                if self.desiredIdentity != started { self.driveIdentitySync() }
             }
         }
-        #endif
     }
+    #endif
 
     // MARK: Offerings / pricing
 
@@ -485,13 +557,15 @@ final class SubscriptionManager: ObservableObject {
 
     private func apply(_ info: CustomerInfo) {
         hasResolvedEntitlement = true
-        if let entitlement = info.entitlements[Self.entitlementID] {
-            isPro = entitlement.isActive
-        } else {
-            // Single-entitlement app: any active entitlement means Pro. This keeps
-            // us correct even if the dashboard identifier differs from the name.
-            isPro = !info.entitlements.active.isEmpty
-        }
+        // ONLY the canonical entitlement grants FocusGlobe PRO.
+        //
+        // There is deliberately NO "any active entitlement" fallback. The old
+        // `!info.entitlements.active.isEmpty` branch meant that adding any future
+        // entitlement to the dashboard — a single-feature add-on, a promo, a
+        // partner grant — would silently unlock the entire PRO product for
+        // everyone who held it. A missing identifier must read as "not Pro", not
+        // as "Pro via anything".
+        isPro = info.entitlements[Self.entitlementID]?.isActive == true
     }
     #endif
 
