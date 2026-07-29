@@ -164,7 +164,7 @@ struct SettingsView: View {
                         router.presentPaywall()
                     } label: {
                         SettingsRow(systemImage: "sparkles", title: "Unlock FocusGlobe PRO",
-                                    subtitle: "No ads · all PRO Skies & flights · exclusive extras", tint: AppColors.gold,
+                                    subtitle: "No ads · Exclusive Skies · online flights", tint: AppColors.gold,
                                     trailing: AnyView(Image(systemName: "chevron.right")
                                         .font(.system(size: 13, weight: .semibold))
                                         .foregroundStyle(AppColors.textTertiary)))
@@ -442,7 +442,7 @@ struct ToggleRow: View {
                 }
             }
         }
-        .tint(AppColors.brand)
+        .tint(AppColors.selectionGold)
         .padding(.vertical, 6)
     }
 }

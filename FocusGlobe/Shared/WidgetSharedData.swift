@@ -101,6 +101,8 @@ struct WidgetSnapshot: Codable, Hashable {
     var activeDayCategories: [Int: String] = [:]
     /// The selected Sky's name + gradient (idle Focus Now / Streak backdrop).
     var selectedSkyName: String?
+    /// Lightweight production artwork identifier embedded in the widget target.
+    var selectedSkyArtworkName: String?
     var skyTopHex = 0
     var skyBottomHex = 0
     /// Active flight (Focus Now live state). `activeEndDate` drives a native
@@ -109,6 +111,7 @@ struct WidgetSnapshot: Codable, Hashable {
     var activeEndDate: Date?
     var activeInfinite = false
     var activeSkyName: String?
+    var activeSkyArtworkName: String?
     var activeCategory: String?
     // Badges (Badge Collection)
     var badges: [WidgetBadge] = []
@@ -148,6 +151,8 @@ struct WidgetSnapshot: Codable, Hashable {
             WidgetGoal(title: "Earn 10 Focus Coins", systemImage: "circle.hexagongrid.fill", current: 10, target: 10),
         ],
         goalsCompleted: 2, goalsTotal: 4, canClaimReward: false,
+        selectedSkyName: "Desert Night", selectedSkyArtworkName: "WidgetSky_DesertNight",
+        skyTopHex: 0x0A0A1E, skyBottomHex: 0x8E5A46,
         updatedAt: Date())
 }
 
@@ -194,12 +199,14 @@ extension WidgetSnapshot {
         activeDayOrdinals = v(.activeDayOrdinals, activeDayOrdinals)
         activeDayCategories = v(.activeDayCategories, activeDayCategories)
         selectedSkyName = v(.selectedSkyName, selectedSkyName)
+        selectedSkyArtworkName = v(.selectedSkyArtworkName, selectedSkyArtworkName)
         skyTopHex = v(.skyTopHex, skyTopHex)
         skyBottomHex = v(.skyBottomHex, skyBottomHex)
         activeFlight = v(.activeFlight, activeFlight)
         activeEndDate = v(.activeEndDate, activeEndDate)
         activeInfinite = v(.activeInfinite, activeInfinite)
         activeSkyName = v(.activeSkyName, activeSkyName)
+        activeSkyArtworkName = v(.activeSkyArtworkName, activeSkyArtworkName)
         activeCategory = v(.activeCategory, activeCategory)
         badges = v(.badges, badges)
         badgeUnlockedCount = v(.badgeUnlockedCount, badgeUnlockedCount)

@@ -242,7 +242,8 @@ struct FocusSessionView: View {
                           realPilots: visibleRealPilots,
                           roomMode: roomBubbleMode,
                           isPrivate: online.isPrivateFlight,
-                          equippedItemIDs: appModel.profile.equippedCabinItemIDs ?? [])
+                          equippedItemIDs: appModel.profile.equippedCabinItemIDs ?? [],
+                          equippedItemPlacements: appModel.cabinPlacements)
                     .transition(.opacity)
             }
 

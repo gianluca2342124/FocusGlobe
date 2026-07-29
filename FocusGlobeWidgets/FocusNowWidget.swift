@@ -1,5 +1,8 @@
 import SwiftUI
 import WidgetKit
+#if canImport(UIKit)
+import UIKit
+#endif
 
 // MARK: - Focus Now (FREE · medium)
 
@@ -11,13 +14,13 @@ struct FocusNowWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "FGFocusNow", provider: FGProvider()) { entry in
             FocusNowView(snapshot: entry.snapshot)
-                .fgWidgetBackground(artwork: "WidgetBG_FocusNow",
-                                    glow: WTheme.teal)
+                .containerBackground(for: .widget) { Color.black }
                 .widgetURL(FGLink.url(FocusNowView.link(entry.snapshot)))
         }
         .configurationDisplayName("Focus Now")
         .description("Start a focus flight, or watch the one you're on.")
         .supportedFamilies([.systemMedium, .systemSmall])
+        .contentMarginsDisabled()
     }
 }
 
@@ -48,12 +51,26 @@ struct FocusNowView: View {
 
     var body: some View {
         ZStack {
-            // The Sky itself is the backdrop tint (over the deep-space container).
-            skyGradient.opacity(0.30)
-            RadialGradient(colors: [WTheme.teal.opacity(0.18), .clear], center: .topTrailing,
-                           startRadius: 4, endRadius: 180)
+            skyArtwork
+            LinearGradient(colors: [.black.opacity(0.20), .black.opacity(0.08), .black.opacity(0.72)],
+                           startPoint: .top, endPoint: .bottom)
             content
         }
+    }
+
+    @ViewBuilder private var skyArtwork: some View {
+        #if canImport(UIKit)
+        let name = snapshot.activeFlight
+            ? (snapshot.activeSkyArtworkName ?? snapshot.selectedSkyArtworkName)
+            : snapshot.selectedSkyArtworkName
+        if let name, let image = UIImage(named: name) {
+            Image(uiImage: image).resizable().scaledToFill()
+        } else {
+            skyGradient
+        }
+        #else
+        skyGradient
+        #endif
     }
 
     @ViewBuilder private var content: some View {
@@ -120,7 +137,7 @@ struct FocusNowView: View {
             .foregroundStyle(Color(red: 0.08, green: 0.07, blue: 0.05))
             .padding(.horizontal, 14).padding(.vertical, 9)
             .frame(maxWidth: family == .systemSmall ? .infinity : nil)
-            .background(Capsule().fill(WTheme.teal))
+            .background(Capsule().fill(WTheme.gold))
         }
         .padding(15)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)

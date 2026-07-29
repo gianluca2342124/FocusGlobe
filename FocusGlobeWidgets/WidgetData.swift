@@ -98,12 +98,14 @@ struct WidgetSnapshot: Codable, Hashable {
     /// RECENTLY completed qualifying journey that day (parity with Passport).
     var activeDayCategories: [Int: String] = [:]
     var selectedSkyName: String?
+    var selectedSkyArtworkName: String?
     var skyTopHex = 0
     var skyBottomHex = 0
     var activeFlight = false
     var activeEndDate: Date?
     var activeInfinite = false
     var activeSkyName: String?
+    var activeSkyArtworkName: String?
     var activeCategory: String?
     var badges: [WidgetBadge] = []
     var badgeUnlockedCount = 0
@@ -141,7 +143,8 @@ struct WidgetSnapshot: Codable, Hashable {
         goalsCompleted: 2, goalsTotal: 4, canClaimReward: false,
         totalFocusedSeconds: 41_400, activeFocusDays: 37, focusedToday: true,
         activeDayOrdinals: WidgetSnapshot.sampleOrdinals,
-        selectedSkyName: "Desert Night", skyTopHex: 0x0A0A1E, skyBottomHex: 0x8E5A46,
+        selectedSkyName: "Desert Night", selectedSkyArtworkName: "WidgetSky_DesertNight",
+        skyTopHex: 0x0A0A1E, skyBottomHex: 0x8E5A46,
         badges: [
             WidgetBadge(name: "First Flight", icon: "airplane.departure", earned: true),
             WidgetBadge(name: "10 Flights", icon: "10.circle.fill", earned: true),
@@ -204,12 +207,14 @@ extension WidgetSnapshot {
         activeDayOrdinals = v(.activeDayOrdinals, activeDayOrdinals)
         activeDayCategories = v(.activeDayCategories, activeDayCategories)
         selectedSkyName = v(.selectedSkyName, selectedSkyName)
+        selectedSkyArtworkName = v(.selectedSkyArtworkName, selectedSkyArtworkName)
         skyTopHex = v(.skyTopHex, skyTopHex)
         skyBottomHex = v(.skyBottomHex, skyBottomHex)
         activeFlight = v(.activeFlight, activeFlight)
         activeEndDate = v(.activeEndDate, activeEndDate)
         activeInfinite = v(.activeInfinite, activeInfinite)
         activeSkyName = v(.activeSkyName, activeSkyName)
+        activeSkyArtworkName = v(.activeSkyArtworkName, activeSkyArtworkName)
         activeCategory = v(.activeCategory, activeCategory)
         badges = v(.badges, badges)
         badgeUnlockedCount = v(.badgeUnlockedCount, badgeUnlockedCount)

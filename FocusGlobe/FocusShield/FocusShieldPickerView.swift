@@ -119,7 +119,7 @@ struct FocusShieldPickerView: View {
         card {
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
                 rowLabel(icon: "apps.iphone",
-                         tint: AppColors.brand,
+                         tint: AppColors.selectionGold,
                          title: "Blocked apps",
                          subtitle: countLabel(service.selectionCount))
                 AppPrimaryButton(title: service.selectionCount == 0 ? "Choose apps" : "Change blocked apps",

@@ -1,12 +1,10 @@
 // ============================================================================
-//  Focus Shield is PARKED for v1.0 distribution.
+//  Focus Shield production gate
 //
-//  The full Screen Time implementation below compiles ONLY when the
-//  `FOCUS_SHIELD_ENABLED` Swift flag is set (it is intentionally NOT set in any
-//  build configuration). Until Apple grants the Family Controls **Distribution**
-//  entitlement, the app ships with the no-op stub in the `#else` branch — no
-//  FamilyControls / ManagedSettings / DeviceActivity usage, no authorization, no
-//  picker, no shields. See FOCUS_SHIELD_PARKED.md to re-enable.
+//  `FOCUS_SHIELD_ENABLED` is set in the current app configurations, so the
+//  FamilyControls / ManagedSettings implementation below is the production path.
+//  Keeping the compile gate preserves a safe no-op fallback for unsupported or
+//  temporarily parked distributions without duplicating the journey API.
 // ============================================================================
 
 #if FOCUS_SHIELD_ENABLED
@@ -233,7 +231,7 @@ final class FocusShieldService: ObservableObject {
 
 import Foundation
 
-/// PARKED no-op stub of `FocusShieldService` (Focus Shield disabled for v1.0).
+/// Compile-time no-op fallback used only when `FOCUS_SHIELD_ENABLED` is absent.
 ///
 /// Same public surface the app calls (`applyForJourney`, `clear`, `reconcile`,
 /// …) so journey/lifecycle code compiles unchanged — but it does nothing, never

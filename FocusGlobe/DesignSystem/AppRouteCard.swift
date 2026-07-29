@@ -28,7 +28,7 @@ struct AppRouteCard: View {
             .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
-                    .strokeBorder(highlighted ? AppColors.brand.opacity(0.6) : AppColors.glassStroke,
+                    .strokeBorder(highlighted ? AppColors.selectionGold.opacity(0.6) : AppColors.glassStroke,
                                   lineWidth: highlighted ? 1.5 : 1)
             }
             .shadow(color: AppColors.shadow, radius: 16, x: 0, y: 8)

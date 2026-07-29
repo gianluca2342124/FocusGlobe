@@ -12,13 +12,20 @@ struct PassportStatsWidget: Widget {
         // Kind stays "FGPassportStats" so existing installs keep working.
         StaticConfiguration(kind: "FGPassportStats", provider: FGProvider()) { entry in
             PassportStatsView(snapshot: entry.snapshot)
-                .fgWidgetBackground(artwork: "WidgetBG_PassportDashboard",
-                                    glow: WTheme.indigo)
+                .containerBackground(for: .widget) {
+                    LinearGradient(
+                        colors: [Color(red: 0.09, green: 0.105, blue: 0.15),
+                                 Color(red: 0.035, green: 0.043, blue: 0.065)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                }
                 .widgetURL(FGLink.url(entry.snapshot.gatedLink("passport")))
         }
         .configurationDisplayName("Passport Dashboard")
         .description("Your journeys, focused time, streaks and badges. FocusGlobe PRO.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        .contentMarginsDisabled()
     }
 }
 
@@ -35,6 +42,7 @@ struct PassportStatsView: View {
     var body: some View {
         if !snapshot.isPro {
             LockedTeaser(icon: "book.closed.fill", title: "Passport Stats", accent: WTheme.indigo)
+                .padding(14)
         } else if family == .systemSmall {
             VStack(alignment: .leading, spacing: 6) {
                 WHeader(icon: "book.closed.fill", title: "Passport", tint: WTheme.gold)
@@ -44,6 +52,7 @@ struct PassportStatsView: View {
                 WStat(value: "\(snapshot.currentStreak)", caption: "day streak", tint: WTheme.coral)
             }
             .padding(14)
+            .background(passportBackground)
         } else {
             VStack(alignment: .leading, spacing: 10) {
                 WHeader(icon: "book.closed.fill", title: "FocusGlobe Passport", tint: WTheme.gold)
@@ -64,7 +73,17 @@ struct PassportStatsView: View {
             }
             .padding(15)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(passportBackground)
         }
+    }
+
+    private var passportBackground: some View {
+        LinearGradient(
+            colors: [Color(red: 0.09, green: 0.105, blue: 0.15),
+                     Color(red: 0.035, green: 0.043, blue: 0.065)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
     }
 
     // A few genuinely unlocked badges (folded in from the retired Badge Collection

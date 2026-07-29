@@ -246,7 +246,7 @@ enum PaywallContext: Equatable {
     var benefitTitle: String {
         switch self {
         case .general:     return "Unlock FocusGlobe"
-        case .sky:         return "Explore Every Sky"
+        case .sky:         return "Explore Exclusive Skies"
         case .balloonSkin: return "Make Every Flight Yours"
         case .interior:    return "Make Your Cabin Yours"
         case .sound:       return "Find Your Focus Sound"
@@ -346,10 +346,9 @@ enum PaywallContext: Equatable {
         case .sky:                   return "Exclusive Skies"
         case .balloonSkin:           return "Exclusive Balloon Skins"
         case .noAds:                return "No Ads"
-        // `.interior` deliberately highlights nothing: no StoreItem is
-        // `isPremium`, so PRO buys no cabin item. Pointing the pilot at the
-        // skins row from a cabin entry would promise the wrong thing.
-        case .interior: return nil
+        // Cabin now has a curated premium item set, so the interior entry points
+        // to the combined skins-and-items benefit row.
+        case .interior:              return "Exclusive Skins & Items"
         case .general, .sound, .widget, .rewards, .pause: return nil
         }
     }

@@ -13,7 +13,6 @@ struct WidgetGalleryItem: Identifiable {
     let name: String
     let blurb: String
     let systemImage: String
-    let artwork: String
     let glow: Color
     let families: [String]    // e.g. ["Small", "Medium", "Large"]
     let isPro: Bool
@@ -24,21 +23,21 @@ struct WidgetGalleryItem: Identifiable {
     static let all: [WidgetGalleryItem] = [
         // FREE
         .init(id: "FGStreakCompanion", name: "Streak Companion",
-              blurb: "An expressive balloon, your streak flame and today's state — nothing yet, focused, at risk or a milestone.",
-              systemImage: "flame.fill", artwork: "WidgetBG_StreakCompanion", glow: WGTheme.coral,
+              blurb: "The FocusGlobe fire balloon, your live streak and today's focus state.",
+              systemImage: "flame.fill", glow: WGTheme.coral,
               families: ["Small", "Lock Screen"], isPro: false),
         .init(id: "FGFocusNow", name: "Focus Now",
               blurb: "Start a flight in a tap when idle, or watch the live time remaining on the flight you're on.",
-              systemImage: "paperplane.fill", artwork: "WidgetBG_FocusNow", glow: WGTheme.teal,
+              systemImage: "paperplane.fill", glow: WGTheme.teal,
               families: ["Medium"], isPro: false),
         // PRO
         .init(id: "FGFocusGrid", name: "Focus Grid",
               blurb: "Your last six months of real focus days as a living contribution grid — tap to open your Passport.",
-              systemImage: "square.grid.3x3.fill", artwork: "WidgetBG_FocusGrid", glow: WGTheme.teal,
+              systemImage: "square.grid.3x3.fill", glow: WGTheme.teal,
               families: ["Medium", "Large"], isPro: true),
         .init(id: "FGPassportStats", name: "Passport Dashboard",
               blurb: "Journeys, focused time, current + longest streak, your longest session — plus a few unlocked badges.",
-              systemImage: "book.closed.fill", artwork: "WidgetBG_PassportDashboard", glow: WGTheme.indigo,
+              systemImage: "book.closed.fill", glow: WGTheme.indigo,
               families: ["Small", "Medium", "Large"], isPro: true),
     ]
 }
@@ -105,17 +104,11 @@ private struct WidgetPreviewTile: View {
     let item: WidgetGalleryItem
     var locked: Bool = false
     var side: CGFloat = 156
+    @EnvironmentObject private var appModel: AppModel
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            WidgetPreviewCanvas(artwork: item.artwork, glow: item.glow)
-            // Signature glyph, top-trailing.
-            Image(systemName: item.systemImage)
-                .font(.system(size: side * 0.22, weight: .bold))
-                .foregroundStyle(item.glow)
-                .shadow(color: item.glow.opacity(0.6), radius: 12)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                .padding(side * 0.12)
+            preview
 
             // Image-only preview: the card + signature glyph read as the widget
             // itself. ONLY the PRO/lock affordance remains — a free widget carries
@@ -139,27 +132,151 @@ private struct WidgetPreviewTile: View {
             .strokeBorder(.white.opacity(0.10), lineWidth: 1))
         .shadow(color: .black.opacity(0.35), radius: 12, y: 6)
     }
-}
 
-/// The dark "space" widget background + starfield + signature glow.
-private struct WidgetPreviewCanvas: View {
-    let artwork: String
-    let glow: Color
-    var body: some View {
+    @ViewBuilder
+    private var preview: some View {
+        switch item.id {
+        case "FGStreakCompanion":
+            streakPreview
+        case "FGFocusNow":
+            focusNowPreview
+        case "FGFocusGrid":
+            focusGridPreview
+        default:
+            passportPreview
+        }
+    }
+
+    private var streakPreview: some View {
         ZStack {
-            if let image = UIImage(named: artwork) {
+            if let image = UIImage(named: "WidgetFireBalloon") {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
-                LinearGradient(colors: [.black.opacity(0.06), .clear, .black.opacity(0.30)],
-                               startPoint: .top, endPoint: .bottom)
             } else {
-                LinearGradient(colors: [WGTheme.bgTop, WGTheme.bgBottom],
-                               startPoint: .top, endPoint: .bottom)
+                WGTheme.bgBottom
             }
-            RadialGradient(colors: [glow.opacity(0.5), .clear],
-                           center: .topTrailing, startRadius: 2, endRadius: 150)
+            LinearGradient(colors: [.clear, .black.opacity(0.16), .black.opacity(0.78)],
+                           startPoint: .top, endPoint: .bottom)
+            VStack(spacing: -1) {
+                Spacer()
+                Text("\(appModel.progress.currentStreak)")
+                    .font(.system(size: side * 0.30, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.8), radius: 6, y: 2)
+                Text("DAY STREAK")
+                    .font(.system(size: max(8, side * 0.06), weight: .heavy, design: .rounded))
+                    .tracking(1)
+                    .foregroundStyle(.white.opacity(0.86))
+            }
+            .padding(side * 0.09)
         }
+    }
+
+    private var focusNowPreview: some View {
+        ZStack {
+            SkyStillPreview(sky: appModel.selectedSky)
+            LinearGradient(colors: [.black.opacity(0.06), .black.opacity(0.64)],
+                           startPoint: .top, endPoint: .bottom)
+            VStack(alignment: .leading, spacing: 5) {
+                HStack {
+                    Text(appModel.selectedSky.name)
+                        .font(.system(size: side * 0.09, weight: .heavy))
+                        .lineLimit(1)
+                    Spacer()
+                    Image(systemName: "paperplane.fill")
+                        .foregroundStyle(WGTheme.teal)
+                }
+                Spacer()
+                Label("Start Focus", systemImage: "arrow.up")
+                    .font(.system(size: side * 0.08, weight: .heavy))
+                    .foregroundStyle(Color(red: 0.08, green: 0.07, blue: 0.05))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(Capsule().fill(WGTheme.gold))
+            }
+            .foregroundStyle(.white)
+            .padding(side * 0.10)
+        }
+    }
+
+    private var focusGridPreview: some View {
+        let calendar = Calendar.current
+        let active = FocusConsistency.activeDays(history: appModel.history, calendar: calendar)
+        let today = calendar.startOfDay(for: Date())
+        let ordinals = Set(active.keys.map {
+            Int((calendar.startOfDay(for: $0).timeIntervalSince1970 / 86_400).rounded())
+        })
+        let todayOrdinal = Int((today.timeIntervalSince1970 / 86_400).rounded())
+        return VStack(alignment: .leading, spacing: side * 0.055) {
+            HStack {
+                Label("FOCUS GRID", systemImage: "square.grid.3x3.fill")
+                    .font(.system(size: side * 0.06, weight: .heavy))
+                    .foregroundStyle(WGTheme.inkSoft)
+                Spacer()
+                Label("\(appModel.progress.currentStreak)", systemImage: "flame.fill")
+                    .font(.system(size: side * 0.065, weight: .heavy))
+                    .foregroundStyle(WGTheme.gold)
+            }
+            GeometryReader { geo in
+                let columns = 12
+                let spacing: CGFloat = 2
+                let cell = (geo.size.width - CGFloat(columns - 1) * spacing) / CGFloat(columns)
+                HStack(spacing: spacing) {
+                    ForEach(0..<columns, id: \.self) { column in
+                        VStack(spacing: spacing) {
+                            ForEach(0..<7, id: \.self) { row in
+                                let day = todayOrdinal - ((columns - 1 - column) * 7 + (6 - row))
+                                RoundedRectangle(cornerRadius: 1.8, style: .continuous)
+                                    .fill(ordinals.contains(day)
+                                          ? (day == todayOrdinal ? WGTheme.gold : WGTheme.teal.opacity(0.74))
+                                          : Color.white.opacity(0.075))
+                                    .frame(width: cell, height: cell)
+                            }
+                        }
+                    }
+                }
+            }
+            Text("\(active.count) focus days")
+                .font(.system(size: side * 0.06, weight: .bold))
+                .foregroundStyle(WGTheme.inkSoft)
+        }
+        .padding(side * 0.09)
+        .background(Color(red: 0.055, green: 0.058, blue: 0.066))
+    }
+
+    private var passportPreview: some View {
+        VStack(alignment: .leading, spacing: side * 0.06) {
+            Label("PASSPORT", systemImage: "book.closed.fill")
+                .font(.system(size: side * 0.065, weight: .heavy))
+                .foregroundStyle(WGTheme.gold)
+            Spacer(minLength: 0)
+            HStack {
+                previewStat("\(appModel.progress.landings)", "JOURNEYS", WGTheme.ink)
+                previewStat("\(appModel.lifetimeFocusMinutes)m", "FOCUSED", WGTheme.teal)
+            }
+            HStack {
+                previewStat("\(appModel.progress.currentStreak)", "STREAK", WGTheme.coral)
+                previewStat("\(appModel.progress.bestFocusMinutes)m", "LONGEST", WGTheme.gold)
+            }
+        }
+        .padding(side * 0.10)
+        .background(LinearGradient(colors: [WGTheme.bgTop, WGTheme.bgBottom],
+                                   startPoint: .topLeading, endPoint: .bottomTrailing))
+    }
+
+    private func previewStat(_ value: String, _ label: String, _ color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(value)
+                .font(.system(size: side * 0.13, weight: .heavy))
+                .foregroundStyle(color)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+            Text(label)
+                .font(.system(size: side * 0.047, weight: .bold))
+                .foregroundStyle(WGTheme.inkSoft)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

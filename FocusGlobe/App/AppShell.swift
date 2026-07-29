@@ -95,14 +95,14 @@ struct AppTabBar: View {
             Image(systemName: item.system)
                 .font(.system(size: Layout.pad(24, 27), weight: .semibold))
                 .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(active ? AppColors.celestialTeal
+                .foregroundStyle(active ? AppColors.selectionGold
                                  : Color.dynamic(light: 0x26221D, lightAlpha: 0.55,
                                                  dark: 0xFFFFFF, darkAlpha: 0.68))
                 .frame(width: Layout.pad(54, 62), height: 40)
                 .background {
                     if active {
                         RoundedRectangle(cornerRadius: 13, style: .continuous)
-                            .fill(AppColors.celestialTeal.opacity(0.15))
+                            .fill(AppColors.selectionGold.opacity(0.17))
                     }
                 }
                 .frame(maxWidth: .infinity, minHeight: 44)

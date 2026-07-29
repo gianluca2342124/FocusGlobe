@@ -246,11 +246,12 @@ struct SkyFlightSceneView: View {
         case "paris-sunset":
             groundShimmer(W: W, H: H, t: t, tint: Color(hex: 0xF6C88A))
         case "sahara-night":
-            milkyWay(W: W, H: H, t: t, hasArtwork: hasArtwork)
+            starRiver(W: W, H: H, t: t, showGlowPlate: !hasArtwork)
         case "galaxy-drift", "deep-space":
-            // The great diagonal star-river gives the cosmos its sense of
-            // immense, structured depth — the emptiest Skies feel the largest.
-            milkyWay(W: W, H: H, t: t, hasArtwork: hasArtwork)
+            // Micro-stars keep cosmic depth. The broad tilted glow plate is
+            // deliberately disabled here in every context: over finished art it
+            // read as a translucent white oval/beam.
+            starRiver(W: W, H: H, t: t, showGlowPlate: false)
         default:
             EmptyView()
         }
@@ -369,7 +370,8 @@ struct SkyFlightSceneView: View {
 
     /// A faint diagonal Milky-Way glow: a tilted band of dense micro-stars
     /// inside a very soft luminous haze — no edges, no geometry.
-    private func milkyWay(W: CGFloat, H: CGFloat, t: Double, hasArtwork: Bool) -> some View {
+    private func starRiver(W: CGFloat, H: CGFloat, t: Double,
+                           showGlowPlate: Bool) -> some View {
         Canvas { ctx, s in
             var rng = SeededRNG(seed: skySeed &+ 0x3117)
             let cx = Double(s.width) * 0.5
@@ -389,7 +391,7 @@ struct SkyFlightSceneView: View {
                 // artificial translucent oval / rotated beam reported on
                 // Starfall Nebula and Deep Space. Every shipping Sky now has
                 // art, so this only ever draws for a Sky whose art is absent.
-                if !hasArtwork {
+                if showGlowPlate {
                     l.fill(Path(ellipseIn: CGRect(x: -len / 2, y: -len * 0.09,
                                                   width: len, height: len * 0.18)),
                            with: .radialGradient(g, center: .zero, startRadius: 0,
@@ -439,7 +441,6 @@ struct SkyFlightSceneView: View {
             .opacity(fadeIn * 0.9)
         case "deep-space":
             ZStack {
-                galaxySmudge(W: W, H: H)
                 // The hero: a Saturn-like ringed planet, high and to the side so
                 // it never sits behind the timer or balloon. Slow parallax.
                 SkyCosmic.ringedPlanet(d: W * 0.22)
@@ -484,27 +485,6 @@ struct SkyFlightSceneView: View {
                      Color(hex: 0x3A4A72).opacity(0)],
             center: UnitPoint(x: 0.36, y: 0.32), startRadius: 0, endRadius: d * 0.68))
             .frame(width: d, height: d)
-    }
-
-    /// A faint tilted galaxy smudge — soft elliptical haze with a brighter core.
-    private func galaxySmudge(W: CGFloat, H: CGFloat) -> some View {
-        Canvas { ctx, s in
-            var rng = SeededRNG(seed: skySeed &+ 0x6A1A)
-            let gx = Double(s.width) * (0.24 + rng.unit() * 0.16)
-            let gy = Double(s.height) * (0.14 + rng.unit() * 0.1)
-            let r = Double(min(s.width, s.height)) * 0.16
-            ctx.drawLayer { l in
-                l.translateBy(x: CGFloat(gx), y: CGFloat(gy))
-                l.rotate(by: .radians(rng.unit() * 0.8 - 0.4))
-                let g = Gradient(colors: [Color(hex: 0xB49CE8).opacity(0.12),
-                                          Color(hex: 0x6E7EC8).opacity(0.05), .clear])
-                l.fill(Path(ellipseIn: CGRect(x: -r, y: -r * 0.4, width: r * 2, height: r * 0.8)),
-                       with: .radialGradient(g, center: .zero, startRadius: 0, endRadius: CGFloat(r)))
-                let cg = Gradient(colors: [Color.white.opacity(0.12), .clear])
-                l.fill(Path(ellipseIn: CGRect(x: -r * 0.14, y: -r * 0.07, width: r * 0.28, height: r * 0.14)),
-                       with: .radialGradient(cg, center: .zero, startRadius: 0, endRadius: CGFloat(r * 0.2)))
-            }
-        }
     }
 
     // MARK: 4 — Per-Sky atmospheric moments (fade in · live · fade out)

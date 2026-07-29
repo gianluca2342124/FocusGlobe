@@ -37,6 +37,9 @@ struct CabinView: View {
     /// Owned Store cabin decorations the pilot has placed (`StoreItem` ids) —
     /// purely additive dressing; the cabin stands alone without any of them.
     var equippedItemIDs: Set<String> = []
+    /// The pilot's persisted semantic choices. Store preview and active journey
+    /// receive this same map, so an item never jumps to a different surface.
+    var equippedItemPlacements: [String: CabinSlot] = [:]
     /// An optional custom backdrop shown *through the window* instead of the live
     /// flight world. The Store passes its calm daytime sky here so the cabin
     /// preview looks out on a bright afternoon (never the dark night world, which
@@ -152,9 +155,9 @@ struct CabinView: View {
     /// interior instead of nine stacked objects.
     private var visibleItems: [StoreItem] {
         StoreItem.cabinDecorations
-            .filter { equippedItemIDs.contains($0.id) && $0.slot != nil }
+            .filter { equippedItemIDs.contains($0.id) && !$0.allowedSlots.isEmpty }
             .prefix(StoreItem.maxEquipped)
-            .sorted { ($0.slot?.depth ?? 0) < ($1.slot?.depth ?? 0) }
+            .sorted { placement(for: $0).depth < placement(for: $1).depth }
     }
 
     /// Places every equipped object from the slot layout table. Nothing here
@@ -162,41 +165,30 @@ struct CabinView: View {
     /// seats, and objects sharing a surface take different seats so they never
     /// stack. Adding a decoration needs no change to this file.
     @ViewBuilder private func slottedProps(W: CGFloat, H: CGFloat, t: Double) -> some View {
-        let items = visibleItems
-        ForEach(Array(items.enumerated()), id: \.element.id) { _, item in
-            if let slot = item.slot {
-                let seat = seatIndex(of: item, in: items)
-                let size = W * Self.layout(for: slot).size
-                cabinItemImage(item, t: t)
-                    .frame(width: size, height: size)
-                    .position(x: W * seatX(slot, seat: seat),
-                              y: H * Self.layout(for: slot).y)
-            }
+        ForEach(visibleItems) { item in
+            let slot = placement(for: item)
+            let layout = Self.layout(for: slot)
+            let size = W * layout.size * item.normalizedScale
+            cabinItemImage(item, t: t)
+                .frame(width: size, height: size)
+                .rotationEffect(.degrees(item.rotationDegrees))
+                .position(x: W * layout.x, y: H * layout.y)
+                .zIndex(item.zIndex + Double(slot.depth))
         }
     }
 
-    /// Which seat on its own surface this object takes — its index among the
-    /// visible objects sharing that slot.
-    private func seatIndex(of item: StoreItem, in items: [StoreItem]) -> Int {
-        items.filter { $0.slot == item.slot }.firstIndex(of: item) ?? 0
+    /// A profile created before persisted placement still gets a deterministic,
+    /// compatible preferred slot. The AppModel migration writes this choice.
+    private func placement(for item: StoreItem) -> CabinSlot {
+        if let saved = equippedItemPlacements[item.id], item.supports(saved) { return saved }
+        return item.preferredSlot ?? item.allowedSlots.first ?? .tableCenter
     }
 
-    /// The one layout table. `y` is the surface's height in the cabin, `size` the
-    /// object's width as a fraction of the cabin, and `seats` the positions along
-    /// that surface — ordered so a single object sits in the most natural spot
-    /// and extra objects spread outward rather than crowding the centre.
-    private static func layout(for slot: CabinSlot) -> (y: CGFloat, size: CGFloat, seats: [CGFloat]) {
-        switch slot {
-        case .wall:  return (0.17, 0.26, [0.50, 0.24, 0.76])
-        case .hook:  return (0.10, 0.12, [0.80, 0.20, 0.62])
-        case .shelf: return (0.52, 0.15, [0.26, 0.74, 0.44, 0.62])
-        case .bench: return (0.70, 0.24, [0.72, 0.28, 0.50])
-        }
-    }
-
-    private func seatX(_ slot: CabinSlot, seat: Int) -> CGFloat {
-        let seats = Self.layout(for: slot).seats
-        return seats[seat % seats.count]
+    /// The one responsive layout table. Ground/surface placements stay below the
+    /// protected main window; wall placements sit outside its left/right edges.
+    private static func layout(for slot: CabinSlot) -> (x: CGFloat, y: CGFloat, size: CGFloat) {
+        let p = slot.normalizedPosition
+        return (CGFloat(p.x), CGFloat(p.y), CGFloat(slot.normalizedBaseSize))
     }
 
     /// One cabin object drawn from its real asset — with a graceful procedural

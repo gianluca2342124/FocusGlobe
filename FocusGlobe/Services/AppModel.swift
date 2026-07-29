@@ -151,6 +151,38 @@ final class AppModel: ObservableObject {
                         .map(\.id))
                 }
                 if kept != equipped { loadedProfile.equippedCabinItemIDs = kept; dirty = true }
+
+                // Upgrade the old four-bucket auto-layout to persisted semantic
+                // slots. Preserve a valid saved choice; otherwise choose the
+                // item's preferred free slot, then its next compatible slot.
+                var placements = loadedProfile.cabinItemSlotByID ?? [:]
+                placements = placements.filter { kept.contains($0.key) }
+                var occupied = Set<CabinSlot>()
+                var placedIDs = Set<String>()
+                for item in StoreItem.cabinDecorations where kept.contains(item.id) {
+                    let saved = placements[item.id].flatMap(CabinSlot.init(rawValue:))
+                    let candidates = ([item.preferredSlot].compactMap { $0 } + item.allowedSlots)
+                        .reduce(into: [CabinSlot]()) { result, slot in
+                            if !result.contains(slot) { result.append(slot) }
+                        }
+                    guard let slot = saved.flatMap({ item.supports($0) && !occupied.contains($0) ? $0 : nil })
+                            ?? candidates.first(where: { !occupied.contains($0) }) else {
+                        placements.removeValue(forKey: item.id)
+                        continue
+                    }
+                    placements[item.id] = slot.rawValue
+                    occupied.insert(slot)
+                    placedIDs.insert(item.id)
+                }
+                if placedIDs != kept {
+                    loadedProfile.equippedCabinItemIDs = placedIDs
+                    kept = placedIDs
+                    dirty = true
+                }
+                if placements != loadedProfile.cabinItemSlotByID {
+                    loadedProfile.cabinItemSlotByID = placements
+                    dirty = true
+                }
             }
             if let trail = loadedProfile.equippedTrailID, !valid.contains(trail) {
                 loadedProfile.equippedTrailID = nil; dirty = true
@@ -458,7 +490,7 @@ final class AppModel: ObservableObject {
     }
 
     func ownsStoreItem(_ item: StoreItem) -> Bool {
-        (profile.ownedStoreItemIDs ?? []).contains(item.id)
+        item.isPremium ? isPro : (profile.ownedStoreItemIDs ?? []).contains(item.id)
     }
 
     // MARK: - Daily gift (Shop)
@@ -668,6 +700,29 @@ final class AppModel: ObservableObject {
         (profile.equippedCabinItemIDs ?? []).contains(item.id)
     }
 
+    /// The one persisted placement map used by Store preview and active Cabin.
+    var cabinPlacements: [String: CabinSlot] {
+        let equipped = profile.equippedCabinItemIDs ?? []
+        let raw = profile.cabinItemSlotByID ?? [:]
+        return raw.reduce(into: [:]) { result, pair in
+            guard equipped.contains(pair.key),
+                  let item = StoreItem.byID(pair.key),
+                  let slot = CabinSlot(rawValue: pair.value),
+                  item.supports(slot) else { return }
+            result[pair.key] = slot
+        }
+    }
+
+    func cabinSlot(for item: StoreItem) -> CabinSlot? { cabinPlacements[item.id] }
+
+    /// Compatible unoccupied slots. Passing the currently-moving item excludes
+    /// its own old placement from collision checks.
+    func availableCabinSlots(for item: StoreItem, moving: StoreItem? = nil) -> [CabinSlot] {
+        let ignoredID = moving?.id ?? item.id
+        let occupied = Set(cabinPlacements.compactMap { $0.key == ignoredID ? nil : $0.value })
+        return item.allowedSlots.filter { !occupied.contains($0) }
+    }
+
     /// How many decorations are currently placed in the Cabin.
     var equippedCabinItemCount: Int { (profile.equippedCabinItemIDs ?? []).count }
 
@@ -675,27 +730,74 @@ final class AppModel: ObservableObject {
     /// letting a tap silently do nothing.
     var isCabinFull: Bool { equippedCabinItemCount >= StoreItem.maxEquipped }
 
-    /// Show/hide an owned decoration inside the Cabin View.
-    ///
-    /// Returns `false` when the tap was refused because the Cabin already holds
-    /// `StoreItem.maxEquipped` objects — the caller shows the "make room first"
-    /// affordance. Removing is always allowed, so a full Cabin is never stuck.
+    /// Place an owned item in a compatible semantic slot. A fifth item must name
+    /// the equipped item it replaces; collisions and window-covering coordinates
+    /// are impossible because callers can only provide a catalogued `CabinSlot`.
+    @discardableResult
+    func placeCabinItem(_ item: StoreItem, in slot: CabinSlot,
+                        replacing replacement: StoreItem? = nil) -> Bool {
+        guard item.kind == .cabinDecoration, ownsStoreItem(item), item.supports(slot) else {
+            haptics.refused()
+            return false
+        }
+        var ids = profile.equippedCabinItemIDs ?? []
+        var placements = profile.cabinItemSlotByID ?? [:]
+
+        if let replacement, replacement.id != item.id {
+            guard ids.contains(replacement.id) else { return false }
+            ids.remove(replacement.id)
+            placements.removeValue(forKey: replacement.id)
+        }
+        if !ids.contains(item.id), ids.count >= StoreItem.maxEquipped {
+            haptics.refused()
+            return false
+        }
+        let occupiedByAnother = placements.contains {
+            $0.key != item.id && ids.contains($0.key) && $0.value == slot.rawValue
+        }
+        guard !occupiedByAnother else {
+            haptics.refused()
+            return false
+        }
+        ids.insert(item.id)
+        placements[item.id] = slot.rawValue
+        profile.equippedCabinItemIDs = ids
+        profile.cabinItemSlotByID = placements
+        haptics.tap()
+        return true
+    }
+
+    @discardableResult
+    func moveCabinItem(_ item: StoreItem, to slot: CabinSlot) -> Bool {
+        guard isCabinItemEquipped(item) else { return false }
+        return placeCabinItem(item, in: slot)
+    }
+
+    func unequipCabinItem(_ item: StoreItem) {
+        var ids = profile.equippedCabinItemIDs ?? []
+        var placements = profile.cabinItemSlotByID ?? [:]
+        ids.remove(item.id)
+        placements.removeValue(forKey: item.id)
+        profile.equippedCabinItemIDs = ids
+        profile.cabinItemSlotByID = placements
+        haptics.tap()
+    }
+
+    /// Compatibility path for older call sites: remove an equipped item, or
+    /// place a new one in its first free preferred/allowed slot.
     @discardableResult
     func toggleCabinItem(_ item: StoreItem) -> Bool {
         guard item.kind == .cabinDecoration, ownsStoreItem(item) else { return false }
-        var ids = profile.equippedCabinItemIDs ?? []
-        if ids.contains(item.id) {
-            ids.remove(item.id)
-        } else {
-            guard ids.count < StoreItem.maxEquipped else {
-                haptics.refused()
-                return false
-            }
-            ids.insert(item.id)
+        if isCabinItemEquipped(item) {
+            unequipCabinItem(item)
+            return true
         }
-        profile.equippedCabinItemIDs = ids
-        haptics.tap()
-        return true
+        guard !isCabinFull,
+              let slot = availableCabinSlots(for: item).first else {
+            haptics.refused()
+            return false
+        }
+        return placeCabinItem(item, in: slot)
     }
 
     // MARK: - Onboarding completion
@@ -952,6 +1054,13 @@ final class AppModel: ObservableObject {
         if !isAudioUnlocked(JourneyAudioOption.option(id: settings.selectedJourneyAudioID)) {
             settings.selectedJourneyAudioID = nil
         }
+        var equipped = profile.equippedCabinItemIDs ?? []
+        var placements = profile.cabinItemSlotByID ?? [:]
+        let premiumIDs = Set(StoreItem.cabinDecorations.filter(\.isPremium).map(\.id))
+        equipped.subtract(premiumIDs)
+        placements = placements.filter { !premiumIDs.contains($0.key) }
+        profile.equippedCabinItemIDs = equipped
+        profile.cabinItemSlotByID = placements
     }
 
     // MARK: - Daily objective event tracking
@@ -1589,6 +1698,7 @@ final class AppModel: ObservableObject {
         // The selected Sky's identity + gradient for the idle Focus Now backdrop.
         let sky = selectedSky
         snap.selectedSkyName = sky.name
+        snap.selectedSkyArtworkName = sky.widgetArtworkAssetName
         snap.skyTopHex = Int(sky.moodPalette.first ?? 0x181721)
         snap.skyBottomHex = Int(sky.moodPalette.last ?? 0x100F16)
         // Active-flight live state (nil when idle).
@@ -1596,6 +1706,8 @@ final class AppModel: ObservableObject {
         snap.activeEndDate = activeFlightEndDate
         snap.activeInfinite = activeFlightInfinite
         snap.activeSkyName = activeFlightSkyName
+        snap.activeSkyArtworkName = activeFlightSkyName
+            .flatMap { name in FocusSky.all.first(where: { $0.name == name })?.widgetArtworkAssetName }
         snap.activeCategory = activeFlightCategory
         // Badges — real earned state (never fabricated).
         let badges = makeWidgetBadges()

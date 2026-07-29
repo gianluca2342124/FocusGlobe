@@ -251,7 +251,7 @@ struct VisitedPlacesMapView: View {
                                 .foregroundStyle(AppColors.textTertiary)
                         }
                         .padding(.horizontal, AppSpacing.screen)
-                        .background(selected == place ? AppColors.brand.opacity(0.08) : .clear)
+                        .background(selected == place ? AppColors.selectionGold.opacity(0.11) : .clear)
                     }
                     .buttonStyle(SoftPressStyle(scale: 0.995))
                     Rectangle().fill(AppColors.hairline).frame(height: 1)

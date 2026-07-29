@@ -216,7 +216,7 @@ struct OnboardingView: View {
                 .focused($textFocused)
                 .font(AppTypography.body)
                 .foregroundStyle(Color(hex: 0x26221D))
-                .tint(AppColors.brand)
+                .tint(AppColors.selectionGold)
                 .padding(AppSpacing.md)
                 .background(RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(Color(hex: 0xF4EFE4)))
@@ -236,7 +236,7 @@ struct OnboardingView: View {
                 .textInputAutocapitalization(.words)
                 .font(.system(size: 22, weight: .semibold, design: .default))
                 .foregroundStyle(Color(hex: 0x26221D))
-                .tint(AppColors.brand)
+                .tint(AppColors.selectionGold)
                 .multilineTextAlignment(.center)
                 .padding(AppSpacing.md)
                 .background(RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -346,7 +346,7 @@ struct OnboardingView: View {
             HStack(spacing: 6) {
                 ForEach(opts.indices, id: \.self) { i in
                     Capsule()
-                        .fill(i == soundIndex ? AppColors.brand : .white.opacity(0.28))
+                        .fill(i == soundIndex ? AppColors.selectionGold : .white.opacity(0.28))
                         .frame(width: i == soundIndex ? 18 : 6, height: 6)
                 }
             }
@@ -387,7 +387,7 @@ struct OnboardingView: View {
         }
         .padding(.horizontal, 15).padding(.vertical, 9)
         .background(Capsule().fill(.white.opacity(0.08)))
-        .overlay(Capsule().strokeBorder(AppColors.brand.opacity(0.32), lineWidth: 1))
+        .overlay(Capsule().strokeBorder(AppColors.selectionGold.opacity(0.32), lineWidth: 1))
         .accessibilityLabel("Now playing a preview")
     }
 
@@ -820,13 +820,10 @@ struct OnboardingView: View {
 
     private var premiumBenefits: some View {
         VStack(spacing: AppSpacing.xs) {
-            // Fixed order, consistent Title Case. "Support FocusGlobe" is
-            // deliberately absent — it is a sentiment, not a benefit.
+            // Fixed order and consistent Title Case; sentiment is kept out of the
+            // product-benefit table.
             premiumBenefit("moon.stars.fill", "Exclusive Skies")
-            // "Skins", not "Skins & Items": four balloon skins are gated behind
-            // `.pro`, but every StoreItem is `isPremium: false` — buying PRO
-            // unlocks no item at all, so naming them here is a false promise.
-            premiumBenefit("circle.circle.fill", "Exclusive Balloon Skins")
+            premiumBenefit("circle.circle.fill", "Exclusive Skins & Items")
             premiumBenefit("square.grid.2x2.fill", "Exclusive Widgets")
             premiumBenefit("person.2.fill", "Online Mode")
             premiumBenefit("infinity", "Unlimited Time ∞")

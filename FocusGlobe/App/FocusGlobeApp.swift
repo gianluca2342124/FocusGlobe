@@ -39,7 +39,7 @@ struct FocusGlobeApp: App {
                 .environmentObject(appModel)
                 .environmentObject(router)
                 .environmentObject(online)
-                .tint(AppColors.brand)
+                .tint(AppColors.selectionGold)
                 .preferredColorScheme(appModel.settings.appearance.colorScheme)
                 .onAppear {
                     LaunchLog.mark("RootView onAppear")

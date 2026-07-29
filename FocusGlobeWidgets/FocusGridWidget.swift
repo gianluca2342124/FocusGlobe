@@ -6,8 +6,8 @@ import WidgetKit
 /// The SAME six-month span as the app's Passport/Streak grid (26 rolling weeks ×
 /// 7 rows, newest week on the right), rebuilt on the widget from the shared set
 /// of active local-day ordinals. No scrolling; sizes itself to the available
-/// width. Each lit day takes its focus-category hue (parity with Passport);
-/// intensity isn't needed at widget scale.
+/// width. Active days use a restrained teal intensity and today uses warm gold;
+/// the grid deliberately stays informational rather than decorative.
 struct WFocusGrid: View {
     let activeOrdinals: Set<Int>
     /// Local day-ordinal → category key of that day's latest qualifying journey.
@@ -51,10 +51,11 @@ struct WFocusGrid: View {
             let ord = todayOrd - daysBack
             let active = activeOrdinals.contains(ord)
             let isToday = ord == todayOrd
-            RoundedRectangle(cornerRadius: side * 0.28, style: .continuous)
-                .fill(active ? WTheme.category(categories[ord]) : WTheme.hair)
+            RoundedRectangle(cornerRadius: side * 0.25, style: .continuous)
+                .fill(active ? (isToday ? WTheme.gold : WTheme.teal.opacity(0.72))
+                             : Color.white.opacity(0.075))
                 .overlay(
-                    RoundedRectangle(cornerRadius: side * 0.28, style: .continuous)
+                    RoundedRectangle(cornerRadius: side * 0.25, style: .continuous)
                         .strokeBorder(WTheme.ink.opacity(isToday ? 0.9 : 0), lineWidth: 1)
                 )
                 .frame(width: side, height: side)
@@ -72,13 +73,15 @@ struct FocusGridWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "FGFocusGrid", provider: FGProvider()) { entry in
             FocusGridWidgetView(snapshot: entry.snapshot)
-                .fgWidgetBackground(artwork: "WidgetBG_FocusGrid",
-                                    glow: WTheme.teal)
+                .containerBackground(for: .widget) {
+                    Color(red: 0.055, green: 0.058, blue: 0.066)
+                }
                 .widgetURL(FGLink.url(entry.snapshot.gatedLink("passport")))
         }
         .configurationDisplayName("Focus Grid")
         .description("Your last six months of focus days. FocusGlobe PRO.")
         .supportedFamilies([.systemMedium, .systemLarge])
+        .contentMarginsDisabled()
     }
 }
 
@@ -110,6 +113,8 @@ struct FocusGridWidgetView: View {
                 }
             }
             .padding(14)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(Color(red: 0.055, green: 0.058, blue: 0.066))
         } else {
             LockedTeaser(icon: "square.grid.3x3.fill", title: "Focus Grid", accent: WTheme.teal)
         }

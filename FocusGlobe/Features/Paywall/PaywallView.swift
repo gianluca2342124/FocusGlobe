@@ -201,8 +201,8 @@ struct PaywallView: View {
     }
 
     private var purchaseFooter: some View {
-        // No "No charge today" badge: the trial timeline above already states the
-        // billing story, and the badge is deliberately NOT replaced by another one.
+        // The trial timeline already states the billing story; no redundant status
+        // badge is inserted above the CTA.
         // Slightly looser spacing keeps the CTA and legal text from crowding the
         // bottom edge on short screens.
         VStack(spacing: 10) {
@@ -515,7 +515,7 @@ private struct PaywallCollectibleCarousel: View {
 
     private let items: [PaywallCollectible] =
         BalloonSkin.all.filter(\.isPremium).map(PaywallCollectible.skin)
-        + StoreItem.all.prefix(5).map(PaywallCollectible.item)
+        + StoreItem.all.filter(\.isPremium).map(PaywallCollectible.item)
 
     var body: some View {
         FocusContinuousCarousel(
@@ -537,9 +537,7 @@ private struct PaywallCollectibleCarousel: View {
             .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .fill(ProBrand.glow.opacity(0.025 + prominence * 0.045)))
+                    .fill(Color(hex: 0x242235).opacity(0.96))
             )
             .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .strokeBorder(.white.opacity(0.08 + prominence * 0.10), lineWidth: 1))
@@ -580,8 +578,7 @@ private struct PaywallSkyCarousel: View {
     /// (Fiji, Northern Aurora, Deep Space) is not something PRO buys, so showing
     /// it would be a false promise. Single source of truth: `FocusSky.proExclusive`.
     private var skies: [FocusSky] {
-        let exclusive = FocusSky.proExclusive
-        return exclusive.isEmpty ? FocusSky.all.filter { !$0.isDefaultFree } : exclusive
+        FocusSky.proExclusive
     }
 
     var body: some View {
@@ -688,9 +685,7 @@ struct PaywallComparisonTable: View {
         "Online & Friends",
         "Unlimited Time  ∞",
         "Exclusive Skies",
-        // Every StoreItem is `isPremium: false`, so PRO unlocks no item — only
-        // the four `.pro` balloon skins. The row must name what it delivers.
-        "Exclusive Balloon Skins",
+        "Exclusive Skins & Items",
     ]
 
     private var freeWidth: CGFloat { viewport.isCompact ? 52 : 66 }

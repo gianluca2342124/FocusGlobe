@@ -26,7 +26,7 @@ struct FocusShieldSettingsSection: View {
                     showSheet = true
                 } label: {
                     row(icon: "square.grid.2x2",
-                        tint: AppColors.brand,
+                        tint: AppColors.selectionGold,
                         title: "Default blocked apps",
                         subtitle: "Choose apps",
                         showChevron: true)

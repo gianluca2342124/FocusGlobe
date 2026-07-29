@@ -93,6 +93,21 @@ struct FocusSky: Identifiable, Hashable {
     /// The four PRO-exclusive Skies, in presentation order — the ONLY list any
     /// promotional surface (paywall carousel, onboarding showcase) may show.
     static var proExclusive: [FocusSky] { all.filter(\.isProExclusive) }
+
+    /// The lightweight, downsampled production artwork embedded in WidgetKit.
+    /// WidgetKit never runs the live Sky renderer.
+    var widgetArtworkAssetName: String {
+        switch id {
+        case "fiji-lagoon": return "WidgetSky_FijiLagoon"
+        case "kyoto-lanterns": return "WidgetSky_KyotoLanternNight"
+        case "aurora-snowfield": return "WidgetSky_NorthernAurora"
+        case "rainy-tokyo": return "WidgetSky_RainyTokyo"
+        case "swiss-alps": return "WidgetSky_SwissAlps"
+        case "galaxy-drift": return "WidgetSky_StarfallNebula"
+        case "deep-space": return "WidgetSky_DeepSpace"
+        default: return "WidgetSky_DesertNight"
+        }
+    }
     var requiresPremiumOrInvites: Bool { !isDefaultFree }
 
     /// The invite count this Sky needs on its free path (nil if not invite-based).
@@ -311,8 +326,8 @@ struct FocusSky: Identifiable, Hashable {
 
 // MARK: - Unlock rules
 
-/// Pure unlock logic for Skies — the free Sky always; Premium unlocks all while
-/// active; and inviting 3 friends unlocks **only that specific Sky** (each
+/// Pure unlock logic for Skies — the free Sky always; PRO unlocks only the four
+/// `isProExclusive` Skies while active; and inviting friends unlocks that specific Sky (each
 /// locked Sky needs its own 3 accepted invites). Pure functions so the
 /// backend-driven entitlement slots in without touching call sites.
 enum SkyUnlock {

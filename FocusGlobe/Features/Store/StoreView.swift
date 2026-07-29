@@ -25,6 +25,9 @@ struct StoreView: View {
     @State private var previewSkinID: String? = nil
     /// The interior item highlighted in Interior mode (nil = just your cabin).
     @State private var previewItemID: String? = nil
+    /// The focused placement flow; it owns replacement selection and only
+    /// exposes slots compatible with the selected object.
+    @State private var placementItem: StoreItem? = nil
     @State private var float: CGFloat = 0
     /// Drives the sliding highlight of the Balloon/Interior segmented control.
     @Namespace private var modeNS
@@ -80,6 +83,10 @@ struct StoreView: View {
         }
         // Daily Gift + Coin Spin present through the app-wide modal coordinator.
         .animation(.snappy(duration: 0.24), value: mode)
+        .sheet(item: $placementItem) { item in
+            CabinPlacementSheet(item: item)
+                .environmentObject(appModel)
+        }
     }
 
     // MARK: Header — title left; compact coins + Get Coins right. No subtitle,
@@ -171,6 +178,7 @@ struct StoreView: View {
                 CabinView(elapsed: { 0 }, seed: 0xC0FFEE, animated: false,
                           focusSky: nil, showPilots: false,
                           equippedItemIDs: previewCabinIDs,
+                          equippedItemPlacements: previewCabinPlacements,
                           windowBackdrop: AnyView(StoreDaytimeSky()))
                     .allowsHitTesting(false)
                 if let item = previewItem, !appModel.ownsStoreItem(item) {
@@ -200,6 +208,20 @@ struct StoreView: View {
             .prefix(room)
             .map(\.id)
         return Set(kept).union([previewItemID])
+    }
+
+    /// Preview the highlighted object in a real compatible free slot without
+    /// mutating the pilot's saved layout.
+    private var previewCabinPlacements: [String: CabinSlot] {
+        var placements = appModel.cabinPlacements.filter { previewCabinIDs.contains($0.key) }
+        guard let item = previewItem, previewCabinIDs.contains(item.id),
+              placements[item.id] == nil else { return placements }
+        let occupied = Set(placements.values)
+        if let slot = ([item.preferredSlot].compactMap { $0 } + item.allowedSlots)
+            .first(where: { !occupied.contains($0) }) {
+            placements[item.id] = slot
+        }
+        return placements
     }
 
     private var storeBalloonHeight: CGFloat {
@@ -266,9 +288,6 @@ struct StoreView: View {
         if let item = previewItem {
             let owned = appModel.ownsStoreItem(item)
             let placed = appModel.isCabinItemEquipped(item)
-            // A full Cabin has to be legible BEFORE the tap. Without this the
-            // "Place" button simply did nothing on the fifth object and the
-            // pilot had no way to know why.
             let blocked = owned && item.kind == .cabinDecoration && !placed && appModel.isCabinFull
             HStack(spacing: AppSpacing.sm) {
                 VStack(alignment: .leading, spacing: 1) {
@@ -288,12 +307,18 @@ struct StoreView: View {
                 }
                 Spacer()
                 if owned, item.kind == .cabinDecoration {
-                    goldAction(placed ? "Remove" : "Place") {
-                        appModel.toggleCabinItem(item)
-                        appModel.tapFeedback()
+                    if placed {
+                        HStack(spacing: 8) {
+                            goldAction("Move") { placementItem = item }
+                            Button("Unequip") { appModel.unequipCabinItem(item) }
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(.white.opacity(0.78))
+                        }
+                    } else {
+                        goldAction(blocked ? "Replace…" : "Place") {
+                            placementItem = item
+                        }
                     }
-                    .opacity(blocked ? 0.45 : 1)
-                    .disabled(blocked)
                 } else if owned {
                     Label("Owned", systemImage: "checkmark.circle.fill")
                         .font(.system(size: 13, weight: .bold, design: .default))
@@ -304,7 +329,11 @@ struct StoreView: View {
                     }
                 } else {
                     Button {
-                        if !appModel.purchaseStoreItem(item) { appModel.haptics.tap() }
+                        if appModel.purchaseStoreItem(item), item.kind == .cabinDecoration {
+                            placementItem = item
+                        } else {
+                            appModel.haptics.tap()
+                        }
                     } label: {
                         HStack(spacing: 5) {
                             FocusCoinIcon(size: 13)
@@ -520,6 +549,168 @@ struct StoreView: View {
         withAnimation(.snappy(duration: 0.2)) {
             previewItemID = (previewItemID == item.id) ? nil : item.id
         }
+    }
+}
+
+// MARK: - Cabin placement
+
+/// A bounded placement flow: compatible semantic slots only, no free dragging,
+/// no window coordinates and an explicit replacement choice for a fifth item.
+private struct CabinPlacementSheet: View {
+    let item: StoreItem
+    @EnvironmentObject private var appModel: AppModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var replacementID: String?
+
+    private var moving: Bool { appModel.isCabinItemEquipped(item) }
+    private var replacement: StoreItem? { replacementID.flatMap(StoreItem.byID) }
+    private var needsReplacement: Bool { !moving && appModel.isCabinFull }
+
+    private var equippedItems: [StoreItem] {
+        StoreItem.cabinDecorations.filter {
+            appModel.isCabinItemEquipped($0) && $0.id != item.id
+        }
+    }
+
+    private var occupiedSlots: Set<CabinSlot> {
+        Set(appModel.cabinPlacements.compactMap { id, slot in
+            if id == item.id || id == replacementID { return nil }
+            return slot
+        })
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    cabinMap
+
+                    if needsReplacement {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Replace one item")
+                                .font(.headline)
+                            Text("Your Cabin holds four decorations. Choose the one that will make room.")
+                                .font(.subheadline)
+                                .foregroundStyle(AppColors.textSecondary)
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 130))], spacing: 10) {
+                                ForEach(equippedItems) { candidate in
+                                    Button {
+                                        replacementID = candidate.id
+                                    } label: {
+                                        HStack(spacing: 8) {
+                                            Image(systemName: replacementID == candidate.id
+                                                  ? "checkmark.circle.fill" : "circle")
+                                            Text(candidate.name).lineLimit(1)
+                                        }
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(replacementID == candidate.id
+                                                         ? Color(hex: 0x2B2510) : AppColors.textPrimary)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(10)
+                                        .background(RoundedRectangle(cornerRadius: 12)
+                                            .fill(replacementID == candidate.id
+                                                  ? AppColors.selectionGold : AppColors.storeCard(selected: false)))
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(moving ? "Move to" : "Place in")
+                            .font(.headline)
+                        ForEach(item.allowedSlots) { slot in
+                            slotButton(slot)
+                        }
+                    }
+                }
+                .padding(20)
+            }
+            .background(
+                LinearGradient(colors: [AppColors.backgroundTop, AppColors.backgroundBottom],
+                               startPoint: .top, endPoint: .bottom)
+                    .ignoresSafeArea()
+            )
+            .navigationTitle(item.name)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private var cabinMap: some View {
+        GeometryReader { geo in
+            ZStack {
+                #if canImport(UIKit)
+                if let cabin = UIImage(named: "cabin_iphone") {
+                    Image(uiImage: cabin).resizable().scaledToFill()
+                } else {
+                    LinearGradient(colors: [Color(hex: 0x2B1A12), Color(hex: 0x0F0B09)],
+                                   startPoint: .top, endPoint: .bottom)
+                }
+                #endif
+                Color.black.opacity(0.12)
+                ForEach(item.allowedSlots) { slot in
+                    let p = slot.normalizedPosition
+                    let open = !occupiedSlots.contains(slot)
+                    Image(systemName: open ? "plus.circle.fill" : "xmark.circle.fill")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundStyle(open ? AppColors.selectionGold : .white.opacity(0.38))
+                        .background(Circle().fill(.black.opacity(0.55)))
+                        .position(x: geo.size.width * CGFloat(p.x),
+                                  y: geo.size.height * CGFloat(p.y))
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        }
+        .frame(height: 220)
+        .overlay(alignment: .bottomLeading) {
+            Text("The main window is protected")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 10).padding(.vertical, 6)
+                .background(Capsule().fill(.black.opacity(0.55)))
+                .padding(10)
+        }
+    }
+
+    private func slotButton(_ slot: CabinSlot) -> some View {
+        let open = !occupiedSlots.contains(slot)
+        let replacementChosen = !needsReplacement || replacement != nil
+        return Button {
+            guard open, replacementChosen,
+                  appModel.placeCabinItem(item, in: slot, replacing: replacement) else { return }
+            dismiss()
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: slot.systemImage)
+                    .frame(width: 24)
+                    .foregroundStyle(open ? AppColors.selectionGold : AppColors.textTertiary)
+                Text(slot.displayName)
+                    .font(.system(size: 15, weight: .semibold))
+                Spacer()
+                if appModel.cabinSlot(for: item) == slot {
+                    Text("Current").font(.caption.weight(.bold)).foregroundStyle(AppColors.textSecondary)
+                } else if !open {
+                    Text("Occupied").font(.caption.weight(.bold)).foregroundStyle(AppColors.textTertiary)
+                }
+            }
+            .foregroundStyle(AppColors.textPrimary)
+            .padding(14)
+            .background(RoundedRectangle(cornerRadius: 14)
+                .fill(AppColors.storeCard(selected: false)))
+            .overlay(RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(open ? AppColors.selectionGold.opacity(0.45)
+                              : AppColors.hairline, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .disabled(!open || !replacementChosen)
+        .opacity(open && replacementChosen ? 1 : 0.52)
     }
 }
 

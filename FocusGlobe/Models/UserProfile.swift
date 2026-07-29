@@ -29,8 +29,7 @@ struct UserProfile: Codable, Equatable {
     /// This pilot's shareable invite code (generated lazily, then stable).
     var referralCode: String? = nil
     /// Friends who joined from this pilot's invite. Driven by a real referral
-    /// backend later — production code must never fabricate this. 3 unlocks
-    /// every Sky (see `SkyUnlock`).
+    /// backend later — production code must never fabricate this.
     var acceptedInviteCount: Int = 0
     /// When the profile was first created.
     var createdAt: Date? = nil
@@ -43,12 +42,15 @@ struct UserProfile: Codable, Equatable {
     var equippedTrailID: String? = nil
     /// Equipped cabin decorations (`StoreItem` ids of kind `.cabinDecoration`).
     var equippedCabinItemIDs: Set<String>? = nil
+    /// Persisted semantic placement (`StoreItem.id` → `CabinSlot.rawValue`).
+    /// Optional so profiles saved before user-placeable Cabin items still decode.
+    var cabinItemSlotByID: [String: String]? = nil
     /// LEGACY (pre-FocusGlobe-Online "fly with others" toggle). Kept only so
     /// older saved profiles keep decoding; the flight mode now lives in the
     /// pre-flight ritual (`OnlineFlightMode`, persisted by `OnlineCache`).
     var soloFlights: Bool? = nil
     /// Per-Sky unlocks earned by invites: a Sky unlocks individually once its
-    /// own 3 invites are accepted. (Premium bypasses this while active.)
+    /// own invite requirement is satisfied.
     var unlockedSkyIDs: Set<String>? = nil
     /// Balloon skins that have been earned at least once — the GRANDFATHER set.
     /// Milestone skins are normally derived from live progress, but once a skin
