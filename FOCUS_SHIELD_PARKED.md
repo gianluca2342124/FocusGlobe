@@ -1,5 +1,44 @@
 # Focus Shield — PARKED for v1.0
 
+> ## ⚠️ SUPERSEDED — Focus Shield has been UN-parked in the project
+>
+> Everything below describes the *parked* state and is **no longer what the
+> repository does**. Verified against `FocusGlobe.xcodeproj/project.pbxproj`:
+>
+> | Step from "How to re-enable later" | Status |
+> |---|---|
+> | 2 · `com.apple.developer.family-controls` in the app entitlements | **done** (plus `…family-controls.app-and-website-usage`) |
+> | 3 · `FOCUS_SHIELD_ENABLED` compilation condition | **done — set on the FocusGlobe app target, BOTH Debug and Release** |
+> | 4 · Shield **Configuration** Extension target | **done** — builds, embedded in *Embed Foundation Extensions*, correct `NSExtensionPointIdentifier`, principal class and entitlements |
+> | 4 · Shield **Action** Extension target | **done** — same, verified |
+> | 4 · **Device Activity Monitor** Extension target | **NOT DONE — see below** |
+>
+> So the live app *does* compile the full Screen Time implementation, requests
+> Family Controls authorization, and ships two extensions that declare
+> `com.apple.developer.family-controls`.
+>
+> **Two consequences to be aware of:**
+>
+> 1. **Distribution.** The warning in "Why" below still applies: an archive that
+>    requests Family Controls in the app *or any embedded extension* cannot be
+>    distributed without the **Family Controls (Distribution)** entitlement on
+>    the account. If that has since been granted, this is fine and this document
+>    is simply historical. If it has not, archiving will fail — and it will now
+>    fail for three reasons rather than none.
+> 2. **The kill-safe backstop is inert.** `FocusShieldService.startMonitoring(…)`
+>    schedules a `DeviceActivity` interval on every journey, but with no Device
+>    Activity Monitor target nothing handles `intervalDidEnd`. Shields therefore
+>    survive an app kill until the next launch calls `reconcile(…)`. The real
+>    implementation and a correct `Info.plist` / `.entitlements` are ready in
+>    `FocusGlobeDeviceActivityMonitorExtension/`; that file's header comment
+>    lists the four remaining steps. It must be added through
+>    **Xcode ▸ File ▸ New ▸ Target**, not by hand-editing `project.pbxproj`,
+>    because that is what registers the capability against the App ID.
+>
+> The duplicate, never-referenced `FocusGlobeShieldExtensions/` folder (a stale
+> second copy of all three extensions) has been deleted so there is exactly one
+> source of truth per extension.
+
 The **Focus Shield** app-blocking feature (Apple **Family Controls** / Screen
 Time) is **temporarily parked** for the v1.0 App Store / TestFlight release.
 

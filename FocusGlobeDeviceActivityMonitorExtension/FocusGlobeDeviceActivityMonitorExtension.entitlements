@@ -4,5 +4,12 @@
     <dict>
         <key>com.apple.developer.family-controls</key>
         <true/>
+        <!-- Required: the monitor reads the blocked selection and journey flags
+             the app wrote to this App Group. Without it `intervalDidEnd` cannot
+             resolve what to clear. Matches the app and both Shield extensions. -->
+        <key>com.apple.security.application-groups</key>
+        <array>
+            <string>group.com.focusglobe.app</string>
+        </array>
     </dict>
 </plist>
