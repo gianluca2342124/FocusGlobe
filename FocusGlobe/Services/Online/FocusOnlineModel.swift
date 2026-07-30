@@ -224,6 +224,13 @@ final class FocusOnlineModel: ObservableObject {
     /// to hand them back.
     private var flightSkyID: String?
     private var flightCategory: String?
+    /// This device's own current pause state, mirrored from `flightPauseChanged`.
+    /// Needed so a session REPAIR (republish) re-asserts the pause instead of
+    /// silently resuming the pilot on everyone else's screen.
+    private var localPaused = false
+    /// The in-flight pause/resume mutation, so a rapid double tap supersedes it
+    /// rather than racing a second write to the same row.
+    private var pauseSyncTask: Task<Void, Never>?
     private var flightRoom: FocusRoom?
     private var serverSessionID: String?
     /// The CURRENT flight's shared end (nil = infinite). Captured at take-off so
@@ -468,9 +475,16 @@ final class FocusOnlineModel: ObservableObject {
         p.isDiscoverable = on
         profile = p
         OnlineCache.save(profile: p)
+        let inPrivateFlight = flightMode == .privateRoom
         Task {
             try? await profileService.updateProfile(p)
-            if !on { await flightService.stopPublishing() }
+            // Opting out of PUBLIC discovery drops the public presence row. It must
+            // NOT do that during a private flight: a room session's visibility comes
+            // from room membership (`in_same_active_room`), not `is_discoverable`,
+            // so deleting the row there would only destroy this pilot's own
+            // authoritative timer and silently break their pause — without changing
+            // what anyone can see.
+            if !on && !inPrivateFlight { await flightService.stopPublishing() }
         }
     }
 
@@ -582,7 +596,17 @@ final class FocusOnlineModel: ObservableObject {
             // (visibility to OTHER pilots is still gated by is_discoverable in
             // RLS, so a non-discoverable flyer stays hidden). The realtime sky
             // nudge remains discoverable-only.
-            if flightMode == .publicSky {
+            // EVERY online flight — public OR private — publishes its own
+            // authoritative participant session. A private/invited journey used to
+            // skip this branch entirely, so an invited pilot had no `active_flights`
+            // row at all: no timer of their own, nothing for pause to write to, and
+            // nothing for co-members to observe. That is what made private-room
+            // pause impossible rather than merely missing.
+            do {
+                // A private flight publishes bound to its room, so the row is
+                // `session_kind = 'room'`: out of Public Sky discovery, visible to
+                // co-members through the existing room RLS branch.
+                if let roomID = flightRoom?.id { await flightService.noteRoomBinding(roomID) }
                 // Server-canonical publish: the SERVER stamps started_at /
                 // expected_end_at. Sync the shared clock from its server_now and
                 // adopt the canonical deadline for THIS session so the host's main
@@ -610,7 +634,8 @@ final class FocusOnlineModel: ObservableObject {
                 if let end = published?.expectedEndAt {
                     hostCanonicalDeadline = HostDeadline(sessionID: sessionID, deadline: end)
                 }
-                if appModel?.profile.onlineDiscoverable ?? false {
+                // Public discovery + the realtime Sky nudge stay public-only.
+                if flightMode == .publicSky, appModel?.profile.onlineDiscoverable ?? false {
                     await realtimeService.joinSky(skyID: skyID, myID: myID) { [weak self] in
                         Task { @MainActor [weak self] in await self?.pollSoon() }
                     }
@@ -642,10 +667,39 @@ final class FocusOnlineModel: ObservableObject {
 
     func flightPauseChanged(isPaused: Bool) {
         guard flightMode.isOnline else { return }
-        Task {
+        localPaused = isPaused
+        pauseSyncTask?.cancel()      // a rapid re-tap supersedes the in-flight one
+        pauseSyncTask = Task { [weak self] in
+            guard let self else { return }
+            #if DEBUG
+            SupabaseService.log.debug("online: \(isPaused ? "pause" : "resume", privacy: .public) requested")
+            #endif
             let t0 = Date()
-            let r = await flightService.setPaused(isPaused)
-            syncServerClock(r?.serverNow, since: t0)
+            var result = await flightService.setPaused(isPaused)
+            if result == nil, !Task.isCancelled {
+                // `setPaused` used to bail whenever the service held no presence —
+                // exactly the state a promoted/joined private flight was left in,
+                // so pause was a silent no-op for every invited journey. Repair the
+                // canonical session (bound to the room when there is one) and apply
+                // the pause to it rather than dropping the request on the floor.
+                if let sessionID = self.flightSessionID {
+                    await self.ensureCanonicalSession(sessionID: sessionID, roomID: self.flightRoom?.id)
+                    result = await self.flightService.setPaused(isPaused)
+                }
+            }
+            guard !Task.isCancelled else { return }
+            self.syncServerClock(result?.serverNow, since: t0)
+            if let result {
+                // Reconcile the optimistic local flag with the server's answer.
+                self.localPaused = result.isPaused
+                #if DEBUG
+                SupabaseService.log.debug("online: \(result.isPaused ? "pause" : "resume", privacy: .public) confirmed")
+                #endif
+            } else {
+                #if DEBUG
+                SupabaseService.log.debug("online: pause mutation failed — server state unchanged")
+                #endif
+            }
         }
         if isPaused { sampleOverlap(activeOthers: 0) } else { lastOverlapSample = Date() }
     }
@@ -845,26 +899,30 @@ final class FocusOnlineModel: ObservableObject {
                 flightRoom = refreshed
                 room = refreshed
             }
+            // Keep MY OWN participant row alive too. The room branch used to
+            // heartbeat only room membership, so a private flight's active_flights
+            // row went stale after 120 s and vanished from every co-member's view —
+            // a pilot who simply paused for a few minutes would disappear. This
+            // ping never moves the deadline or the frozen remainder; while paused it
+            // re-asserts the pause rather than resuming it (`localPaused`).
+            let t0 = Date()
+            if let hb = await flightService.heartbeatNow() {
+                syncServerClock(hb.serverNow, since: t0)
+                localPaused = hb.isPaused
+            }
             let participants = Self.dedupe(await roomService.participants(roomID: room.id, roomActive: true))
             detectJoins(in: participants)   // "<alias> joined" for in-flight joins
             activeRoomParticipants = participants
             // Deduplicate by UUID and NEVER render myself as a remote pilot.
             let others = participants.filter { $0.publicID != myUserID }
-            // The room's shared end is a SERVER timestamp; shift it into local
-            // clock space so each pilot bubble's remaining time is server-correct
-            // regardless of this device's wall-clock skew.
-            let bubbleEnd = adjustedDeadline(room.endsAt)
-            realPilots = others.map { p in
-                // Remaining time is the room's shared, server-canonical end —
-                // synchronized across devices, not a free-running local timer.
-                OnlinePilot(id: p.publicID, sessionID: p.activeSessionID ?? p.id,
-                            displayName: p.displayName, countryCode: p.countryCode,
-                            balloonSkinID: p.balloonSkinID, skyID: room.skyID,
-                            startedAt: p.joinedAt, expectedEndAt: bubbleEnd,
-                            lastHeartbeatAt: p.lastHeartbeatAt ?? .distantPast,
-                            isPaused: false, focusCategory: "",
-                            allowsFriendRequest: true, hasLiveSession: true)
-            }
+            // Each co-member's OWN authoritative participant row: their own
+            // expected_end_at, is_paused and paused_remaining_seconds. RLS scopes
+            // this to exactly this room's members.
+            //
+            // These used to be synthesized from the room-wide `focus_rooms.ends_at`
+            // with `isPaused: false` hardcoded — one shared clock for everybody,
+            // which made independent per-pilot pause impossible to express.
+            realPilots = await roomPilots(room: room, participants: others)
             // Verified friend-flight overlap: another participant actively
             // flying with a fresh heartbeat.
             let activeOthers = others.filter {
@@ -1102,15 +1160,18 @@ final class FocusOnlineModel: ObservableObject {
     /// published at all. Idempotent server-side: the RPC is keyed by
     /// `client_session_id`, so re-publishing the same journey preserves its
     /// server-canonical start, deadline and pause state.
-    private func ensureCanonicalSession(sessionID: String) async {
+    private func ensureCanonicalSession(sessionID: String, roomID: String? = nil) async {
         guard let profile else { return }
+        // A room id makes the published row `session_kind = 'room'`, so it is
+        // visible to co-members and hidden from Public Sky discovery.
+        if let roomID { await flightService.noteRoomBinding(roomID) }
         let presence = OnlinePresence(sessionID: sessionID,
                                       skyID: flightSkyID ?? appModel?.selectedSky.id ?? "classic",
-                                      mode: .publicSky,
-                                      roomPublicID: nil,
+                                      mode: roomID == nil ? .publicSky : .privateRoom,
+                                      roomPublicID: roomID,
                                       startedAt: flightStartedAt ?? Date(),
                                       expectedEndAt: flightExpectedEnd,
-                                      isPaused: false,
+                                      isPaused: localPaused,
                                       focusCategory: flightCategory ?? "Focus",
                                       balloonSkinID: profile.balloonSkinID,
                                       soundID: appModel?.selectedJourneyAudio.id)
@@ -1146,20 +1207,79 @@ final class FocusOnlineModel: ObservableObject {
         flightRoom = room
         activeRoomParticipants = members
         detectJoins(in: members)           // "<alias> joined"
-        // Only invited pilots remain visible (map below on next tick anyway).
-        let bubbleEnd = adjustedDeadline(room.endsAt)
-        realPilots = members.filter { $0.publicID != myUserID }.map { p in
-            OnlinePilot(id: p.publicID, sessionID: p.activeSessionID ?? p.id,
-                        displayName: p.displayName, countryCode: p.countryCode,
-                        balloonSkinID: p.balloonSkinID, skyID: room.skyID,
-                        startedAt: p.joinedAt, expectedEndAt: bubbleEnd,
-                        lastHeartbeatAt: p.lastHeartbeatAt ?? .distantPast,
-                        isPaused: false, focusCategory: "",
-                        allowsFriendRequest: true, hasLiveSession: true)
+        // Only invited pilots remain visible. Their authoritative rows land on the
+        // next poll; until then keep whatever real pilots we already have rather
+        // than fabricating a room-wide countdown for them.
+        let joining = Set(members.map(\.publicID))
+        realPilots = realPilots.filter { joining.contains($0.id) && $0.id != myUserID }
+        Task { [weak self] in
+            guard let self else { return }
+            let others = members.filter { $0.publicID != myUserID }
+            let pilots = await self.roomPilots(room: room, participants: others)
+            guard self.flightRoom?.id == room.id else { return }
+            self.realPilots = pilots
         }
         Task {
-            await flightService.stopPublishing()   // no longer a public stranger
+            // CONVERT the participant session instead of deleting it. The old
+            // `stopPublishing()` here destroyed the one row carrying this pilot's
+            // started_at / expected_end_at / paused_at / paused_remaining_seconds
+            // at the exact moment the journey became private — which is why pause
+            // silently no-opped for the rest of an invited flight. Binding leaves
+            // Public Sky discovery (the public RLS branch requires
+            // session_kind = 'public') while keeping the authoritative timer.
+            await bindSessionToRoom(room.id)
             await realtimeService.leaveSky()
+        }
+    }
+
+    /// The room's REAL pilots, each backed by their own authoritative
+    /// `active_flights` row (own deadline, own pause, own frozen remainder).
+    ///
+    /// Membership is still the roster of record — a member whose participant row
+    /// has not landed yet (or has gone stale) is kept visible using their
+    /// membership metadata, but WITHOUT a fabricated countdown: no
+    /// `expectedEndAt`, `hasLiveSession: false`, so the UI omits the timer instead
+    /// of inventing one. Nothing here is ever marked paused unless the server says
+    /// so.
+    private func roomPilots(room: FocusRoom, participants: [RoomParticipant]) async -> [OnlinePilot] {
+        let live = await flightService.fetchRoomPilots(roomID: room.id, excluding: myUserID)
+        let byUser = Dictionary(live.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        return participants.map { p in
+            if let authoritative = byUser[p.publicID] { return authoritative }
+            return OnlinePilot(id: p.publicID, sessionID: p.activeSessionID ?? p.id,
+                               displayName: p.displayName, countryCode: p.countryCode,
+                               balloonSkinID: p.balloonSkinID, skyID: room.skyID,
+                               startedAt: p.joinedAt, expectedEndAt: nil,
+                               lastHeartbeatAt: p.lastHeartbeatAt ?? .distantPast,
+                               isPaused: false, focusCategory: "",
+                               allowsFriendRequest: true,
+                               // No authoritative row yet → no fabricated timer.
+                               hasLiveSession: false)
+        }
+    }
+
+    /// Attach this pilot's canonical participant session to `roomID`, repairing it
+    /// first if the server has none. Used by BOTH promotion (host) and invite
+    /// acceptance (guest), so every real room participant ends up backed by its own
+    /// authoritative row — never a synthesized room-wide timer.
+    private func bindSessionToRoom(_ roomID: String) async {
+        guard let sessionID = flightSessionID else { return }
+        if publishedSessionID != sessionID {
+            // No confirmed session yet (e.g. a guest who just joined): create one
+            // already bound to the room, then we are done.
+            await ensureCanonicalSession(sessionID: sessionID, roomID: roomID)
+            return
+        }
+        let t0 = Date()
+        if let bound = await flightService.bindToRoom(roomID) {
+            syncServerClock(bound.serverNow, since: t0)
+            publishedSessionID = sessionID
+            #if DEBUG
+            SupabaseService.log.debug("online: session associated with private room")
+            #endif
+        } else {
+            // Bind could not run (no live presence) — rebuild it bound to the room.
+            await ensureCanonicalSession(sessionID: sessionID, roomID: roomID)
         }
     }
 

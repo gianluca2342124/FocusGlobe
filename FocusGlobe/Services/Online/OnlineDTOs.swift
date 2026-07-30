@@ -47,6 +47,12 @@ struct ActiveFlightRow: Codable, Sendable {
     var expiresAt: String
     /// Optional so rows written before the metadata migration still decode.
     var soundID: String?
+    /// The pilot's STABLE participant-session id for this journey. Used as the
+    /// visual session identity instead of the user id, so the same account taking
+    /// off on a new flight is correctly seen as a new arrival.
+    var clientSessionID: String?
+    /// The private room this participant session belongs to (room-kind only).
+    var roomID: String?
 
     enum CodingKeys: String, CodingKey {
         case userID = "user_id"
@@ -62,6 +68,8 @@ struct ActiveFlightRow: Codable, Sendable {
         case lastHeartbeatAt = "last_heartbeat_at"
         case expiresAt = "expires_at"
         case soundID = "sound_id"
+        case clientSessionID = "client_session_id"
+        case roomID = "room_id"
     }
 }
 
