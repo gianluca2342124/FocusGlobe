@@ -209,6 +209,21 @@ final class FocusOnlineModel: ObservableObject {
         let category: String
     }
     private var pendingFlightStart: PendingFlightStart?
+    /// The session id the SERVER has confirmed an `active_flights` row for.
+    ///
+    /// `flightSessionID` alone was never proof of that: it is assigned
+    /// synchronously at take-off, while the publish RPC runs in a detached task
+    /// that was never awaited and whose failure nothing observed. Invite Friends
+    /// gated on it and therefore promoted sessions the server had never seen.
+    private var publishedSessionID: String?
+    /// The in-flight publish work, so Invite can await the REAL server session
+    /// rather than racing it.
+    private var publishTask: Task<Void, Never>?
+    /// The current journey's Sky and focus category, retained so the canonical
+    /// session can be re-published later (Invite repair) without the caller having
+    /// to hand them back.
+    private var flightSkyID: String?
+    private var flightCategory: String?
     private var flightRoom: FocusRoom?
     private var serverSessionID: String?
     /// The CURRENT flight's shared end (nil = infinite). Captured at take-off so
@@ -295,6 +310,11 @@ final class FocusOnlineModel: ObservableObject {
         if inviteBlockedReason == nil { return true }
         // Nudge the session along — this is also what replays a bailed flight start.
         await refreshAvailability()
+        // Then await the ACTUAL publish work rather than polling a local flag. This
+        // is the difference that matters: `flightSessionID` is set synchronously at
+        // take-off, so the old poll cleared instantly while the server row did not
+        // yet exist, and the promote RPC raced ahead into `no_active_global_session`.
+        await publishTask?.value
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
             if inviteBlockedReason == nil { return true }
@@ -510,7 +530,23 @@ final class FocusOnlineModel: ObservableObject {
             return
         }
         pendingFlightStart = nil
+        // `flightMode` is sticky and persisted across launches, so a journey that
+        // does NOT pass through the mode selector can start in `.privateRoom` with
+        // no room at all. That combination skipped publishing entirely (the branch
+        // below is `.publicSky`-only), leaving no server row, and the recovery
+        // `republish()` was a no-op because the service had no presence — Invite
+        // could then never succeed for the whole flight. A private mode without a
+        // room is not private: normalise it to a Global flight.
+        if flightMode == .privateRoom, pendingRoom == nil, flightRoom == nil {
+            #if DEBUG
+            SupabaseService.log.debug("online: stale privateRoom mode with no room — flying Global")
+            #endif
+            flightMode = .publicSky
+        }
         flightSessionID = sessionID
+        publishedSessionID = nil
+        flightSkyID = skyID
+        flightCategory = category
         flightRoom = flightMode == .privateRoom ? pendingRoom : nil
         flightExpectedEnd = expectedEndAt
         flightStartedAt = Date()
@@ -539,7 +575,8 @@ final class FocusOnlineModel: ObservableObject {
         }
         let ownsFlightRoom = flightRoom?.isOwned ?? false
         let roomEnd = expectedEndAt
-        Task {
+        publishTask?.cancel()
+        publishTask = Task {
             // Every Global flight publishes its active_flights session row — this
             // is the server-canonical record the promote RPC validates against
             // (visibility to OTHER pilots is still gated by is_discoverable in
@@ -551,8 +588,25 @@ final class FocusOnlineModel: ObservableObject {
                 // adopt the canonical deadline for THIS session so the host's main
                 // timer counts down to the exact instant the guests will.
                 let t0 = Date()
-                let published = await flightService.startPublishing(presence)
+                // `ensurePublished` retries with a short backoff and, crucially,
+                // reports success. The old call published once, un-awaited, and
+                // discarded a nil result — so a failed publish left the journey
+                // rendering happily with NO server row, and Invite Friends promoted
+                // a session the server had never heard of
+                // (`no_active_global_session`). Confirmation is now recorded and
+                // gates the invite.
+                let published = await flightService.ensurePublished(presence)
                 syncServerClock(published?.serverNow, since: t0)
+                if published != nil {
+                    publishedSessionID = sessionID
+                    #if DEBUG
+                    SupabaseService.log.debug("online: flight session confirmed by server")
+                    #endif
+                } else {
+                    #if DEBUG
+                    SupabaseService.log.debug("online: flight session NOT published — invite will re-try on demand")
+                    #endif
+                }
                 if let end = published?.expectedEndAt {
                     hostCanonicalDeadline = HostDeadline(sessionID: sessionID, deadline: end)
                 }
@@ -650,14 +704,25 @@ final class FocusOnlineModel: ObservableObject {
         guard flightSessionID == sessionID else { return }
         pilotPollTask?.cancel()
         pilotPollTask = nil
+        // Cancel any outstanding invite preparation with the journey it belonged
+        // to, so a link can never arrive for a flight the pilot has left.
+        publishTask?.cancel()
+        publishTask = nil
         let room = flightRoom
         let wasOwnedPrivate = room?.isOwned ?? false
         let serverSession = serverSessionID
         flightRoom = nil
         flightSessionID = nil
+        publishedSessionID = nil
+        flightSkyID = nil
+        flightCategory = nil
+        pendingFlightStart = nil
         flightExpectedEnd = nil
         flightStartedAt = nil
         serverSessionID = nil
+        #if DEBUG
+        SupabaseService.log.debug("online: exit cleanup — session cleared")
+        #endif
         realPilots = []
         reconnecting = false
         hostCanonicalDeadline = nil
@@ -937,13 +1002,20 @@ final class FocusOnlineModel: ObservableObject {
     /// Why `prepareInvite` cannot run right now — `nil` when it can.
     ///
     /// Mirrors `prepareInvite`'s precondition guard so the caller can say something
-    /// TRUE instead of failing silently. `flightSessionID` is the usual culprit: it
-    /// is set by `flightDidStart`, so an invite tapped in the first moments of a
-    /// flight (before the first presence heartbeat lands) has no session to promote.
+    /// TRUE instead of failing silently.
+    ///
+    /// It deliberately requires the SERVER-CONFIRMED session, not just the locally
+    /// minted `flightSessionID`. The two are not the same thing: the local id is
+    /// assigned synchronously at take-off while the publish RPC is still in flight
+    /// (and may fail outright), which is precisely how an invite used to sail past
+    /// this guard and hit `no_active_global_session`.
     var inviteBlockedReason: String? {
         if !availability.isAvailable { return availability.userMessage }
         if myUserID == nil { return "Sign in to invite friends." }
         if flightSessionID == nil { return "Your flight is still connecting — try again in a moment." }
+        if publishedSessionID != flightSessionID {
+            return "Your flight is still connecting — try again in a moment."
+        }
         return nil
     }
 
@@ -954,6 +1026,23 @@ final class FocusOnlineModel: ObservableObject {
             return await freshInvite(for: room)
         }
         socialState = .preparingInvite
+        // Guarantee the canonical server row BEFORE promoting. If the take-off
+        // publish failed (or never ran), this is where it is repaired — so the
+        // promote RPC always has a real active Global session to find instead of
+        // returning `no_active_global_session` and stranding the pilot.
+        if publishedSessionID != sessionID {
+            #if DEBUG
+            SupabaseService.log.debug("online: invite needs a canonical session — publishing now")
+            #endif
+            await ensureCanonicalSession(sessionID: sessionID)
+            guard publishedSessionID == sessionID else {
+                socialState = flightMode == .privateRoom ? .privateActive : .global
+                #if DEBUG
+                SupabaseService.log.debug("online: invite aborted — no canonical session")
+                #endif
+                return nil
+            }
+        }
         do {
             // The ONLY input is the stable client session id; the server derives
             // sky / start / end / active-status from the caller's canonical live
@@ -993,8 +1082,46 @@ final class FocusOnlineModel: ObservableObject {
             // (Re)publish the canonical Global presence row (server-stamped,
             // bound to this exact client_session_id), await it, then retry the
             // promotion once.
-            await flightService.republish()
+            //
+            // This used to call `republish()`, which bails when the service holds
+            // no presence — exactly the state on the paths that produced this error
+            // in the first place, so the "retry" issued no RPC at all and the
+            // second promote failed identically. Rebuilding the presence makes the
+            // recovery real.
+            await ensureCanonicalSession(sessionID: sessionID)
             return try await roomService.promoteToPrivate(clientSessionID: sessionID, myID: myID)
+        }
+    }
+
+    /// Create (or repair) the canonical `active_flights` row for THIS journey and
+    /// record the server's confirmation.
+    ///
+    /// Rebuilds the presence from current state rather than relying on whatever the
+    /// flight service still holds, so it works even after `stopPublishing()` has
+    /// cleared it (discoverability toggled off mid-flight) or when the flight never
+    /// published at all. Idempotent server-side: the RPC is keyed by
+    /// `client_session_id`, so re-publishing the same journey preserves its
+    /// server-canonical start, deadline and pause state.
+    private func ensureCanonicalSession(sessionID: String) async {
+        guard let profile else { return }
+        let presence = OnlinePresence(sessionID: sessionID,
+                                      skyID: flightSkyID ?? appModel?.selectedSky.id ?? "classic",
+                                      mode: .publicSky,
+                                      roomPublicID: nil,
+                                      startedAt: flightStartedAt ?? Date(),
+                                      expectedEndAt: flightExpectedEnd,
+                                      isPaused: false,
+                                      focusCategory: flightCategory ?? "Focus",
+                                      balloonSkinID: profile.balloonSkinID,
+                                      soundID: appModel?.selectedJourneyAudio.id)
+        let t0 = Date()
+        let published = await flightService.ensurePublished(presence)
+        syncServerClock(published?.serverNow, since: t0)
+        if published != nil {
+            publishedSessionID = sessionID
+            if let end = published?.expectedEndAt {
+                hostCanonicalDeadline = HostDeadline(sessionID: sessionID, deadline: end)
+            }
         }
     }
 
