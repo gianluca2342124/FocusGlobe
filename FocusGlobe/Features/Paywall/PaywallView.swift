@@ -512,10 +512,17 @@ private enum PaywallCollectible: Identifiable {
 
 private struct PaywallCollectibleCarousel: View {
     @Binding var selectedIndex: Int
+    @Environment(\.focusViewport) private var viewport
 
     private let items: [PaywallCollectible] =
         BalloonSkin.all.filter(\.isPremium).map(PaywallCollectible.skin)
         + StoreItem.all.filter(\.isPremium).map(PaywallCollectible.item)
+
+    /// One art box for BOTH media types, derived from the hero height the
+    /// carousel is actually given. A balloon is drawn at a fixed point size while
+    /// a cabin PNG scales to fit, so without a shared box the two read at wildly
+    /// different scales as they pass the centre.
+    private var artHeight: CGFloat { max(120, viewport.paywallHeroHeight - 58) }
 
     var body: some View {
         FocusContinuousCarousel(
@@ -525,37 +532,39 @@ private struct PaywallCollectibleCarousel: View {
             maximumCardWidth: 330,
             speed: 34
         ) { item, prominence in
+            // No card. These are transparent PNGs (and a vector balloon) and they
+            // float directly on the paywall — the rounded panel that used to sit
+            // behind each one boxed every collectible into the same silhouette and
+            // clipped the artwork it was meant to present. What remains is a soft
+            // contact shadow belonging to the object itself.
             VStack(spacing: 8) {
                 collectibleArt(item)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: artHeight)
+                    .shadow(color: .black.opacity(0.30), radius: 16, y: 10)
                 Text(item.title)
                     .font(.system(size: prominence > 0.55 ? 16 : 14, weight: .bold))
                     .foregroundStyle(.white.opacity(0.72 + prominence * 0.28))
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
+                    .shadow(color: .black.opacity(0.55), radius: 5, y: 2)
             }
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(Color(hex: 0x242235).opacity(0.96))
-            )
-            .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .strokeBorder(.white.opacity(0.08 + prominence * 0.10), lineWidth: 1))
+            .padding(.horizontal, 6)
         }
     }
 
     @ViewBuilder private func collectibleArt(_ item: PaywallCollectible) -> some View {
         switch item {
         case .skin(let skin):
-            BalloonView(height: 170, showBurner: false, showGlow: false, skin: skin)
-                .padding(.vertical, 4)
+            BalloonView(height: artHeight * 0.86, showBurner: false, showGlow: false, skin: skin)
         case .item(let item):
             #if canImport(UIKit)
             if let image = UIImage(named: item.bestAssetName) {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFit()
-                    .padding(12)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, artHeight * 0.07)
             } else {
                 Image(systemName: item.systemImage)
                     .font(.system(size: 56, weight: .medium))

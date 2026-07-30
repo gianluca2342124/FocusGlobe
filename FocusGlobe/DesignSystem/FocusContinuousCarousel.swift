@@ -15,7 +15,10 @@ struct FocusContinuousCarousel<Item: Identifiable, Card: View>: View {
     /// `(cardWidth + spacing) / speed` seconds — on a 390 pt phone that is ~7.5 s
     /// at 34, versus ~19.5 s at the previous 14, which read as a static row.
     var speed: CGFloat = 34
-    var resumeDelay: TimeInterval = 2.4
+    /// How long the conveyor stays still after a drag ends. Long enough that a
+    /// pilot reading one card is not immediately pulled off it, short enough that
+    /// the surface does not read as having stopped for good.
+    var resumeDelay: TimeInterval = 1.6
     @ViewBuilder let card: (Item, Double) -> Card
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
