@@ -11,7 +11,26 @@ to enable them — nothing here is active until the web side is deployed.
 |---|---|
 | A domain FocusGlobe actually controls | **Unverified.** `focusglobe.app` appears in the repo (`ShareService.appStoreURLString`, the referral share string, docs) but there is no evidence in this repository that it is registered, hosted, or serving. |
 | `apple-app-site-association` file served over HTTPS | **Missing.** No AASA file and no web/hosting directory exist in this repository. |
-| `com.apple.developer.associated-domains` entitlement | Key exists in `FocusGlobe/FocusGlobe.entitlements` but the array is **empty**. |
+| `com.apple.developer.associated-domains` entitlement | Key exists in `FocusGlobe/FocusGlobe.entitlements` but the array is still **empty**. |
+
+> ### ⚠️ `associated-domains.mdm-managed` is set — remove it before submitting
+>
+> `FocusGlobe.entitlements` currently also contains:
+>
+> ```xml
+> <key>com.apple.developer.associated-domains.mdm-managed</key>
+> <true/>
+> ```
+>
+> This does **not** enable Universal Links. It is a separate, *restricted*
+> entitlement that lets an **MDM administrator** supply associated domains to a
+> managed app at runtime; it requires an explicit grant from Apple on the App ID.
+>
+> With it present but not granted, expect the provisioning profile to fail to
+> include it (signing/build errors) and an App Store Connect upload to be rejected
+> for invalid entitlements. Unless FocusGlobe has actually been granted this
+> capability, **delete those two lines**. What Universal Links need is the plain
+> `associated-domains` array populated per Step 3 below.
 | `SupabaseConfig.universalLinkBaseURLString` | Deliberately `""` → `inviteURL(token:)` returns the custom scheme. |
 
 The client code is already Universal-Link-ready: `DeepLinkService.inviteToken(from:)`
