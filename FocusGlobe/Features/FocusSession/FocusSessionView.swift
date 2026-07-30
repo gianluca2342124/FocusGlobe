@@ -214,6 +214,15 @@ struct FocusSessionView: View {
             if socialNote == message { withAnimation { socialNote = nil } }
         }
     }
+
+    /// The transient-pill text: the invite-preparing message wins over a social
+    /// note. Explicitly typed `String` (rendered with `Text(verbatim:)`) so the
+    /// compiler never has to weigh SwiftUI's `String` vs `LocalizedStringKey`
+    /// `Text` overloads against a nested ternary inside `body`.
+    private var inviteStatusMessage: String {
+        if invitePreparing { return "Preparing your invite…" }
+        return socialNote ?? ""
+    }
     /// True while the give-up button is being held. Used only to fade the centre
     /// watermark on compact iPhone so the expanding capsule never crowds it.
     @State private var holdingGiveUp = false
@@ -467,7 +476,7 @@ struct FocusSessionView: View {
                             .scaleEffect(0.7)
                             .frame(width: 14, height: 14)
                     }
-                    Text(invitePreparing ? "Preparing your invite…" : (socialNote ?? ""))
+                    Text(verbatim: inviteStatusMessage)
                         .font(.system(size: 13, weight: .semibold, design: .default))
                         .foregroundStyle(.white)
                 }
