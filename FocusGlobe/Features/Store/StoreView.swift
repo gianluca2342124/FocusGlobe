@@ -551,10 +551,34 @@ private struct CabinPlacementSheet: View {
     @EnvironmentObject private var appModel: AppModel
     @Environment(\.dismiss) private var dismiss
     @State private var replacementID: String?
+    /// Chosen, not yet committed. Nothing moves until the pilot confirms, so
+    /// Cancel genuinely leaves the current placement untouched.
+    @State private var selectedSlot: CabinSlot?
 
     private var moving: Bool { appModel.isCabinItemEquipped(item) }
     private var replacement: StoreItem? { replacementID.flatMap(StoreItem.byID) }
     private var needsReplacement: Bool { !moving && appModel.isCabinFull }
+
+    private var commitTitle: String { moving ? "Move Here" : "Place Item" }
+
+    private var canCommit: Bool {
+        guard let slot = selectedSlot, !occupiedSlots.contains(slot) else { return false }
+        return !needsReplacement || replacement != nil
+    }
+
+    /// Pre-select the sensible slot so the sheet opens ready to confirm: the one
+    /// the item already occupies, else its catalogued preferred slot, else the
+    /// first slot that is actually free.
+    private var defaultSelection: CabinSlot? {
+        if let current = appModel.cabinSlot(for: item), item.allowedSlots.contains(current) {
+            return current
+        }
+        if let preferred = item.preferredSlot, item.allowedSlots.contains(preferred),
+           !occupiedSlots.contains(preferred) {
+            return preferred
+        }
+        return item.allowedSlots.first { !occupiedSlots.contains($0) }
+    }
 
     private var equippedItems: [StoreItem] {
         StoreItem.cabinDecorations.filter {
@@ -571,64 +595,11 @@ private struct CabinPlacementSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    hero
-
-                    if needsReplacement {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Replace one item")
-                                .font(.headline)
-                            Text("Your Cabin holds four decorations. Choose the one that will make room.")
-                                .font(.subheadline)
-                                .foregroundStyle(AppColors.textSecondary)
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 130))], spacing: 10) {
-                                ForEach(equippedItems) { candidate in
-                                    Button {
-                                        replacementID = candidate.id
-                                    } label: {
-                                        HStack(spacing: 8) {
-                                            Image(systemName: replacementID == candidate.id
-                                                  ? "checkmark.circle.fill" : "circle")
-                                            Text(candidate.name).lineLimit(1)
-                                        }
-                                        .font(.system(size: 13, weight: .semibold))
-                                        .foregroundStyle(replacementID == candidate.id
-                                                         ? Color(hex: 0x2B2510) : AppColors.textPrimary)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .padding(10)
-                                        .background(RoundedRectangle(cornerRadius: 12)
-                                            .fill(replacementID == candidate.id
-                                                  ? AppColors.selectionGold : AppColors.storeCard(selected: false)))
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                        }
-                    }
-
-                    if !item.allowedSlots.isEmpty {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text(moving ? "Move to" : "Place in")
-                                .font(.headline)
-                            VStack(spacing: 0) {
-                                ForEach(Array(item.allowedSlots.enumerated()), id: \.element) { index, slot in
-                                    if index > 0 { RowDivider() }
-                                    slotRow(slot)
-                                }
-                            }
-                            .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(AppColors.storeCard(selected: false)))
-                            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .strokeBorder(AppColors.hairline, lineWidth: 1))
-                            Text("The Cabin window always stays clear, so it is never a placement option.")
-                                .font(AppTypography.caption)
-                                .foregroundStyle(AppColors.textTertiary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
+            VStack(spacing: 0) {
+                ScrollView {
+                    placementContent.padding(20)
                 }
-                .padding(20)
+                commitBar
             }
             .background(
                 LinearGradient(colors: [AppColors.backgroundTop, AppColors.backgroundBottom],
@@ -644,6 +615,104 @@ private struct CabinPlacementSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
+        .onAppear {
+            if selectedSlot == nil { selectedSlot = defaultSelection }
+        }
+        // Choosing what to replace frees a slot, so a sheet that opened with
+        // nothing selectable can become selectable.
+        .onChange(of: replacementID) { _, _ in
+            if selectedSlot == nil { selectedSlot = defaultSelection }
+        }
+    }
+
+    private var placementContent: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            hero
+
+            Text("Choose where this item should appear in your cabin.")
+                .font(AppTypography.callout)
+                .foregroundStyle(AppColors.textSecondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .center)
+
+            replacementSection
+
+            slotSection
+        }
+    }
+
+    private var commitBar: some View {
+        AppPrimaryButton(title: commitTitle, systemImage: "checkmark",
+                         isEnabled: canCommit) {
+            commit()
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 16)
+    }
+
+    private func commit() {
+        guard canCommit, let slot = selectedSlot else { return }
+        appModel.tapFeedback()
+        guard appModel.placeCabinItem(item, in: slot, replacing: replacement) else { return }
+        dismiss()
+    }
+
+    @ViewBuilder private var replacementSection: some View {
+        if needsReplacement {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Replace one item")
+                    .font(.headline)
+                Text("Your Cabin holds four decorations. Choose the one that will make room.")
+                    .font(.subheadline)
+                    .foregroundStyle(AppColors.textSecondary)
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 130))], spacing: 10) {
+                    ForEach(equippedItems) { candidate in
+                        Button {
+                            appModel.tapFeedback()
+                            replacementID = candidate.id
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: replacementID == candidate.id
+                                      ? "checkmark.circle.fill" : "circle")
+                                Text(candidate.name).lineLimit(1)
+                            }
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(replacementID == candidate.id
+                                             ? Color(hex: 0x2B2510) : AppColors.textPrimary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(10)
+                            .background(RoundedRectangle(cornerRadius: 12)
+                                .fill(replacementID == candidate.id
+                                      ? AppColors.selectionGold : AppColors.storeCard(selected: false)))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private var slotSection: some View {
+        if !item.allowedSlots.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(moving ? "Move to" : "Place in")
+                    .font(.headline)
+                VStack(spacing: 0) {
+                    ForEach(Array(item.allowedSlots.enumerated()), id: \.element) { index, slot in
+                        if index > 0 { RowDivider() }
+                        slotRow(slot)
+                    }
+                    RowDivider()
+                    protectedWindowRow
+                }
+                .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(AppColors.storeCard(selected: false)))
+                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(AppColors.hairline, lineWidth: 1))
+            }
+        }
     }
 
     /// The piece itself, on its own — the isolated PNG with nothing behind it but
@@ -665,14 +734,8 @@ private struct CabinPlacementSheet: View {
             artwork
                 .frame(maxWidth: 210, maxHeight: 168)
         }
-        .frame(height: 190)
+        .frame(height: 176)
         .frame(maxWidth: .infinity)
-        .overlay(alignment: .bottom) {
-            Text(item.subtitle)
-                .font(AppTypography.caption)
-                .foregroundStyle(AppColors.textSecondary)
-                .multilineTextAlignment(.center)
-        }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(item.name). \(item.subtitle)")
     }
@@ -703,19 +766,17 @@ private struct CabinPlacementSheet: View {
     private func slotRow(_ slot: CabinSlot) -> some View {
         let open = !occupiedSlots.contains(slot)
         let isCurrent = appModel.cabinSlot(for: item) == slot
-        let replacementChosen = !needsReplacement || replacement != nil
-        let enabled = open && replacementChosen
+        let chosen = selectedSlot == slot
         return Button {
-            guard enabled else { return }
+            guard open else { return }
             appModel.tapFeedback()
-            guard appModel.placeCabinItem(item, in: slot, replacing: replacement) else { return }
-            dismiss()
+            selectedSlot = slot
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: slot.systemImage)
                     .font(.system(size: 15, weight: .semibold))
                     .frame(width: 26)
-                    .foregroundStyle(enabled ? AppColors.selectionGold : AppColors.textTertiary)
+                    .foregroundStyle(open ? AppColors.selectionGold : AppColors.textTertiary)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(slot.displayName)
                         .font(.system(size: 15, weight: .semibold))
@@ -725,7 +786,17 @@ private struct CabinPlacementSheet: View {
                         .foregroundStyle(AppColors.textSecondary)
                 }
                 Spacer(minLength: 8)
-                slotStatus(isCurrent: isCurrent, open: open)
+                if isCurrent {
+                    Text("Current").font(.caption.weight(.bold)).foregroundStyle(AppColors.textSecondary)
+                } else if !open {
+                    Text("Occupied").font(.caption.weight(.bold)).foregroundStyle(AppColors.textTertiary)
+                }
+                if open {
+                    Image(systemName: chosen ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(chosen ? AppColors.selectionGold
+                                         : AppColors.textTertiary.opacity(0.55))
+                }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
@@ -733,23 +804,43 @@ private struct CabinPlacementSheet: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(!enabled)
-        .opacity(enabled ? 1 : 0.52)
+        .disabled(!open)
+        .opacity(open ? 1 : 0.52)
         .accessibilityLabel("\(slot.displayName). \(slot.placementHint)")
-        .accessibilityHint(isCurrent ? "Current position"
-                           : (open ? "Places \(item.name) here" : "Occupied by another item"))
+        .accessibilityValue(isCurrent ? "Current position" : (open ? "" : "Occupied by another item"))
+        .accessibilityAddTraits(chosen ? [.isSelected] : [])
     }
 
-    @ViewBuilder private func slotStatus(isCurrent: Bool, open: Bool) -> some View {
-        if isCurrent {
-            Text("Current").font(.caption.weight(.bold)).foregroundStyle(AppColors.textSecondary)
-        } else if !open {
-            Text("Occupied").font(.caption.weight(.bold)).foregroundStyle(AppColors.textTertiary)
-        } else {
-            Image(systemName: "chevron.right")
-                .font(.system(size: 12, weight: .semibold))
+    /// The window is not a slot in the canonical model at all — it is simply
+    /// absent from `CabinSlot`. Saying so as a permanently disabled row is much
+    /// clearer than the caption that used to float over the Cabin photo, and it
+    /// answers the obvious question ("why can't I put it on the window?") in the
+    /// one place the pilot is looking.
+    private var protectedWindowRow: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "rectangle.portrait")
+                .font(.system(size: 15, weight: .semibold))
+                .frame(width: 26)
+                .foregroundStyle(AppColors.textTertiary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Main Window")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(AppColors.textPrimary)
+                Text("Reserved to keep your Sky visible")
+                    .font(AppTypography.caption)
+                    .foregroundStyle(AppColors.textSecondary)
+            }
+            Spacer(minLength: 8)
+            Image(systemName: "lock.fill")
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(AppColors.textTertiary)
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(minHeight: 56)
+        .opacity(0.52)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Main Window. Reserved to keep your Sky visible. Not available.")
     }
 }
 
