@@ -17,6 +17,12 @@ struct CabinView: View {
     /// Live elapsed focus seconds (pause-aware) — forwarded to the sky window so
     /// the world through the glass matches the exterior exactly.
     let elapsed: () -> Double
+    /// The SHARED, monotonic scene clock for fellow pilots seen through the
+    /// window. Separate from `elapsed` because that one is pause-aware: it holds
+    /// still while WE are paused and, on resume, jumps backwards by the paused
+    /// span — which would rewind every other pilot's countdown. Defaults to
+    /// `elapsed` so existing callers (previews, Store) are unchanged.
+    var pilotsElapsed: (() -> Double)? = nil
     /// Stable per-session world seed (shared with the exterior view).
     var seed: UInt64
     /// When false every layer is frozen (Reduce Motion / low-power calm).
@@ -125,7 +131,7 @@ struct CabinView: View {
             // art so they read *through the window* (non-interactive in here).
             if showPilots {
                 AmbientPilotsLayer(skyID: focusSky?.id ?? "classic",
-                                   elapsed: elapsed, animated: animated,
+                                   elapsed: pilotsElapsed ?? elapsed, animated: animated,
                                    realPilots: realPilots, roomMode: roomMode, isPrivate: isPrivate)
                     .frame(width: W, height: H).clipped()
                     .allowsHitTesting(false)
@@ -338,7 +344,7 @@ struct CabinView: View {
             // The same fellow pilots drifting past, clipped inside the glass.
             if showPilots {
                 AmbientPilotsLayer(skyID: focusSky?.id ?? "classic",
-                                   elapsed: elapsed, animated: animated,
+                                   elapsed: pilotsElapsed ?? elapsed, animated: animated,
                                    realPilots: realPilots, roomMode: roomMode, isPrivate: isPrivate)
                     .frame(width: winW, height: winH)
                     .clipShape(shape)

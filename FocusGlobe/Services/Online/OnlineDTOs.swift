@@ -37,6 +37,11 @@ struct ActiveFlightRow: Codable, Sendable {
     var startedAt: String
     var expectedEndAt: String?
     var pausedAt: String?
+    /// The remaining seconds frozen at the moment this pilot paused — the
+    /// AUTHORITATIVE paused countdown, stamped by the server. Optional so rows
+    /// written before the per-pilot-pause migration (and Infinite flights, which
+    /// have no deadline to freeze) still decode.
+    var pausedRemainingSeconds: Int?
     var status: String
     var lastHeartbeatAt: String
     var expiresAt: String
@@ -52,6 +57,7 @@ struct ActiveFlightRow: Codable, Sendable {
         case startedAt = "started_at"
         case expectedEndAt = "expected_end_at"
         case pausedAt = "paused_at"
+        case pausedRemainingSeconds = "paused_remaining_seconds"
         case status
         case lastHeartbeatAt = "last_heartbeat_at"
         case expiresAt = "expires_at"

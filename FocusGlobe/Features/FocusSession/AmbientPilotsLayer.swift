@@ -420,7 +420,13 @@ struct AmbientPilotsLayer: View {
         // A deliberate tap-to-reveal always wins over the auto-hide, and a new
         // arrival shows its own label briefly even while labels are hidden — so a
         // join is noticed without revealing the whole Sky.
-        let bubbleVisible = labelsVisible || life.showsArrivalLabel || selectedRealID == pilot.id
+        //
+        // A PAUSED pilot stays visible for the WHOLE pause, deliberately outliving
+        // the five-second label fade: "that pilot is paused, with this much left"
+        // is state, not a transient greeting, and it must be readable at a glance
+        // by every other client until they resume.
+        let bubbleVisible = labelsVisible || life.showsArrivalLabel
+            || selectedRealID == pilot.id || pilot.isPaused
         return ZStack(alignment: .bottom) {
             if showBubble {
                 realBubble(pilot)
@@ -512,11 +518,22 @@ struct AmbientPilotsLayer: View {
                 // a value that is constant for the whole flight also puts the tick
                 // on the pilot's real second boundary, which is what a countdown to
                 // their server-canonical end should follow.
-                TimelineView(.periodic(from: pilot.startedAt, by: 1)) { ctx in
-                    Text(pilot.liveCountdown(at: ctx.date))
-                        .font(.system(size: 10.5, weight: .semibold, design: .default))
-                        .foregroundStyle(.white.opacity(0.72))
-                        .monospacedDigit()
+                //
+                // A paused pilot keeps this row: `liveCountdown` returns their
+                // server-frozen value, so the number simply holds still rather than
+                // disappearing — the pause glyph beside it says why.
+                HStack(spacing: 4) {
+                    if pilot.isPaused {
+                        Image(systemName: "pause.fill")
+                            .font(.system(size: 8.5, weight: .black))
+                            .foregroundStyle(.white.opacity(0.9))
+                    }
+                    TimelineView(.periodic(from: pilot.startedAt, by: 1)) { ctx in
+                        Text(pilot.liveCountdown(at: ctx.date))
+                            .font(.system(size: 10.5, weight: .semibold, design: .default))
+                            .foregroundStyle(.white.opacity(pilot.isPaused ? 0.9 : 0.72))
+                            .monospacedDigit()
+                    }
                 }
             }
         }

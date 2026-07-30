@@ -229,10 +229,20 @@ struct FocusSessionView: View {
     @Environment(\.horizontalSizeClass) private var hSize
     /// The "Playing …" soundscape toast shown briefly at take-off.
     @State private var soundToastVisible = false
-    /// The wall-clock anchor for everything the pilot sees. Captured **once** on
-    /// appear (resume-aware); shifted forward when a pause ends so paused time
-    /// never counts. Never touched inside `body`.
+    /// The LOCAL pilot's wall-clock anchor. Captured **once** on appear
+    /// (resume-aware); shifted forward when a pause ends so paused time never
+    /// counts toward OUR focus total. Never touched inside `body`.
     @State private var flightStartedAt: Date?
+    /// The SHARED world's anchor. Captured once alongside `flightStartedAt` and
+    /// then **never moved**.
+    ///
+    /// This must be a separate stored value, not a reuse of `flightStartedAt`:
+    /// ending a pause shifts `flightStartedAt` FORWARD by the paused span, so any
+    /// clock derived from it jumps BACKWARDS by that same span at the moment of
+    /// resume. That is exactly what made every other pilot's countdown leap back
+    /// to its pre-pause value when the local pilot resumed — one pilot's pause
+    /// silently rewinding everyone else's time.
+    @State private var sceneAnchor: Date?
     /// Set while paused so the display clock holds still.
     @State private var pausedAt: Date?
 
@@ -254,14 +264,16 @@ struct FocusSessionView: View {
         return max(0, effective.timeIntervalSince(start))
     }
 
-    /// The SHARED scene clock: wall-clock, never pause-shifted.
+    /// The SHARED scene clock: monotonic wall-clock, never pause-shifted.
     ///
     /// Everything that belongs to the world rather than to us — remote balloons,
-    /// their motion, ambient pilots — reads this, so a local pause can never stop
-    /// other pilots. (Real remote countdowns were already safe: they tick from
-    /// their own `expectedEndAt` inside a periodic `TimelineView`.)
+    /// their drift, the decorative ambient pilots and their countdowns — reads
+    /// this, so a local pause can neither stop nor rewind other pilots. Anchored
+    /// to `sceneAnchor`, which is deliberately NOT the pause-adjusted
+    /// `flightStartedAt`. (Real remote countdowns are safe by construction: they
+    /// tick from their own `expectedEndAt` against wall-clock `Date`.)
     private func sceneElapsed(at now: Date) -> Double {
-        guard let start = flightStartedAt else { return 0 }
+        guard let start = sceneAnchor else { return 0 }
         return max(0, now.timeIntervalSince(start))
     }
 
@@ -298,6 +310,10 @@ struct FocusSessionView: View {
                     .transition(.opacity)
             case .cabin:
                 CabinView(elapsed: { displayElapsed(at: Date()) },
+                          // Fellow pilots through the window read the SHARED clock,
+                          // exactly as they do outside: our pause must not rewind
+                          // their countdowns.
+                          pilotsElapsed: { sceneElapsed(at: Date()) },
                           seed: worldSeed,
                           animated: !reduceMotion,
                           focusSky: matchedSky,
@@ -446,6 +462,9 @@ struct FocusSessionView: View {
             if flightStartedAt == nil {
                 let anchor = Date().addingTimeInterval(-vm.timer.liveElapsed)
                 flightStartedAt = anchor
+                // The shared world starts from the same instant but keeps its OWN
+                // anchor, because `flightStartedAt` moves forward on every resume.
+                sceneAnchor = anchor
                 // Seed the world from the anchor: stable for this session,
                 // different for every flight.
                 worldSeed = UInt64(bitPattern: Int64(anchor.timeIntervalSince1970 * 1000))
@@ -634,15 +653,25 @@ struct FocusSessionView: View {
                 // The user's own balloon is always labelled exactly "YOU" —
                 // never their alias. Hidden in Clean Mode and until take-off.
                 if roomBubbleMode && takeoffLift > 0.9 {
-                    Text("YOU")
-                        .font(.system(size: 11, weight: .heavy, design: .default))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 11).padding(.vertical, 5)
-                        .background(Capsule().fill(.ultraThinMaterial))
-                        .overlay(Capsule().fill(AppColors.gold.opacity(0.28)))
-                        .overlay(Capsule().strokeBorder(.white.opacity(0.25), lineWidth: 1))
-                        .position(x: geo.size.width / 2 + balloonSway + balloonDrift,
-                                  y: restY + balloonBob - balloonSize - 16)
+                    // The same compact pause glyph every remote pilot wears, so OUR
+                    // balloon reads exactly as it does on everyone else's screen
+                    // while we are paused.
+                    HStack(spacing: 4) {
+                        if vm.isPaused {
+                            Image(systemName: "pause.fill")
+                                .font(.system(size: 8.5, weight: .black))
+                                .foregroundStyle(.white.opacity(0.9))
+                        }
+                        Text("YOU")
+                            .font(.system(size: 11, weight: .heavy, design: .default))
+                            .foregroundStyle(.white)
+                    }
+                    .padding(.horizontal, 11).padding(.vertical, 5)
+                    .background(Capsule().fill(.ultraThinMaterial))
+                    .overlay(Capsule().fill(AppColors.gold.opacity(0.28)))
+                    .overlay(Capsule().strokeBorder(.white.opacity(0.25), lineWidth: 1))
+                    .position(x: geo.size.width / 2 + balloonSway + balloonDrift,
+                              y: restY + balloonBob - balloonSize - 16)
                 }
             }
         }

@@ -20,11 +20,29 @@ actor PublicFlightService {
         let serverNow: Date?
         let startedAt: Date?
         let expectedEndAt: Date?
+        /// The server's authoritative pause state for MY row.
+        var isPaused: Bool = false
+        /// The remaining seconds the server froze when this flight paused.
+        var pausedRemainingSeconds: Int? = nil
     }
 
     func configure(userID: String?) { self.userID = userID }
 
     // MARK: Publishing (server-canonical)
+
+    /// The session id whose canonical `active_flights` row the SERVER has
+    /// confirmed. Set only by a successful publish/heartbeat, cleared when the row
+    /// is deleted.
+    ///
+    /// This exists because the app used to treat its own locally-minted
+    /// `flightSessionID` as proof that the server row existed. It is not: the
+    /// publish RPC runs in a detached task, is never awaited, and returns nil on
+    /// failure with nothing observing it. Invite Friends then promoted a session
+    /// the server had never heard of and got `no_active_global_session`.
+    private var publishedSessionID: String?
+
+    /// Whether the server has confirmed a row for this exact journey.
+    func isPublished(_ sessionID: String) -> Bool { publishedSessionID == sessionID }
 
     /// Create (or refresh) the canonical Global-flight row. The SERVER stamps
     /// started_at / expected_end_at; we only pass the intended duration (a
@@ -33,6 +51,28 @@ actor PublicFlightService {
     func startPublishing(_ presence: OnlinePresence) async -> FlightPublishResult? {
         current = presence
         return await publish(presence)
+    }
+
+    /// Guarantee a canonical server row for `presence`, retrying a few times with
+    /// a short backoff. Idempotent: returns immediately once the server has
+    /// confirmed this session, so repeated Invite taps never publish twice.
+    ///
+    /// Takes the presence as an argument rather than relying on `current`, because
+    /// `current` is nil on exactly the paths that used to make recovery
+    /// impossible (a private-room flight that never published, or a
+    /// discoverability toggle that cleared it) — `republish()` silently no-opped
+    /// there and the invite could never succeed.
+    @discardableResult
+    func ensurePublished(_ presence: OnlinePresence, attempts: Int = 3) async -> FlightPublishResult? {
+        if current == nil { current = presence }
+        for attempt in 0..<max(1, attempts) {
+            if let result = await publish(presence) { return result }
+            // 0.4 s, 0.8 s — short enough that Invite still feels immediate.
+            if attempt + 1 < attempts {
+                try? await Task.sleep(nanoseconds: UInt64(400_000_000 * (attempt + 1)))
+            }
+        }
+        return nil
     }
 
     /// Re-publish the current presence (recovery path: e.g. the promotion RPC
@@ -59,17 +99,25 @@ actor PublicFlightService {
         struct Params: Encodable { let p_client_session_id: String; let p_is_paused: Bool }
         struct Payload: Decodable {
             let server_now: String?; let started_at: String?; let expected_end_at: String?
+            let is_paused: Bool?; let paused_remaining_seconds: Int?
         }
         do {
             let p: Payload = try await client
                 .rpc("heartbeat_global_flight",
                      params: Params(p_client_session_id: presence.sessionID, p_is_paused: presence.isPaused))
                 .execute().value
+            // A successful heartbeat proves the canonical row exists.
+            publishedSessionID = presence.sessionID
             return FlightPublishResult(serverNow: PostgresDate.parse(p.server_now),
                                        startedAt: PostgresDate.parse(p.started_at),
-                                       expectedEndAt: PostgresDate.parse(p.expected_end_at))
+                                       expectedEndAt: PostgresDate.parse(p.expected_end_at),
+                                       isPaused: p.is_paused ?? presence.isPaused,
+                                       pausedRemainingSeconds: p.paused_remaining_seconds)
         } catch {
-            if OnlineError.isNoActiveGlobalSession(error) { return await publish(presence) }
+            if OnlineError.isNoActiveGlobalSession(error) {
+                publishedSessionID = nil
+                return await publish(presence)
+            }
             SupabaseService.log.error("flight heartbeat failed: \(OnlineError.category(for: error), privacy: .public)")
             return nil
         }
@@ -78,6 +126,7 @@ actor PublicFlightService {
     /// Stop publishing and delete the row (every termination path).
     func stopPublishing() async {
         current = nil
+        publishedSessionID = nil
         guard let client, let userID else { return }
         _ = try? await client.from("active_flights").delete()
             .eq("user_id", value: userID).execute()
@@ -104,6 +153,7 @@ actor PublicFlightService {
         }
         struct Payload: Decodable {
             let server_now: String?; let started_at: String?; let expected_end_at: String?
+            let is_paused: Bool?; let paused_remaining_seconds: Int?
         }
         do {
             let p: Payload = try await client
@@ -117,11 +167,25 @@ actor PublicFlightService {
                                     p_is_paused: presence.isPaused,
                                     p_sound_id: presence.soundID))
                 .execute().value
+            // The ONLY place a session is marked as existing on the server.
+            publishedSessionID = presence.sessionID
+            #if DEBUG
+            SupabaseService.log.debug("online: canonical session published")
+            #endif
             return FlightPublishResult(serverNow: PostgresDate.parse(p.server_now),
                                        startedAt: PostgresDate.parse(p.started_at),
-                                       expectedEndAt: PostgresDate.parse(p.expected_end_at))
+                                       expectedEndAt: PostgresDate.parse(p.expected_end_at),
+                                       isPaused: p.is_paused ?? presence.isPaused,
+                                       pausedRemainingSeconds: p.paused_remaining_seconds)
         } catch {
+            // The coarse category alone hid the real cause (e.g. PGRST202 when the
+            // deployed RPC signature is stale), so a permanently-failing publish
+            // looked identical to a transient blip. The detail is DEBUG-only — it
+            // can carry backend specifics that don't belong in Release logs.
             SupabaseService.log.error("flight publish failed: \(OnlineError.category(for: error), privacy: .public)")
+            #if DEBUG
+            SupabaseService.log.debug("online: publish detail \(OnlineError.detail(for: error), privacy: .public)")
+            #endif
             return nil
         }
     }
@@ -167,6 +231,7 @@ actor PublicFlightService {
                     expectedEndAt: PostgresDate.parse(flight.expectedEndAt),
                     lastHeartbeatAt: heartbeat,
                     isPaused: flight.pausedAt != nil,
+                    pausedRemainingSeconds: flight.pausedRemainingSeconds,
                     focusCategory: flight.focusCategory,
                     allowsFriendRequest: profile?.allowFriendRequests ?? true,
                     hasLiveSession: true,
@@ -203,6 +268,7 @@ actor PublicFlightService {
                            expectedEndAt: PostgresDate.parse(flight.expectedEndAt),
                            lastHeartbeatAt: heartbeat,
                            isPaused: flight.pausedAt != nil,
+                           pausedRemainingSeconds: flight.pausedRemainingSeconds,
                            focusCategory: flight.focusCategory,
                            allowsFriendRequest: true, hasLiveSession: true,
                            soundID: flight.soundID)

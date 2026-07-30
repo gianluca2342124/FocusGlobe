@@ -352,8 +352,15 @@ final class OnlinePilotStage: ObservableObject {
 
     /// A pilot with a real live session whose canonical end has passed.
     /// Timestamp-derived — no per-pilot timer anywhere.
+    ///
+    /// A PAUSED pilot is never "finished", however long the pause runs. Their
+    /// `expectedEndAt` deliberately stays at its pre-pause value until they
+    /// resume (the server pushes it out then), so judging by the raw deadline
+    /// would fly a merely-paused pilot away as soon as their frozen time elapsed
+    /// in real seconds.
     private static func hasFinished(_ pilot: OnlinePilot, now: Date) -> Bool {
-        guard pilot.hasLiveSession, let end = pilot.expectedEndAt else { return false }
+        guard pilot.hasLiveSession, !pilot.isPaused else { return false }
+        guard let end = pilot.expectedEndAt else { return false }
         return end <= now
     }
 
@@ -367,8 +374,11 @@ final class OnlinePilotStage: ObservableObject {
     /// `expectedEndAt` of whoever finishes soonest, so the exit starts on the same
     /// tick the label reaches zero, with one task for the whole Sky.
     private func armCompletionClock(now: Date) {
+        // A paused pilot has no meaningful deadline to wake for — theirs is frozen
+        // until they resume, at which point the server issues a new one and the
+        // next reconciliation re-arms.
         let next = entries.compactMap { entry -> Date? in
-            guard !entry.phase.isExiting, entry.pilot.hasLiveSession,
+            guard !entry.phase.isExiting, entry.pilot.hasLiveSession, !entry.pilot.isPaused,
                   let end = entry.pilot.expectedEndAt, end > now else { return nil }
             return end
         }.min()
