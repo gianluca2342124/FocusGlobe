@@ -452,20 +452,35 @@ struct FocusSessionView: View {
                 }
             }
         }
+        // ONE transient surface for a social note AND the invite's preparing state.
+        // The controls panel closes the moment Invite is tapped, so without this the
+        // pilot got no sign at all that a link was being made. Restrained and
+        // non-blocking: a small pill above the timer, never an alert or a spinner
+        // over the sky.
         .overlay(alignment: .bottom) {
-            if let socialNote {
-                Text(socialNote)
-                    .font(.system(size: 13, weight: .semibold, design: .default))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 14).padding(.vertical, 8)
-                    .background(Capsule().fill(.ultraThinMaterial))
-                    .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 1))
-                    .padding(.bottom, 130)
-                    .transition(.opacity)
+            if invitePreparing || socialNote != nil {
+                HStack(spacing: 8) {
+                    if invitePreparing {
+                        ProgressView()
+                            .progressViewStyle(.circular)
+                            .tint(.white)
+                            .scaleEffect(0.7)
+                            .frame(width: 14, height: 14)
+                    }
+                    Text(invitePreparing ? "Preparing your invite…" : (socialNote ?? ""))
+                        .font(.system(size: 13, weight: .semibold, design: .default))
+                        .foregroundStyle(.white)
+                }
+                .padding(.horizontal, 14).padding(.vertical, 8)
+                .background(Capsule().fill(.ultraThinMaterial))
+                .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 1))
+                .padding(.bottom, 130)
+                .transition(.opacity)
             }
         }
         .animation(.easeInOut(duration: 0.3), value: online.joinToastAlias)
         .animation(.easeInOut(duration: 0.3), value: socialNote)
+        .animation(.easeInOut(duration: 0.3), value: invitePreparing)
         .sheet(item: $selectedRealPilot) { pilot in
             PilotProfileSheet(pilot: pilot)
                 .environmentObject(online).environmentObject(appModel)
@@ -881,6 +896,7 @@ struct FocusSessionView: View {
                 isCabin: viewMode == .cabin,
                 isOnline: isOnlineFlight,
                 isPrivate: online.isPrivateFlight || online.isInviteReady,
+                hasRoom: online.pendingRoom != nil,
                 preparingInvite: invitePreparing,
                 showPilotLabels: showPilotLabels,
                 onToggleMute: {
@@ -1019,6 +1035,8 @@ private struct FlightControlsPanel: View {
     let isOnline: Bool
     /// A Private Flight (someone was invited) also shows Participants.
     var isPrivate: Bool = false
+    /// Whether a real room record exists to show in the lobby — see `Participants`.
+    var hasRoom: Bool = false
     var preparingInvite: Bool = false
     /// Online only: whether pilot labels are currently forced visible.
     var showPilotLabels: Bool = false
@@ -1066,7 +1084,10 @@ private struct FlightControlsPanel: View {
             // invite and no social surface, so the control is omitted entirely.
             // Participants (the one lobby) appears once the flight is Private.
             if isOnline {
-                if isPrivate {
+                // Participants opens the ONE lobby, which needs a real room to show.
+                // Gating on `isPrivate` alone opened an EMPTY sheet whenever the
+                // flight was invite-ready but no room existed yet — a dead row.
+                if isPrivate && hasRoom {
                     row(icon: "person.2.fill", title: "Participants",
                         subtitle: "See who's flying with you", action: onParticipants)
                 }
@@ -1097,6 +1118,9 @@ private struct FlightControlsPanel: View {
                     Text(title)
                         .font(.system(size: 14.5, weight: .semibold, design: .default))
                         .foregroundStyle(.white)
+                        // The panel has a fixed width, so a long title must shrink
+                        // rather than wrap and break the shared row height.
+                        .lineLimit(1).minimumScaleFactor(0.85)
                     Text(subtitle)
                         .font(.system(size: 11.5, weight: .regular, design: .default))
                         .foregroundStyle(.white.opacity(0.6))
@@ -1136,29 +1160,59 @@ private struct FlightControlsPanel: View {
         }
     }
 
+    /// The panel's one primary action. Same two-line geometry and vertical rhythm
+    /// as `row`, so the panel reads as a single list — it is distinguished by its
+    /// gold surface, not by being a different height.
     private var inviteButton: some View {
         Button(action: onInvite) {
-            HStack(spacing: 8) {
-                Image(systemName: preparingInvite ? "hourglass" : "person.badge.plus")
-                    .font(.system(size: 14, weight: .bold))
-                Text(preparingInvite ? "Preparing…" : "Invite Friends")
-                    .font(.system(size: 14, weight: .bold, design: .default))
-                // Inviting friends into a Private Flight is FocusGlobe PRO — the
-                // compact badge marks the gate for a non-premium pilot.
-                if !preparingInvite && appModel.entitlement != .premium {
-                    FocusGlobePROBadge(visibleHeight: 13)
+            HStack(spacing: AppSpacing.sm) {
+                ZStack {
+                    if preparingInvite {
+                        // A quiet spinner rather than a static hourglass, which read
+                        // as stalled rather than working.
+                        ProgressView()
+                            .progressViewStyle(.circular)
+                            .tint(.white)
+                            .scaleEffect(0.7)
+                    } else {
+                        Image(systemName: "person.badge.plus")
+                            .font(.system(size: 15, weight: .semibold))
+                    }
                 }
-                Spacer()
-                if !preparingInvite {
-                    Image(systemName: "chevron.right").font(.system(size: 11, weight: .bold)).opacity(0.7)
+                .frame(width: 24)
+                VStack(alignment: .leading, spacing: 1) {
+                    HStack(spacing: 6) {
+                        Text("Invite Friends")
+                            .font(.system(size: 14.5, weight: .bold, design: .default))
+                            .lineLimit(1)
+                        // Inviting friends into a Private Flight is FocusGlobe PRO.
+                        // Shown only when we are SURE the pilot is free: `.loading`
+                        // must never flash a badge at a PRO owner whose entitlement
+                        // has not arrived yet, and an entitled pilot never sees one.
+                        if appModel.isConfirmedFree {
+                            FocusGlobePROBadge(visibleHeight: 13)
+                        }
+                    }
+                    Text(preparingInvite ? "Creating your link…"
+                                         : "Fly this journey together")
+                        .font(.system(size: 11.5, weight: .regular, design: .default))
+                        .foregroundStyle(.white.opacity(0.75))
+                        .lineLimit(1).minimumScaleFactor(0.8)
                 }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .bold))
+                    .opacity(preparingInvite ? 0 : 0.7)
             }
             .foregroundStyle(.white)
-            .padding(.vertical, 10).padding(.horizontal, 12)
+            .padding(.vertical, 7).padding(.horizontal, 9)
             .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(ProBrand.softGradient))
+            .contentShape(Rectangle())
         }
         .buttonStyle(SoftPressStyle(scale: 0.98))
+        // No second tap while a link is being made — the tap is already honoured.
         .disabled(preparingInvite)
+        .accessibilityLabel(preparingInvite ? "Creating your invite link" : "Invite Friends")
     }
 }
 

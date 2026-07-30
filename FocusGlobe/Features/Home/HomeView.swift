@@ -354,19 +354,25 @@ struct HomeView: View {
             }
             Spacer()
             coinsChip
-            StatusCircleButton(size: viewport.navigationControlSize,
-                               ring: appModel.isPro ? AppColors.gold.opacity(0.42) : nil,
-                               accessibilityText: appModel.isPro
-                                ? "FocusGlobe PRO is active"
-                                : "Unlock FocusGlobe PRO") {
-                appModel.tapFeedback()
-                router.presentPaywall(context: .general)
-            } content: {
-                Image(systemName: "crown.fill")
-                    .font(.system(size: viewport.navigationControlSize * 0.38, weight: .bold))
-                    .foregroundStyle(ProBrand.gradient)
+            // The crown is a pure paywall entry. For an entitled pilot it opened a
+            // "you already have PRO" screen — a dead promotion — so it is hidden
+            // once PRO is confirmed; the row collapses to end at the coins chip with
+            // no gap. Subscription management lives in Settings, not here. Shown
+            // during `.loading` (isPro still false) so it never flickers for a free
+            // user; a PRO owner simply sees it vanish, never a forced paywall.
+            if !appModel.isPro {
+                StatusCircleButton(size: viewport.navigationControlSize,
+                                   ring: nil,
+                                   accessibilityText: "Unlock FocusGlobe PRO") {
+                    appModel.tapFeedback()
+                    router.presentPaywall(context: .general)
+                } content: {
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: viewport.navigationControlSize * 0.38, weight: .bold))
+                        .foregroundStyle(ProBrand.gradient)
+                }
+                .shadow(color: ProBrand.glow.opacity(0.30), radius: 8, y: 0)
             }
-            .shadow(color: ProBrand.glow.opacity(0.30), radius: 8, y: 0)
         }
         .padding(.top, AppSpacing.xs)
     }

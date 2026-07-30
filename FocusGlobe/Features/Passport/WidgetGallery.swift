@@ -114,11 +114,15 @@ private struct WidgetPreviewTile: View {
             // itself. ONLY the PRO/lock affordance remains — a free widget carries
             // no "FREE" badge at all (it just appears available). The identity +
             // families live in the detail sheet.
+            //
+            // The PRO plaque marks a *purchase*: it is shown only while the pilot
+            // has not unlocked it (`locked`). An entitled owner sees the widget as
+            // plainly available — matching the Store, where an owned premium item
+            // reads "Owned", never a PRO badge — and the row collapses with no
+            // retained badge width. VoiceOver still carries the PRO identity above.
             HStack(spacing: 5) {
-                if item.isPro {
-                    FocusGlobePROBadge(visibleHeight: 13)
-                }
                 if locked {
+                    FocusGlobePROBadge(visibleHeight: 13)
                     Image(systemName: "lock.fill")
                         .font(.system(size: 9, weight: .heavy))
                         .foregroundStyle(.white.opacity(0.9))
