@@ -934,7 +934,6 @@ final class FocusOnlineModel: ObservableObject {
     /// Private once a real remote pilot joins (see `activatePrivateFlight`). The
     /// timer/sky/sound/shield never change. Idempotent: repeated taps reuse the
     /// one flight (server-keyed by clientSessionID) and mint a fresh link.
-    @discardableResult
     /// Why `prepareInvite` cannot run right now — `nil` when it can.
     ///
     /// Mirrors `prepareInvite`'s precondition guard so the caller can say something
