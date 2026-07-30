@@ -13,24 +13,25 @@ to enable them — nothing here is active until the web side is deployed.
 | `apple-app-site-association` file served over HTTPS | **Missing.** No AASA file and no web/hosting directory exist in this repository. |
 | `com.apple.developer.associated-domains` entitlement | Key exists in `FocusGlobe/FocusGlobe.entitlements` but the array is still **empty**. |
 
-> ### ⚠️ `associated-domains.mdm-managed` is set — remove it before submitting
+> ### ✅ `associated-domains.mdm-managed` — resolved
 >
-> `FocusGlobe.entitlements` currently also contains:
+> `FocusGlobe.entitlements` previously also contained:
 >
 > ```xml
 > <key>com.apple.developer.associated-domains.mdm-managed</key>
 > <true/>
 > ```
 >
-> This does **not** enable Universal Links. It is a separate, *restricted*
+> That key does **not** enable Universal Links. It is a separate, *restricted*
 > entitlement that lets an **MDM administrator** supply associated domains to a
-> managed app at runtime; it requires an explicit grant from Apple on the App ID.
+> managed app at runtime, and it requires an explicit grant from Apple on the App
+> ID. Present but not granted, it would have kept the provisioning profile from
+> including it (signing/build errors) and had an App Store Connect upload rejected
+> for invalid entitlements.
 >
-> With it present but not granted, expect the provisioning profile to fail to
-> include it (signing/build errors) and an App Store Connect upload to be rejected
-> for invalid entitlements. Unless FocusGlobe has actually been granted this
-> capability, **delete those two lines**. What Universal Links need is the plain
-> `associated-domains` array populated per Step 3 below.
+> It was removed in `87b270b`, so this is no longer a submission blocker. What
+> Universal Links need is the plain `associated-domains` array populated per
+> Step 3 below — which is still an empty `<array/>`.
 | `SupabaseConfig.universalLinkBaseURLString` | Deliberately `""` → `inviteURL(token:)` returns the custom scheme. |
 
 The client code is already Universal-Link-ready: `DeepLinkService.inviteToken(from:)`
