@@ -581,12 +581,27 @@ final class AppModel: ObservableObject {
     /// Show a rewarded ad, then (on reward) grant a weighted spin prize and return
     /// it. Returns `nil` when no reward was earned (ad unavailable / dismissed) or
     /// the cooldown hasn't elapsed — the caller shows a gentle message.
+    ///
+    /// PRO pilots skip the video entirely. `AdService.showRewarded` answers
+    /// `false` immediately for an entitled pilot (`adSkippedForPro`), so asking it
+    /// would make the spin permanently unwinnable for exactly the people who paid
+    /// to remove ads — and, now that today's objective is the Free Coin Spin,
+    /// would also make the daily objectives impossible for them to complete. The
+    /// 90-second cooldown remains the throttle in that path.
     func spinCoinReward() async -> Int? {
         guard canCoinSpin else { return nil }
-        let earned = await ads.showRewarded(.doubleMiles, isPro: isPro)
-        guard earned else { return nil }
+        if !isPro {
+            let earned = await ads.showRewarded(.doubleMiles, isPro: false)
+            guard earned else { return nil }
+        }
         let prize = Self.weightedSpinPrize()
-        profile.lastCoinSpinAt = Date().timeIntervalSince1970
+        var updated = profile
+        updated.lastCoinSpinAt = Date().timeIntervalSince1970
+        // Stamp the objective here, at the single point where a spin is genuinely
+        // resolved: the prize is decided and the coins are about to be credited.
+        // The wheel that follows is presentation only.
+        updated.coinSpinEventDayKey = Self.dayKey(Date())
+        profile = updated
         addCoins(prize, source: "coin_spin")
         return prize
     }
@@ -1199,6 +1214,12 @@ final class AppModel: ObservableObject {
 
     /// Persist a real transition from not-observed to earned. The observed set
     /// only grows, so temporary entitlement/streak changes cannot award twice.
+    ///
+    /// No daily objective reads `badgeUnlockEventDayKey` any more (today's third
+    /// objective is the Free Coin Spin). The tracker is kept running because it is
+    /// cheap, idempotent and — crucially — the observed set must stay continuous:
+    /// if it stopped growing now, every badge earned in the meantime would look
+    /// brand new the day anything reads it again.
     private func recordNewBadgeUnlocks() {
         guard let observed = profile.observedBadgeKeys else {
             initializeBadgeTrackingIfNeeded()
@@ -1222,7 +1243,11 @@ final class AppModel: ObservableObject {
         let todays = history.filter { $0.completed && cal.isDateInToday($0.date) }
         let journeys = Double(todays.count)
         let minutes = Double(todays.reduce(0) { $0 + $1.focusedSeconds }) / 60.0
-        let badgeUnlockedToday = profile.badgeUnlockEventDayKey == Self.dayKey(Date())
+        // Today's third objective is the Free Coin Spin, which every pilot can
+        // reach from Home on any day. It replaced "Unlock a new badge", which was
+        // unreachable for anyone who had already collected the badges their
+        // progress qualified for — an objective that silently became impossible.
+        let spunToday = profile.coinSpinEventDayKey == Self.dayKey(Date())
         let coinsEarnedToday = profile.coinEarningsDayKey == Self.dayKey(Date())
             ? Double(profile.coinsEarnedOnDay ?? 0) : 0
         return [
@@ -1230,9 +1255,9 @@ final class AppModel: ObservableObject {
                          accent: .indigo, target: 1, current: journeys),
             DailyMission(id: "focus", title: "Focus 30 minutes", systemImage: "timer",
                          accent: .teal, target: 30, current: minutes),
-            DailyMission(id: "badge", title: "Unlock a new badge",
-                         systemImage: "rosette", accent: .gold, target: 1,
-                         current: badgeUnlockedToday ? 1 : 0),
+            DailyMission(id: "spin", title: "Spin the Free Coin Spin",
+                         systemImage: "arrow.triangle.2.circlepath", accent: .gold, target: 1,
+                         current: spunToday ? 1 : 0),
             DailyMission(id: "coins", title: "Earn 10 Focus Coins", systemImage: "sparkles",
                          accent: .coral, target: 10, current: coinsEarnedToday),
         ]

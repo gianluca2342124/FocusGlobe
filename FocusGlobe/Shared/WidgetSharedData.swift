@@ -147,7 +147,8 @@ struct WidgetSnapshot: Codable, Hashable {
         goals: [
             WidgetGoal(title: "Complete one flight", systemImage: "paperplane.fill", current: 1, target: 1),
             WidgetGoal(title: "Focus 30 minutes", systemImage: "timer", current: 18, target: 30),
-            WidgetGoal(title: "Unlock a new badge", systemImage: "rosette", current: 0, target: 1),
+            WidgetGoal(title: "Spin the Free Coin Spin", systemImage: "arrow.triangle.2.circlepath",
+                       current: 0, target: 1),
             WidgetGoal(title: "Earn 10 Focus Coins", systemImage: "circle.hexagongrid.fill", current: 10, target: 10),
         ],
         goalsCompleted: 2, goalsTotal: 4, canClaimReward: false,

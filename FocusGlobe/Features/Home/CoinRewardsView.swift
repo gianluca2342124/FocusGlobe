@@ -46,7 +46,7 @@ struct CoinSpinButton: View {
             // The long rest (phase 0) sets the ~3 s cadence; 1–4 are a gentle shake.
             phase == 0 ? .easeInOut(duration: 3.0) : .spring(response: 0.16, dampingFraction: 0.4)
         }
-        .accessibilityLabel("Free Coin Spin. Watch a video to win Focus Coins.")
+        .accessibilityLabel("Free Coin Spin. Spin to win Focus Coins.")
     }
 
     private func shakeAngle(_ p: Int) -> Double {
@@ -151,7 +151,10 @@ struct CoinSpinSheet: View {
                 .font(.system(size: 15, weight: .heavy, design: .default))
                 .tracking(0.5)
                 .foregroundStyle(AppColors.gold)
-            Text("Watch a short video and spin for a reward.")
+            // PRO removes ads everywhere, the spin included — so an entitled pilot
+            // is never promised a video they will not be shown.
+            Text(appModel.isPro ? "Spin the wheel for a reward."
+                                : "Watch a short video and spin for a reward.")
                 .font(AppTypography.callout)
                 .foregroundStyle(AppColors.textSecondary)
                 .multilineTextAlignment(.center)
@@ -164,11 +167,17 @@ struct CoinSpinSheet: View {
                     .foregroundStyle(AppColors.textSecondary)
                     .multilineTextAlignment(.center)
             }
-            AppPrimaryButton(title: busy ? "Loading…" : "Watch video", systemImage: "play.fill") {
+            AppPrimaryButton(title: spinButtonTitle,
+                             systemImage: appModel.isPro ? "arrow.triangle.2.circlepath" : "play.fill") {
                 watch()
             }
             .disabled(busy)
         }
+    }
+
+    private var spinButtonTitle: String {
+        if busy { return "Loading…" }
+        return appModel.isPro ? "Spin now" : "Watch video"
     }
 
     private var spinning: some View {
@@ -213,10 +222,15 @@ struct CoinSpinSheet: View {
         note = nil
         appModel.tapFeedback()
         Task { @MainActor in
+            // Read the gate BEFORE spinning so the two failure modes can be told
+            // apart: still cooling down, versus no rewarded video available.
+            let onCooldown = !appModel.canCoinSpin
             let won = await appModel.spinCoinReward()
             busy = false
             guard let won else {
-                note = "No video available right now. Please try again soon."
+                note = onCooldown
+                    ? "Your next free spin is warming up. Try again in a moment."
+                    : "No video available right now. Please try again soon."
                 return
             }
             prize = won

@@ -17,7 +17,6 @@ struct SettingsView: View {
     #endif
     #if DEBUG
     @State private var showResetConfirm = false
-    @State private var showOnlineDiagnostics = false
     #endif
 
     var body: some View {
@@ -334,24 +333,13 @@ struct SettingsView: View {
                 // now holds a real lifetime entitlement, so PRO is exercised by
                 // signing in via Settings ▸ Account like any customer.
                 //
-                // Only the pre-existing, unrelated internal diagnostics remain —
-                // still Debug-only, still absent from Release/TestFlight/App Store.
-                // Entitlement refreshing continues automatically (app becomes
-                // active, after login, purchase, restore and account changes); the
-                // manual button was a convenience, not the mechanism.
-                Button {
-                    appModel.tapFeedback()
-                    showOnlineDiagnostics = true
-                } label: {
-                    SettingsRow(systemImage: "waveform.badge.magnifyingglass", title: "Online diagnostics",
-                                subtitle: "Supabase status, presence & rooms",
-                                tint: AppColors.brand,
-                                trailing: AnyView(Image(systemName: "chevron.right")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundStyle(AppColors.textTertiary)))
-                }
-                .buttonStyle(SoftPressStyle())
-                RowDivider()
+                // The Online diagnostics inspector is gone too — screen, row and
+                // sheet. It surfaced backend hostnames, presence internals and a
+                // room-creation control; none of that belongs in a shipping build,
+                // and a Debug-only fence is not a good enough reason to keep an
+                // inspector one build configuration away from a customer.
+                //
+                // What remains is a single local reset used to replay onboarding.
                 Button {
                     appModel.tapFeedback()
                     showResetConfirm = true
@@ -363,11 +351,6 @@ struct SettingsView: View {
                 }
                 .buttonStyle(SoftPressStyle())
             }
-        }
-        .sheet(isPresented: $showOnlineDiagnostics) {
-            OnlineDiagnosticsView()
-                .environmentObject(appModel)
-                .environmentObject(online)
         }
         .confirmationDialog("Reset all data?",
                             isPresented: $showResetConfirm,

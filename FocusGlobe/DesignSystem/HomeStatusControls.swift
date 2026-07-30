@@ -86,7 +86,7 @@ struct CoinSpinCircleButton: View {
     var body: some View {
         StatusCircleButton(size: size,
                            ring: AppColors.gold.opacity(0.30),
-                           accessibilityText: "Free Coin Spin. Watch a video to win Focus Coins.",
+                           accessibilityText: "Free Coin Spin. Spin to win Focus Coins.",
                            action: action) {
             // The real free-coin-spin artwork (near full-bleed). No generated
             // play/coin glyphs — the asset carries the whole invitation.
