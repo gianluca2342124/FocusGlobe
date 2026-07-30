@@ -306,6 +306,18 @@ final class FocusOnlineModel: ObservableObject {
             flightDidStart(skyID: pending.skyID, sessionID: pending.sessionID,
                            expectedEndAt: pending.expectedEndAt, category: pending.category)
         }
+        // …and replay a held INVITATION for the same reason.
+        //
+        // This used to run only after a fresh Sign in with Apple, so a token
+        // stashed by an ALREADY-signed-in pilot was never consumed: tapping an
+        // invite on a cold launch (session restore / profile ensure still in
+        // flight, or one flaky network moment) stored the token, showed a message,
+        // and then silently dropped it — the invitation could not be opened again
+        // because the link had already been "used" from the pilot's point of view.
+        // Now any path back to `.ready` picks it up.
+        if availability.isAvailable, profile != nil, OnlineCache.pendingInviteToken != nil {
+            await consumePendingInviteIfAny()
+        }
     }
 
     /// Wait (briefly) until an invite can actually be prepared.
@@ -1446,9 +1458,20 @@ final class FocusOnlineModel: ObservableObject {
         guard let token = DeepLinkService.inviteToken(from: url) else { return }
         await refreshAvailability()
         guard availability.isAvailable else {
-            // Keep the invitation; preview it right after sign-in.
+            // Hold the invitation and explain TRUTHFULLY why it can't open yet.
+            // `refreshAvailability()` replays it the moment we reach `.ready`, so
+            // the pilot never has to find the link again.
+            //
+            // This used to say "Sign in to join this private flight" for every
+            // non-ready state — including no-internet and reconnecting, which told
+            // an already-signed-in pilot to do something they had already done.
             OnlineCache.pendingInviteToken = token
-            inviteJoinMessage = "Sign in to join this private flight."
+            switch availability {
+            case .signedOut, .sessionExpired:
+                inviteJoinMessage = "Sign in to join this private flight."
+            default:
+                inviteJoinMessage = availability.userMessage
+            }
             return
         }
         await previewInvite(token: token)
