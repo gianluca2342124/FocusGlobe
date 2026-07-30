@@ -178,7 +178,7 @@ private struct WidgetPreviewTile: View {
     }
 
     private var focusNowPreview: some View {
-        let resumable = appModel.resumableJourney != nil
+        let resumable = appModel.hasResumableJourney
         return ZStack {
             SkyStillPreview(sky: appModel.selectedSky)
             LinearGradient(colors: [.black.opacity(0.14), .black.opacity(0.10), .black.opacity(0.72)],

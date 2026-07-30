@@ -63,7 +63,11 @@ struct HomeView: View {
     /// The Resume tab may ONLY appear when the main CTA is the real "Start Focus"
     /// action (an unlocked Sky). On a locked Sky the CTA is a Preview button, and
     /// a resume tab hanging off a preview would be nonsensical — so it's hidden.
-    private var showResumeTab: Bool { appModel.resumableJourney != nil && currentSkyUnlocked }
+    /// Requires the snapshot to PROVE it is Solo. Deliberately not a check on
+    /// `online.flightMode`: that value is sticky and persisted, so at display time
+    /// it reflects the last mode ever chosen, not the mode of the saved journey —
+    /// it would both miss stale Online snapshots and hide legitimate Solo ones.
+    private var showResumeTab: Bool { appModel.hasResumableJourney && currentSkyUnlocked }
 
     /// The selected page runs the full production cadence, its circular
     /// neighbours retain the complete scene at a reduced cadence, and far
@@ -301,7 +305,7 @@ struct HomeView: View {
     /// flight, or while the paywall is up. Apple may still choose not to show it.
     private func maybeRequestReview() {
         guard !router.showPaywall, router.activeJourney == nil,
-              appModel.resumableJourney == nil else { return }
+              !appModel.hasResumableJourney else { return }
         homeVisitCount += 1
         guard homeVisitCount % 3 == 0 else { return }
         let now = Date().timeIntervalSince1970
@@ -322,7 +326,7 @@ struct HomeView: View {
     /// boost also re-checks at fire time in case another path (deep link,
     /// locked-Sky tap) raised the paywall during its delay.
     private func presentHomeAutoPopup() {
-        guard appModel.resumableJourney == nil, !router.showPaywall else { return }
+        guard !appModel.hasResumableJourney, !router.showPaywall else { return }
         if appModel.shouldShowPremiumIntro {
             appModel.markPremiumIntroSeen()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {

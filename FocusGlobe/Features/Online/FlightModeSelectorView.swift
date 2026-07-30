@@ -57,15 +57,6 @@ struct FlightModeSelectorView: View {
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
 
-            // The public-presence disclosure, shown HERE — on the Online setup
-            // step, before take-off — instead of as an alert after Continue.
-            // Same wording, same information, no interruption between choosing
-            // Online and the Sky opening.
-            if onlineSelected {
-                publicSkyDisclosure
-                    .transition(.opacity)
-            }
-
             AppPrimaryButton(title: "Continue", systemImage: "arrow.right", iconTrailing: true) {
                 appModel.tapFeedback()
                 continueTapped()
@@ -102,29 +93,12 @@ struct FlightModeSelectorView: View {
         // OWN local coordinator (see FlightSetupView) — never the app-wide router,
         // which would collapse this full-screen cover.
         //
-        // The "Fly in Public Skies?" alert that used to live here is gone. It fired
-        // from `continueTapped()` AFTER the pilot had already chosen Online and
-        // pressed Continue, so it interrupted the one moment that should feel
-        // immediate. Its two jobs are preserved: the wording is now the always-
-        // visible `publicSkyDisclosure` above (read before take-off, not after),
-        // and its side effects are committed in `continueTapped()`.
-    }
-
-    /// The public-presence disclosure. Calm, secondary, and never a modal —
-    /// exactly what the alert used to say.
-    private var publicSkyDisclosure: some View {
-        HStack(alignment: .top, spacing: AppSpacing.xs) {
-            Image(systemName: "eye")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.5))
-                .padding(.top, 1)
-            Text("Other pilots see your anonymous alias, balloon, Sky and roughly how long you're focusing. Your name, email and goals are never shared.")
-                .font(AppTypography.caption)
-                .foregroundStyle(.white.opacity(0.62))
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: 420)
-        .padding(.horizontal, AppSpacing.xs)
+        // NO public-presence disclosure is shown on this step: not the old "Fly in
+        // Public Skies?" alert, and not the inline paragraph that replaced it. The
+        // cards go straight to Continue, with no reserved vertical space. Choosing
+        // Online still records the acknowledgement silently in `continueTapped()`,
+        // and the privacy wording lives in Settings ▸ Privacy (Privacy Policy and
+        // Terms are unchanged and still reachable there).
     }
 
     private func continueTapped() {
@@ -155,9 +129,9 @@ struct FlightModeSelectorView: View {
             }
             return
         }
-        // Take off immediately. The disclosure was read on this very step (it is
-        // shown inline whenever Online is selected), so the acknowledgement is
-        // simply recorded here rather than demanded through a modal.
+        // Take off immediately. Choosing Online IS the acknowledgement: it is
+        // recorded silently here, with no modal and no visible disclosure on the
+        // step (the privacy wording lives in Settings ▸ Privacy).
         //
         // `setDiscoverable(true)` is called ONLY on the first Online flight — it
         // is the pilot's public-presence preference, and re-asserting it on every

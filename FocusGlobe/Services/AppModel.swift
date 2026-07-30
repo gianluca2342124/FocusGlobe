@@ -93,6 +93,11 @@ final class AppModel: ObservableObject {
     /// A lightweight snapshot of an unfinished journey, offered for resume on Home.
     @Published private(set) var resumableJourney: ResumableJourney?
 
+    /// The ONE question every resume surface should ask: is there a journey we can
+    /// genuinely offer to continue? Only a Solo snapshot qualifies — an Online or
+    /// unidentifiable one is never resumable, however recent it is.
+    var hasResumableJourney: Bool { resumableJourney?.isResumable ?? false }
+
     /// Mirrors the location service's resolution state so views can observe it.
     @Published private(set) var locationState: LocationService.State = .idle
 
@@ -130,7 +135,18 @@ final class AppModel: ObservableObject {
         self.progress = loadedProgress
         self.history = loadedHistory
         self.revenueCatPro = persistence.bool(for: .isPro)
-        self.resumableJourney = persistence.load(ResumableJourney.self, for: .resumableJourney)
+        // Only a snapshot that PROVES it is Solo survives the load. An Online one —
+        // or a legacy one from before the mode was recorded, which is therefore
+        // indistinguishable from a stale Online journey written by a buggy build —
+        // is dropped here rather than being offered on Home. This is what clears
+        // the "Resume your flight" CTA that is already stuck on existing installs.
+        let loadedResume = persistence.load(ResumableJourney.self, for: .resumableJourney)
+        if let loadedResume, !loadedResume.isResumable {
+            self.resumableJourney = nil
+            persistence.remove(.resumableJourney)
+        } else {
+            self.resumableJourney = loadedResume
+        }
 
         // Profile: first-run onboarding shows only for genuinely new pilots.
         // Anyone with existing progress/history predates onboarding — mark it
@@ -684,7 +700,14 @@ final class AppModel: ObservableObject {
                                   category: profile.focusStyle ?? "Focus")
     }
     func onlineFlightPauseChanged(_ paused: Bool) { onlineRef?.flightPauseChanged(isPaused: paused) }
-    func onlineFlightDidEnd(sessionID: String) { onlineRef?.flightDidEnd(sessionID: sessionID) }
+    func onlineFlightDidEnd(sessionID: String) {
+        // A definitive "an Online flight just ended" signal, independent of the
+        // sticky `flightMode`. Leaving an Online journey must never leave a resume
+        // offer behind — including one inherited from an earlier Solo flight, which
+        // can no longer be reconstructed meaningfully once this journey replaced it.
+        if onlineRef?.flightMode.isOnline == true { clearResumableJourney() }
+        onlineRef?.flightDidEnd(sessionID: sessionID)
+    }
 
     /// Buy a cosmetic with Focus Coins (or claim a premium item when Pro).
     /// Returns `true` on success.
@@ -1277,10 +1300,25 @@ final class AppModel: ObservableObject {
     /// rather than a duplicated boolean.
     func saveResumableJourney(origin: JourneyOrigin, route: Route, intention: String?,
                               elapsedSeconds: Int, skinAssetName: String, soundID: String?) {
-        guard onlineRef?.flightMode.isOnline != true else { return }
+        // `?? .publicSky` is the fail-SAFE default: if the online model is somehow
+        // unreachable we must not mint a snapshot we cannot prove is Solo. The old
+        // `onlineRef?.flightMode.isOnline != true` inverted exactly here — a nil
+        // ref made the expression true and an Online journey WAS saved.
+        let mode = onlineRef?.flightMode ?? .publicSky
+        guard mode == .solo else {
+            // Not merely "don't save": an Online journey must also DROP whatever
+            // snapshot is already on disk. Skipping silently is what left Home
+            // showing "Resume your flight" after an Online flight — the CTA was
+            // being served by an older, unrelated snapshot that nothing cleared.
+            #if DEBUG
+            print("[Resume] rejected: Online/shared journeys are never resumable")
+            #endif
+            clearResumableJourney()
+            return
+        }
         let snapshot = ResumableJourney(origin: origin, route: route, intention: intention,
                                         elapsedSeconds: elapsedSeconds, skinAssetName: skinAssetName,
-                                        soundID: soundID, savedAt: Date())
+                                        soundID: soundID, savedAt: Date(), mode: .solo)
         resumableJourney = snapshot
         persistence.save(snapshot, for: .resumableJourney)
         syncWidgets()
@@ -1298,6 +1336,12 @@ final class AppModel: ObservableObject {
     /// invalid or already complete.
     func makeResumeJourney() -> Journey? {
         guard let snapshot = resumableJourney else { return nil }
+        // Belt-and-braces with the load-time purge and the Home gate: an Online or
+        // unidentifiable snapshot is never reconstructed, and is dropped on sight.
+        guard snapshot.isResumable else {
+            clearResumableJourney()
+            return nil
+        }
         let total = snapshot.route.durationMinutes * 60
         guard snapshot.elapsedSeconds > 0, snapshot.elapsedSeconds < total else {
             clearResumableJourney()
@@ -1612,7 +1656,7 @@ final class AppModel: ObservableObject {
                                  landedToday: landedToday,
                                  goalsRemaining: remaining,
                                  allGoalsDoneToday: remaining == 0,
-                                 hasUnfinishedJourney: resumable != nil,
+                                 hasUnfinishedJourney: resumable?.isResumable ?? false,
                                  unfinishedOrigin: resumable?.origin.city,
                                  unfinishedDestination: resumable?.route.destinationName,
                                  originCity: currentOrigin?.city,
@@ -1682,7 +1726,7 @@ final class AppModel: ObservableObject {
 
         if let r = resumableJourney {
             let total = max(1, r.route.durationMinutes * 60)
-            snap.hasResumable = r.elapsedSeconds > 0 && r.elapsedSeconds < total
+            snap.hasResumable = r.isResumable && r.elapsedSeconds > 0 && r.elapsedSeconds < total
             snap.resumeOriginCity = r.origin.city
             snap.resumeOriginCode = r.origin.code
             snap.resumeDestinationCity = r.route.destinationName
@@ -1825,4 +1869,15 @@ struct ResumableJourney: Codable, Equatable {
     let skinAssetName: String
     let soundID: String?
     let savedAt: Date
+    /// The flight mode this snapshot was taken in. ONLY `.solo` is resumable.
+    ///
+    /// Optional purely for decoding: snapshots written before this field existed
+    /// carry no mode and are therefore *unidentifiable* — they could equally be a
+    /// stale Online journey from a buggy build. `isResumable` treats them as not
+    /// resumable, so the invariant holds for data already on disk rather than only
+    /// for newly written snapshots.
+    var mode: OnlineFlightMode? = nil
+
+    /// The single rule Home and the restore path both use.
+    var isResumable: Bool { mode == .solo }
 }
