@@ -722,18 +722,49 @@ struct FocusSessionView: View {
     // at the bottom: large and glanceable, with the controls demoted to a quiet
     // secondary affordance beneath it. (Distance was removed — it isn't the point.)
     private var bottomBar: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: Layout.pad(16, 24)) {
             Spacer()
             // A half-second TimelineView is the tick: every value is derived from
-            // `ctx.date` right here, so the clock can never go stale.
+            // `ctx.date` right here, so the clock can never go stale. ONLY the
+            // numerals live inside it — the glass pause/land capsule sits OUTSIDE,
+            // so its Liquid Glass substrate is built once and rebuilt only when the
+            // pause state actually flips, never twice a second with every tick.
             TimelineView(.periodic(from: .now, by: 0.5)) { ctx in
                 heroTimer(now: ctx.date)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, AppSpacing.screen)
+            heroControl
         }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, AppSpacing.screen)
         .padding(.bottom, Layout.pad(30, 46))
         .transition(.opacity)
+    }
+
+    /// The single quiet control beneath the hero timer — Land now (Infinite) or
+    /// Pause / Resume (finite). Deliberately outside the ticking timeline above.
+    @ViewBuilder private var heroControl: some View {
+        if isInfinity {
+            subtleControl(icon: "arrow.down.to.line", title: "Land now") {
+                appModel.tapFeedback(); vm.landNow()
+            }
+        } else {
+            subtleControl(icon: vm.isPaused ? "play.fill" : "pause.fill",
+                          title: vm.isPaused ? "Resume" : "Pause") {
+                // Pausing is FocusGlobe PRO. A free tap opens the Pause paywall
+                // and the timer KEEPS running — we never pause to present it.
+                // Resuming is always allowed (only a PRO pilot could have paused).
+                if !vm.isPaused {
+                    switch appModel.entitlement {
+                    case .premium: break
+                    case .free:
+                        appModel.tapFeedback(); journeyPaywall = JourneyPaywall(context: .pause); return
+                    case .loading:
+                        appModel.tapFeedback(); appModel.refreshSubscriptionStatus(); return
+                    }
+                }
+                vm.togglePause()
+            }
+        }
     }
 
     // MARK: Clean mode — a tiny timer + a reveal button, nothing else
@@ -786,44 +817,22 @@ struct FocusSessionView: View {
         // always visibly tick (the calm "20 min" style stays on Home/ticket).
         let secs = isInfinity ? elapsedSecs : remainingSecs
         let value = secs >= 3600 ? Formatters.countdown(secs) : Formatters.flightClock(secs)
-        return VStack(spacing: Layout.pad(16, 24)) {
-            VStack(spacing: 4) {
-                Text(label.uppercased())
-                    .font(.system(size: Layout.pad(12, 15), weight: .semibold, design: .default))
-                    .tracking(2.5)
-                    .foregroundStyle(.white.opacity(0.55))
-                Text(value)
-                    .font(.system(size: Layout.pad(66, 108), weight: .bold, design: .default))
-                    .monospacedDigit()
-                    .foregroundStyle(.white)
-                    .contentTransition(.numericText(countsDown: !isInfinity))
-                    .animation(.snappy(duration: 0.35), value: value)
-                    .minimumScaleFactor(0.5)
-                    .lineLimit(1)
-                    .shadow(color: .black.opacity(0.45), radius: 14, y: 3)
-            }
-            if isInfinity {
-                subtleControl(icon: "arrow.down.to.line", title: "Land now") {
-                    appModel.tapFeedback(); vm.landNow()
-                }
-            } else {
-                subtleControl(icon: vm.isPaused ? "play.fill" : "pause.fill",
-                              title: vm.isPaused ? "Resume" : "Pause") {
-                    // Pausing is FocusGlobe PRO. A free tap opens the Pause paywall
-                    // and the timer KEEPS running — we never pause to present it.
-                    // Resuming is always allowed (only a PRO pilot could have paused).
-                    if !vm.isPaused {
-                        switch appModel.entitlement {
-                        case .premium: break
-                        case .free:
-                            appModel.tapFeedback(); journeyPaywall = JourneyPaywall(context: .pause); return
-                        case .loading:
-                            appModel.tapFeedback(); appModel.refreshSubscriptionStatus(); return
-                        }
-                    }
-                    vm.togglePause()
-                }
-            }
+        // ONLY the ticking numerals — the control lives in `heroControl`, outside
+        // this half-second timeline.
+        return VStack(spacing: 4) {
+            Text(label.uppercased())
+                .font(.system(size: Layout.pad(12, 15), weight: .semibold, design: .default))
+                .tracking(2.5)
+                .foregroundStyle(.white.opacity(0.55))
+            Text(value)
+                .font(.system(size: Layout.pad(66, 108), weight: .bold, design: .default))
+                .monospacedDigit()
+                .foregroundStyle(.white)
+                .contentTransition(.numericText(countsDown: !isInfinity))
+                .animation(.snappy(duration: 0.35), value: value)
+                .minimumScaleFactor(0.5)
+                .lineLimit(1)
+                .shadow(color: .black.opacity(0.45), radius: 14, y: 3)
         }
         .frame(maxWidth: .infinity)
     }
@@ -868,7 +877,11 @@ struct FocusSessionView: View {
     }
 
     /// A quiet, secondary control beneath the hero timer — deliberately
-    /// understated so the time stays the focus.
+    /// understated so the time stays the focus. It shares the ONE Liquid Glass
+    /// substrate every in-flight utility uses (the close button, the controls
+    /// button), so pause / resume / land read as the same material family rather
+    /// than a flat translucent pill — reflective over a bright Fiji sky, still
+    /// legible over Deep Space, and honouring Reduce Transparency automatically.
     private func subtleControl(icon: String, title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 8) {
@@ -878,8 +891,8 @@ struct FocusSessionView: View {
             .foregroundStyle(.white.opacity(0.9))
             .padding(.horizontal, Layout.pad(22, 28))
             .padding(.vertical, Layout.pad(12, 15))
-            .background(Capsule().fill(.white.opacity(0.12)))
-            .overlay(Capsule().strokeBorder(.white.opacity(0.16), lineWidth: 1))
+            .background { FocusLiquidGlassSurface(shape: Capsule()) }
+            .contentShape(Capsule())
         }
         .buttonStyle(SoftPressStyle())
         .accessibilityLabel(title)
