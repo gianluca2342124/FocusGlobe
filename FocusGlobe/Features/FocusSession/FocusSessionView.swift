@@ -292,48 +292,7 @@ struct FocusSessionView: View {
                 // A Solo flight is truly solo: NO other balloons (real or
                 // decorative). Online (public/private) keeps the living Sky.
                 if isOnlineFlight {
-                    AmbientPilotsLayer(skyID: matchedSky?.id ?? "classic",
-                                       // The SCENE clock, not the local pilot's.
-                                       // `displayElapsed` freezes at `pausedAt` so
-                                       // OUR timer holds still — feeding it here
-                                       // also froze every remote balloon and the
-                                       // ambient pilots, so pausing appeared to
-                                       // stop the whole Online world. Pausing is
-                                       // local: other pilots keep flying.
-                                       elapsed: { sceneElapsed(at: Date()) },
-                                       animated: !reduceMotion,
-                                       // Staged, not raw: an exiting pilot stays in
-                                       // this list (with its slot) until its
-                                       // animation finishes.
-                                       realPilots: pilotStage.entries.map(\.pilot),
-                                       pilotLifecycle: pilotStage.presentation,
-                                       onPilotSettled: { pilotStage.settle($0) },
-                                       onArrivalLabelDone: { pilotStage.clearArrivalLabel($0) },
-                                       labelsVisible: pilotLabelsVisible,
-                                       roomMode: roomBubbleMode,
-                                       isPrivate: online.isPrivateFlight,
-                                       onSelectReal: { selectedRealPilot = $0 },
-                                       onAddFriend: quickAddFriend,
-                                       onHide: { appModel.hidePilot($0.id) },
-                                       onBlock: quickBlock,
-                                       onReport: { selectedRealPilot = $0 })
-                        .transition(.opacity)
-                        // ONE lifecycle-aware task drives the automatic label
-                        // reveal, keyed to the JOURNEY (route id) rather than to
-                        // this view. `.task(id:)` re-runs only when that key
-                        // changes, and the `labelIntroPlayedFor` guard means a
-                        // remount — including coming back from Cabin View — is a
-                        // no-op, while a genuinely new journey does replay it.
-                        // Bound to the view's lifetime, so teardown cancels it.
-                        .task(id: vm.route.id) {
-                            guard labelIntroPlayedFor != vm.route.id else { return }
-                            labelIntroPlayedFor = vm.route.id
-                            try? await Task.sleep(
-                                nanoseconds: OnlinePilotLifecycle.nanoseconds(
-                                    OnlinePilotLifecycle.labelIntro))
-                            guard !Task.isCancelled else { return }
-                            labelIntroActive = false
-                        }
+                    onlinePilotsLayer
                 }
                 balloon
                     .transition(.opacity)
@@ -428,63 +387,18 @@ struct FocusSessionView: View {
         } message: {
             Text("You'll lose this flight's progress: no Focus Coins earned, today's missions won't count it, and your streak only grows when you land. You can resume from Home.")
         }
-        .overlay(alignment: .top) {
-            if online.reconnecting && online.flightMode.isOnline {
-                Text("Reconnecting…")
-                    .font(.system(size: 12, weight: .semibold, design: .default))
-                    .foregroundStyle(.white.opacity(0.8))
-                    .padding(.horizontal, 12).padding(.vertical, 6)
-                    .background(Capsule().fill(.ultraThinMaterial))
-                    .padding(.top, 60)
-                    .transition(.opacity)
-            }
-        }
+        .overlay(alignment: .top) { reconnectingBanner }
         // "<alias> joined" — a subtle glass pill, auto-dismissing, once per real
         // join (never for the current user, reconnects, or decorative pilots).
-        .overlay(alignment: .top) {
-            if let alias = online.joinToastAlias, isOnlineFlight {
-                HStack(spacing: 7) {
-                    Image(systemName: "person.fill.badge.plus")
-                        .font(.system(size: 12, weight: .bold)).foregroundStyle(AppColors.gold)
-                    Text("\(alias) joined")
-                        .font(.system(size: 13, weight: .bold, design: .default))
-                        .foregroundStyle(.white)
-                }
-                .padding(.horizontal, 13).padding(.vertical, 8)
-                .background(Capsule().fill(.ultraThinMaterial))
-                .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 1))
-                .padding(.top, 96)
-                .transition(.move(edge: .top).combined(with: .opacity))
-                .task(id: alias) {
-                    try? await Task.sleep(nanoseconds: 2_600_000_000)
-                    withAnimation(.easeOut(duration: 0.3)) { online.clearJoinToast() }
-                }
-            }
-        }
+        .overlay(alignment: .top) { joinToastBanner }
         // ONE transient surface for a social note AND the invite's preparing state.
         // The controls panel closes the moment Invite is tapped, so without this the
         // pilot got no sign at all that a link was being made. Restrained and
         // non-blocking: a small pill above the timer, never an alert or a spinner
         // over the sky.
         .overlay(alignment: .bottom) {
-            if invitePreparing || socialNote != nil {
-                HStack(spacing: 8) {
-                    if invitePreparing {
-                        ProgressView()
-                            .progressViewStyle(.circular)
-                            .tint(.white)
-                            .scaleEffect(0.7)
-                            .frame(width: 14, height: 14)
-                    }
-                    Text(verbatim: inviteStatusMessage)
-                        .font(.system(size: 13, weight: .semibold, design: .default))
-                        .foregroundStyle(.white)
-                }
-                .padding(.horizontal, 14).padding(.vertical, 8)
-                .background(Capsule().fill(.ultraThinMaterial))
-                .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 1))
-                .padding(.bottom, 130)
-                .transition(.opacity)
+            if shouldShowInviteStatus {
+                InviteStatusPill(isPreparing: invitePreparing, message: inviteStatusMessage)
             }
         }
         .animation(.easeInOut(duration: 0.3), value: online.joinToastAlias)
@@ -496,26 +410,7 @@ struct FocusSessionView: View {
         }
         // A quiet, elegant applause moment when another pilot applauds ME —
         // auto-dismisses; bursts are throttled in the model.
-        .overlay(alignment: .top) {
-            if let from = online.applauseFrom {
-                HStack(spacing: 8) {
-                    Text("👏")
-                    Text("\(from) applauds your focus")
-                        .font(.system(size: 13.5, weight: .bold, design: .default))
-                        .foregroundStyle(.white)
-                }
-                .padding(.horizontal, 16).padding(.vertical, 10)
-                .background(Capsule().fill(.ultraThinMaterial))
-                .overlay(Capsule().fill(AppColors.gold.opacity(0.22)))
-                .overlay(Capsule().strokeBorder(.white.opacity(0.2), lineWidth: 1))
-                .padding(.top, 54)
-                .transition(.opacity.combined(with: .move(edge: .top)))
-                .task {
-                    try? await Task.sleep(nanoseconds: 2_600_000_000)
-                    withAnimation(.easeOut(duration: 0.35)) { online.clearApplause() }
-                }
-            }
-        }
+        .overlay(alignment: .top) { applauseBanner }
         .animation(.spring(response: 0.4, dampingFraction: 0.85), value: online.applauseFrom)
         // Invite Friends hands ONE link to the native share sheet — no custom UI.
         #if canImport(UIKit)
@@ -581,10 +476,23 @@ struct FocusSessionView: View {
         // arrival — labels and all — the moment the pilot came back outside. Bound
         // here, the stage spans the whole flight and only a genuinely new route (or
         // leaving the flight) resets it.
+        //
+        // The five-second label intro runs in this SAME journey task (there is only
+        // one `.task(id: vm.route.id)` in the view). Owning it here rather than on
+        // the sky layer means a quick peek at the Cabin no longer cancels the intro
+        // mid-sleep — which previously left labels stuck visible, because the guard
+        // then blocked a replay. `labelIntroPlayedFor` still makes it run once per
+        // route.
         .task(id: vm.route.id) {
             guard isOnlineFlight else { return }
             pilotStage.begin(journeyID: vm.route.id)
             pilotStage.sync(with: visibleRealPilots)
+            guard labelIntroPlayedFor != vm.route.id else { return }
+            labelIntroPlayedFor = vm.route.id
+            try? await Task.sleep(
+                nanoseconds: OnlinePilotLifecycle.nanoseconds(OnlinePilotLifecycle.labelIntro))
+            guard !Task.isCancelled else { return }
+            labelIntroActive = false
         }
         // Reconcile on ids AND session ids, so a pilot who lands and takes off again
         // is picked up even though the id set never changed. Completion is NOT polled:
@@ -600,6 +508,99 @@ struct FocusSessionView: View {
         // screen (end, cancel, or returning Home). Scoped to this view only.
         .keepScreenAwake(true)
     }
+
+    // MARK: Body sub-views (kept out of `body` so each type-checks in isolation)
+
+    /// The living Online sky: real + decorative balloons. Reads the SCENE clock,
+    /// so a local pause never stops other pilots. Pulled out of `body` because its
+    /// ~18-argument initializer was the single heaviest expression to type-check;
+    /// its identity (and the stage that feeds it) is unchanged.
+    private var onlinePilotsLayer: some View {
+        AmbientPilotsLayer(skyID: matchedSky?.id ?? "classic",
+                           // The SCENE clock, not the local pilot's. `displayElapsed`
+                           // freezes at `pausedAt` so OUR timer holds still — feeding
+                           // it here also froze every remote balloon and the ambient
+                           // pilots, so pausing appeared to stop the whole Online
+                           // world. Pausing is local: other pilots keep flying.
+                           elapsed: { sceneElapsed(at: Date()) },
+                           animated: !reduceMotion,
+                           // Staged, not raw: an exiting pilot stays in this list
+                           // (with its slot) until its animation finishes.
+                           realPilots: pilotStage.entries.map(\.pilot),
+                           pilotLifecycle: pilotStage.presentation,
+                           onPilotSettled: { pilotStage.settle($0) },
+                           onArrivalLabelDone: { pilotStage.clearArrivalLabel($0) },
+                           labelsVisible: pilotLabelsVisible,
+                           roomMode: roomBubbleMode,
+                           isPrivate: online.isPrivateFlight,
+                           onSelectReal: { selectedRealPilot = $0 },
+                           onAddFriend: quickAddFriend,
+                           onHide: { appModel.hidePilot($0.id) },
+                           onBlock: quickBlock,
+                           onReport: { selectedRealPilot = $0 })
+            .transition(.opacity)
+    }
+
+    /// A quiet "Reconnecting…" pill while the Online socket is re-establishing.
+    @ViewBuilder private var reconnectingBanner: some View {
+        if online.reconnecting && online.flightMode.isOnline {
+            Text("Reconnecting…")
+                .font(.system(size: 12, weight: .semibold, design: .default))
+                .foregroundStyle(.white.opacity(0.8))
+                .padding(.horizontal, 12).padding(.vertical, 6)
+                .background(Capsule().fill(.ultraThinMaterial))
+                .padding(.top, 60)
+                .transition(.opacity)
+        }
+    }
+
+    /// "<alias> joined" — auto-dismissing, once per real join.
+    @ViewBuilder private var joinToastBanner: some View {
+        if let alias = online.joinToastAlias, isOnlineFlight {
+            HStack(spacing: 7) {
+                Image(systemName: "person.fill.badge.plus")
+                    .font(.system(size: 12, weight: .bold)).foregroundStyle(AppColors.gold)
+                Text(verbatim: "\(alias) joined")
+                    .font(.system(size: 13, weight: .bold, design: .default))
+                    .foregroundStyle(.white)
+            }
+            .padding(.horizontal, 13).padding(.vertical, 8)
+            .background(Capsule().fill(.ultraThinMaterial))
+            .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 1))
+            .padding(.top, 96)
+            .transition(.move(edge: .top).combined(with: .opacity))
+            .task(id: alias) {
+                try? await Task.sleep(nanoseconds: 2_600_000_000)
+                withAnimation(.easeOut(duration: 0.3)) { online.clearJoinToast() }
+            }
+        }
+    }
+
+    /// A quiet applause moment when another pilot applauds ME — auto-dismisses.
+    @ViewBuilder private var applauseBanner: some View {
+        if let from = online.applauseFrom {
+            HStack(spacing: 8) {
+                Text(verbatim: "👏")
+                Text(verbatim: "\(from) applauds your focus")
+                    .font(.system(size: 13.5, weight: .bold, design: .default))
+                    .foregroundStyle(.white)
+            }
+            .padding(.horizontal, 16).padding(.vertical, 10)
+            .background(Capsule().fill(.ultraThinMaterial))
+            .overlay(Capsule().fill(AppColors.gold.opacity(0.22)))
+            .overlay(Capsule().strokeBorder(.white.opacity(0.2), lineWidth: 1))
+            .padding(.top, 54)
+            .transition(.opacity.combined(with: .move(edge: .top)))
+            .task {
+                try? await Task.sleep(nanoseconds: 2_600_000_000)
+                withAnimation(.easeOut(duration: 0.35)) { online.clearApplause() }
+            }
+        }
+    }
+
+    /// Whether the transient invite/social pill should be shown at all — a plain
+    /// `Bool` so `body` never resolves a compound condition inline.
+    private var shouldShowInviteStatus: Bool { invitePreparing || socialNote != nil }
 
     // The balloon is **tiny** (~7% of screen height) and stays roughly still,
     // just breathing with a gentle sway + bob. The world tape scrolls *downward*
@@ -972,6 +973,39 @@ struct FocusSessionView: View {
     }
 }
 
+
+// MARK: - Invite / social status pill
+
+/// The transient feedback pill above the timer: an optional spinner while an
+/// invite link is being prepared, then a short message (the preparing line, or a
+/// social note). Its own view boundary so the parent `body` only decides whether
+/// to include it and passes two plain typed values — no conditional UI or
+/// material chain is type-checked inline in `body`. Presentation, positioning and
+/// the opacity transition are exactly as before.
+private struct InviteStatusPill: View {
+    let isPreparing: Bool
+    let message: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            if isPreparing {
+                ProgressView()
+                    .progressViewStyle(.circular)
+                    .tint(.white)
+                    .scaleEffect(0.7)
+                    .frame(width: 14, height: 14)
+            }
+            Text(verbatim: message)
+                .font(.system(size: 13, weight: .semibold, design: .default))
+                .foregroundStyle(.white)
+        }
+        .padding(.horizontal, 14).padding(.vertical, 8)
+        .background(Capsule().fill(.ultraThinMaterial))
+        .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 1))
+        .padding(.bottom, 130)
+        .transition(.opacity)
+    }
+}
 
 // MARK: - Hold to give up (never one accidental tap)
 
