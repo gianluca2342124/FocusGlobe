@@ -177,18 +177,34 @@ private struct WidgetPreviewTile: View {
         }
     }
 
+    /// Mirrors the real `.systemSmall` Focus Now layout exactly: state eyebrow and
+    /// Sky name at the top, the Sky breathing through the middle, a full-width
+    /// action at the bottom, and the same two-ended legibility scrim. Kept in
+    /// lock-step with `FocusNowView.smallLayout` — if the widget changes, this
+    /// changes with it, or the gallery starts advertising a widget that no longer
+    /// exists.
     private var focusNowPreview: some View {
         let resumable = appModel.hasResumableJourney
         return ZStack {
             SkyStillPreview(sky: appModel.selectedSky)
-            LinearGradient(colors: [.black.opacity(0.14), .black.opacity(0.10), .black.opacity(0.72)],
-                           startPoint: .top, endPoint: .bottom)
-            VStack(alignment: .leading, spacing: side * 0.045) {
-                Text(appModel.selectedSky.name)
-                    .font(.system(size: side * 0.095, weight: .heavy))
+            LinearGradient(stops: [
+                .init(color: .black.opacity(0.55), location: 0.00),
+                .init(color: .black.opacity(0.14), location: 0.34),
+                .init(color: .black.opacity(0.30), location: 0.62),
+                .init(color: .black.opacity(0.80), location: 1.00),
+            ], startPoint: .top, endPoint: .bottom)
+            VStack(alignment: .leading, spacing: side * 0.04) {
+                Text("FOCUS NOW")
+                    .font(.system(size: max(8, side * 0.065), weight: .heavy))
+                    .tracking(1.1)
+                    .foregroundStyle(WGTheme.inkSoft)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.72)
-                Spacer()
+                    .fixedSize()
+                Text(appModel.selectedSky.name)
+                    .font(.system(size: side * 0.09, weight: .heavy))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                Spacer(minLength: side * 0.02)
                 Label(resumable ? "Resume" : "Start Focus",
                       systemImage: resumable ? "arrow.uturn.up" : "arrow.up")
                     .font(.system(size: side * 0.075, weight: .heavy))
@@ -201,7 +217,8 @@ private struct WidgetPreviewTile: View {
                     .background(Capsule().fill(WGTheme.gold))
             }
             .foregroundStyle(.white)
-            .padding(side * 0.085)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(side * 0.093)
         }
     }
 
@@ -285,6 +302,76 @@ private struct WidgetPreviewTile: View {
     }
 }
 
+// MARK: - Focus Now · medium preview
+
+/// The square tile mirrors the `.systemSmall` Focus Now widget. Focus Now also
+/// ships `.systemMedium`, and that is the layout the gallery was silently not
+/// showing, so the detail sheet renders it at the real medium aspect ratio
+/// (329 × 155 on a standard iPhone ≈ 2.12 : 1).
+///
+/// Deliberately scoped to Focus Now: no other widget's preview changes.
+private struct FocusNowMediumPreview: View {
+    @EnvironmentObject private var appModel: AppModel
+    /// A ceiling, not a fixed size — the tile shrinks on a narrow screen rather
+    /// than overflowing the sheet.
+    var maximumWidth: CGFloat = 320
+
+    var body: some View {
+        let resumable = appModel.hasResumableJourney
+        ZStack {
+            SkyStillPreview(sky: appModel.selectedSky)
+            LinearGradient(stops: [
+                .init(color: .black.opacity(0.55), location: 0.00),
+                .init(color: .black.opacity(0.14), location: 0.34),
+                .init(color: .black.opacity(0.30), location: 0.62),
+                .init(color: .black.opacity(0.80), location: 1.00),
+            ], startPoint: .top, endPoint: .bottom)
+            HStack(alignment: .center, spacing: 14) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("FOCUS NOW")
+                        .font(.system(size: 10, weight: .heavy))
+                        .tracking(1.1)
+                        .foregroundStyle(WGTheme.inkSoft)
+                        .lineLimit(1)
+                        .fixedSize()
+                    Text(appModel.selectedSky.name)
+                        .font(.system(size: 19, weight: .heavy))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
+                    Text(resumable ? "Your flight is ready to continue."
+                                   : "A quiet flight is one tap away.")
+                        .font(.system(size: 11.5, weight: .semibold))
+                        .foregroundStyle(WGTheme.inkSoft)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.85)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Label(resumable ? "Resume" : "Start Focus",
+                      systemImage: resumable ? "arrow.uturn.up" : "arrow.up")
+                    .font(.system(size: 13, weight: .heavy))
+                    .lineLimit(1)
+                    .foregroundStyle(Color(red: 0.08, green: 0.07, blue: 0.05))
+                    .padding(.horizontal, 13)
+                    .padding(.vertical, 9)
+                    .background(Capsule().fill(WGTheme.gold))
+                    .fixedSize()
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .padding(16)
+        }
+        .aspectRatio(2.12, contentMode: .fit)
+        .frame(maxWidth: maximumWidth)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous)
+            .strokeBorder(.white.opacity(0.10), lineWidth: 1))
+        .shadow(color: .black.opacity(0.35), radius: 12, y: 6)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Focus Now, medium size preview")
+    }
+}
+
 // MARK: - Detail / how-to-add sheet
 
 private struct WidgetDetailSheet: View {
@@ -310,6 +397,10 @@ private struct WidgetDetailSheet: View {
                     closeRow
                     WidgetPreviewTile(item: item, locked: locked, side: 210)
                         .padding(.top, AppSpacing.xs)
+                    if item.id == "FGFocusNow" {
+                        FocusNowMediumPreview()
+                            .environmentObject(appModel)
+                    }
                     VStack(spacing: 6) {
                         Text(item.name)
                             .font(AppTypography.title2).foregroundStyle(AppColors.textPrimary)

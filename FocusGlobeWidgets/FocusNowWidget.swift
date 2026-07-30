@@ -27,6 +27,12 @@ struct FocusNowWidget: Widget {
 struct FocusNowView: View {
     let snapshot: WidgetSnapshot
     @Environment(\.widgetFamily) private var family
+    /// The margins the system WOULD have applied. `contentMarginsDisabled()` is
+    /// what lets the Sky run edge to edge, but it also throws these away — so the
+    /// content re-applies them itself instead of guessing a number. Floored,
+    /// because the widget corner radius is what actually eats a full-width
+    /// control sitting at the bottom of the container.
+    @Environment(\.widgetContentMargins) private var systemMargins
 
     /// Deep link: an active flight returns to it; otherwise the setup flow.
     static func link(_ s: WidgetSnapshot) -> String {
@@ -49,11 +55,27 @@ struct FocusNowView: View {
     }
     private func s(_ hex: Int, _ fallback: Int) -> Color { WColor.hex(hex == 0 ? fallback : hex) }
 
+    /// Content inset, applied to the CONTENT only so the Sky stays full-bleed.
+    private var contentInsets: EdgeInsets {
+        EdgeInsets(top: max(systemMargins.top, 14),
+                   leading: max(systemMargins.leading, 14),
+                   bottom: max(systemMargins.bottom, 15),
+                   trailing: max(systemMargins.trailing, 14))
+    }
+
     var body: some View {
         ZStack {
             skyArtwork
-            LinearGradient(colors: [.black.opacity(0.20), .black.opacity(0.08), .black.opacity(0.72)],
-                           startPoint: .top, endPoint: .bottom)
+            // Legibility scrim. Text now lives at BOTH ends of the small layout,
+            // so the previous single bottom-heavy ramp left the top title fighting
+            // the artwork. This darkens both ends and leaves the Sky itself open
+            // through the middle.
+            LinearGradient(stops: [
+                .init(color: .black.opacity(0.55), location: 0.00),
+                .init(color: .black.opacity(0.14), location: 0.34),
+                .init(color: .black.opacity(0.30), location: 0.62),
+                .init(color: .black.opacity(0.80), location: 1.00),
+            ], startPoint: .top, endPoint: .bottom)
             if family == .systemSmall {
                 smallLayout
             } else {
@@ -62,6 +84,17 @@ struct FocusNowView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipShape(ContainerRelativeShape())
+    }
+
+    /// The state eyebrow, shared by both families. Fixed size on purpose: this is
+    /// the one line that must never shrink or wrap.
+    private var eyebrow: some View {
+        Text(snapshot.activeFlight ? "IN FLIGHT" : "FOCUS NOW")
+            .font(.system(size: 10, weight: .heavy, design: .default))
+            .tracking(1.1)
+            .foregroundStyle(snapshot.activeFlight ? WTheme.teal : WTheme.inkSoft)
+            .lineLimit(1)
+            .fixedSize()
     }
 
     @ViewBuilder private var skyArtwork: some View {
@@ -94,61 +127,71 @@ struct FocusNowView: View {
         snapshot.activeFlight || snapshot.hasResumable ? "arrow.uturn.up" : "arrow.up"
     }
 
-    /// Small is a true edge-to-edge widget, not a resized phone card. Every
-    /// element stays inside the family container and the CTA uses compact copy.
+    /// Small: eyebrow and Sky name pinned to the top, the Sky artwork breathing
+    /// through the middle, the action pinned full-width at the bottom.
+    ///
+    /// The previous version pinned only the title to the top and let a 28 pt live
+    /// timer plus the capsule pile up under it with 13 pt of padding, which is why
+    /// the title read as cut and the action sat in the corner curve. Nothing here
+    /// relies on text shrinking to stay inside: the eyebrow is `fixedSize`, the
+    /// Sky name never drops below 85 % of 14 pt, and the timer is the only element
+    /// allowed to scale hard (a running clock genuinely varies in width).
     private var smallLayout: some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: 6) {
+            eyebrow
+
             Text(displayedSkyName)
-                .font(.system(size: 15, weight: .heavy, design: .default))
+                .font(.system(size: 14, weight: .heavy, design: .default))
                 .foregroundStyle(WTheme.ink)
                 .lineLimit(1)
-                .minimumScaleFactor(0.72)
+                .minimumScaleFactor(0.85)
 
-            Spacer(minLength: 0)
+            Spacer(minLength: 4)
 
             if snapshot.activeFlight {
-                remainingTime(fontSize: 28)
+                remainingTime(fontSize: 22)
             }
 
             actionCapsule(compact: true)
         }
-        .padding(13)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(contentInsets)
     }
 
-    /// Medium uses its horizontal room intentionally: state and remaining time
-    /// stay on the left; the compact action remains safely inset on the right.
+    /// Medium keeps the horizontal composition — text column left, action right —
+    /// but is vertically CENTRED rather than pinned to the bottom edge. Bottom
+    /// pinning with 15 pt of padding is exactly what pushed the title and the
+    /// action into the container's lower rounded corners.
     private var mediumLayout: some View {
-        HStack(alignment: .bottom, spacing: 14) {
+        HStack(alignment: .center, spacing: 14) {
             VStack(alignment: .leading, spacing: 5) {
-                Text(snapshot.activeFlight ? "IN FLIGHT" : "FOCUS NOW")
-                    .font(.system(size: 10, weight: .heavy, design: .default))
-                    .tracking(1.1)
-                    .foregroundStyle(snapshot.activeFlight ? WTheme.teal : WTheme.inkSoft)
-                    .lineLimit(1)
+                eyebrow
 
                 Text(displayedSkyName)
                     .font(.system(size: 19, weight: .heavy, design: .default))
                     .foregroundStyle(WTheme.ink)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.72)
+                    .minimumScaleFactor(0.78)
 
                 if snapshot.activeFlight {
-                    remainingTime(fontSize: 27)
+                    remainingTime(fontSize: 26)
                 } else {
                     Text(snapshot.hasResumable ? "Your flight is ready to continue." : "A quiet flight is one tap away.")
                         .font(.system(size: 11.5, weight: .semibold))
                         .foregroundStyle(WTheme.inkSoft)
                         .lineLimit(2)
-                        .minimumScaleFactor(0.82)
+                        .minimumScaleFactor(0.85)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
+            // Fixed-size so the greedy text column can never squeeze the primary
+            // action — the action is the one thing that must never truncate.
             actionCapsule(compact: false)
+                .fixedSize()
         }
-        .padding(15)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .padding(contentInsets)
     }
 
     @ViewBuilder
