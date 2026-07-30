@@ -57,6 +57,26 @@ enum CabinSlot: String, CaseIterable, Codable, Hashable, Identifiable {
         }
     }
 
+    /// Plain language for where the slot physically is. The placement sheet reads
+    /// this instead of asking the pilot to interpret markers floating on a dark
+    /// photo of the Cabin.
+    var placementHint: String {
+        switch self {
+        case .tableLeft: return "On the table, left side"
+        case .tableCenter: return "On the table, in the middle"
+        case .tableRight: return "On the table, right side"
+        case .benchLeft: return "On the bench, left side"
+        case .benchCenter: return "On the bench, in the middle"
+        case .wallLeft: return "On the left wall"
+        case .wallRight: return "On the right wall"
+        case .hookLeft: return "On the left hook"
+        case .hookRight: return "On the right hook"
+        case .hangingLeft: return "Hanging above, to the left"
+        case .hangingRight: return "Hanging above, to the right"
+        case .floorRight: return "On the floor, right side"
+        }
+    }
+
     var systemImage: String {
         switch self {
         case .tableCenter, .tableLeft, .tableRight: return "table.furniture"

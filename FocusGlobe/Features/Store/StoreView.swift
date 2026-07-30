@@ -573,7 +573,7 @@ private struct CabinPlacementSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    cabinMap
+                    hero
 
                     if needsReplacement {
                         VStack(alignment: .leading, spacing: 10) {
@@ -607,11 +607,24 @@ private struct CabinPlacementSheet: View {
                         }
                     }
 
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(moving ? "Move to" : "Place in")
-                            .font(.headline)
-                        ForEach(item.allowedSlots) { slot in
-                            slotButton(slot)
+                    if !item.allowedSlots.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text(moving ? "Move to" : "Place in")
+                                .font(.headline)
+                            VStack(spacing: 0) {
+                                ForEach(Array(item.allowedSlots.enumerated()), id: \.element) { index, slot in
+                                    if index > 0 { RowDivider() }
+                                    slotRow(slot)
+                                }
+                            }
+                            .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(AppColors.storeCard(selected: false)))
+                            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .strokeBorder(AppColors.hairline, lineWidth: 1))
+                            Text("The Cabin window always stays clear, so it is never a placement option.")
+                                .font(AppTypography.caption)
+                                .foregroundStyle(AppColors.textTertiary)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }
@@ -633,74 +646,110 @@ private struct CabinPlacementSheet: View {
         .presentationDetents([.medium, .large])
     }
 
-    private var cabinMap: some View {
-        GeometryReader { geo in
-            ZStack {
-                #if canImport(UIKit)
-                if let cabin = UIImage(named: "cabin_iphone") {
-                    Image(uiImage: cabin).resizable().scaledToFill()
-                } else {
-                    LinearGradient(colors: [Color(hex: 0x2B1A12), Color(hex: 0x0F0B09)],
-                                   startPoint: .top, endPoint: .bottom)
-                }
-                #endif
-                Color.black.opacity(0.12)
-                ForEach(item.allowedSlots) { slot in
-                    let p = slot.transform(for: .portrait).contact
-                    let open = !occupiedSlots.contains(slot)
-                    Image(systemName: open ? "plus.circle.fill" : "xmark.circle.fill")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundStyle(open ? AppColors.selectionGold : .white.opacity(0.38))
-                        .background(Circle().fill(.black.opacity(0.55)))
-                        .position(x: geo.size.width * CGFloat(p.x),
-                                  y: geo.size.height * CGFloat(p.y))
-                }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    /// The piece itself, on its own — the isolated PNG with nothing behind it but
+    /// a soft bloom in the item's own tint.
+    ///
+    /// This replaced a photo of the Cabin overprinted with `+` / `×` markers at
+    /// the slots' normalized contact points. That map was the confusing part of
+    /// this flow: the markers sat on a dark, heavily cropped picture, the tabletop
+    /// three landed almost on top of one another, and the thing actually being
+    /// placed was never shown. The labelled rows below already say where each slot
+    /// is, in words, so the map was carrying no information the list didn't.
+    private var hero: some View {
+        ZStack {
+            RadialGradient(colors: [item.tint.opacity(0.22), .clear],
+                           center: .center, startRadius: 2, endRadius: 118)
+                .frame(width: 260, height: 260)
+                .blur(radius: 12)
+                .allowsHitTesting(false)
+            artwork
+                .frame(maxWidth: 210, maxHeight: 168)
         }
-        .frame(height: 220)
-        .overlay(alignment: .bottomLeading) {
-            Text("The main window is protected")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 10).padding(.vertical, 6)
-                .background(Capsule().fill(.black.opacity(0.55)))
-                .padding(10)
+        .frame(height: 190)
+        .frame(maxWidth: .infinity)
+        .overlay(alignment: .bottom) {
+            Text(item.subtitle)
+                .font(AppTypography.caption)
+                .foregroundStyle(AppColors.textSecondary)
+                .multilineTextAlignment(.center)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(item.name). \(item.subtitle)")
     }
 
-    private func slotButton(_ slot: CabinSlot) -> some View {
+    @ViewBuilder private var artwork: some View {
+        #if canImport(UIKit)
+        if let ui = UIImage(named: item.bestAssetName) {
+            Image(uiImage: ui)
+                .resizable()
+                .scaledToFit()
+                // A grounded contact shadow, so the object reads as an object and
+                // not as a sticker floating in the sheet.
+                .shadow(color: .black.opacity(0.32), radius: 14, y: 10)
+        } else {
+            placeholderGlyph
+        }
+        #else
+        placeholderGlyph
+        #endif
+    }
+
+    private var placeholderGlyph: some View {
+        Image(systemName: item.systemImage)
+            .font(.system(size: 62, weight: .semibold))
+            .foregroundStyle(item.tint)
+    }
+
+    private func slotRow(_ slot: CabinSlot) -> some View {
         let open = !occupiedSlots.contains(slot)
+        let isCurrent = appModel.cabinSlot(for: item) == slot
         let replacementChosen = !needsReplacement || replacement != nil
+        let enabled = open && replacementChosen
         return Button {
-            guard open, replacementChosen,
-                  appModel.placeCabinItem(item, in: slot, replacing: replacement) else { return }
+            guard enabled else { return }
+            appModel.tapFeedback()
+            guard appModel.placeCabinItem(item, in: slot, replacing: replacement) else { return }
             dismiss()
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: slot.systemImage)
-                    .frame(width: 24)
-                    .foregroundStyle(open ? AppColors.selectionGold : AppColors.textTertiary)
-                Text(slot.displayName)
                     .font(.system(size: 15, weight: .semibold))
-                Spacer()
-                if appModel.cabinSlot(for: item) == slot {
-                    Text("Current").font(.caption.weight(.bold)).foregroundStyle(AppColors.textSecondary)
-                } else if !open {
-                    Text("Occupied").font(.caption.weight(.bold)).foregroundStyle(AppColors.textTertiary)
+                    .frame(width: 26)
+                    .foregroundStyle(enabled ? AppColors.selectionGold : AppColors.textTertiary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(slot.displayName)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(AppColors.textPrimary)
+                    Text(slot.placementHint)
+                        .font(AppTypography.caption)
+                        .foregroundStyle(AppColors.textSecondary)
                 }
+                Spacer(minLength: 8)
+                slotStatus(isCurrent: isCurrent, open: open)
             }
-            .foregroundStyle(AppColors.textPrimary)
-            .padding(14)
-            .background(RoundedRectangle(cornerRadius: 14)
-                .fill(AppColors.storeCard(selected: false)))
-            .overlay(RoundedRectangle(cornerRadius: 14)
-                .strokeBorder(open ? AppColors.selectionGold.opacity(0.45)
-                              : AppColors.hairline, lineWidth: 1))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .frame(minHeight: 56)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(!open || !replacementChosen)
-        .opacity(open && replacementChosen ? 1 : 0.52)
+        .disabled(!enabled)
+        .opacity(enabled ? 1 : 0.52)
+        .accessibilityLabel("\(slot.displayName). \(slot.placementHint)")
+        .accessibilityHint(isCurrent ? "Current position"
+                           : (open ? "Places \(item.name) here" : "Occupied by another item"))
+    }
+
+    @ViewBuilder private func slotStatus(isCurrent: Bool, open: Bool) -> some View {
+        if isCurrent {
+            Text("Current").font(.caption.weight(.bold)).foregroundStyle(AppColors.textSecondary)
+        } else if !open {
+            Text("Occupied").font(.caption.weight(.bold)).foregroundStyle(AppColors.textTertiary)
+        } else {
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(AppColors.textTertiary)
+        }
     }
 }
 
