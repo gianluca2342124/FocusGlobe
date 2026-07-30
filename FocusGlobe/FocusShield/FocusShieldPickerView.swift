@@ -86,6 +86,7 @@ struct FocusShieldPickerView: View {
                     .background(Circle().fill(AppColors.glassTint.opacity(0.5)))
             }
             .buttonStyle(SoftPressStyle())
+            .accessibilityLabel("Close")
         }
         .padding(.horizontal, AppSpacing.screen)
         .padding(.top, AppSpacing.lg)

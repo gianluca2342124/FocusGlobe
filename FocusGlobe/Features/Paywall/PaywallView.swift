@@ -260,7 +260,7 @@ struct PaywallView: View {
 
         return Button {
             appModel.tapFeedback()
-            withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+            withAnimation(AppMotion.control.respecting(reduceMotion)) {
                 selectedKind = kind
             }
         } label: {
@@ -542,6 +542,9 @@ private struct PaywallCollectibleCarousel: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: artHeight)
                     .shadow(color: .black.opacity(0.30), radius: 16, y: 10)
+                    // Decoration: VoiceOver reads the collectible's NAME below,
+                    // not a nameless moving image.
+                    .accessibilityHidden(true)
                 Text(item.title)
                     .font(.system(size: prominence > 0.55 ? 16 : 14, weight: .bold))
                     .foregroundStyle(.white.opacity(0.72 + prominence * 0.28))
@@ -613,6 +616,7 @@ private struct PaywallSkyCarousel: View {
                     skin: appModel.selectedSkin
                 )
                 .offset(y: 10 - 6 * prominence)
+                .accessibilityHidden(true)
 
                 VStack {
                     Spacer()

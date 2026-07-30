@@ -89,7 +89,11 @@ struct FriendsView: View {
                                 Image(systemName: "xmark")
                                     .font(.system(size: 11, weight: .bold))
                                     .foregroundStyle(AppColors.textTertiary)
+                                    .frame(width: 34, height: 34)
+                                    .contentShape(Rectangle())
                             }
+                            .buttonStyle(SoftPressStyle())
+                            .accessibilityLabel("Dismiss message")
                         }
                         .padding(.horizontal, AppSpacing.md)
                         .padding(.vertical, 10)
@@ -243,6 +247,7 @@ struct FriendsView: View {
                     .background(Circle().fill(.white.opacity(0.08)))
             }
             .buttonStyle(SoftPressStyle())
+            .accessibilityLabel("Decline crew request")
             Button {
                 appModel.tapFeedback()
                 Task { await online.respond(to: request, accept: true) }
@@ -254,6 +259,7 @@ struct FriendsView: View {
                     .background(Circle().fill(AppColors.gold))
             }
             .buttonStyle(SoftPressStyle())
+            .accessibilityLabel("Accept crew request")
         }
         .padding(.horizontal, AppSpacing.md)
         .padding(.vertical, 10)
@@ -338,6 +344,7 @@ struct FriendsView: View {
                     .frame(width: 34, height: 34)
                     .contentShape(Rectangle())
             }
+            .accessibilityLabel("More options")
         }
         .padding(.horizontal, AppSpacing.md)
         .padding(.vertical, 10)
