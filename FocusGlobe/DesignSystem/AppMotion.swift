@@ -10,6 +10,34 @@ import SwiftUI
 /// hatch (`respecting(reduceMotion:)`) so accessibility gets a static fallback.
 enum AppMotion {
 
+    // MARK: Interaction tiers — how fast the app answers a finger
+    //
+    // The four tiers below cover everything between "the finger just went down"
+    // and "a hero is arriving". They were added because the durations further
+    // down all start at 0.28 s: there was nothing in the app's vocabulary fast
+    // enough for press feedback, so controls were borrowing a content-transition
+    // curve and reading as laggy.
+
+    /// Immediate acknowledgement — the press itself. Must land under the finger,
+    /// not after the action completes.
+    static let pressDuration:    Double = 0.12
+    /// A control changing state: a toggle, a selection, enabling/disabling.
+    static let controlDuration:  Double = 0.22
+    /// Content swapping in or out: a card revealing, a section expanding.
+    static let contentDuration:  Double = 0.30
+    /// A premium entrance — a hero or a reward arriving.
+    static let entranceDuration: Double = 0.50
+
+    /// Press feedback. Near-critically damped on purpose: the brief for this app
+    /// is "no bouncing, no large spring overshoot".
+    static var press:    Animation { .spring(response: pressDuration, dampingFraction: 0.86) }
+    /// Standard control response.
+    static var control:  Animation { .spring(response: controlDuration, dampingFraction: 0.86) }
+    /// Content transition.
+    static var content:  Animation { .easeInOut(duration: contentDuration) }
+    /// Premium entrance, with just enough weight to feel physical.
+    static var entrance: Animation { .spring(response: entranceDuration, dampingFraction: 0.82) }
+
     // MARK: Durations (seconds)  — deliberately unhurried
 
     /// A small acknowledgement (a tap settling, a chip toggling).
@@ -49,6 +77,21 @@ enum AppMotion {
     /// ```
     static func flat(_ reduceMotion: Bool, else animation: Animation) -> Animation? {
         reduceMotion ? nil : animation
+    }
+
+    // MARK: Reusable transitions
+
+    /// Content arriving: a short fade with a small lift, leaving on a plain fade.
+    ///
+    /// Under Reduce Motion this becomes a pure crossfade. That is the rule the
+    /// app follows everywhere — remove the spatial movement, keep the feedback,
+    /// never leave the change unexplained by making it instant and invisible.
+    static func appear(reduceMotion: Bool, lift: CGFloat = 8) -> AnyTransition {
+        guard !reduceMotion else { return .opacity }
+        return .asymmetric(
+            insertion: .opacity.combined(with: .offset(y: lift)),
+            removal: .opacity
+        )
     }
 }
 

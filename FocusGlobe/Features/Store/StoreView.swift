@@ -82,7 +82,8 @@ struct StoreView: View {
             withAnimation(.easeInOut(duration: 3.6).repeatForever(autoreverses: true)) { float = -8 }
         }
         // Daily Gift + Coin Spin present through the app-wide modal coordinator.
-        .animation(.snappy(duration: 0.24), value: mode)
+        // Scoped to `mode` alone — the Balloon/Interior swap — never to a model.
+        .animation(AppMotion.control, value: mode)
         .sheet(item: $placementItem) { item in
             CabinPlacementSheet(item: item)
                 .environmentObject(appModel)
@@ -687,7 +688,7 @@ private struct CabinPlacementSheet: View {
                                 .fill(replacementID == candidate.id
                                       ? AppColors.selectionGold : AppColors.storeCard(selected: false)))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(SoftPressStyle(scale: 0.99))
                     }
                 }
             }
@@ -711,6 +712,7 @@ private struct CabinPlacementSheet: View {
                     .fill(AppColors.storeCard(selected: false)))
                 .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .strokeBorder(AppColors.hairline, lineWidth: 1))
+                .animation(AppMotion.control, value: selectedSlot)
             }
         }
     }
@@ -803,7 +805,7 @@ private struct CabinPlacementSheet: View {
             .frame(minHeight: 56)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(SoftPressStyle(scale: 0.99))
         .disabled(!open)
         .opacity(open ? 1 : 0.52)
         .accessibilityLabel("\(slot.displayName). \(slot.placementHint)")

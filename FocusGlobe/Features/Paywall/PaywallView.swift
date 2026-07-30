@@ -102,7 +102,7 @@ struct PaywallView: View {
             } else {
                 Button {
                     appModel.tapFeedback()
-                    withAnimation(.easeInOut(duration: reduceMotion ? 0 : 0.34)) {
+                    withAnimation(AppMotion.content.respecting(reduceMotion)) {
                         page = .trial
                     }
                 } label: {
@@ -140,7 +140,7 @@ struct PaywallView: View {
         VStack(spacing: 0) {
             paywallHeader(backAction: {
                 appModel.tapFeedback()
-                withAnimation(.easeInOut(duration: reduceMotion ? 0 : 0.34)) {
+                withAnimation(AppMotion.content.respecting(reduceMotion)) {
                     page = .benefit
                 }
             }, showsClose: false)

@@ -2,12 +2,31 @@ import SwiftUI
 
 /// A gentle press effect shared by all buttons — a soft scale + slight dim.
 struct SoftPressStyle: ButtonStyle {
-    var scale: CGFloat = 0.97
+    var scale: CGFloat = 0.98
+
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? scale : 1)
-            .opacity(configuration.isPressed ? 0.92 : 1)
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
+        PressBody(configuration: configuration, scale: scale)
+    }
+
+    /// A nested View, not a modifier chain in `makeBody`, because `@Environment`
+    /// is only resolved for `View` — a `ButtonStyle` cannot read Reduce Motion
+    /// directly.
+    private struct PressBody: View {
+        let configuration: ButtonStyleConfiguration
+        let scale: CGFloat
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+        var body: some View {
+            configuration.label
+                // Reduce Motion keeps the acknowledgement and drops the movement:
+                // the control still answers the finger, it just doesn't travel.
+                .scaleEffect(reduceMotion ? 1 : (configuration.isPressed ? scale : 1))
+                .opacity(configuration.isPressed ? 0.90 : 1)
+                // 0.12 s, near-critically damped. The old 0.3 s / 0.7 spring was a
+                // content-transition curve doing a press's job: the response
+                // arrived visibly after the finger, and it overshot on release.
+                .animation(AppMotion.press, value: configuration.isPressed)
+        }
     }
 }
 
@@ -60,6 +79,9 @@ struct AppPrimaryButton: View {
             }
             .shadow(color: Color.black.opacity(0.22), radius: 18, x: 0, y: 10)
             .opacity(isEnabled ? 1 : 0.5)
+            // The enable/disable step used to be instant, which reads as a glitch
+            // when a form becomes valid under the finger.
+            .animation(AppMotion.control, value: isEnabled)
         }
         .buttonStyle(SoftPressStyle())
         .disabled(!isEnabled || isLoading)

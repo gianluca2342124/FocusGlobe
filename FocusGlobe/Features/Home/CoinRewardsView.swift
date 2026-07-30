@@ -66,6 +66,7 @@ struct CoinSpinSheet: View {
     @EnvironmentObject private var appModel: AppModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private enum Phase { case intro, spinning, result }
     @State private var phase: Phase = .intro
@@ -238,11 +239,21 @@ struct CoinSpinSheet: View {
             let seg = 360.0 / Double(prizes.count)
             // Bring the winning wedge under the fixed top pointer, after 6 turns.
             let target = 360.0 * 6 - Double(k) * seg
+
+            // Reduce Motion skips the 2.6-second spin outright — six spatial
+            // revolutions is exactly the kind of motion that setting exists to
+            // suppress — and crossfades straight to the result the pilot won.
+            guard !reduceMotion else {
+                appModel.haptics.rewardClaim()
+                withAnimation(AppMotion.content) { phase = .result }
+                return
+            }
+
             phase = .spinning
             withAnimation(.easeOut(duration: 2.6)) { rotation = target }
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.75) {
                 appModel.haptics.rewardClaim()
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { phase = .result }
+                withAnimation(AppMotion.entrance) { phase = .result }
             }
         }
     }

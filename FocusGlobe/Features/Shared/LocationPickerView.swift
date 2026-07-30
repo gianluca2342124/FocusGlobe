@@ -69,7 +69,7 @@ struct LocationPickerView: View {
                 if !appModel.canReturnToRealLocation { selectedCheck }
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(SoftPressStyle(scale: 0.99))
     }
 
     private var currentLocationSubtitle: String {
@@ -100,7 +100,7 @@ struct LocationPickerView: View {
                 if isSelected(origin) { selectedCheck }
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(SoftPressStyle(scale: 0.99))
     }
 
     private func isSelected(_ origin: JourneyOrigin) -> Bool {
