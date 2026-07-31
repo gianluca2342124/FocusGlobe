@@ -62,10 +62,25 @@ struct IntroductoryOffer: Equatable {
     let periodValue: Int
     let periodUnit: String           // "day" | "week" | "month" | "year"
 
-    /// "3-day", "1-week" — used inside "3-Day Free Trial" style headings.
+    /// "3 days", "1 week" — for sentences.
     var localizedDuration: String {
         let unit = periodValue == 1 ? periodUnit : "\(periodUnit)s"
         return "\(periodValue) \(unit)"
+    }
+
+    /// The offer expressed in DAYS.
+    ///
+    /// StoreKit reports a one-week trial as value 1 with unit `.week`, not 7
+    /// days. Reading `periodValue` as a day count is what made the paywall
+    /// timeline collapse to "Day 1" twice — both the reminder and the renewal
+    /// resolved off a period of 1.
+    var totalDays: Int {
+        switch periodUnit {
+        case "week":  return periodValue * 7
+        case "month": return periodValue * 30
+        case "year":  return periodValue * 365
+        default:      return periodValue   // "day"
+        }
     }
 }
 

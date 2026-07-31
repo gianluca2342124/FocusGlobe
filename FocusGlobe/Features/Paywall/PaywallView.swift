@@ -221,7 +221,7 @@ struct PaywallView: View {
             // the per-product truth belongs.
             if trialOfferAvailable {
                 TrialTimeline(compact: viewport.isShort || viewport.isCompact,
-                              trialDays: trialOfferPlan?.introOffer?.periodValue ?? 3)
+                              trialDays: trialOfferPlan?.introOffer?.totalDays ?? 7)
                     .frame(maxWidth: viewport.isWide ? 620 : 540)
             }
 
@@ -392,12 +392,12 @@ struct PaywallView: View {
     /// is annual only, and only for an eligible Apple ID.
     private func planSubtitle(_ kind: PlanKind, plan: PlanOption?) -> String {
         guard let plan, plan.available else { return "Unavailable" }
-        if plan.offersFreeTrial {
-            return "\(plan.introOffer?.localizedDuration ?? "") free, then billed yearly"
-        }
         switch kind {
         case .annual:
-            return plan.monthlyEquivalent.map { "Billed yearly · \($0)" } ?? "Billed yearly"
+            // The effective monthly equivalent — the strongest line this row can
+            // carry. The trial is already stated by the timeline and the CTA
+            // disclosure, so repeating it here would cost the price anchor.
+            return plan.monthlyEquivalent ?? "Billed yearly"
         case .monthly:
             return "Billed immediately. Cancel anytime."
         case .lifetime:
@@ -427,7 +427,7 @@ struct PaywallView: View {
                             .font(.system(size: 17, weight: .bold))
                             .foregroundStyle(.white)
                         if kind == .annual {
-                            Text("Best Value")
+                            Text("-60%")
                                 .font(.system(size: 10, weight: .heavy))
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 7)
@@ -563,7 +563,8 @@ struct PaywallView: View {
         if showsTrialCopy { return "Start My Free Trial" }
         switch kind {
         case .annual:   return "Continue with Annual"
-        case .monthly:  return "Continue with Monthly"
+        // Monthly is exactly "Continue" — never "Continue with Monthly".
+        case .monthly:  return "Continue"
         case .lifetime: return "Unlock FocusGlobe PRO"
         }
     }
@@ -838,17 +839,22 @@ private struct TrialTimeline: View {
     var trialDays: Int = 3
 
     private var steps: [(icon: String, title: String, detail: String, color: Color)] {
-        // The reminder lands TWO days before the trial ends, because that is
-        // exactly what the title promises. `- 1` put it one day out and quietly
-        // contradicted the headline. Floored at day 1 so a very short offer still
-        // produces a sane day number.
-        let endDay = trialDays
-        let reminderDay = max(1, trialDays - 2)
-        return [
-            ("lock.open.fill", "Today", "Unlock all FocusGlobe PRO features.", ProBrand.c1),
-            ("bell.fill", "Day \(reminderDay)", "We’ll remind you 2 days before your trial ends.", ProBrand.c2),
-            ("star.fill", "Day \(endDay)", "Your subscription begins. Cancel anytime.", ProBrand.c4),
+        // The reminder lands TWO days before the trial ends, matching the title.
+        let endDay = max(1, trialDays)
+        let reminderDay = max(1, endDay - 2)
+        var result: [(icon: String, title: String, detail: String, color: Color)] = [
+            ("lock.open.fill", "Today", "Unlock all FocusGlobe PRO features.", ProBrand.c1)
         ]
+        // Only when it is genuinely a different day. A one-day offer cannot have
+        // a reminder two days earlier, and printing "Day 1" twice reads as a bug
+        // rather than as a short trial.
+        if reminderDay < endDay {
+            result.append(("bell.fill", "Day \(reminderDay)",
+                           "We’ll remind you 2 days before your trial ends.", ProBrand.c2))
+        }
+        result.append(("star.fill", "Day \(endDay)",
+                       "Your subscription begins. Cancel anytime.", ProBrand.c4))
+        return result
     }
 
     var body: some View {
