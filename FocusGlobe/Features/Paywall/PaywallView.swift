@@ -42,6 +42,20 @@ struct PaywallView: View {
     /// still resolving, offer withdrawn — reads as an immediate purchase.
     private var showsTrialCopy: Bool { effectivePlan?.offersFreeTrial ?? false }
 
+    /// The plan on THIS paywall that carries the free trial (annual today), and
+    /// whether a trial is on offer at all.
+    ///
+    /// Distinct from `showsTrialCopy` on purpose. The title and the day timeline
+    /// describe the OFFER, so they must stay put when the pilot toggles to
+    /// Monthly — the timeline disappearing mid-selection is what made the screen
+    /// feel unstable. The CTA and its disclosure still follow `showsTrialCopy`,
+    /// because those two must always describe the exact product being charged.
+    private var trialOfferPlan: PlanOption? {
+        offeredPlans.compactMap { subs.plan($0) }.first { $0.offersFreeTrial }
+    }
+
+    private var trialOfferAvailable: Bool { trialOfferPlan != nil }
+
     private var trialDuration: String {
         effectivePlan?.introOffer?.localizedDuration ?? "3 days"
     }
@@ -131,7 +145,7 @@ struct PaywallView: View {
                         page = .trial
                     }
                 } label: {
-                    Text(showsTrialCopy ? "Start My Free Trial" : "See Plans")
+                    Text(trialOfferAvailable ? "Start My Free Trial" : "See Plans")
                         .font(.system(size: viewport.isWide ? 19 : 17, weight: .bold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
@@ -177,6 +191,10 @@ struct PaywallView: View {
                 }
                 .scrollBounceBehavior(.basedOnSize)
             }
+            // Take the whole gap between the header and the footer, so the header
+            // stays pinned at the very top rather than sitting directly on top of
+            // a centred block.
+            .frame(maxHeight: .infinity)
 
             if appModel.isPro {
                 proState
@@ -187,16 +205,27 @@ struct PaywallView: View {
     }
 
     private var trialContent: some View {
+        // Spacers, not bigger paddings. A `Spacer` contributes 0 to the IDEAL
+        // height, so `ViewThatFits` still measures this stack compactly and still
+        // falls back to the ScrollView on a short screen — but when it does fit,
+        // the groups distribute over the whole remaining height instead of
+        // huddling into a centred card under the header.
         VStack(spacing: viewport.isWide ? 24 : (viewport.isShort ? 13 : 18)) {
+            Spacer(minLength: 0)
+
             trialTitle
 
-            // The timeline describes a free trial, so it appears ONLY when this
-            // account is actually getting one for the product being bought.
-            if showsTrialCopy {
+            // Shown whenever a trial is on offer for this account — NOT gated on
+            // the current selection, so switching to Monthly no longer removes it.
+            // Monthly's own row still reads "Billed immediately", which is where
+            // the per-product truth belongs.
+            if trialOfferAvailable {
                 TrialTimeline(compact: viewport.isShort || viewport.isCompact,
-                              trialDays: effectivePlan?.introOffer?.periodValue ?? 3)
+                              trialDays: trialOfferPlan?.introOffer?.periodValue ?? 3)
                     .frame(maxWidth: viewport.isWide ? 620 : 540)
             }
+
+            Spacer(minLength: 0)
 
             if context.isOnboardingOffer {
                 annualOfferPanel
@@ -209,22 +238,25 @@ struct PaywallView: View {
                 }
                 .frame(maxWidth: viewport.isWide ? 620 : 540)
             }
+
+            Spacer(minLength: 0)
         }
         .frame(maxWidth: viewport.readableContentWidth)
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.horizontal, viewport.pagePadding)
         .padding(.top, viewport.isShort ? 2 : 8)
         .padding(.bottom, viewport.isShort ? 10 : 16)
     }
 
-    /// Leads with the free trial ONLY when there is one. An ineligible account
-    /// (or a monthly selection) sees a plain product headline instead of a
-    /// promise the App Store would refuse to honour.
+    /// The original headline, restored. Still guarded by `trialOfferAvailable`
+    /// so an account with no trial is never promised one — but it no longer
+    /// changes when the pilot switches plan.
     private var trialTitle: some View {
         Group {
-            if showsTrialCopy {
-                Text(trialHeadlineDuration).foregroundStyle(ProBrand.softGradient)
-                + Text("\nFree Trial")
+            if trialOfferAvailable {
+                Text("We’ll remind you")
+                + Text(" 2 days").foregroundStyle(ProBrand.softGradient)
+                + Text("\nbefore your trial ends")
             } else {
                 Text("Unlock\n")
                 + Text("FocusGlobe PRO").foregroundStyle(ProBrand.softGradient)
@@ -239,16 +271,9 @@ struct PaywallView: View {
         .lineSpacing(2)
         .minimumScaleFactor(0.75)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(showsTrialCopy
-                            ? "\(trialHeadlineDuration) free trial"
+        .accessibilityLabel(trialOfferAvailable
+                            ? "We’ll remind you 2 days before your trial ends"
                             : "Unlock FocusGlobe PRO")
-    }
-
-    /// "3-Day" — built from the product's REAL introductory period.
-    private var trialHeadlineDuration: String {
-        guard let offer = effectivePlan?.introOffer else { return "Free" }
-        let unit = offer.periodUnit.prefix(1).uppercased() + String(offer.periodUnit.dropFirst())
-        return "\(offer.periodValue)-\(unit)"
     }
 
     /// The onboarding offer: ONE annual plan, stated plainly. No selector, so the
