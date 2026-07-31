@@ -23,7 +23,7 @@ struct WidgetGalleryItem: Identifiable {
     static let all: [WidgetGalleryItem] = [
         // FREE
         .init(id: "FGStreakCompanion", name: "Streak Companion",
-              blurb: "The FocusGlobe fire balloon, your live streak and today's focus state.",
+              blurb: "The FocusGlobe fire balloon carrying your live streak count.",
               systemImage: "flame.fill", glow: WGTheme.coral,
               families: ["Small", "Lock Screen"], isPro: false),
         .init(id: "FGFocusNow", name: "Focus Now",
@@ -151,6 +151,8 @@ private struct WidgetPreviewTile: View {
         }
     }
 
+    /// Mirrors the real Streak Companion exactly: flame artwork, the number as the
+    /// only text, seated in the bright heart of the flame above centre.
     private var streakPreview: some View {
         ZStack {
             if let image = UIImage(named: "WidgetFireBalloon") {
@@ -160,20 +162,19 @@ private struct WidgetPreviewTile: View {
             } else {
                 WGTheme.bgBottom
             }
-            LinearGradient(colors: [.clear, .black.opacity(0.16), .black.opacity(0.78)],
-                           startPoint: .top, endPoint: .bottom)
-            VStack(spacing: -1) {
-                Spacer()
-                Text("\(appModel.progress.currentStreak)")
-                    .font(.system(size: side * 0.30, weight: .black, design: .rounded))
-                    .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.8), radius: 6, y: 2)
-                Text("DAY STREAK")
-                    .font(.system(size: max(8, side * 0.06), weight: .heavy, design: .rounded))
-                    .tracking(1)
-                    .foregroundStyle(.white.opacity(0.86))
-            }
-            .padding(side * 0.09)
+            RadialGradient(colors: [.black.opacity(0.42), .clear],
+                           center: UnitPoint(x: 0.5, y: 0.44),
+                           startRadius: 2, endRadius: side * 0.44)
+                .blendMode(.multiply)
+            Text("\(appModel.progress.currentStreak)")
+                .font(.system(size: side * 0.36, weight: .black, design: .rounded))
+                .foregroundStyle(.white)
+                .shadow(color: .black.opacity(0.85), radius: 6, y: 2)
+                .lineLimit(1)
+                .minimumScaleFactor(0.45)
+                .padding(.horizontal, side * 0.12)
+                .frame(width: side, height: side)
+                .offset(y: -side * 0.06)
         }
     }
 
@@ -217,8 +218,10 @@ private struct WidgetPreviewTile: View {
                     .background(Capsule().fill(WGTheme.gold))
             }
             .foregroundStyle(.white)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            // Padding BEFORE frame, matching the real widget — the other order
+            // grows to the container and then adds insets outside it.
             .padding(side * 0.093)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
     }
 

@@ -127,17 +127,23 @@ struct FocusNowView: View {
         snapshot.activeFlight || snapshot.hasResumable ? "arrow.uturn.up" : "arrow.up"
     }
 
-    /// Small: eyebrow and Sky name pinned to the top, the Sky artwork breathing
-    /// through the middle, the action pinned full-width at the bottom.
+    /// Small: a genuinely compact composition — eyebrow and Sky name at the top,
+    /// the Sky itself through the middle, a full-width action at the bottom. It
+    /// borrows nothing from the medium layout.
     ///
-    /// The previous version pinned only the title to the top and let a 28 pt live
-    /// timer plus the capsule pile up under it with 13 pt of padding, which is why
-    /// the title read as cut and the action sat in the corner curve. Nothing here
-    /// relies on text shrinking to stay inside: the eyebrow is `fixedSize`, the
-    /// Sky name never drops below 85 % of 14 pt, and the timer is the only element
-    /// allowed to scale hard (a running clock genuinely varies in width).
+    /// The clipping this replaces was a modifier-ORDER bug, not a spacing one:
+    /// the content read `.frame(maxWidth: .infinity, maxHeight: .infinity)` and
+    /// THEN `.padding(contentInsets)`. That makes a view which first grows to the
+    /// full container and then adds insets *outside* itself, so the laid-out size
+    /// is the container plus 28-30 pt — text pushed past the left edge and the
+    /// action past the bottom, exactly as reported. Padding must come first, and
+    /// the frame after it.
+    ///
+    /// Nothing here depends on text shrinking to stay inside: the eyebrow is
+    /// `fixedSize`, the Sky name floors at 85 % of 14 pt, and only the live timer
+    /// (whose width genuinely varies as it counts down) scales hard.
     private var smallLayout: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 5) {
             eyebrow
 
             Text(displayedSkyName)
@@ -146,22 +152,22 @@ struct FocusNowView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
 
-            Spacer(minLength: 4)
+            Spacer(minLength: 2)
 
             if snapshot.activeFlight {
-                remainingTime(fontSize: 22)
+                remainingTime(fontSize: 20)
             }
 
             actionCapsule(compact: true)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(contentInsets)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     /// Medium keeps the horizontal composition — text column left, action right —
-    /// but is vertically CENTRED rather than pinned to the bottom edge. Bottom
-    /// pinning with 15 pt of padding is exactly what pushed the title and the
-    /// action into the container's lower rounded corners.
+    /// vertically centred rather than pinned to the bottom edge. Same padding /
+    /// frame ordering fix as small: it was overflowing its container by the inset
+    /// on every side, which centring merely disguised.
     private var mediumLayout: some View {
         HStack(alignment: .center, spacing: 14) {
             VStack(alignment: .leading, spacing: 5) {
@@ -190,8 +196,8 @@ struct FocusNowView: View {
             actionCapsule(compact: false)
                 .fixedSize()
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .padding(contentInsets)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 
     @ViewBuilder

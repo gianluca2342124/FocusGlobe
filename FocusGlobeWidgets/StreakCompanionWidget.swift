@@ -68,41 +68,59 @@ struct StreakCompanionView: View {
                 Spacer()
             }
         } else {
-            ZStack {
-                #if canImport(UIKit)
-                if let art = UIImage(named: "WidgetFireBalloon") {
-                    Image(uiImage: art)
-                        .resizable()
-                        .scaledToFill()
-                        .grayscale(snapshot.currentStreak > 0 ? 0 : 0.42)
-                } else {
-                    LinearGradient(colors: [Color(red: 0.05, green: 0.07, blue: 0.12),
-                                            Color(red: 0.12, green: 0.05, blue: 0.035)],
-                                   startPoint: .top, endPoint: .bottom)
-                }
-                #endif
-                LinearGradient(colors: [.black.opacity(0.02), .black.opacity(0.16), .black.opacity(0.72)],
-                               startPoint: .top, endPoint: .bottom)
-                VStack(spacing: -2) {
-                    Spacer()
+            // The artwork carries the whole message; the number is the ONLY text.
+            // "DAY STREAK" and the state line ("Focused today", "Focus to keep
+            // it"…) are gone — three stacked captions crowding the bottom of a
+            // 158 pt tile read as a label sheet pasted over a picture, and the
+            // widget's own gallery title and description already say what it is.
+            GeometryReader { geo in
+                let side = min(geo.size.width, geo.size.height)
+                ZStack {
+                    artwork
+                    // A soft pocket of shade behind the digits only. The old
+                    // full-height ramp existed to carry bottom text that no
+                    // longer exists, and it was dulling the flame.
+                    RadialGradient(colors: [.black.opacity(0.42), .clear],
+                                   center: UnitPoint(x: 0.5, y: 0.44),
+                                   startRadius: 2, endRadius: side * 0.44)
+                        .blendMode(.multiply)
+
                     Text("\(snapshot.currentStreak)")
-                        .font(.system(size: 47, weight: .black, design: .rounded))
+                        .font(.system(size: side * 0.36, weight: .black, design: .rounded))
                         .foregroundStyle(.white)
                         .shadow(color: .black.opacity(0.85), radius: 7, y: 2)
-                        .minimumScaleFactor(0.55).lineLimit(1)
-                    Text("DAY STREAK")
-                        .font(.system(size: 10, weight: .heavy, design: .rounded))
-                        .tracking(1.2)
-                        .foregroundStyle(.white.opacity(0.86))
-                    Text(state.line)
-                        .font(.system(size: 10.5, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.72))
-                        .lineLimit(1).minimumScaleFactor(0.7)
-                        .padding(.top, 3)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.45)
+                        .padding(.horizontal, side * 0.12)
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        // Optically centred in the bright heart of the flame,
+                        // which sits above the tile's geometric centre.
+                        .offset(y: -side * 0.06)
+                        .accessibilityLabel("\(snapshot.currentStreak) day streak. \(state.line).")
                 }
-                .padding(12)
             }
             .clipped()
         }
+    }
+
+    @ViewBuilder private var artwork: some View {
+        #if canImport(UIKit)
+        if let art = UIImage(named: "WidgetFireBalloon") {
+            Image(uiImage: art)
+                .resizable()
+                .scaledToFill()
+                .grayscale(snapshot.currentStreak > 0 ? 0 : 0.42)
+        } else {
+            fallbackBackground
+        }
+        #else
+        fallbackBackground
+        #endif
+    }
+
+    private var fallbackBackground: some View {
+        LinearGradient(colors: [Color(red: 0.05, green: 0.07, blue: 0.12),
+                                Color(red: 0.12, green: 0.05, blue: 0.035)],
+                       startPoint: .top, endPoint: .bottom)
     }
 }
