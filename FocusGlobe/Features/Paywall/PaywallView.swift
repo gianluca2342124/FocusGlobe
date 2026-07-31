@@ -21,8 +21,30 @@ struct PaywallView: View {
     @State private var selectedHeroIndex = 0
 
     private enum Page { case benefit, trial }
-    private static let offeredPlans: [PlanKind] = [.annual, .monthly]
     private var subs: SubscriptionManager { appModel.subscriptions }
+
+    /// Which subscriptions this entry point may sell.
+    ///
+    /// Onboarding sells the ANNUAL plan alone. That page leads with the free-trial
+    /// timeline, and the monthly product has no introductory offer — letting it be
+    /// selected there meant the whole screen promised a trial while one selectable
+    /// product charged immediately. Every other paywall keeps both, and the monthly
+    /// product itself is untouched in RevenueCat.
+    private var offeredPlans: [PlanKind] {
+        context.isOnboardingOffer ? [.annual] : [.annual, .monthly]
+    }
+
+    private var effectivePlan: PlanOption? { effectiveKind.flatMap { subs.plan($0) } }
+
+    /// A free trial may be described ONLY when the exact plan being purchased
+    /// carries a real free-trial intro offer AND this account is confirmed
+    /// eligible. Anything else — monthly selected, ineligible account, eligibility
+    /// still resolving, offer withdrawn — reads as an immediate purchase.
+    private var showsTrialCopy: Bool { effectivePlan?.offersFreeTrial ?? false }
+
+    private var trialDuration: String {
+        effectivePlan?.introOffer?.localizedDuration ?? "3 days"
+    }
 
     var body: some View {
         ZStack {
@@ -44,6 +66,9 @@ struct PaywallView: View {
             subs.loadOfferings()
             syncSelection()
             selectedHeroIndex = context.initialHeroIndex
+            // The first-run offer IS the offer page: one product, one CTA, no
+            // benefit/trial two-step. Onboarding has already made the pitch.
+            if context.isOnboardingOffer { page = .trial }
         }
         .onChange(of: subs.plans) { _, _ in syncSelection() }
     }
@@ -106,7 +131,7 @@ struct PaywallView: View {
                         page = .trial
                     }
                 } label: {
-                    Text("Start 7 days free trial")
+                    Text(showsTrialCopy ? "Start My Free Trial" : "See Plans")
                         .font(.system(size: viewport.isWide ? 19 : 17, weight: .bold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
@@ -138,12 +163,12 @@ struct PaywallView: View {
 
     private var trialPage: some View {
         VStack(spacing: 0) {
-            paywallHeader(backAction: {
+            paywallHeader(backAction: context.isOnboardingOffer ? nil : {
                 appModel.tapFeedback()
                 withAnimation(AppMotion.content.respecting(reduceMotion)) {
                     page = .benefit
                 }
-            }, showsClose: false)
+            }, showsClose: context.isOnboardingOffer)
 
             ViewThatFits(in: .vertical) {
                 trialContent
@@ -165,15 +190,25 @@ struct PaywallView: View {
         VStack(spacing: viewport.isWide ? 24 : (viewport.isShort ? 13 : 18)) {
             trialTitle
 
-            TrialTimeline(compact: viewport.isShort || viewport.isCompact)
-                .frame(maxWidth: viewport.isWide ? 620 : 540)
-
-            VStack(spacing: 9) {
-                ForEach(Self.offeredPlans) { kind in
-                    planCard(kind)
-                }
+            // The timeline describes a free trial, so it appears ONLY when this
+            // account is actually getting one for the product being bought.
+            if showsTrialCopy {
+                TrialTimeline(compact: viewport.isShort || viewport.isCompact,
+                              trialDays: effectivePlan?.introOffer?.periodValue ?? 3)
+                    .frame(maxWidth: viewport.isWide ? 620 : 540)
             }
-            .frame(maxWidth: viewport.isWide ? 620 : 540)
+
+            if context.isOnboardingOffer {
+                annualOfferPanel
+                    .frame(maxWidth: viewport.isWide ? 620 : 540)
+            } else {
+                VStack(spacing: 9) {
+                    ForEach(offeredPlans) { kind in
+                        planCard(kind)
+                    }
+                }
+                .frame(maxWidth: viewport.isWide ? 620 : 540)
+            }
         }
         .frame(maxWidth: viewport.readableContentWidth)
         .frame(maxWidth: .infinity)
@@ -182,11 +217,18 @@ struct PaywallView: View {
         .padding(.bottom, viewport.isShort ? 10 : 16)
     }
 
+    /// Leads with the free trial ONLY when there is one. An ineligible account
+    /// (or a monthly selection) sees a plain product headline instead of a
+    /// promise the App Store would refuse to honour.
     private var trialTitle: some View {
-        VStack(spacing: 8) {
-            Text("We’ll remind you")
-            + Text(" 2 days").foregroundStyle(ProBrand.softGradient)
-            + Text("\nbefore your trial ends")
+        Group {
+            if showsTrialCopy {
+                Text(trialHeadlineDuration).foregroundStyle(ProBrand.softGradient)
+                + Text("\nFree Trial")
+            } else {
+                Text("Unlock\n")
+                + Text("FocusGlobe PRO").foregroundStyle(ProBrand.softGradient)
+            }
         }
         .font(.system(
             size: viewport.isWide ? 40 : (viewport.isCompact ? 29 : 35),
@@ -197,7 +239,72 @@ struct PaywallView: View {
         .lineSpacing(2)
         .minimumScaleFactor(0.75)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("We’ll remind you 2 days before your trial ends")
+        .accessibilityLabel(showsTrialCopy
+                            ? "\(trialHeadlineDuration) free trial"
+                            : "Unlock FocusGlobe PRO")
+    }
+
+    /// "3-Day" — built from the product's REAL introductory period.
+    private var trialHeadlineDuration: String {
+        guard let offer = effectivePlan?.introOffer else { return "Free" }
+        let unit = offer.periodUnit.prefix(1).uppercased() + String(offer.periodUnit.dropFirst())
+        return "\(offer.periodValue)-\(unit)"
+    }
+
+    /// The onboarding offer: ONE annual plan, stated plainly. No selector, so the
+    /// monthly product cannot be bought from the screen that promises a trial.
+    /// When the annual package fails to load this says so rather than showing a
+    /// placeholder price or quietly falling back to monthly.
+    @ViewBuilder private var annualOfferPanel: some View {
+        let plan = subs.plan(.annual)
+        VStack(spacing: 6) {
+            Text("FocusGlobe PRO Annual")
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(.white.opacity(0.72))
+
+            if let plan, plan.available {
+                // The annual billing price is the prominent number.
+                Text(plan.localizedPrice + "/year")
+                    .font(.system(size: viewport.isCompact ? 26 : 30, weight: .heavy))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+
+                Text(showsTrialCopy
+                     ? "after the \(trialDuration) free trial"
+                     : "billed immediately")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.66))
+
+                if let monthly = plan.monthlyEquivalent {
+                    // Secondary, and deliberately quieter than the annual price.
+                    Text("Only " + monthly)
+                        .font(.system(size: 12.5, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+            } else {
+                Text("Plans are unavailable right now.")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.8))
+                Text("Please check your connection and try again.")
+                    .font(.system(size: 12.5, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.55))
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, viewport.isShort ? 14 : 18)
+        .padding(.horizontal, 18)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(Color.black.opacity(0.06)))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .strokeBorder(ProBrand.borderGradient, lineWidth: 2)
+        )
     }
 
     private var purchaseFooter: some View {
@@ -253,6 +360,26 @@ struct PaywallView: View {
         .padding(.bottom, max(10, viewport.pagePadding * 0.55))
     }
 
+    /// One line of honest billing detail per plan.
+    ///
+    /// Free-trial wording appears only for a plan that genuinely carries a
+    /// free-trial introductory offer this account is eligible for — which today
+    /// is annual only, and only for an eligible Apple ID.
+    private func planSubtitle(_ kind: PlanKind, plan: PlanOption?) -> String {
+        guard let plan, plan.available else { return "Unavailable" }
+        if plan.offersFreeTrial {
+            return "\(plan.introOffer?.localizedDuration ?? "") free, then billed yearly"
+        }
+        switch kind {
+        case .annual:
+            return plan.monthlyEquivalent.map { "Billed yearly · \($0)" } ?? "Billed yearly"
+        case .monthly:
+            return "Billed immediately. Cancel anytime."
+        case .lifetime:
+            return "One payment. Yours forever."
+        }
+    }
+
     private func planCard(_ kind: PlanKind) -> some View {
         let plan = subs.plan(kind)
         let selected = selectedKind == kind
@@ -275,7 +402,7 @@ struct PaywallView: View {
                             .font(.system(size: 17, weight: .bold))
                             .foregroundStyle(.white)
                         if kind == .annual {
-                            Text("-60%")
+                            Text("Best Value")
                                 .font(.system(size: 10, weight: .heavy))
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 7)
@@ -283,11 +410,14 @@ struct PaywallView: View {
                                 .background(Capsule().fill(ProBrand.c1))
                         }
                     }
-                    if kind == .annual, let monthly = plan?.monthlyEquivalent {
-                        Text(monthly)
-                            .font(.system(size: 12.5, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.62))
-                    }
+                    // Per-plan billing truth. The monthly product has no
+                    // introductory offer, so it can never inherit trial wording
+                    // from the page it happens to be sitting on.
+                    Text(planSubtitle(kind, plan: plan))
+                        .font(.system(size: 12.5, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.62))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
 
                 Spacer()
@@ -393,25 +523,44 @@ struct PaywallView: View {
         .allowsHitTesting(false)
     }
 
+    /// The plan the CTA will actually buy — always the one the UI is showing.
     private var effectiveKind: PlanKind? {
-        if Self.offeredPlans.contains(selectedKind),
-           subs.plan(selectedKind)?.available == true {
+        if offeredPlans.contains(selectedKind), subs.plan(selectedKind)?.available == true {
             return selectedKind
         }
-        return Self.offeredPlans.first { subs.plan($0)?.available == true }
+        return offeredPlans.first { subs.plan($0)?.available == true }
     }
 
+    /// The CTA names the product it will charge for, and only says "free trial"
+    /// when there genuinely is one for this account.
     private var purchaseButtonTitle: String {
         guard let kind = effectiveKind else { return "Products unavailable" }
-        // Monthly is exactly "Continue" — never "Continue with Monthly" or any
-        // other extended wording.
-        return kind == .annual ? "Start 7 days free trial" : "Continue"
+        if showsTrialCopy { return "Start My Free Trial" }
+        switch kind {
+        case .annual:   return "Continue with Annual"
+        case .monthly:  return "Continue with Monthly"
+        case .lifetime: return "Unlock FocusGlobe PRO"
+        }
     }
 
+    /// The disclosure under the CTA, matched to the SAME product.
     private var trialDisclosure: String {
-        effectiveKind == .annual
-            ? "7 days free, then the selected plan. Cancel anytime."
-            : "The selected plan renews automatically. Cancel anytime."
+        guard let plan = effectivePlan else {
+            return "Subscriptions renew automatically. Cancel anytime."
+        }
+        let price = plan.localizedPrice + perPeriodSuffix(plan.kind)
+        if showsTrialCopy {
+            return "No charge today. Then " + price + ". Cancel anytime."
+        }
+        return price + ", billed immediately. Cancel anytime."
+    }
+
+    private func perPeriodSuffix(_ kind: PlanKind) -> String {
+        switch kind {
+        case .annual:   return "/year"
+        case .monthly:  return "/month"
+        case .lifetime: return ""
+        }
     }
 
     private var paywallButtonHeight: CGFloat {
@@ -420,9 +569,9 @@ struct PaywallView: View {
 
     private func syncSelection() {
         guard subs.hasAnyPackage else { return }
-        if !Self.offeredPlans.contains(selectedKind)
+        if !offeredPlans.contains(selectedKind)
             || subs.plan(selectedKind)?.available != true,
-           let preferred = Self.offeredPlans.first(where: {
+           let preferred = offeredPlans.first(where: {
                subs.plan($0)?.available == true
            }) {
             selectedKind = preferred
@@ -659,12 +808,19 @@ private struct PaywallSkyCarousel: View {
 
 private struct TrialTimeline: View {
     let compact: Bool
+    /// The REAL introductory period, so the day numbers match the offer the App
+    /// Store will actually apply rather than a hardcoded schedule.
+    var trialDays: Int = 3
 
-    private let steps: [(icon: String, title: String, detail: String, color: Color)] = [
-        ("lock.open.fill", "Today", "Unlock all FocusGlobe PRO features.", ProBrand.c1),
-        ("bell.fill", "2 days before", "We’ll remind you before your free trial ends.", ProBrand.c2),
-        ("star.fill", "Trial end date", "Your selected plan begins. Cancel anytime.", ProBrand.c4),
-    ]
+    private var steps: [(icon: String, title: String, detail: String, color: Color)] {
+        let endDay = max(2, trialDays)
+        let reminderDay = max(2, endDay - 1)
+        return [
+            ("lock.open.fill", "Today", "Unlock all FocusGlobe PRO features.", ProBrand.c1),
+            ("bell.fill", "Day \(reminderDay)", "We’ll remind you before your free trial ends.", ProBrand.c2),
+            ("star.fill", "Day \(endDay)", "Your subscription begins. Cancel anytime.", ProBrand.c4),
+        ]
+    }
 
     var body: some View {
         VStack(spacing: 0) {

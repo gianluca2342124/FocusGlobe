@@ -133,7 +133,10 @@ struct OnboardingView: View {
         appModel.markPremiumIntroSeen()   // onboarding already made the premium offer
         if thenPaywall {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                router.presentPaywall()
+                // The first-run offer: annual only, because this is the screen
+                // that leads with the free-trial timeline and the monthly product
+                // carries no trial.
+                router.presentPaywall(context: .onboarding)
             }
         }
     }

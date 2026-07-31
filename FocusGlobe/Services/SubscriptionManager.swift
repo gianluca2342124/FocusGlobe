@@ -51,6 +51,24 @@ enum PlanKind: String, CaseIterable, Identifiable {
     }
 }
 
+/// The introductory offer a product actually carries, read from StoreKit — never
+/// assumed. `nil` on a plan means the product has no introductory offer at all,
+/// which is exactly the monthly product's situation today.
+struct IntroductoryOffer: Equatable {
+    /// Only a `.freeTrial` payment mode may ever be described as "free".
+    let isFreeTrial: Bool
+    /// The real period, e.g. 3 + `.day`. The UI must print THIS, not a literal,
+    /// so changing the offer in App Store Connect changes the copy.
+    let periodValue: Int
+    let periodUnit: String           // "day" | "week" | "month" | "year"
+
+    /// "3-day", "1-week" — used inside "3-Day Free Trial" style headings.
+    var localizedDuration: String {
+        let unit = periodValue == 1 ? periodUnit : "\(periodUnit)s"
+        return "\(periodValue) \(unit)"
+    }
+}
+
 /// A provider-independent snapshot of one plan for the paywall UI. Built from a
 /// RevenueCat `Package`/`StoreProduct` (localized price) when available, else a
 /// disabled fallback so the paywall always renders.
@@ -59,7 +77,20 @@ struct PlanOption: Identifiable, Equatable {
     var localizedPrice: String       // e.g. "18,99 €" (App Store localized)
     var monthlyEquivalent: String?   // annual only, e.g. "1,58 €/month"
     var available: Bool              // true when a real product is loaded
+    /// What the STORE says this product offers. Nil = no introductory offer.
+    var introOffer: IntroductoryOffer? = nil
+    /// Whether THIS Apple ID may still use that offer, per StoreKit. Defaults to
+    /// false and only becomes true on a confirmed `.eligible` result, so the UI
+    /// can never promise a trial it has not verified.
+    var isTrialEligible: Bool = false
     var id: PlanKind { kind }
+
+    /// The ONE condition under which any free-trial language may be shown for
+    /// this plan: a real purchasable product, carrying a real free-trial intro
+    /// offer, that this account is confirmed eligible for.
+    var offersFreeTrial: Bool {
+        available && isTrialEligible && (introOffer?.isFreeTrial ?? false)
+    }
 }
 
 /// Centralised subscription state, backed by RevenueCat when the SDK is linked.
@@ -424,6 +455,53 @@ final class SubscriptionManager: ObservableObject {
         #endif
     }
 
+    // MARK: Introductory offers and trial eligibility
+
+    #if canImport(RevenueCat)
+    /// Read the product's introductory offer straight from StoreKit. Only a
+    /// `.freeTrial` payment mode counts as free — a pay-up-front or pay-as-you-go
+    /// intro price is an offer, but it is NOT a free trial and must never be
+    /// described as one.
+    private static func introductoryOffer(for product: StoreProduct) -> IntroductoryOffer? {
+        guard let discount = product.introductoryDiscount else { return nil }
+        let unit: String
+        switch discount.subscriptionPeriod.unit {
+        case .day:   unit = "day"
+        case .week:  unit = "week"
+        case .month: unit = "month"
+        case .year:  unit = "year"
+        @unknown default: unit = "day"
+        }
+        return IntroductoryOffer(
+            isFreeTrial: discount.paymentMode == .freeTrial,
+            periodValue: discount.subscriptionPeriod.value,
+            periodUnit: unit)
+    }
+
+    /// Ask StoreKit (via RevenueCat) whether THIS Apple ID may still use each
+    /// product's introductory offer, and republish `plans` with the answer.
+    ///
+    /// Deliberately fail-closed: anything that is not an explicit `.eligible`
+    /// — unknown, still resolving, no offer, an error — leaves the plan marked
+    /// ineligible, so the UI shows the truthful "billed immediately" path rather
+    /// than a trial that the App Store would then refuse to honour.
+    func refreshTrialEligibility() async {
+        guard isAvailable else { return }
+        var updated = plans
+        for index in updated.indices where updated[index].available {
+            guard let product = packagesByKind[updated[index].kind]?.storeProduct,
+                  updated[index].introOffer != nil else { continue }
+            let status = await Purchases.shared.checkTrialOrIntroDiscountEligibility(product: product)
+            updated[index].isTrialEligible = (status == .eligible)
+        }
+        guard updated != plans else { return }
+        plans = updated
+        rcLog("trial eligibility: [\(updated.filter(\.offersFreeTrial).map { $0.kind.rawValue }.joined(separator: ","))]")
+    }
+    #else
+    func refreshTrialEligibility() async {}
+    #endif
+
     // MARK: RevenueCat plumbing
 
     #if canImport(RevenueCat)
@@ -490,8 +568,14 @@ final class SubscriptionManager: ObservableObject {
                 kind: kind,
                 localizedPrice: product.localizedPriceString,
                 monthlyEquivalent: kind == .annual ? monthlyEquivalent(for: product) : nil,
-                available: true)
+                available: true,
+                introOffer: Self.introductoryOffer(for: product),
+                // Eligibility is a separate, asynchronous StoreKit question.
+                // Start false — never promise a trial before it is confirmed.
+                isTrialEligible: false)
         }
+        // Resolve eligibility for whatever actually loaded, then republish.
+        Task { [weak self] in await self?.refreshTrialEligibility() }
         rcLog("plans mapped available=[\(availableKinds.map { $0.rawValue }.joined(separator: ","))] preferred=\(preferredKind?.rawValue ?? "none")")
         if !hasAnyPackage {
             rcLog("⚠️ no purchasable packages loaded. RevenueCat offering default1 must contain focusglobe_pro_monthly, focusglobe_pro_annual, focusglobe_pro_lifetime (and those IAPs must be Ready to Submit / Approved in App Store Connect).")

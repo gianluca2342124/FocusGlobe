@@ -242,6 +242,11 @@ enum PaywallContext: Equatable {
     case invite           // invite friends:      "Invite Friends with PRO"
     case infinite         // infinite duration:   "Focus Without Limits with PRO"
     case pause            // pause a flight:       "Pause Your Flight with PRO"
+    /// The first-run offer at the end of onboarding. This is the ONE context
+    /// that shows a single annual offer with no plan selector, because it is the
+    /// only screen that leads with the free-trial timeline — and the monthly
+    /// product has no trial, so offering it here would contradict the page.
+    case onboarding
 
     var benefitTitle: String {
         switch self {
@@ -257,6 +262,7 @@ enum PaywallContext: Equatable {
         case .invite:      return "Bring Your Crew"
         case .infinite:    return "Focus Without Limits"
         case .pause:       return "Pause When Needed"
+        case .onboarding:  return "Focus, Elevated"
         }
     }
 
@@ -274,6 +280,7 @@ enum PaywallContext: Equatable {
         case .invite: return "Create private flights and focus with people you know."
         case .infinite: return "Stay in the Sky for as long as the work needs."
         case .pause: return "Hold your journey safely when real life needs a moment."
+        case .onboarding: return "The exclusive Skies, skins and features."
         }
     }
 
@@ -290,6 +297,7 @@ enum PaywallContext: Equatable {
         case .online, .invite: return "person.2.fill"
         case .infinite: return "infinity"
         case .pause: return "pause.fill"
+        case .onboarding: return "sparkles"
         }
     }
 
@@ -302,6 +310,7 @@ enum PaywallContext: Equatable {
         case .noAds, .pause: return ProBrand.c4
         case .online, .invite: return ProBrand.c2
         case .infinite: return ProBrand.c5
+        case .onboarding: return ProBrand.c5
         }
     }
 
@@ -332,9 +341,13 @@ enum PaywallContext: Equatable {
         case .rewards:          return "PaywallHero_Rewards"
         case .noAds:            return "PaywallHero_NoAds"
         case .pause:            return "PaywallHero_Pause"
-        case .general:          return "PaywallHero_GeneralPRO"
+        case .general, .onboarding: return "PaywallHero_GeneralPRO"
         }
     }
+
+    /// The first-run offer: a single annual plan, no selector. Every other entry
+    /// point keeps both subscriptions.
+    var isOnboardingOffer: Bool { self == .onboarding }
 
     /// The single comparison-table benefit row to spotlight for this entry point
     /// (nil for broad / general entries). Titles match `PaywallComparisonTable`
@@ -349,7 +362,7 @@ enum PaywallContext: Equatable {
         // Cabin now has a curated premium item set, so the interior entry points
         // to the combined skins-and-items benefit row.
         case .interior:              return "Exclusive Skins & Items"
-        case .general, .sound, .widget, .rewards, .pause: return nil
+        case .general, .sound, .widget, .rewards, .pause, .onboarding: return nil
         }
     }
 }
