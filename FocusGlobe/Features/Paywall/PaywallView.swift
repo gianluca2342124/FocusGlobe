@@ -838,11 +838,15 @@ private struct TrialTimeline: View {
     var trialDays: Int = 3
 
     private var steps: [(icon: String, title: String, detail: String, color: Color)] {
-        let endDay = max(2, trialDays)
-        let reminderDay = max(2, endDay - 1)
+        // The reminder lands TWO days before the trial ends, because that is
+        // exactly what the title promises. `- 1` put it one day out and quietly
+        // contradicted the headline. Floored at day 1 so a very short offer still
+        // produces a sane day number.
+        let endDay = trialDays
+        let reminderDay = max(1, trialDays - 2)
         return [
             ("lock.open.fill", "Today", "Unlock all FocusGlobe PRO features.", ProBrand.c1),
-            ("bell.fill", "Day \(reminderDay)", "We’ll remind you before your free trial ends.", ProBrand.c2),
+            ("bell.fill", "Day \(reminderDay)", "We’ll remind you 2 days before your trial ends.", ProBrand.c2),
             ("star.fill", "Day \(endDay)", "Your subscription begins. Cancel anytime.", ProBrand.c4),
         ]
     }
