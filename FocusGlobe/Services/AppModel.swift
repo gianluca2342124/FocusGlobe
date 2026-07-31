@@ -326,6 +326,12 @@ final class AppModel: ObservableObject {
         // tap is instant. Runs on the main actor (not off-main) — see the function.
         Self.warmJourneyEngine()
 
+        // A streak can die between launches with nothing running to notice, so
+        // correct the loaded value BEFORE anything reads or publishes it —
+        // otherwise the first widget snapshot of the session carries a number the
+        // calendar broke days ago.
+        reconcileStreakIfNeeded()
+
         // Publish the initial widget snapshot from the just-loaded state.
         LaunchLog.mark("syncWidgets")
         initializeBadgeTrackingIfNeeded()
@@ -1638,21 +1644,98 @@ final class AppModel: ObservableObject {
 
     // MARK: - Private
 
+    /// Whole local calendar days from one instant's day to another's. Positive
+    /// means `to` is later. THE single definition of "consecutive" — both the
+    /// landing path and the launch reconciliation measure with this, so they can
+    /// never disagree about what a missed day is.
+    ///
+    /// `Calendar.current` throughout: the pilot's own calendar and time zone, and
+    /// `startOfDay` + a `.day` component so a DST shift is still exactly one day.
+    static func dayGap(from earlier: Date, to later: Date,
+                       calendar: Calendar = .current) -> Int {
+        let a = calendar.startOfDay(for: earlier)
+        let b = calendar.startOfDay(for: later)
+        return calendar.dateComponents([.day], from: a, to: b).day ?? 0
+    }
+
+    /// The streak that is still genuinely running as of `now`.
+    ///
+    /// A run survives only while its last completed day is today (gap 0) or
+    /// yesterday (gap 1) — yesterday is still alive because flying today would
+    /// continue it. Anything older means a whole local day passed with no
+    /// completed flight, and the run is over: 0, not the stale count, and not 1
+    /// (no flight has been completed today, so there is nothing to show).
+    ///
+    /// A negative gap means the device clock moved backwards or the pilot crossed
+    /// a time zone eastward. That is not a missed day, so the streak stands.
+    static func liveStreak(_ streak: Int, lastLandingDay: Date?, asOf now: Date,
+                           calendar: Calendar = .current) -> Int {
+        guard streak > 0, let last = lastLandingDay else { return 0 }
+        return dayGap(from: last, to: now, calendar: calendar) <= 1 ? streak : 0
+    }
+
+    /// Drop a streak that has already been broken by the calendar.
+    ///
+    /// `applyStreak` only ever runs when a flight LANDS, so a streak that dies
+    /// from simple inactivity was never written down as dead: the last landing's
+    /// value just sat in storage, and Home, Passport, the streak sheet and the
+    /// widgets all kept reporting it for days. Monday's 5 was still showing on
+    /// Friday. This is the missing half — called at launch and every time the app
+    /// comes forward, so the number is correct before a new flight is completed
+    /// and not only after one.
+    func reconcileStreakIfNeeded(now: Date = Date()) {
+        let live = Self.liveStreak(progress.currentStreak,
+                                   lastLandingDay: progress.lastLandingDay,
+                                   asOf: now)
+        guard live != progress.currentStreak else { return }
+
+        // Bank what the run legitimately earned BEFORE it is dropped. The pilot
+        // really did reach that streak, so a Sky unlocked by it must survive —
+        // `captureUnlockedSkies` is the permanent grandfather set and is
+        // idempotent, so this is safe to call on every reconciliation. (Milestone
+        // skins key off minutes / journeys / miles, never the streak, so they
+        // cannot be affected.)
+        captureUnlockedSkies()
+
+        var p = progress
+        // The record is a lifetime best and is never reduced by a broken run.
+        p.longestStreak = max(p.longestStreak, p.currentStreak)
+        p.currentStreak = live
+        progress = p
+
+        // Streak badges read `max(currentStreak, longestStreak)`, so they cannot
+        // be un-earned here; this only keeps the observed set continuous.
+        recordNewBadgeUnlocks()
+        // Persists progress AND republishes the widget snapshot, so the Streak
+        // Companion stops showing the dead number immediately.
+        persistAll()
+    }
+
     private func applyStreak(to p: inout UserProgress, landingDate: Date) {
         let cal = Calendar.current
         let today = cal.startOfDay(for: landingDate)
-        if let last = p.lastLandingDay {
-            let lastDay = cal.startOfDay(for: last)
-            if cal.isDate(lastDay, inSameDayAs: today) {
-                // Already landed today — streak unchanged.
-            } else if let yesterday = cal.date(byAdding: .day, value: -1, to: today),
-                      cal.isDate(lastDay, inSameDayAs: yesterday) {
-                p.currentStreak += 1
-            } else {
-                p.currentStreak = 1
-            }
-        } else {
+
+        guard let last = p.lastLandingDay else {
             p.currentStreak = 1
+            p.longestStreak = max(p.longestStreak, 1)
+            p.lastLandingDay = today
+            return
+        }
+
+        switch Self.dayGap(from: last, to: today, calendar: cal) {
+        case ..<0:
+            // A landing dated BEFORE the last recorded day — a late Online
+            // completion, a backfilled record, a clock correction. It can neither
+            // extend nor break the run, and it must not drag `lastLandingDay`
+            // backwards, which would make the NEXT landing look like a huge gap
+            // and wrongly reset a healthy streak.
+            return
+        case 0:
+            break                  // already flown today — one day, one streak day
+        case 1:
+            p.currentStreak += 1   // yesterday → consecutive
+        default:
+            p.currentStreak = 1    // a whole day was missed → this is day one
         }
         p.longestStreak = max(p.longestStreak, p.currentStreak)
         p.lastLandingDay = today

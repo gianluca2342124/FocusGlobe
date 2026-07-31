@@ -67,6 +67,12 @@ struct FocusGlobeApp: App {
                 }
                 .onChange(of: scenePhase) { _, phase in
                     guard phase == .active else { return }
+                    // FIRST: a streak can break while the app sits in the
+                    // background — over midnight, or over a whole missed day —
+                    // and nothing is running to notice. Correct it before the
+                    // notification plan (which reads the streak) and before any
+                    // screen redraws with the stale number.
+                    appModel.reconcileStreakIfNeeded()
                     // Rebuild the notification plan (pushes the comeback sequence out
                     // for active users) and re-check the RevenueCat Pro entitlement so
                     // renewals / expirations / restores made elsewhere are reflected.
