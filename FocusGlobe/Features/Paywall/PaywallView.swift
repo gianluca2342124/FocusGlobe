@@ -524,18 +524,27 @@ private struct PaywallCollectibleCarousel: View {
     /// different scales as they pass the centre.
     private var artHeight: CGFloat { max(120, viewport.paywallHeroHeight - 58) }
 
+    /// Balloon skins and cabin items are BOTH square source assets, so each one
+    /// renders exactly this wide. Pinning the width explicitly (rather than
+    /// letting the card box decide) is what lets the box be narrower than the
+    /// art, which is the only way to close the gap: the visible separation is
+    /// never just `spacing`, it is `spacing` plus the neighbour's depth
+    /// scale-down, and no amount of shrinking the box helps while the box is
+    /// also what sizes the picture.
+    private var artWidth: CGFloat { artHeight * 0.86 }
+
     var body: some View {
-        // Tight box + small gap: these are transparent PNGs whose own bounds
-        // already carry a lot of empty margin, so a 330 pt card at 0.62 of the
-        // width put a phone-width of nothing between one balloon and the next.
+        // The box is deliberately ~94% of the artwork, so neighbouring pieces
+        // close to a ~3 pt gap at every size class while each one still renders
+        // at full natural size. Nothing clips: these cards have no background,
+        // and the carousel only clips at its own bounds. Spacing and speed are
+        // inherited from the engine.
         FocusContinuousCarousel(
             items: items,
             selectedIndex: $selectedIndex,
-            spacing: 6,
-            maximumCardWidth: 210,
-            cardWidthFraction: 0.44,
-            minimumCardWidth: 130,
-            speed: 34
+            maximumCardWidth: artWidth * 0.94,
+            cardWidthFraction: 0.9,
+            minimumCardWidth: 110
         ) { item, prominence in
             // No card. These are transparent PNGs (and a vector balloon) and they
             // float directly on the paywall — the rounded panel that used to sit
@@ -544,8 +553,7 @@ private struct PaywallCollectibleCarousel: View {
             // contact shadow belonging to the object itself.
             VStack(spacing: 8) {
                 collectibleArt(item)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: artHeight)
+                    .frame(width: artWidth, height: artHeight)
                     .shadow(color: .black.opacity(0.30), radius: 16, y: 10)
                     // Decoration: VoiceOver reads the collectible's NAME below,
                     // not a nameless moving image.
@@ -557,7 +565,7 @@ private struct PaywallCollectibleCarousel: View {
                     .minimumScaleFactor(0.7)
                     .shadow(color: .black.opacity(0.55), radius: 5, y: 2)
             }
-            .padding(.horizontal, 6)
+            .padding(.horizontal, 2)
         }
     }
 
@@ -571,7 +579,9 @@ private struct PaywallCollectibleCarousel: View {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFit()
-                    .padding(.horizontal, 10)
+                    // Vertical inset only. The horizontal 10 pt that used to sit
+                    // here was dead box on top of the card's own padding — it
+                    // shrank the object AND widened the gap to its neighbour.
                     .padding(.vertical, artHeight * 0.07)
             } else {
                 Image(systemName: item.systemImage)
@@ -599,16 +609,17 @@ private struct PaywallSkyCarousel: View {
     }
 
     var body: some View {
-        // A Sky is a landscape and keeps a wider box than a collectible, but the
-        // gap between previews closes to match the rest of the paywall.
+        // A Sky is a landscape and keeps a wider box than a collectible. Its
+        // preview FILLS that box (no transparency), so the visible gap here is
+        // exactly `spacing` — 5 pt, the middle of the 4-6 pt target for
+        // landscapes. Speed is inherited from the engine.
         FocusContinuousCarousel(
             items: skies,
             selectedIndex: $selectedIndex,
-            spacing: 8,
+            spacing: 5,
             maximumCardWidth: 300,
             cardWidthFraction: 0.60,
-            minimumCardWidth: 180,
-            speed: 34
+            minimumCardWidth: 180
         ) { sky, prominence in
             ZStack {
                 // Static artwork, not a live scene graph: four of these are on

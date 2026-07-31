@@ -747,11 +747,14 @@ struct OnboardingView: View {
         FocusContinuousCarousel(
             items: premiumPreviewItems,
             selectedIndex: $premiumPreviewIndex,
-            spacing: 6,
-            maximumCardWidth: 200,
-            cardWidthFraction: 0.50,
+            spacing: 4,
+            maximumCardWidth: 210,
+            cardWidthFraction: 0.54,
             minimumCardWidth: 140,
-            speed: 28
+            // Deliberately below the shared 42: this is a first-run surface and
+            // the only carousel that mixes landscape Skies with balloons, so it
+            // stays a touch calmer. Still +25% on its previous 28.
+            speed: 35
         ) { preview, prominence in
             premiumPreviewCard(preview, prominence: prominence)
         }

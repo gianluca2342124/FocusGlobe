@@ -29,15 +29,16 @@ struct FocusContinuousCarousel<Item: Identifiable, Card: View>: View {
     /// Gap between card boxes. Small on purpose: the cards hold transparent
     /// artwork whose own bounds already contribute generous empty margin, so
     /// large spacing here reads as the assets drifting apart.
-    var spacing: CGFloat = 6
-    var maximumCardWidth: CGFloat = 220
+    var spacing: CGFloat = 3
+    var maximumCardWidth: CGFloat = 230
     /// Card width as a fraction of the available width. Landscape Sky previews
     /// want a wider box than an isolated balloon or cabin object.
-    var cardWidthFraction: CGFloat = 0.46
+    var cardWidthFraction: CGFloat = 0.54
     var minimumCardWidth: CGFloat = 140
-    /// Points per second. A card advances one position every
-    /// `(cardWidth + spacing) / speed` seconds.
-    var speed: CGFloat = 34
+    /// Points per second — THE shared cadence. Call sites inherit this rather
+    /// than restating it, so the paywalls cannot drift apart; only onboarding
+    /// overrides it, deliberately calmer for a first-run surface.
+    var speed: CGFloat = 42
     /// How long the conveyor stays still after a drag ends.
     var resumeDelay: TimeInterval = 1.6
     @ViewBuilder let card: (Item, Double) -> Card
