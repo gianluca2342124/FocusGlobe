@@ -45,7 +45,19 @@ struct RootView: View {
         .fullScreenCover(item: paywallModalBinding) { modal in
             coordinatedModal(modal)
         }
-        .sheet(item: sheetModalBinding) { modal in
+        // Compact destinations. On a wide Mac window these become centred,
+        // content-sized desktop dialogs instead of mobile detent sheets, which is
+        // what produced the oversized panels with empty lower halves. On iPhone
+        // and iPad portrait this is the same `.sheet` as before.
+        .focusAdaptiveDialog(item: dialogModalBinding,
+                             width: dialogModalBinding.wrappedValue?.desktopDialogWidth ?? 400,
+                             maximumHeightFraction: 0.8,
+                             showsCloseButton: false) { modal in
+            coordinatedModal(modal)
+        }
+        // The native share sheet stays a real sheet — it is a
+        // UIActivityViewController and the system owns its presentation.
+        .sheet(item: shareModalBinding) { modal in
             coordinatedModal(modal)
         }
         // The take-off curtain: an opaque cover raised the instant the Boarding
@@ -116,21 +128,40 @@ struct RootView: View {
         )
     }
 
-    private var sheetModalBinding: Binding<AppModal?> {
+    /// Everything that can become a desktop dialog: the coordinated destinations
+    /// minus the paywall (a full-screen cover) and the share sheet.
+    private var dialogModalBinding: Binding<AppModal?> {
         Binding(
             get: {
-                guard let modal = router.activeModal else { return nil }
-                if case .paywall = modal { return nil }
+                guard let modal = router.activeModal,
+                      modal.desktopDialogWidth != nil else { return nil }
                 return modal
             },
             set: { newValue in
                 if let newValue {
                     router.activeModal = newValue
-                } else if let modal = router.activeModal {
-                    if case .paywall = modal { return }
+                } else if router.activeModal?.desktopDialogWidth != nil {
                     router.activeModal = nil
                 }
             }
         )
     }
+
+    /// The share sheet alone.
+    private var shareModalBinding: Binding<AppModal?> {
+        Binding(
+            get: {
+                guard case .share = router.activeModal else { return nil }
+                return router.activeModal
+            },
+            set: { newValue in
+                if let newValue {
+                    router.activeModal = newValue
+                } else if case .share = router.activeModal {
+                    router.activeModal = nil
+                }
+            }
+        )
+    }
+
 }

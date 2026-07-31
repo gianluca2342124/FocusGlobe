@@ -84,7 +84,13 @@ struct StoreView: View {
         // Daily Gift + Coin Spin present through the app-wide modal coordinator.
         // Scoped to `mode` alone — the Balloon/Interior swap — never to a model.
         .animation(AppMotion.control, value: mode)
-        .sheet(item: $placementItem) { item in
+        // Mac: a compact centred dialog sized to the slot rows. Backdrop clicks
+        // deliberately do NOT dismiss — the sheet holds a chosen slot that is not
+        // committed until "Place Item", and a stray click must not discard it.
+        .focusAdaptiveDialog(item: $placementItem, width: 520,
+                             maximumHeightFraction: 0.8,
+                             showsCloseButton: false,   // its toolbar has Cancel
+                             dismissOnBackdrop: false) { item in
             CabinPlacementSheet(item: item)
                 .environmentObject(appModel)
         }

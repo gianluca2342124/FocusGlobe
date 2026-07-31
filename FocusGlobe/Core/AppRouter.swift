@@ -224,6 +224,22 @@ enum AppModal: Identifiable {
         case .share:            return "share"
         }
     }
+
+    /// The width this destination takes as a compact DESKTOP dialog on a wide
+    /// window. `nil` means it must stay a real sheet:
+    ///   • `.paywall` is a full-screen cover and never went through here.
+    ///   • `.share` is a `UIActivityViewController`; the system owns its
+    ///     presentation and it breaks if hosted inside an overlay.
+    var desktopDialogWidth: CGFloat? {
+        switch self {
+        case .streak:        return 360
+        case .coinSpin:      return 400
+        case .coinBoostGift: return 400
+        case .dailyGift:     return 400
+        case .onlineSignIn:  return 440
+        case .paywall, .share: return nil
+        }
+    }
 }
 
 /// The reason a FocusGlobe PRO paywall was opened — one reusable paywall view

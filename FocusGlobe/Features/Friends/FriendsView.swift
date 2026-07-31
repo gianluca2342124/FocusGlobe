@@ -154,7 +154,8 @@ struct FriendsView: View {
                 .environmentObject(appModel)
                 .environmentObject(online)
         }
-        .sheet(item: $inviteFlow) { _ in
+        .focusAdaptiveDialog(item: $inviteFlow, width: 470,
+                             maximumHeightFraction: 0.7) { _ in
             // From Friends you recommend the app; a Private Flight is created
             // in-flight (Invite Friends), never pre-emptively from here.
             InvitePeopleView(context: .app)

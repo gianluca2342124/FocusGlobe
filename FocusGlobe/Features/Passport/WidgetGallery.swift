@@ -91,7 +91,9 @@ struct WidgetsGallerySection: View {
                 .padding(.vertical, 4)
             }
         }
-        .sheet(item: $selected) { item in
+        .focusAdaptiveDialog(item: $selected, width: 560,
+                             maximumHeightFraction: 0.78,
+                             showsCloseButton: false) { item in   // sheet has its own X
             WidgetDetailSheet(item: item, locked: locked(item))
                 .environmentObject(appModel)
                 .environmentObject(router)
