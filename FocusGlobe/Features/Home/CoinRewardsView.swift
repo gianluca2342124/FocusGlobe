@@ -208,7 +208,7 @@ struct CoinSpinSheet: View {
             Text("You won")
                 .font(AppTypography.callout)
                 .foregroundStyle(AppColors.textSecondary)
-            Text("\(prize ?? 0) FocusCoins")
+            Text("\(prize ?? 0) Coins")
                 .font(.system(size: 36, weight: .heavy, design: .default))
                 .foregroundStyle(AppColors.gold)
             AppPrimaryButton(title: "Awesome", systemImage: "checkmark") {
@@ -392,7 +392,7 @@ struct CoinsBoostPopup: View {
                         .monospacedDigit()
                 }
 
-                Text("Double your FocusCoins for your next study hour once equipped.")
+                Text("Double your Coins for your next study hour once equipped.")
                     .font(AppTypography.callout)
                     .foregroundStyle(AppColors.textSecondary)
                     .multilineTextAlignment(.center)

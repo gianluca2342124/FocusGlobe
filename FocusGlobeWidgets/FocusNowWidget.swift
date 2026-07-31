@@ -127,9 +127,9 @@ struct FocusNowView: View {
         snapshot.activeFlight || snapshot.hasResumable ? "arrow.uturn.up" : "arrow.up"
     }
 
-    /// Small: a genuinely compact composition — eyebrow and Sky name at the top,
-    /// the Sky itself through the middle, a full-width action at the bottom. It
-    /// borrows nothing from the medium layout.
+    /// Small: a genuinely compact composition — eyebrow and Sky name as one tight
+    /// block at the top, the Sky itself through the middle, and an action pill at
+    /// the bottom that hugs its label. It borrows nothing from the medium layout.
     ///
     /// The clipping this replaces was a modifier-ORDER bug, not a spacing one:
     /// the content read `.frame(maxWidth: .infinity, maxHeight: .infinity)` and
@@ -140,17 +140,20 @@ struct FocusNowView: View {
     /// the frame after it.
     ///
     /// Nothing here depends on text shrinking to stay inside: the eyebrow is
-    /// `fixedSize`, the Sky name floors at 85 % of 14 pt, and only the live timer
+    /// `fixedSize`, the Sky name floors at 80 % of 15 pt, and only the live timer
     /// (whose width genuinely varies as it counts down) scales hard.
     private var smallLayout: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            eyebrow
+        VStack(alignment: .leading, spacing: 6) {
+            // Eyebrow + Sky name as ONE tight block at the top.
+            VStack(alignment: .leading, spacing: 1) {
+                eyebrow
 
-            Text(displayedSkyName)
-                .font(.system(size: 14, weight: .heavy, design: .default))
-                .foregroundStyle(WTheme.ink)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
+                Text(displayedSkyName)
+                    .font(.system(size: 15, weight: .heavy, design: .default))
+                    .foregroundStyle(WTheme.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
 
             Spacer(minLength: 2)
 
@@ -228,9 +231,11 @@ struct FocusNowView: View {
             .lineLimit(1)
         }
         .foregroundStyle(Color(red: 0.08, green: 0.07, blue: 0.05))
-        .padding(.horizontal, compact ? 10 : 13)
-        .padding(.vertical, compact ? 7 : 9)
-        .frame(maxWidth: compact ? .infinity : nil)
+        .padding(.horizontal, compact ? 11 : 13)
+        .padding(.vertical, compact ? 6.5 : 9)
+        // Hugs its label in both families. Spanning the full small tile made a
+        // heavy gold bar that dominated a 158 pt square.
+        .fixedSize()
         .background(Capsule().fill(WTheme.gold))
     }
 }

@@ -910,6 +910,7 @@ struct PaywallComparisonTable: View {
         "Unlimited Time  ∞",
         "Exclusive Skies",
         "Exclusive Skins & Items",
+        "2x Coins in trips",
     ]
 
     private var freeWidth: CGFloat { viewport.isCompact ? 52 : 66 }

@@ -16,7 +16,7 @@ struct FocusShieldSettingsSection: View {
             SectionLabel(text: "Focus Shield")
             VStack(spacing: 0) {
                 row(icon: "shield.lefthalf.filled",
-                    tint: AppColors.success,
+                    tint: AppColors.gold,
                     title: "Block distracting apps during flights",
                     subtitle: statusText,
                     showChevron: false)

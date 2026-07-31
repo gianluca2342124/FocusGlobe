@@ -194,27 +194,28 @@ private struct WidgetPreviewTile: View {
                 .init(color: .black.opacity(0.30), location: 0.62),
                 .init(color: .black.opacity(0.80), location: 1.00),
             ], startPoint: .top, endPoint: .bottom)
-            VStack(alignment: .leading, spacing: side * 0.04) {
-                Text("FOCUS NOW")
-                    .font(.system(size: max(8, side * 0.065), weight: .heavy))
-                    .tracking(1.1)
-                    .foregroundStyle(WGTheme.inkSoft)
-                    .lineLimit(1)
-                    .fixedSize()
-                Text(appModel.selectedSky.name)
-                    .font(.system(size: side * 0.09, weight: .heavy))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
+            VStack(alignment: .leading, spacing: side * 0.045) {
+                VStack(alignment: .leading, spacing: side * 0.006) {
+                    Text("FOCUS NOW")
+                        .font(.system(size: max(8, side * 0.065), weight: .heavy))
+                        .tracking(1.1)
+                        .foregroundStyle(WGTheme.inkSoft)
+                        .lineLimit(1)
+                        .fixedSize()
+                    Text(appModel.selectedSky.name)
+                        .font(.system(size: side * 0.095, weight: .heavy))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
                 Spacer(minLength: side * 0.02)
                 Label(resumable ? "Resume" : "Start Focus",
                       systemImage: resumable ? "arrow.uturn.up" : "arrow.up")
                     .font(.system(size: side * 0.075, weight: .heavy))
                     .lineLimit(1)
-                    .minimumScaleFactor(0.78)
                     .foregroundStyle(Color(red: 0.08, green: 0.07, blue: 0.05))
                     .padding(.horizontal, side * 0.07)
-                    .padding(.vertical, side * 0.05)
-                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, side * 0.042)
+                    .fixedSize()
                     .background(Capsule().fill(WGTheme.gold))
             }
             .foregroundStyle(.white)
@@ -223,6 +224,11 @@ private struct WidgetPreviewTile: View {
             .padding(side * 0.093)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
+        // The Sky preview fills, so it can render WIDER than the tile; without
+        // this the ZStack grew with it and the leading text was pushed outside
+        // the visible square ("US NOW", "sert Night").
+        .frame(width: side, height: side)
+        .clipped()
     }
 
     private var focusGridPreview: some View {

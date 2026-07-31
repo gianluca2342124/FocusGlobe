@@ -90,7 +90,7 @@ struct SettingsView: View {
             .foregroundStyle(selected ? Color.white : AppColors.textSecondary)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(selected ? AnyShapeStyle(AppGradients.brandButton) : AnyShapeStyle(Color.clear))
+                    .fill(selected ? AnyShapeStyle(AppColors.selectionGold) : AnyShapeStyle(Color.clear))
             )
         }
         .buttonStyle(SoftPressStyle())
@@ -117,7 +117,7 @@ struct SettingsView: View {
                 HStack(spacing: AppSpacing.sm) {
                     Image(systemName: "person.text.rectangle")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(AppColors.brand)
+                        .foregroundStyle(AppColors.gold)
                         .frame(width: 30)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Your name")
@@ -146,14 +146,14 @@ struct SettingsView: View {
             VStack(spacing: 0) {
                 if appModel.isPro {
                     SettingsRow(systemImage: "checkmark.seal.fill", title: "PRO is active",
-                                subtitle: "Thank you for your support", tint: AppColors.success,
+                                subtitle: "Thank you for your support", tint: AppColors.gold,
                                 trailing: AnyView(EmptyView()))
                     #if canImport(RevenueCatUI)
                     if appModel.subscriptions.isAvailable {
                         RowDivider()
                         Button { appModel.tapFeedback(); showCustomerCenter = true } label: {
                             SettingsRow(systemImage: "person.crop.circle", title: "Manage subscription",
-                                        subtitle: "Billing, restore & support", tint: AppColors.brand,
+                                        subtitle: "Billing, restore & support", tint: AppColors.gold,
                                         trailing: AnyView(Image(systemName: "chevron.right")
                                             .font(.system(size: 13, weight: .semibold))
                                             .foregroundStyle(AppColors.textTertiary)))
@@ -183,7 +183,7 @@ struct SettingsView: View {
                     }
                 } label: {
                     SettingsRow(systemImage: "arrow.clockwise", title: "Restore Purchases",
-                                subtitle: restoreMessage, tint: AppColors.brand,
+                                subtitle: restoreMessage, tint: AppColors.gold,
                                 trailing: AnyView(EmptyView()))
                 }
                 .buttonStyle(SoftPressStyle())
@@ -230,7 +230,7 @@ struct SettingsView: View {
             SettingsRow(systemImage: "person.crop.circle.badge.plus",
                         title: "Sign in to FocusGlobe",
                         subtitle: "Restore your account, progress and PRO access.",
-                        tint: AppColors.brand,
+                        tint: AppColors.gold,
                         trailing: AnyView(EmptyView()))
             if let accountError {
                 Text(accountError)
@@ -254,7 +254,7 @@ struct SettingsView: View {
             SettingsRow(systemImage: "checkmark.circle.fill",
                         title: "Signed in with Apple",
                         subtitle: "Your FocusGlobe account and purchases are connected.",
-                        tint: AppColors.success,
+                        tint: AppColors.gold,
                         trailing: AnyView(EmptyView()))
             RowDivider()
             Button {
@@ -276,7 +276,7 @@ struct SettingsView: View {
                 HStack(spacing: AppSpacing.sm) {
                     Image(systemName: "lock.shield")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(AppColors.success)
+                        .foregroundStyle(AppColors.gold)
                     Text("Your focus history stays on this device. No account, no tracking.")
                         .font(AppTypography.callout)
                         .foregroundStyle(AppColors.textSecondary)
@@ -289,7 +289,7 @@ struct SettingsView: View {
                 } label: {
                     SettingsRow(systemImage: "icloud.and.arrow.down", title: "Manage Online Data",
                                 subtitle: "Review or delete your FocusGlobe Online data",
-                                tint: AppColors.brand,
+                                tint: AppColors.gold,
                                 trailing: AnyView(Image(systemName: "chevron.right")
                                     .font(.system(size: 13, weight: .semibold))
                                     .foregroundStyle(AppColors.textTertiary)))
@@ -298,12 +298,12 @@ struct SettingsView: View {
                 RowDivider()
                 Link(destination: LegalLinks.privacy) {
                     SettingsRow(systemImage: "hand.raised.fill", title: "Privacy Policy",
-                                tint: AppColors.brand, trailing: AnyView(legalChevron))
+                                tint: AppColors.gold, trailing: AnyView(legalChevron))
                 }
                 RowDivider()
                 Link(destination: LegalLinks.terms) {
                     SettingsRow(systemImage: "doc.text.fill", title: "Terms of Use",
-                                tint: AppColors.brand, trailing: AnyView(legalChevron))
+                                tint: AppColors.gold, trailing: AnyView(legalChevron))
                 }
             }
         }
@@ -507,7 +507,7 @@ struct ToggleRow: View {
     var body: some View {
         Toggle(isOn: $isOn) {
             HStack(spacing: AppSpacing.sm) {
-                iconBadge(systemImage, tint: AppColors.brand)
+                iconBadge(systemImage, tint: AppColors.gold)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(title).font(AppTypography.callout).foregroundStyle(AppColors.textPrimary)
                     if let subtitle {
@@ -525,7 +525,7 @@ struct SettingsRow: View {
     let systemImage: String
     let title: String
     var subtitle: String?
-    var tint: Color = AppColors.brand
+    var tint: Color = AppColors.gold
     let trailing: AnyView
 
     var body: some View {

@@ -64,7 +64,7 @@ struct OnlineFriendsSettingsSection: View {
                     SettingsRow(systemImage: "person.crop.circle.badge.plus",
                                 title: "Sign in to FocusGlobe Online",
                                 subtitle: "Fly with other pilots — you appear only as an anonymous alias",
-                                tint: AppColors.brand, trailing: chevron)
+                                tint: AppColors.gold, trailing: chevron)
                 }
                 .buttonStyle(SoftPressStyle())
                 RowDivider()
@@ -75,7 +75,7 @@ struct OnlineFriendsSettingsSection: View {
                     SettingsRow(systemImage: "person.crop.circle.badge.checkmark",
                                 title: "Account",
                                 subtitle: "Signed in as \(online.profile?.displayName ?? "Sky Pilot") — tap to sign out",
-                                tint: AppColors.brand, trailing: chevron)
+                                tint: AppColors.gold, trailing: chevron)
                 }
                 .buttonStyle(SoftPressStyle())
                 RowDivider()
@@ -97,7 +97,7 @@ struct OnlineFriendsSettingsSection: View {
             } label: {
                 SettingsRow(systemImage: "textformat", title: "Public alias",
                             subtitle: online.profile?.displayName ?? "Set after signing in",
-                            tint: AppColors.brand, trailing: chevron)
+                            tint: AppColors.gold, trailing: chevron)
             }
             .buttonStyle(SoftPressStyle())
             .disabled(online.profile == nil)
@@ -126,7 +126,7 @@ struct OnlineFriendsSettingsSection: View {
             appModel.tapFeedback()
             router.presentPaywall(context: .online)
         } label: {
-            SettingsRow(systemImage: icon, title: title, subtitle: subtitle, tint: AppColors.brand,
+            SettingsRow(systemImage: icon, title: title, subtitle: subtitle, tint: AppColors.gold,
                         trailing: AnyView(Image(systemName: "lock.fill")
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(AppColors.textTertiary)))
