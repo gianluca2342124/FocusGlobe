@@ -627,15 +627,16 @@ private struct CabinPlacementSheet: View {
     }
 
     private var placementContent: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            hero
-
+        // No artwork. The sheet's job is one decision — which slot — and the item
+        // is already named in the navigation bar and was just tapped in the Store,
+        // so a 190 pt hero plus its glow was pushing the actual slot list below the
+        // fold for nothing.
+        VStack(alignment: .leading, spacing: 16) {
             Text("Choose where this item should appear in your cabin.")
                 .font(AppTypography.callout)
                 .foregroundStyle(AppColors.textSecondary)
-                .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .center)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             replacementSection
 
@@ -715,54 +716,6 @@ private struct CabinPlacementSheet: View {
                 .animation(AppMotion.control, value: selectedSlot)
             }
         }
-    }
-
-    /// The piece itself, on its own — the isolated PNG with nothing behind it but
-    /// a soft bloom in the item's own tint.
-    ///
-    /// This replaced a photo of the Cabin overprinted with `+` / `×` markers at
-    /// the slots' normalized contact points. That map was the confusing part of
-    /// this flow: the markers sat on a dark, heavily cropped picture, the tabletop
-    /// three landed almost on top of one another, and the thing actually being
-    /// placed was never shown. The labelled rows below already say where each slot
-    /// is, in words, so the map was carrying no information the list didn't.
-    private var hero: some View {
-        ZStack {
-            RadialGradient(colors: [item.tint.opacity(0.22), .clear],
-                           center: .center, startRadius: 2, endRadius: 118)
-                .frame(width: 260, height: 260)
-                .blur(radius: 12)
-                .allowsHitTesting(false)
-            artwork
-                .frame(maxWidth: 210, maxHeight: 168)
-        }
-        .frame(height: 176)
-        .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(item.name). \(item.subtitle)")
-    }
-
-    @ViewBuilder private var artwork: some View {
-        #if canImport(UIKit)
-        if let ui = UIImage(named: item.bestAssetName) {
-            Image(uiImage: ui)
-                .resizable()
-                .scaledToFit()
-                // A grounded contact shadow, so the object reads as an object and
-                // not as a sticker floating in the sheet.
-                .shadow(color: .black.opacity(0.32), radius: 14, y: 10)
-        } else {
-            placeholderGlyph
-        }
-        #else
-        placeholderGlyph
-        #endif
-    }
-
-    private var placeholderGlyph: some View {
-        Image(systemName: item.systemImage)
-            .font(.system(size: 62, weight: .semibold))
-            .foregroundStyle(item.tint)
     }
 
     private func slotRow(_ slot: CabinSlot) -> some View {
