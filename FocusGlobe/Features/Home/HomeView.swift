@@ -168,25 +168,47 @@ struct HomeView: View {
                 .opacity(handingOff ? 0 : 1)
 
             VStack(spacing: 0) {
-                // The top controls are the ONE part of the Home chrome that
-                // follows the REAL appearance: a warm-white surface + dark
-                // glyphs by day, a premium translucent glass by night — via the
-                // shared `homeControl*` tokens (no scattered scheme checks).
-                topBar
-                // Everything that sits DIRECTLY on the always-dark Sky —
-                // greeting, Sky name, the Start Focus pill — is pinned to DARK
-                // so it reads light-on-sky (and Start Focus stays the signature
-                // white pill) in both appearances. Sheets/popups are presented
-                // outside this scope and keep the user's chosen appearance.
-                greetingBlock
-                    .environment(\.colorScheme, .dark)
+                // HEADER — spans the window, not the reading column.
+                //
+                // The header and the journey content want different widths on a
+                // wide Mac window: the greeting belongs at the left edge and the
+                // coin balance at the right, while the balloon, Sky title and
+                // Start Focus stay centred and narrow. Sharing one
+                // `homeContentWidth` container is what left the greeting and the
+                // coins huddled either side of the middle with hundreds of points
+                // of empty sky beyond them. They are two containers now.
+                //
+                // On compact this is identical to before: `homeHeaderMargin`
+                // returns `pagePadding`, and `homeContentWidth` already resolved
+                // to the full width minus that same padding on a phone.
+                VStack(spacing: 0) {
+                    // The top controls are the ONE part of the Home chrome that
+                    // follows the REAL appearance: a warm-white surface + dark
+                    // glyphs by day, a premium translucent glass by night — via the
+                    // shared `homeControl*` tokens (no scattered scheme checks).
+                    topBar
+                    // Everything that sits DIRECTLY on the always-dark Sky —
+                    // greeting, Sky name, the Start Focus pill — is pinned to DARK
+                    // so it reads light-on-sky (and Start Focus stays the signature
+                    // white pill) in both appearances. Sheets/popups are presented
+                    // outside this scope and keep the user's chosen appearance.
+                    greetingBlock
+                        .environment(\.colorScheme, .dark)
+                }
+                .frame(maxWidth: viewport.homeHeaderWidth)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, viewport.homeHeaderMargin)
+
                 Spacer()
+
+                // JOURNEY CONTENT — stays centred and deliberately narrow, so the
+                // Start Focus pill never stretches across a wide window.
                 bottomCluster
                     .environment(\.colorScheme, .dark)
+                    .frame(maxWidth: viewport.homeContentWidth)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, viewport.pagePadding)
             }
-            .frame(maxWidth: viewport.homeContentWidth)
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, viewport.pagePadding)
             .padding(.bottom, max(AppSpacing.lg, viewport.pagePadding * 0.62))
             .opacity(handingOff ? 0 : 1)
         }

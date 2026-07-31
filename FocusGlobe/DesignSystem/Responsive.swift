@@ -73,6 +73,31 @@ struct FocusViewportMetrics: Equatable, Sendable {
     var homeContentWidth: CGFloat {
         min(size.width - pagePadding * 2, kind == .wide ? 860 : 720)
     }
+
+    /// Horizontal inset for Home's FULL-WIDTH header (greeting + top controls).
+    ///
+    /// The header spans the window rather than the centred reading column that
+    /// holds the balloon, Sky title and Start Focus — on a wide Mac window those
+    /// two want completely different widths, and sharing one container is what
+    /// left the greeting and the coin balance huddled around the middle.
+    ///
+    /// Compact returns `pagePadding` exactly, so iPhone is bit-for-bit unchanged:
+    /// there `homeContentWidth` already resolves to the full width minus that
+    /// same padding.
+    var homeHeaderMargin: CGFloat {
+        switch kind {
+        case .compact: return pagePadding
+        case .regular: return max(pagePadding, 48)
+        case .wide:    return min(72, max(48, size.width * 0.045))
+        }
+    }
+
+    /// The header's own ceiling. Generous enough that a normal Mac window spans
+    /// edge to edge, capped so a 27-inch display does not fling the greeting and
+    /// the coin balance to opposite ends of the desk.
+    var homeHeaderWidth: CGFloat {
+        min(size.width - homeHeaderMargin * 2, kind == .wide ? 1400 : 1024)
+    }
     var readableContentWidth: CGFloat {
         min(size.width - pagePadding * 2, kind == .wide ? 920 : 720)
     }
