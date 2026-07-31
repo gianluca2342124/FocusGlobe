@@ -1,47 +1,70 @@
 import SwiftUI
 
-/// A lightweight, continuously moving carousel shared by premium previews.
+/// A lightweight, continuously moving carousel shared by every premium preview.
 ///
 /// Each item is rendered once. Its position is wrapped mathematically, so the
 /// conveyor can run forever without duplicated view trees, sentinel indexes or
 /// visible resets. Automatic motion fully yields while the pilot drags and
 /// resumes after a short pause without snapping away the drag's momentum.
+///
+/// ## Why the motion is derived, not stated
+///
+/// This used to gate automatic movement behind three pieces of `@State`
+/// (`isAutomatic`, `isVisible`) plus a `scenePhase` comparison, all initialised
+/// from `onAppear`. Every one of those is a way for the conveyor to be silently
+/// stopped — if `onAppear` lands while the scene is not yet `.active` (a modal
+/// still presenting, a cold launch mid-onboarding), `isAutomatic` is left false
+/// and nothing in the normal course of events sets it back, so the carousel just
+/// sits there until the pilot swipes.
+///
+/// Now the offset is a pure function of the clock: `motionOrigin` is stamped when
+/// the state is created, so the FIRST rendered frame is already moving and no
+/// callback has to fire for that to be true. Stopping is likewise structural —
+/// the `TimelineView` is mounted with the carousel, so dismissing the paywall
+/// tears the clock down. The only state left is what genuinely models a user
+/// action: the drag.
 struct FocusContinuousCarousel<Item: Identifiable, Card: View>: View {
     let items: [Item]
     @Binding var selectedIndex: Int
-    var spacing: CGFloat = 12
-    var maximumCardWidth: CGFloat = 340
+    /// Gap between card boxes. Small on purpose: the cards hold transparent
+    /// artwork whose own bounds already contribute generous empty margin, so
+    /// large spacing here reads as the assets drifting apart.
+    var spacing: CGFloat = 6
+    var maximumCardWidth: CGFloat = 220
+    /// Card width as a fraction of the available width. Landscape Sky previews
+    /// want a wider box than an isolated balloon or cabin object.
+    var cardWidthFraction: CGFloat = 0.46
+    var minimumCardWidth: CGFloat = 140
     /// Points per second. A card advances one position every
-    /// `(cardWidth + spacing) / speed` seconds — on a 390 pt phone that is ~7.5 s
-    /// at 34, versus ~19.5 s at the previous 14, which read as a static row.
+    /// `(cardWidth + spacing) / speed` seconds.
     var speed: CGFloat = 34
-    /// How long the conveyor stays still after a drag ends. Long enough that a
-    /// pilot reading one card is not immediately pulled off it, short enough that
-    /// the surface does not read as having stopped for good.
+    /// How long the conveyor stays still after a drag ends.
     var resumeDelay: TimeInterval = 1.6
     @ViewBuilder let card: (Item, Double) -> Card
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.scenePhase) private var scenePhase
+
+    /// Stamped when this carousel's state is created — i.e. before the first
+    /// frame is drawn. Nothing needs to start the motion.
     @State private var motionOrigin = Date()
-    @State private var frozenDistance: CGFloat = 0
+    /// Distance already banked from previous auto runs and drags.
+    @State private var bankedDistance: CGFloat = 0
+    /// Non-nil while automatic motion is held (during and just after a drag).
+    /// Holds the exact distance at the moment it was frozen.
+    @State private var heldDistance: CGFloat?
     @State private var dragTranslation: CGFloat = 0
     @State private var isDragging = false
-    @State private var isAutomatic = false
-    @State private var isVisible = false
     @State private var resumeTask: Task<Void, Never>?
 
     var body: some View {
         GeometryReader { geometry in
             let width = max(1, geometry.size.width)
-            let cardWidth = min(maximumCardWidth, max(196, width * 0.62))
+            let cardWidth = min(maximumCardWidth,
+                                max(minimumCardWidth, width * cardWidthFraction))
             let step = cardWidth + spacing
 
-            TimelineView(.animation(
-                minimumInterval: 1.0 / 30.0,
-                paused: reduceMotion || !isVisible || scenePhase != .active
-            )) { context in
-                let distance = reduceMotion ? 0 : automaticDistance(at: context.date)
+            TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: reduceMotion)) { context in
+                let distance = automaticDistance(at: context.date)
                 let continuousIndex = Double(normalized(selectedIndex))
                     + Double(distance - dragTranslation) / Double(step)
 
@@ -72,38 +95,14 @@ struct FocusContinuousCarousel<Item: Identifiable, Card: View>: View {
             .gesture(dragGesture(step: step))
         }
         .clipped()
-        .onAppear {
-            selectedIndex = normalized(selectedIndex)
-            isVisible = true
-            motionOrigin = Date()
-            isAutomatic = !reduceMotion && scenePhase == .active
-        }
+        .onAppear { selectedIndex = normalized(selectedIndex) }
         .onDisappear {
+            // The clock dies with the view; this only stops the pending resume so
+            // no task outlives the paywall.
             resumeTask?.cancel()
             resumeTask = nil
-            isVisible = false
-            isAutomatic = false
             isDragging = false
             dragTranslation = 0
-        }
-        .onChange(of: reduceMotion) { _, reduced in
-            resumeTask?.cancel()
-            resumeTask = nil
-            frozenDistance = 0
-            dragTranslation = 0
-            isDragging = false
-            motionOrigin = Date()
-            isAutomatic = !reduced && isVisible && scenePhase == .active
-        }
-        .onChange(of: scenePhase) { _, phase in
-            resumeTask?.cancel()
-            resumeTask = nil
-            if phase == .active {
-                motionOrigin = Date()
-                isAutomatic = !reduceMotion && isVisible
-            } else {
-                freezeAutomaticMotion(at: Date())
-            }
         }
         .accessibilityElement(children: .contain)
         .accessibilityAdjustableAction { direction in
@@ -118,9 +117,8 @@ struct FocusContinuousCarousel<Item: Identifiable, Card: View>: View {
     private func dragGesture(step: CGFloat) -> some Gesture {
         DragGesture(minimumDistance: 8)
             .onChanged { value in
-                let now = Date()
                 if !isDragging {
-                    freezeAutomaticMotion(at: now)
+                    freezeAutomaticMotion(at: Date())
                     isDragging = true
                 }
                 resumeTask?.cancel()
@@ -130,38 +128,44 @@ struct FocusContinuousCarousel<Item: Identifiable, Card: View>: View {
             .onEnded { value in
                 let projected = value.translation.width
                     + (value.predictedEndTranslation.width - value.translation.width) * 0.28
+                let held = heldDistance ?? bankedDistance
                 let globalIndex = Double(normalized(selectedIndex))
-                    + Double(frozenDistance - projected) / Double(step)
+                    + Double(held - projected) / Double(step)
                 let nearest = globalIndex.rounded()
 
                 selectedIndex = normalized(Int(nearest))
-                frozenDistance = CGFloat(globalIndex - nearest) * step
+                heldDistance = CGFloat(globalIndex - nearest) * step
                 dragTranslation = 0
                 isDragging = false
                 scheduleAutomaticResume()
             }
     }
 
+    /// The conveyor offset. Held during a drag, otherwise time since the origin.
+    /// Reduce Motion parks it at whatever the pilot last scrubbed to, which is the
+    /// "static accessible arrangement" — still fully swipeable, just not moving on
+    /// its own.
     private func automaticDistance(at date: Date) -> CGFloat {
-        guard isAutomatic else { return frozenDistance }
-        return frozenDistance + CGFloat(date.timeIntervalSince(motionOrigin)) * speed
+        if reduceMotion { return heldDistance ?? bankedDistance }
+        if let heldDistance { return heldDistance }
+        return bankedDistance + CGFloat(date.timeIntervalSince(motionOrigin)) * speed
     }
 
     private func freezeAutomaticMotion(at date: Date) {
-        frozenDistance = automaticDistance(at: date)
-        motionOrigin = date
-        isAutomatic = false
+        heldDistance = automaticDistance(at: date)
     }
 
     private func scheduleAutomaticResume() {
-        guard !reduceMotion, isVisible, scenePhase == .active else { return }
+        guard !reduceMotion else { return }
         resumeTask?.cancel()
         resumeTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: UInt64(resumeDelay * 1_000_000_000))
-            guard !Task.isCancelled, !isDragging, isVisible, !reduceMotion,
-                  scenePhase == .active else { return }
+            guard !Task.isCancelled, !isDragging, !reduceMotion else { return }
+            // Bank what was held and restart the clock from now, so motion picks
+            // up exactly where it stopped instead of jumping.
+            bankedDistance = heldDistance ?? bankedDistance
+            heldDistance = nil
             motionOrigin = Date()
-            isAutomatic = true
         }
     }
 
@@ -170,10 +174,9 @@ struct FocusContinuousCarousel<Item: Identifiable, Card: View>: View {
         resumeTask?.cancel()
         resumeTask = nil
         selectedIndex = normalized(selectedIndex + delta)
-        frozenDistance = 0
+        bankedDistance = 0
+        heldDistance = 0
         dragTranslation = 0
-        motionOrigin = Date()
-        isAutomatic = false
         scheduleAutomaticResume()
     }
 

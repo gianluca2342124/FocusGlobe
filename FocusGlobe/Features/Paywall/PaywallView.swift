@@ -525,11 +525,16 @@ private struct PaywallCollectibleCarousel: View {
     private var artHeight: CGFloat { max(120, viewport.paywallHeroHeight - 58) }
 
     var body: some View {
+        // Tight box + small gap: these are transparent PNGs whose own bounds
+        // already carry a lot of empty margin, so a 330 pt card at 0.62 of the
+        // width put a phone-width of nothing between one balloon and the next.
         FocusContinuousCarousel(
             items: items,
             selectedIndex: $selectedIndex,
-            spacing: 12,
-            maximumCardWidth: 330,
+            spacing: 6,
+            maximumCardWidth: 210,
+            cardWidthFraction: 0.44,
+            minimumCardWidth: 130,
             speed: 34
         ) { item, prominence in
             // No card. These are transparent PNGs (and a vector balloon) and they
@@ -594,11 +599,15 @@ private struct PaywallSkyCarousel: View {
     }
 
     var body: some View {
+        // A Sky is a landscape and keeps a wider box than a collectible, but the
+        // gap between previews closes to match the rest of the paywall.
         FocusContinuousCarousel(
             items: skies,
             selectedIndex: $selectedIndex,
-            spacing: 12,
-            maximumCardWidth: 330,
+            spacing: 8,
+            maximumCardWidth: 300,
+            cardWidthFraction: 0.60,
+            minimumCardWidth: 180,
             speed: 34
         ) { sky, prominence in
             ZStack {

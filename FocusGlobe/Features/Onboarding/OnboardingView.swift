@@ -747,8 +747,10 @@ struct OnboardingView: View {
         FocusContinuousCarousel(
             items: premiumPreviewItems,
             selectedIndex: $premiumPreviewIndex,
-            spacing: 10,
-            maximumCardWidth: 230,
+            spacing: 6,
+            maximumCardWidth: 200,
+            cardWidthFraction: 0.50,
+            minimumCardWidth: 140,
             speed: 28
         ) { preview, prominence in
             premiumPreviewCard(preview, prominence: prominence)
