@@ -78,10 +78,17 @@ struct FocusSessionView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    @State private var balloonSway: CGFloat = 0
-    @State private var balloonBob: CGFloat = 0
-    /// A slow lateral breeze the balloon rides, layered on the faster sway.
-    @State private var balloonDrift: CGFloat = 0
+    // The hero balloon's idle sway / bob / drift used to be three @State values
+    // driven once by `withAnimation(...repeatForever...)` in this view's task.
+    // That is what froze the balloon: switching to Cabin View removes the balloon
+    // from the hierarchy, SwiftUI tears down the repeating animations attached to
+    // it, and the @State values are left sitting at their TERMINAL targets
+    // (7, -14, 9). Coming back re-created the view, which read those finished
+    // values as constants — a balloon parked at the end of its breath, forever.
+    // The task that started them is keyed on the route id, so it never re-ran.
+    //
+    // There is no state to lose any more: the breathe is derived from the clock
+    // in `BalloonIdleMotion`. See `balloon`.
     /// Take-off: 0 = resting low near the terrain, 1 = risen to the cruising
     /// centre. Eased up once on appear, then the balloon steady-follows.
     @State private var takeoffLift: CGFloat = 0
@@ -480,14 +487,11 @@ struct FocusSessionView: View {
             guard !reduceMotion else { takeoffLift = 1; return }
             // The cinematic take-off pull-back: ~3.2 s (present but never slow)
             // to ease the balloon from close-and-low up to its cruising size and
-            // centre. Then an endless gentle breathe (sway + bob) and slow drift.
+            // centre. This one is a genuine ONE-SHOT, so it stays @State: it ends
+            // at 1 and must stay at 1 across a Cabin round trip (no second
+            // take-off). The endless idle breathe is NOT state — see
+            // `BalloonIdleMotion`.
             withAnimation(.easeInOut(duration: 3.2)) { takeoffLift = 1 }
-            // Calm 4–7s idle rhythm: a slightly fuller ~14pt vertical bob with a
-            // gentle sway/rotation and a wider lateral drift — more of a floating
-            // ride than before, but still a breath, never a shake.
-            withAnimation(.easeInOut(duration: 5.0).repeatForever(autoreverses: true)) { balloonSway = 7 }
-            withAnimation(.easeInOut(duration: 4.4).repeatForever(autoreverses: true)) { balloonBob = -14 }
-            withAnimation(.easeInOut(duration: 7.5).repeatForever(autoreverses: true)) { balloonDrift = 9 }
         }
         // The remote-balloon presentation stage lives at the JOURNEY level, not on
         // the sky layer. Switching to Cabin View unmounts that layer, and owning the
@@ -626,7 +630,22 @@ struct FocusSessionView: View {
     // behind it (see `ActiveFlightJourneyWorldView`), so the balloon reads as rising
     // while the landscape — not the balloon — is the protagonist.
     private var balloon: some View {
-        GeometryReader { geo in
+        // One clock, mounted with the balloon and torn down with it — no task, no
+        // state, nothing to restart. Returning from the Cabin re-reads the clock
+        // and the breathe simply continues from wherever the world is now.
+        TimelineView(.animation(minimumInterval: 1.0 / 20.0, paused: reduceMotion)) { ctx in
+            balloonBody(motion: reduceMotion
+                        ? .still
+                        : BalloonIdleMotion(at: ctx.date.timeIntervalSinceReferenceDate))
+        }
+        .allowsHitTesting(false)
+    }
+
+    private func balloonBody(motion: BalloonIdleMotion) -> some View {
+        let balloonSway = motion.sway
+        let balloonBob = motion.bob
+        let balloonDrift = motion.drift
+        return GeometryReader { geo in
             let h = geo.size.height
             let balloonSize = max(38, min(52, h * 0.07))   // 5–8% of screen height
             // Take-off camera: the balloon begins close and large, low near the
@@ -675,7 +694,6 @@ struct FocusSessionView: View {
                 }
             }
         }
-        .allowsHitTesting(false)
     }
 
     // MARK: Top — exit, state, mute
@@ -1312,4 +1330,46 @@ private struct FlightShareURL: Identifiable {
 private struct JourneyPaywall: Identifiable {
     let context: PaywallContext
     var id: String { String(describing: context) }
+}
+
+// MARK: - Hero balloon idle motion
+
+/// The hero balloon's endless breathe, as a pure function of the clock.
+///
+/// This exists because the breathe used to be three `@State` values started once
+/// by `withAnimation(...repeatForever...)`. A `repeatForever` animation belongs to
+/// the view it is animating: switching to Cabin View removes the balloon, SwiftUI
+/// cancels the animation, and the state is left at its terminal target. Coming
+/// back rendered those finished numbers as constants — the frozen balloon.
+///
+/// Derived from time instead, there is nothing to cancel and nothing to restart.
+/// The ranges are exactly the ones the old animations swept, so the ride is
+/// unchanged: sway 0…7 over 10 s, bob -14…0 over 8.8 s, drift 0…9 over 15 s
+/// (each old `easeInOut` half-cycle was 5.0 / 4.4 / 7.5 s, and a sine is that
+/// same shape). The three periods stay mutually irrational-ish so the motion
+/// never visibly repeats as a single pattern.
+struct BalloonIdleMotion {
+    let sway: CGFloat
+    let bob: CGFloat
+    let drift: CGFloat
+
+    /// Reduce Motion: perfectly at rest, matching the old behaviour where the
+    /// repeating animations were never started at all.
+    static let still = BalloonIdleMotion(sway: 0, bob: 0, drift: 0)
+
+    init(sway: CGFloat, bob: CGFloat, drift: CGFloat) {
+        self.sway = sway
+        self.bob = bob
+        self.drift = drift
+    }
+
+    init(at time: TimeInterval) {
+        func wave(period: Double, span: CGFloat) -> CGFloat {
+            let phase = Foundation.sin(time * 2 * .pi / period)
+            return span * 0.5 * (1 + CGFloat(phase))
+        }
+        sway = wave(period: 10.0, span: 7)
+        bob = wave(period: 8.8, span: -14)
+        drift = wave(period: 15.0, span: 9)
+    }
 }

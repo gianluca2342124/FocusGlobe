@@ -126,44 +126,59 @@ enum CabinSlot: String, CaseIterable, Codable, Hashable, Identifiable {
         case .landscape: resolvedY = y.landscape
         }
 
+        // TABLE — the three tabletop slots are now genuinely simultaneous, so
+        // their contact points had to spread. At the old 0.39 / 0.50 / 0.61 the
+        // half-widths already overlapped by ~0.035 W; that was invisible only
+        // because the renderer refused to draw more than one of them. Spread to
+        // 0.335 / 0.50 / 0.665 (0.165 apart) the worst case is centre 0.20 and a
+        // side 0.175 → 0.100 + 0.0875 = 0.1875 of footprint against 0.165 of
+        // spacing at MAXIMUM footprint, and 0.084 + 0.0725 = 0.1565 at the
+        // default scale most items actually use. Items also sit a touch larger
+        // than before.
         switch self {
         case .tableLeft:
-            return .init(contact: .init(x: 0.39, y: resolvedY), defaultScale: 0.135,
-                         anchor: .bottomCenter, zIndex: 3, maximumFootprint: 0.16)
+            return .init(contact: .init(x: 0.335, y: resolvedY), defaultScale: 0.145,
+                         anchor: .bottomCenter, zIndex: 3, maximumFootprint: 0.165)
         case .tableCenter:
-            return .init(contact: .init(x: 0.50, y: resolvedY), defaultScale: 0.155,
+            return .init(contact: .init(x: 0.50, y: resolvedY), defaultScale: 0.168,
                          anchor: .bottomCenter, zIndex: 3, maximumFootprint: 0.19)
         case .tableRight:
-            return .init(contact: .init(x: 0.61, y: resolvedY), defaultScale: 0.135,
-                         anchor: .bottomCenter, zIndex: 3, maximumFootprint: 0.16)
+            return .init(contact: .init(x: 0.665, y: resolvedY), defaultScale: 0.145,
+                         anchor: .bottomCenter, zIndex: 3, maximumFootprint: 0.165)
         case .benchLeft:
             return .init(contact: .init(x: 0.20, y: resolvedY), defaultScale: 0.235,
                          anchor: .bottomCenter, zIndex: 4, maximumFootprint: 0.27)
         case .benchCenter:
             return .init(contact: .init(x: 0.29, y: resolvedY - 0.035), defaultScale: 0.21,
                          anchor: .bottomCenter, zIndex: 4, maximumFootprint: 0.24)
+        // WALL / HOOK / HANGING — these were the smallest slots in the cabin and
+        // the ones that read as toys, the hanging pair worst of all. They have no
+        // near neighbour (left and right sit at opposite edges), so they can grow
+        // without any overlap risk. Each still clears the window: the hanging pair
+        // hangs DOWN from y 0.070 and finishes well above the window's top, and
+        // the hook/wall pairs sit outside the window's horizontal span.
         case .wallLeft:
-            return .init(contact: .init(x: 0.135, y: resolvedY), defaultScale: 0.13,
+            return .init(contact: .init(x: 0.135, y: resolvedY), defaultScale: 0.172,
                          anchor: .center, zIndex: 0, rotationDegrees: -4,
-                         maximumFootprint: 0.15)
+                         maximumFootprint: 0.195)
         case .wallRight:
-            return .init(contact: .init(x: 0.865, y: resolvedY), defaultScale: 0.13,
+            return .init(contact: .init(x: 0.865, y: resolvedY), defaultScale: 0.172,
                          anchor: .center, zIndex: 0, rotationDegrees: 4,
-                         maximumFootprint: 0.15)
+                         maximumFootprint: 0.195)
         case .hookLeft:
-            return .init(contact: .init(x: 0.145, y: resolvedY), defaultScale: 0.115,
+            return .init(contact: .init(x: 0.145, y: resolvedY), defaultScale: 0.160,
                          anchor: .topCenter, zIndex: 2, rotationDegrees: -5,
-                         maximumFootprint: 0.13)
+                         maximumFootprint: 0.185)
         case .hookRight:
-            return .init(contact: .init(x: 0.855, y: resolvedY), defaultScale: 0.115,
+            return .init(contact: .init(x: 0.855, y: resolvedY), defaultScale: 0.160,
                          anchor: .topCenter, zIndex: 2, rotationDegrees: 5,
-                         maximumFootprint: 0.13)
+                         maximumFootprint: 0.185)
         case .hangingLeft:
-            return .init(contact: .init(x: 0.28, y: resolvedY), defaultScale: 0.145,
-                         anchor: .topCenter, zIndex: 1, maximumFootprint: 0.17)
+            return .init(contact: .init(x: 0.28, y: resolvedY), defaultScale: 0.205,
+                         anchor: .topCenter, zIndex: 1, maximumFootprint: 0.235)
         case .hangingRight:
-            return .init(contact: .init(x: 0.72, y: resolvedY), defaultScale: 0.145,
-                         anchor: .topCenter, zIndex: 1, maximumFootprint: 0.17)
+            return .init(contact: .init(x: 0.72, y: resolvedY), defaultScale: 0.205,
+                         anchor: .topCenter, zIndex: 1, maximumFootprint: 0.235)
         case .floorRight:
             return .init(contact: .init(x: 0.73, y: resolvedY), defaultScale: 0.22,
                          anchor: .bottomCenter, zIndex: 4, maximumFootprint: 0.26)

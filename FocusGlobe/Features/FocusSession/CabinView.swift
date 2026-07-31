@@ -169,20 +169,29 @@ struct CabinView: View {
     /// Resolve corrupt/legacy duplicate placements deterministically. The saved
     /// slot is honoured first; otherwise the next valid unoccupied slot wins.
     /// A decoration with no free physical surface is omitted instead of stacked.
+    /// A DELIBERATE placement always wins.
+    ///
+    /// This used to run every item through a declutter heuristic that capped the
+    /// tabletop at two objects and, worse, refused `tableLeft` / `tableRight`
+    /// entirely once `tableCenter` was taken. The placement sheet only blocks the
+    /// SAME slot, so a pilot could legitimately commit a lamp to Table · Center
+    /// and something else to Table · Right, watch it persist — and then never see
+    /// the second item, because the renderer silently overrode the model.
+    ///
+    /// The heuristic now applies ONLY where it was actually needed: an item with
+    /// no valid saved slot (a legacy profile written before semantic slots, or a
+    /// slot that is no longer in the item's `allowedSlots`). A saved, supported,
+    /// unoccupied slot is honoured without further judgement, so distinct slots
+    /// always coexist. Two items can still never share one slot — `occupied`
+    /// guards that — and `maxEquipped` still bounds the whole interior.
     private var resolvedPlacements: [String: CabinSlot] {
         var occupied = Set<CabinSlot>()
         var result: [String: CabinSlot] = [:]
-        var tabletopCount = 0
-        var hasTableCenter = false
         var hasLargeBenchItem = false
 
-        func canOccupy(_ slot: CabinSlot, item: StoreItem) -> Bool {
+        func canFallBackTo(_ slot: CabinSlot, item: StoreItem) -> Bool {
             guard !occupied.contains(slot) else { return false }
             switch slot {
-            case .tableCenter:
-                return tabletopCount == 0
-            case .tableLeft, .tableRight:
-                return !hasTableCenter && tabletopCount < 2
             case .benchLeft, .benchCenter:
                 return item.footprint != .soft || !hasLargeBenchItem
             default:
@@ -190,28 +199,31 @@ struct CabinView: View {
             }
         }
 
-        for item in baseVisibleItems {
-            let saved = equippedItemPlacements[item.id].flatMap {
-                item.supports($0) ? $0 : nil
+        func take(_ slot: CabinSlot, for item: StoreItem) {
+            result[item.id] = slot
+            occupied.insert(slot)
+            if item.footprint == .soft, slot == .benchLeft || slot == .benchCenter {
+                hasLargeBenchItem = true
             }
-            let candidates = ([saved, item.preferredSlot].compactMap { $0 } + item.allowedSlots)
+        }
+
+        // Pass one: honour every explicit placement, so a deliberate choice can
+        // never be displaced by an item that merely happens to sort earlier.
+        for item in baseVisibleItems {
+            guard let saved = equippedItemPlacements[item.id],
+                  item.supports(saved), !occupied.contains(saved) else { continue }
+            take(saved, for: item)
+        }
+
+        // Pass two: everything still unplaced falls back to its preferred slot,
+        // then any allowed slot that is free.
+        for item in baseVisibleItems where result[item.id] == nil {
+            let candidates = ([item.preferredSlot].compactMap { $0 } + item.allowedSlots)
                 .reduce(into: [CabinSlot]()) { unique, slot in
                     if !unique.contains(slot) { unique.append(slot) }
                 }
-            guard let slot = candidates.first(where: { canOccupy($0, item: item) }) else { continue }
-            result[item.id] = slot
-            occupied.insert(slot)
-            switch slot {
-            case .tableCenter:
-                tabletopCount = 1
-                hasTableCenter = true
-            case .tableLeft, .tableRight:
-                tabletopCount += 1
-            case .benchLeft, .benchCenter where item.footprint == .soft:
-                hasLargeBenchItem = true
-            default:
-                break
-            }
+            guard let slot = candidates.first(where: { canFallBackTo($0, item: item) }) else { continue }
+            take(slot, for: item)
         }
         return result
     }
