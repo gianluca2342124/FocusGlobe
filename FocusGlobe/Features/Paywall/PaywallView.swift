@@ -168,6 +168,15 @@ struct PaywallView: View {
             PaywallSkyCarousel(selectedIndex: $selectedHeroIndex)
         case .balloonSkin, .interior:
             PaywallCollectibleCarousel(selectedIndex: $selectedHeroIndex)
+        case .general, .onboarding:
+            // The broad pitch has no single subject, so one still was always
+            // going to under-sell it — a reel of what PRO actually opens up is
+            // the argument. In practice only `.general` reaches this: the
+            // onboarding offer jumps straight to the trial page and never
+            // renders a hero. It is listed anyway because the two share this
+            // context's asset and argument, so if that page ever appears it must
+            // not silently fall back to the still.
+            PaywallShowcaseCarousel(selectedIndex: $selectedHeroIndex)
         default:
             PaywallContextHero(context: context)
         }
@@ -632,16 +641,26 @@ private struct PaywallContextHero: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var floating = false
 
+    /// Where a hero stops being a cut-out object and becomes a scene.
+    ///
+    /// The two kinds want opposite treatments. A transparent cut-out floats free
+    /// and must NOT be boxed — a border around one draws a rectangle through
+    /// empty pixels, which is exactly the card treatment that was stripped off
+    /// these paywalls earlier. A full-bleed landscape scene has real rectangular
+    /// edges, and leaving those edges hard is what makes the new wide art read as
+    /// dropped in rather than designed in.
+    ///
+    /// Read from the asset instead of listed per context, so new horizontal
+    /// artwork picks the frame up the moment it lands in the catalogue and no
+    /// code has to follow the art. The gap is wide: every cut-out hero currently
+    /// ships between 0.64 and 1.22, and genuinely horizontal art starts at 1.5.
+    private static let landscapeThreshold: CGFloat = 1.35
+
     var body: some View {
         ZStack {
             #if canImport(UIKit)
             if let image = UIImage(named: context.heroAssetName) {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFit()
-                    .padding(viewport.isWide ? 10 : 5)
-                    .offset(y: floating ? -5 : 5)
-                    .shadow(color: .black.opacity(0.24), radius: 12, y: 6)
+                hero(image)
             } else {
                 fallback
             }
@@ -656,6 +675,67 @@ private struct PaywallContextHero: View {
                 floating = true
             }
         }
+    }
+
+    #if canImport(UIKit)
+    @ViewBuilder private func hero(_ image: UIImage) -> some View {
+        let aspect = image.size.height > 0 ? image.size.width / image.size.height : 1
+        if aspect >= Self.landscapeThreshold {
+            framedScene(image, aspect: aspect)
+        } else {
+            floatingCutout(image)
+        }
+    }
+
+    /// The wide artwork, presented as a framed piece: soft continuous corners,
+    /// a hairline edge, depth under it and a slow accent bloom behind it.
+    private func framedScene(_ image: UIImage, aspect: CGFloat) -> some View {
+        let radius: CGFloat = viewport.isWide ? 30 : (viewport.isCompact ? 22 : 26)
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        return Image(uiImage: image)
+            .resizable()
+            // Pin the frame to the ARTWORK's own ratio. The corners then land on
+            // the picture itself rather than on a box that merely contains it,
+            // and nothing is ever cropped to make the shape fit.
+            .aspectRatio(aspect, contentMode: .fit)
+            .clipShape(shape)
+            .overlay(shape.strokeBorder(.white.opacity(0.13), lineWidth: 1))
+            // Only the bloom is on the clock, so the picture itself is never
+            // rebuilt for it. `paused:` parks it flat under Reduce Motion.
+            .background {
+                TimelineView(.animation(minimumInterval: 1.0 / 12.0, paused: reduceMotion)) { ctx in
+                    shape
+                        .fill(context.accent.opacity(0.18 + 0.10 * Self.breath(ctx.date)))
+                        .blur(radius: 30)
+                        .scaleEffect(0.97)
+                }
+            }
+            // One tight shadow for depth against the paywall; the bloom above
+            // supplies the colour, so this stays neutral and restrained.
+            .shadow(color: .black.opacity(0.44), radius: 20, y: 12)
+            .padding(.horizontal, viewport.isCompact ? 2 : 8)
+            .padding(.vertical, 4)
+    }
+
+    /// The original treatment, unchanged: transparent objects float, never boxed.
+    private func floatingCutout(_ image: UIImage) -> some View {
+        Image(uiImage: image)
+            .resizable()
+            .scaledToFit()
+            .padding(viewport.isWide ? 10 : 5)
+            .offset(y: floating ? -5 : 5)
+            .shadow(color: .black.opacity(0.24), radius: 12, y: 6)
+    }
+    #endif
+
+    /// A 6-second 0→1→0 ramp. Deliberately not a sine: this drives a blurred
+    /// glow's opacity across a 0.10 range, where the difference is invisible and
+    /// the arithmetic stays in the standard library.
+    static func breath(_ date: Date) -> Double {
+        let period = 6.0
+        let t = date.timeIntervalSinceReferenceDate
+            .truncatingRemainder(dividingBy: period) / period
+        return t < 0.5 ? t * 2 : (1 - t) * 2
     }
 
     private var fallback: some View {
@@ -827,6 +907,242 @@ private struct PaywallSkyCarousel: View {
             .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .strokeBorder(.white.opacity(0.09 + prominence * 0.11), lineWidth: 1))
         }
+    }
+}
+
+// MARK: - Flagship showcase (general PRO)
+
+/// One slide of the general paywall's reel.
+///
+/// Four different kinds of thing — a Sky, a feature, a balloon skin, a cabin
+/// object — deliberately share ONE card shape, one caption block and one
+/// ground. That is the whole trick: mixed content only reads as random when
+/// each piece brings its own presentation with it.
+private enum PaywallShowcaseSlide: Identifiable {
+    case sky(FocusSky)
+    case feature(key: String, title: String, asset: String)
+    case skin(BalloonSkin)
+    case item(StoreItem)
+
+    var id: String {
+        switch self {
+        case .sky(let sky):           return "sky.\(sky.id)"
+        case .feature(let key, _, _): return "feature.\(key)"
+        case .skin(let skin):         return "skin.\(skin.id)"
+        case .item(let item):         return "item.\(item.id)"
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .sky(let sky):             return sky.name
+        case .feature(_, let title, _): return title
+        case .skin(let skin):           return skin.name
+        case .item(let item):           return item.name
+        }
+    }
+
+    /// The small line above the name. It is what makes a starfield, a balloon
+    /// and a pair of headphones on one conveyor feel like a single offer being
+    /// presented rather than three unrelated pictures going past.
+    var kicker: String {
+        switch self {
+        case .sky:     return "EXCLUSIVE SKY"
+        case .feature: return "PRO FEATURE"
+        case .skin:    return "BALLOON SKIN"
+        case .item:    return "CABIN ITEM"
+        }
+    }
+}
+
+/// The general/onboarding paywall's hero: everything PRO opens up, on the same
+/// clock-driven conveyor the Sky and collectible paywalls already use.
+private struct PaywallShowcaseCarousel: View {
+    @Binding var selectedIndex: Int
+    @EnvironmentObject private var appModel: AppModel
+    @Environment(\.focusViewport) private var viewport
+
+    /// The PRO features that own real artwork. Ordered so the strongest pitch
+    /// (flying with other people) leads the reel.
+    private static let features: [PaywallShowcaseSlide] = [
+        .feature(key: "online",   title: "Online Mode",    asset: "PaywallHero_OnlineMode"),
+        .feature(key: "infinite", title: "Infinite Time",  asset: "PaywallHero_InfiniteFocus"),
+        .feature(key: "pause",    title: "Pause a Flight", asset: "PaywallHero_Pause"),
+    ]
+
+    /// Curated, not concatenated. One from each bucket per round, so the reel
+    /// alternates Sky → feature → skin → item and never shows two Skies or two
+    /// balloons back to back. Deterministic: the flagship page looks the same
+    /// every time it opens, which a shuffle could not promise.
+    private var slides: [PaywallShowcaseSlide] {
+        Self.roundRobin([
+            FocusSky.proExclusive.map(PaywallShowcaseSlide.sky),
+            Self.features,
+            BalloonSkin.all.filter(\.isPremium).map(PaywallShowcaseSlide.skin),
+            StoreItem.all.filter(\.isPremium).map(PaywallShowcaseSlide.item),
+        ])
+    }
+
+    private static func roundRobin(_ buckets: [[PaywallShowcaseSlide]]) -> [PaywallShowcaseSlide] {
+        var result: [PaywallShowcaseSlide] = []
+        var cursors = Array(repeating: 0, count: buckets.count)
+        var placed = true
+        while placed {
+            placed = false
+            for (bucket, contents) in buckets.enumerated() where cursors[bucket] < contents.count {
+                result.append(contents[cursors[bucket]])
+                cursors[bucket] += 1
+                placed = true
+            }
+        }
+        return result
+    }
+
+    private var cardRadius: CGFloat { viewport.isCompact ? 24 : 28 }
+    private var balloonHeight: CGFloat { viewport.paywallHeroHeight * 0.60 }
+
+    var body: some View {
+        // Spacing and speed are the engine's shared values — these cards are
+        // opaque and fill their box, so the visible gap IS the 5 pt, the middle
+        // of the landscape target the Sky carousel already sits at.
+        FocusContinuousCarousel(
+            items: slides,
+            selectedIndex: $selectedIndex,
+            spacing: 5,
+            maximumCardWidth: 340,
+            cardWidthFraction: 0.64,
+            minimumCardWidth: 190
+        ) { slide, prominence in
+            card(slide, prominence: prominence)
+        }
+    }
+
+    private func card(_ slide: PaywallShowcaseSlide, prominence: Double) -> some View {
+        let shape = RoundedRectangle(cornerRadius: cardRadius, style: .continuous)
+        return ZStack {
+            // One ground under every slide. A Sky covers it completely; objects
+            // and features sit on it. This is what keeps four kinds of artwork
+            // looking like pages of the same catalogue.
+            LinearGradient(colors: [Color(hex: 0x1A2030), Color(hex: 0x0B0E15)],
+                           startPoint: .top, endPoint: .bottom)
+
+            art(slide, prominence: prominence)
+
+            // The caption always gets its own darkness, whatever is behind it.
+            LinearGradient(colors: [.clear, .black.opacity(0.62)],
+                           startPoint: UnitPoint(x: 0.5, y: 0.52), endPoint: .bottom)
+
+            VStack(spacing: 1) {
+                Spacer(minLength: 0)
+                Text(slide.kicker)
+                    .font(.system(size: 9.5, weight: .heavy))
+                    .tracking(1.1)
+                    .foregroundStyle(.white.opacity(0.42 + prominence * 0.30))
+                    .lineLimit(1)
+                Text(slide.title)
+                    .font(.system(size: prominence > 0.55 ? 16 : 14, weight: .bold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .shadow(color: .black.opacity(0.5), radius: 4, y: 2)
+            }
+            .padding(.horizontal, 10)
+            .padding(.bottom, 12)
+        }
+        .clipShape(shape)
+        .overlay(shape.strokeBorder(.white.opacity(0.09 + prominence * 0.13), lineWidth: 1))
+        .shadow(color: .black.opacity(0.34), radius: 14, y: 8)
+    }
+
+    @ViewBuilder private func art(_ slide: PaywallShowcaseSlide, prominence: Double) -> some View {
+        switch slide {
+        case .sky(let sky):
+            // A Sky IS the scene, so it fills the card edge to edge with the
+            // pilot's own balloon flying in it — the same treatment the Sky
+            // paywall uses, so the two surfaces stay recognisably related.
+            ZStack {
+                SkyStillPreview(sky: sky)
+                BalloonView(height: 48 + 14 * prominence,
+                            showBurner: true,
+                            showGlow: prominence > 0.55,
+                            skin: appModel.selectedSkin)
+                    .offset(y: 2 - 6 * prominence)
+                    .accessibilityHidden(true)
+            }
+
+        case .feature(_, _, let asset):
+            featureArt(asset)
+
+        case .skin(let skin):
+            spotlit {
+                BalloonView(height: balloonHeight, showBurner: false, showGlow: false, skin: skin)
+                    .shadow(color: .black.opacity(0.34), radius: 14, y: 10)
+            }
+
+        case .item(let item):
+            spotlit { itemArt(item) }
+        }
+    }
+
+    /// A soft pool of light under an isolated object, so a transparent cut-out
+    /// has something to stand on instead of hanging in a flat rectangle. The
+    /// bottom inset keeps it clear of the caption.
+    private func spotlit<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        ZStack {
+            RadialGradient(colors: [.white.opacity(0.10), .clear],
+                           center: UnitPoint(x: 0.5, y: 0.44), startRadius: 4, endRadius: 150)
+            content()
+                .padding(.horizontal, 14)
+                .padding(.top, 12)
+                .padding(.bottom, 44)
+        }
+    }
+
+    /// Wide feature artwork, letterboxed against an out-of-focus copy of itself.
+    /// Filling the card would crop a 2:1 picture roughly in half; fitting it
+    /// alone would strand it in dead space. The blurred backdrop fills the card
+    /// without touching the composition.
+    @ViewBuilder private func featureArt(_ asset: String) -> some View {
+        #if canImport(UIKit)
+        if let image = UIImage(named: asset) {
+            ZStack {
+                GeometryReader { geo in
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .clipped()
+                        .blur(radius: 22)
+                        .opacity(0.5)
+                }
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 34)
+                    .shadow(color: .black.opacity(0.45), radius: 12, y: 8)
+            }
+        }
+        #endif
+    }
+
+    @ViewBuilder private func itemArt(_ item: StoreItem) -> some View {
+        #if canImport(UIKit)
+        if let image = UIImage(named: item.bestAssetName) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFit()
+                .shadow(color: .black.opacity(0.34), radius: 14, y: 10)
+        } else {
+            Image(systemName: item.systemImage)
+                .font(.system(size: 54, weight: .medium))
+                .foregroundStyle(item.tint)
+        }
+        #else
+        Image(systemName: item.systemImage)
+            .font(.system(size: 54, weight: .medium))
+            .foregroundStyle(item.tint)
+        #endif
     }
 }
 
