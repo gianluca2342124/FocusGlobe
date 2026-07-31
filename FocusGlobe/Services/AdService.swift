@@ -17,7 +17,12 @@ import UserMessagingPlatform
 /// app builds and runs with zero ad dependencies and Landing never blocks.
 ///
 /// Guarantees (see ADMOB_SETUP.md):
-///  • Never shows ads to Pro users (rewarded, interstitial, and the banner).
+///  • A Pro pilot never sees an ad they did not ask for: no banner, no
+///    interstitial, no automatic prompt of any kind. The one thing Pro does NOT
+///    buy is the prize on the far side of a video the pilot deliberately opted
+///    into — the Free Coin Spin — which every pilot earns the same way. That
+///    single voluntary path goes through `showVoluntaryRewarded`; everything
+///    else keeps passing the real entitlement and stays suppressed for Pro.
 ///  • The only banner is the small in-journey banner (`JourneyBannerAd`, free
 ///    users only, below the readouts); no app-open / native ads; no ads during
 ///    the focus ritual or boarding, and none on Home/Choose/Passport/Settings/Landing.
@@ -177,7 +182,12 @@ final class AdService: NSObject, ObservableObject {
     // MARK: Rewarded
 
     /// Show a rewarded ad for `placement`. Returns `true` only after Google's
-    /// reward callback fired (closing early → `false`). Never shown to Pro users.
+    /// reward callback fired — closing early, a load failure, no presenter or
+    /// unresolved consent all answer `false`, and the caller must grant nothing.
+    ///
+    /// `isPro` means "suppress this placement for an entitled pilot". Pass the
+    /// real entitlement for anything the app puts in front of someone; pass
+    /// `false` only through `showVoluntaryRewarded`, for a video the pilot chose.
     func showRewarded(_ placement: Placement, isPro: Bool) async -> Bool {
         if isPro { analytics?.log(.adSkippedForPro); return false }
         analytics?.log(.rewardedAdRequested, ["item": placement.rewardItem])
@@ -227,6 +237,17 @@ final class AdService: NSObject, ObservableObject {
         analytics?.log(.adSkippedNotReady)
         return false
         #endif
+    }
+
+    /// A rewarded video the pilot deliberately opted into in exchange for a
+    /// prize — today only the Free Coin Spin, which is opened, tapped and
+    /// watched on purpose. This is never suppressed for Pro: Pro removes the
+    /// ads that interrupt, not the ones that are the price of a reward. It is
+    /// also the only reason a call site may pass `isPro: false` — that argument
+    /// is a statement about the PLACEMENT, and no entitlement is consulted,
+    /// asserted or changed here.
+    func showVoluntaryRewarded(_ placement: Placement) async -> Bool {
+        await showRewarded(placement, isPro: false)
     }
 
     /// Backwards-compatible alias used by the existing Double-Miles flow.

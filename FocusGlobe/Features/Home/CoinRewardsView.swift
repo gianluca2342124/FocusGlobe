@@ -46,7 +46,7 @@ struct CoinSpinButton: View {
             // The long rest (phase 0) sets the ~3 s cadence; 1–4 are a gentle shake.
             phase == 0 ? .easeInOut(duration: 3.0) : .spring(response: 0.16, dampingFraction: 0.4)
         }
-        .accessibilityLabel("Free Coin Spin. Spin to win Focus Coins.")
+        .accessibilityLabel("Free Coin Spin. Watch a video to spin for Focus Coins.")
     }
 
     private func shakeAngle(_ p: Int) -> Double {
@@ -152,10 +152,10 @@ struct CoinSpinSheet: View {
                 .font(.system(size: 15, weight: .heavy, design: .default))
                 .tracking(0.5)
                 .foregroundStyle(AppColors.gold)
-            // PRO removes ads everywhere, the spin included — so an entitled pilot
-            // is never promised a video they will not be shown.
-            Text(appModel.isPro ? "Spin the wheel for a reward."
-                                : "Watch a short video and spin for a reward.")
+            // One promise for every pilot, PRO included: the video is the price
+            // of the spin, so nobody is told they can skip it and nobody is
+            // shown a button that claims the wheel turns on its own.
+            Text("Watch a short video and spin for a reward.")
                 .font(AppTypography.callout)
                 .foregroundStyle(AppColors.textSecondary)
                 .multilineTextAlignment(.center)
@@ -168,18 +168,17 @@ struct CoinSpinSheet: View {
                     .foregroundStyle(AppColors.textSecondary)
                     .multilineTextAlignment(.center)
             }
-            AppPrimaryButton(title: spinButtonTitle,
-                             systemImage: appModel.isPro ? "arrow.triangle.2.circlepath" : "play.fill") {
+            AppPrimaryButton(title: spinButtonTitle, systemImage: "play.fill") {
                 watch()
             }
             .disabled(busy)
         }
     }
 
-    private var spinButtonTitle: String {
-        if busy { return "Loading…" }
-        return appModel.isPro ? "Spin now" : "Watch video"
-    }
+    /// Names the exchange rather than the outcome. "Spin now" would promise a
+    /// wheel that turns on tap, which it never does — the reward callback has to
+    /// fire first. `busy` is the ad's load/present window, unchanged.
+    private var spinButtonTitle: String { busy ? "Loading ad…" : "Watch Ad & Spin" }
 
     private var spinning: some View {
         VStack(spacing: AppSpacing.md) {
@@ -229,9 +228,13 @@ struct CoinSpinSheet: View {
             let won = await appModel.spinCoinReward()
             busy = false
             guard let won else {
+                // Every non-cooldown failure lands here — closed early, failed to
+                // load, none available, consent unresolved — and the wheel stays
+                // put in all of them. One sentence that is true for each, rather
+                // than one that claims a video played when it may not have.
                 note = onCooldown
                     ? "Your next free spin is warming up. Try again in a moment."
-                    : "No video available right now. Please try again soon."
+                    : "No spin yet — the video has to finish to earn your coins. If it didn't load, try again shortly."
                 return
             }
             prize = won

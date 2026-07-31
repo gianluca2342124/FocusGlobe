@@ -584,22 +584,22 @@ final class AppModel: ObservableObject {
         return Date().timeIntervalSince1970 - last >= 90
     }
 
-    /// Show a rewarded ad, then (on reward) grant a weighted spin prize and return
-    /// it. Returns `nil` when no reward was earned (ad unavailable / dismissed) or
-    /// the cooldown hasn't elapsed — the caller shows a gentle message.
+    /// Show the rewarded video, then — and ONLY then — grant a weighted spin
+    /// prize and return it. Returns `nil` whenever no reward was earned: the ad
+    /// failed to load, no ad was available, consent hasn't resolved, the pilot
+    /// closed it early, or the cooldown hasn't elapsed. The caller shows a gentle
+    /// message and the wheel never turns. Nothing is credited on any of those paths.
     ///
-    /// PRO pilots skip the video entirely. `AdService.showRewarded` answers
-    /// `false` immediately for an entitled pilot (`adSkippedForPro`), so asking it
-    /// would make the spin permanently unwinnable for exactly the people who paid
-    /// to remove ads — and, now that today's objective is the Free Coin Spin,
-    /// would also make the daily objectives impossible for them to complete. The
-    /// 90-second cooldown remains the throttle in that path.
+    /// EVERY pilot watches, PRO included. PRO buys away the ads FocusGlobe puts
+    /// in front of you — banners, interstitials, anything automatic — not the
+    /// video you choose to watch because you want the coins on the other side of
+    /// it. The spin is a voluntary exchange, so `showVoluntaryRewarded` is used
+    /// and the entitlement is not consulted here at all. (Entitlement logic is
+    /// untouched; this is a placement decision, nothing more.)
     func spinCoinReward() async -> Int? {
         guard canCoinSpin else { return nil }
-        if !isPro {
-            let earned = await ads.showRewarded(.doubleMiles, isPro: false)
-            guard earned else { return nil }
-        }
+        let earned = await ads.showVoluntaryRewarded(.doubleMiles)
+        guard earned else { return nil }
         let prize = Self.weightedSpinPrize()
         var updated = profile
         updated.lastCoinSpinAt = Date().timeIntervalSince1970
