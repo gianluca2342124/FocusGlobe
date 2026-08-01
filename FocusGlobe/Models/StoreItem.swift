@@ -99,95 +99,185 @@ enum CabinSlot: String, CaseIterable, Codable, Hashable, Identifiable {
         }
     }
 
-    /// A single physical slot can have a slightly different contact point in
-    /// each production Cabin artwork: the iPhone sill is higher than the Mac
-    /// sill, for example. These are still normalized inside the displayed Cabin
-    /// image and never use device-screen coordinates.
+    /// Where this slot physically is, per production Cabin artwork.
+    ///
+    /// Every number here is normalized inside the **rendered Cabin artwork**,
+    /// not the device screen and not the container view. That distinction is the
+    /// whole point: the artwork is drawn `.scaledToFill` and centre-cropped, so
+    /// container-normalized coordinates drift by up to 0.054 of the height on an
+    /// iPhone SE, 0.031 of the width on an iPad in landscape, and 0.100 of the
+    /// height in a narrow Mac window — which is precisely why a plush that sat
+    /// on the bench on one device floated in front of it on another.
+    /// `CabinArtFrame` converts these into container points.
+    ///
+    /// The values were measured off the three artworks rather than guessed:
+    ///
+    ///   cabin_iphone  852x1846  tabletop y 0.44-0.47, span x 0.30-0.70
+    ///                           bench seat y 0.55-0.64, span x 0.06-0.33
+    ///   cabin_ipad   1086x1449  tabletop y 0.48-0.52, span x 0.27-0.75
+    ///                           bench seat y 0.62-0.68, span x 0.05-0.30
+    ///   cabin_mac    1586x992   tabletop y 0.50-0.54, span x 0.375-0.75
+    ///                           bench seat y 0.72-0.76, span x 0.125-0.375
+    ///
+    /// The Mac artwork is deliberately NOT symmetric — its window sits right of
+    /// centre — so x varies per artwork too, which the previous table could not
+    /// express.
     func transform(for artwork: CabinArtworkLayout) -> CabinSlotTransform {
-        let y: (portrait: Double, tablet: Double, landscape: Double)
-        switch self {
-        case .tableLeft, .tableCenter, .tableRight:
-            y = (0.482, 0.527, 0.555)
-        case .benchLeft, .benchCenter:
-            y = (0.745, 0.785, 0.785)
-        case .wallLeft, .wallRight:
-            y = (0.380, 0.375, 0.360)
-        case .hookLeft, .hookRight:
-            y = (0.415, 0.430, 0.435)
-        case .hangingLeft, .hangingRight:
-            y = (0.070, 0.065, 0.055)
-        case .floorRight:
-            y = (0.835, 0.835, 0.840)
-        }
-        let resolvedY: Double
-        switch artwork {
-        case .portrait: resolvedY = y.portrait
-        case .tablet: resolvedY = y.tablet
-        case .landscape: resolvedY = y.landscape
-        }
+        let p = Self.placement(for: artwork)[self] ?? Self.placement(for: .portrait)[self]!
+        return CabinSlotTransform(contact: .init(x: p.x, y: p.y),
+                                  defaultScale: p.scale,
+                                  anchor: p.anchor,
+                                  zIndex: depth,
+                                  rotationDegrees: p.rotation,
+                                  maximumFootprint: p.maxFootprint)
+    }
 
-        // TABLE — the three tabletop slots are now genuinely simultaneous, so
-        // their contact points had to spread. At the old 0.39 / 0.50 / 0.61 the
-        // half-widths already overlapped by ~0.035 W; that was invisible only
-        // because the renderer refused to draw more than one of them. Spread to
-        // 0.335 / 0.50 / 0.665 (0.165 apart) the worst case is centre 0.20 and a
-        // side 0.175 → 0.100 + 0.0875 = 0.1875 of footprint against 0.165 of
-        // spacing at MAXIMUM footprint, and 0.084 + 0.0725 = 0.1565 at the
-        // default scale most items actually use. Items also sit a touch larger
-        // than before.
-        switch self {
-        case .tableLeft:
-            return .init(contact: .init(x: 0.335, y: resolvedY), defaultScale: 0.145,
-                         anchor: .bottomCenter, zIndex: 3, maximumFootprint: 0.165)
-        case .tableCenter:
-            return .init(contact: .init(x: 0.50, y: resolvedY), defaultScale: 0.168,
-                         anchor: .bottomCenter, zIndex: 3, maximumFootprint: 0.19)
-        case .tableRight:
-            return .init(contact: .init(x: 0.665, y: resolvedY), defaultScale: 0.145,
-                         anchor: .bottomCenter, zIndex: 3, maximumFootprint: 0.165)
-        case .benchLeft:
-            return .init(contact: .init(x: 0.20, y: resolvedY), defaultScale: 0.235,
-                         anchor: .bottomCenter, zIndex: 4, maximumFootprint: 0.27)
-        case .benchCenter:
-            return .init(contact: .init(x: 0.29, y: resolvedY - 0.035), defaultScale: 0.21,
-                         anchor: .bottomCenter, zIndex: 4, maximumFootprint: 0.24)
-        // WALL / HOOK / HANGING — these were the smallest slots in the cabin and
-        // the ones that read as toys, the hanging pair worst of all. They have no
-        // near neighbour (left and right sit at opposite edges), so they can grow
-        // without any overlap risk. Each still clears the window: the hanging pair
-        // hangs DOWN from y 0.070 and finishes well above the window's top, and
-        // the hook/wall pairs sit outside the window's horizontal span.
-        case .wallLeft:
-            return .init(contact: .init(x: 0.135, y: resolvedY), defaultScale: 0.172,
-                         anchor: .center, zIndex: 0, rotationDegrees: -4,
-                         maximumFootprint: 0.195)
-        case .wallRight:
-            return .init(contact: .init(x: 0.865, y: resolvedY), defaultScale: 0.172,
-                         anchor: .center, zIndex: 0, rotationDegrees: 4,
-                         maximumFootprint: 0.195)
-        case .hookLeft:
-            return .init(contact: .init(x: 0.145, y: resolvedY), defaultScale: 0.160,
-                         anchor: .topCenter, zIndex: 2, rotationDegrees: -5,
-                         maximumFootprint: 0.185)
-        case .hookRight:
-            return .init(contact: .init(x: 0.855, y: resolvedY), defaultScale: 0.160,
-                         anchor: .topCenter, zIndex: 2, rotationDegrees: 5,
-                         maximumFootprint: 0.185)
-        case .hangingLeft:
-            return .init(contact: .init(x: 0.28, y: resolvedY), defaultScale: 0.205,
-                         anchor: .topCenter, zIndex: 1, maximumFootprint: 0.235)
-        case .hangingRight:
-            return .init(contact: .init(x: 0.72, y: resolvedY), defaultScale: 0.205,
-                         anchor: .topCenter, zIndex: 1, maximumFootprint: 0.235)
-        case .floorRight:
-            return .init(contact: .init(x: 0.73, y: resolvedY), defaultScale: 0.22,
-                         anchor: .bottomCenter, zIndex: 4, maximumFootprint: 0.26)
+    /// One artwork's complete slot map. Table sizes differ per artwork because
+    /// the painted tabletop is a different FRACTION of each picture: three
+    /// objects of 0.115/0.130/0.115 fit the iPhone's 0.40-wide tabletop with
+    /// room to spare, and would hang over both ends of the Mac's 0.375-wide one.
+    private static func placement(for artwork: CabinArtworkLayout) -> [CabinSlot: SlotPlacement] {
+        switch artwork {
+        case .portrait:  return portraitPlacement
+        case .tablet:    return tabletPlacement
+        case .landscape: return landscapePlacement
         }
     }
+
+    struct SlotPlacement {
+        let x: Double
+        let y: Double
+        let scale: Double
+        let maxFootprint: Double
+        var anchor: CabinItemAnchor = .bottomCenter
+        var rotation: Double = 0
+    }
+
+    // cabin_iphone. Tabletop runs 0.30-0.70; the three slots divide it in
+    // proportion 1 : 1.15 : 1 with a 4% breathing gap, so at MAXIMUM footprint
+    // the outermost edges land at 0.3025 and 0.6975 and neighbouring pairs clear
+    // each other by 0.1365 against 0.1310 of half-widths — no overhang, no
+    // overlap, verified arithmetically rather than by eye.
+    //
+    // The bench is the exception: it is only 0.27 of the picture wide, so two
+    // objects at a convincing plush size cannot both fit. Each slot is sized to
+    // sit fully inside the bench on its own, and `resolvedPlacements` keeps a
+    // second soft item off it.
+    private static let portraitPlacement: [CabinSlot: SlotPlacement] = [
+        .tableLeft:    .init(x: 0.3635, y: 0.462, scale: 0.1088, maxFootprint: 0.1219),
+        .tableCenter:  .init(x: 0.5000, y: 0.462, scale: 0.1252, maxFootprint: 0.1402),
+        .tableRight:   .init(x: 0.6365, y: 0.462, scale: 0.1088, maxFootprint: 0.1219),
+        .benchLeft:    .init(x: 0.1700, y: 0.605, scale: 0.1960, maxFootprint: 0.2200),
+        .benchCenter:  .init(x: 0.2380, y: 0.570, scale: 0.1610, maxFootprint: 0.1800),
+        .wallLeft:     .init(x: 0.1350, y: 0.435, scale: 0.1500, maxFootprint: 0.1700,
+                             anchor: .center, rotation: -4),
+        .wallRight:    .init(x: 0.8650, y: 0.435, scale: 0.1500, maxFootprint: 0.1700,
+                             anchor: .center, rotation: 4),
+        .hookLeft:     .init(x: 0.1450, y: 0.415, scale: 0.1400, maxFootprint: 0.1600,
+                             anchor: .topCenter, rotation: -5),
+        .hookRight:    .init(x: 0.8550, y: 0.415, scale: 0.1400, maxFootprint: 0.1600,
+                             anchor: .topCenter, rotation: 5),
+        .hangingLeft:  .init(x: 0.2800, y: 0.070, scale: 0.1850, maxFootprint: 0.2100,
+                             anchor: .topCenter),
+        .hangingRight: .init(x: 0.7200, y: 0.070, scale: 0.1850, maxFootprint: 0.2100,
+                             anchor: .topCenter),
+        .floorRight:   .init(x: 0.7300, y: 0.835, scale: 0.2000, maxFootprint: 0.2300),
+    ]
+
+    // cabin_ipad. The widest tabletop of the three (0.27-0.75), so the same
+    // 1 : 1.15 : 1 division leaves the most room.
+    private static let tabletPlacement: [CabinSlot: SlotPlacement] = [
+        .tableLeft:    .init(x: 0.3462, y: 0.505, scale: 0.1306, maxFootprint: 0.1463),
+        .tableCenter:  .init(x: 0.5100, y: 0.505, scale: 0.1502, maxFootprint: 0.1682),
+        .tableRight:   .init(x: 0.6738, y: 0.505, scale: 0.1306, maxFootprint: 0.1463),
+        .benchLeft:    .init(x: 0.1550, y: 0.655, scale: 0.1870, maxFootprint: 0.2100),
+        .benchCenter:  .init(x: 0.2120, y: 0.625, scale: 0.1560, maxFootprint: 0.1750),
+        .wallLeft:     .init(x: 0.1150, y: 0.425, scale: 0.1450, maxFootprint: 0.1650,
+                             anchor: .center, rotation: -4),
+        .wallRight:    .init(x: 0.8850, y: 0.425, scale: 0.1450, maxFootprint: 0.1650,
+                             anchor: .center, rotation: 4),
+        .hookLeft:     .init(x: 0.1250, y: 0.455, scale: 0.1350, maxFootprint: 0.1550,
+                             anchor: .topCenter, rotation: -5),
+        .hookRight:    .init(x: 0.8750, y: 0.455, scale: 0.1350, maxFootprint: 0.1550,
+                             anchor: .topCenter, rotation: 5),
+        .hangingLeft:  .init(x: 0.3000, y: 0.065, scale: 0.1750, maxFootprint: 0.2000,
+                             anchor: .topCenter),
+        .hangingRight: .init(x: 0.7000, y: 0.065, scale: 0.1750, maxFootprint: 0.2000,
+                             anchor: .topCenter),
+        .floorRight:   .init(x: 0.7000, y: 0.845, scale: 0.1900, maxFootprint: 0.2150),
+    ]
+
+    // cabin_mac. Narrowest tabletop as a fraction (0.375-0.75) and an off-centre
+    // window at x 0.40-0.725, so the tabletop midpoint is 0.5625, not 0.5. Every
+    // x here is shifted accordingly; the previous single shared table could only
+    // express one x per slot and put Mac objects left of the furniture.
+    private static let landscapePlacement: [CabinSlot: SlotPlacement] = [
+        .tableLeft:    .init(x: 0.4345, y: 0.525, scale: 0.1020, maxFootprint: 0.1143),
+        .tableCenter:  .init(x: 0.5625, y: 0.525, scale: 0.1173, maxFootprint: 0.1314),
+        .tableRight:   .init(x: 0.6905, y: 0.525, scale: 0.1020, maxFootprint: 0.1143),
+        .benchLeft:    .init(x: 0.2300, y: 0.730, scale: 0.1870, maxFootprint: 0.2100),
+        .benchCenter:  .init(x: 0.2870, y: 0.705, scale: 0.1560, maxFootprint: 0.1750),
+        .wallLeft:     .init(x: 0.1000, y: 0.425, scale: 0.1100, maxFootprint: 0.1250,
+                             anchor: .center, rotation: -4),
+        .wallRight:    .init(x: 0.8750, y: 0.425, scale: 0.1100, maxFootprint: 0.1250,
+                             anchor: .center, rotation: 4),
+        .hookLeft:     .init(x: 0.1100, y: 0.455, scale: 0.1000, maxFootprint: 0.1150,
+                             anchor: .topCenter, rotation: -5),
+        .hookRight:    .init(x: 0.8650, y: 0.455, scale: 0.1000, maxFootprint: 0.1150,
+                             anchor: .topCenter, rotation: 5),
+        .hangingLeft:  .init(x: 0.3000, y: 0.055, scale: 0.1300, maxFootprint: 0.1500,
+                             anchor: .topCenter),
+        .hangingRight: .init(x: 0.8000, y: 0.055, scale: 0.1300, maxFootprint: 0.1500,
+                             anchor: .topCenter),
+        .floorRight:   .init(x: 0.7800, y: 0.855, scale: 0.1500, maxFootprint: 0.1750),
+    ]
 }
 
 enum CabinArtworkLayout {
     case portrait, tablet, landscape
+}
+
+/// The rectangle the Cabin artwork actually occupies inside its container, and
+/// the only coordinate space cabin objects are ever placed in.
+///
+/// The Cabin art is drawn `.scaledToFill()` and clipped, so it is scaled by the
+/// LARGER of the two container ratios and centre-cropped on one axis. Its
+/// rendered rect is therefore bigger than the container in that axis and offset
+/// by a negative origin. Placing objects against the container instead — which
+/// is what shipped — puts them in the wrong place on every aspect ratio except
+/// the one the coordinates were authored on.
+struct CabinArtFrame {
+    /// Top-left of the rendered artwork in container coordinates. Negative on
+    /// the cropped axis, which is exactly the correction that was missing.
+    let origin: CGPoint
+    /// The rendered artwork's size. Larger than the container on the cropped axis.
+    let size: CGSize
+    /// Which artwork is on screen, resolved once from the container by the same
+    /// rule that picks the asset — so coordinates can never be read from a
+    /// different artwork's table than the one being displayed.
+    let layout: CabinArtworkLayout
+
+    /// Mirrors SwiftUI's `.scaledToFill()` + centre crop exactly.
+    static func fill(image: CGSize, in container: CGSize,
+                     layout: CabinArtworkLayout) -> CabinArtFrame {
+        guard image.width > 0, image.height > 0 else {
+            return CabinArtFrame(origin: .zero, size: container, layout: layout)
+        }
+        let scale = max(container.width / image.width, container.height / image.height)
+        let size = CGSize(width: image.width * scale, height: image.height * scale)
+        return CabinArtFrame(
+            origin: CGPoint(x: (container.width - size.width) / 2,
+                            y: (container.height - size.height) / 2),
+            size: size,
+            layout: layout
+        )
+    }
+
+    func x(_ normalized: Double) -> CGFloat { origin.x + CGFloat(normalized) * size.width }
+    func y(_ normalized: Double) -> CGFloat { origin.y + CGFloat(normalized) * size.height }
+    /// Object widths are a fraction of the ARTWORK's width, so a plush keeps the
+    /// same size relative to the bench it sits on however the picture is cropped.
+    func width(_ normalized: Double) -> CGFloat { CGFloat(normalized) * size.width }
 }
 
 struct CabinSlotTransform {

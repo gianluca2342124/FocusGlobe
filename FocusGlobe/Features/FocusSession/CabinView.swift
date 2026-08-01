@@ -148,7 +148,49 @@ struct CabinView: View {
     }
 
     @ViewBuilder private func assetEquippedProps(W: CGFloat, H: CGFloat, t: Double) -> some View {
-        slottedProps(W: W, H: H, t: t)
+        slottedProps(art: Self.artFrame(W: W, H: H), t: t)
+    }
+
+    /// Where the Cabin artwork ACTUALLY lands inside the container.
+    ///
+    /// The art is drawn `.scaledToFill()` and clipped, so it is scaled by the
+    /// LARGER of the two ratios and centre-cropped on one axis. Objects used to
+    /// be positioned against the container instead, which meant every device
+    /// whose aspect ratio differed from the artwork's put them in the wrong
+    /// place — measured against the shipping assets: 0.054 of the height out on
+    /// an iPhone SE, 0.031 of the width on an iPad in landscape, and 0.100 of
+    /// the height in a narrow Mac window, live, as it is resized. That is the
+    /// bench plush hovering in front of the seat and the tabletop items sliding
+    /// off the shelf.
+    ///
+    /// With no asset (the procedural cabin) the artwork IS the container, which
+    /// this returns unchanged.
+    private static func artFrame(W: CGFloat, H: CGFloat) -> CabinArtFrame {
+        let container = CGSize(width: W, height: H)
+        // The layout family is decided from the CONTAINER, by the same rule that
+        // picks the asset, so the coordinate table can never be resolved against
+        // a different artwork than the one on screen.
+        let layout = artworkLayout(W: W, H: H)
+        #if canImport(UIKit)
+        if let name = cabinAssetNameStatic(W: W, H: H),
+           let image = UIImage(named: name), image.size.width > 0, image.size.height > 0 {
+            return CabinArtFrame.fill(image: image.size, in: container, layout: layout)
+        }
+        #endif
+        return CabinArtFrame(origin: .zero, size: container, layout: layout)
+    }
+
+    private static func cabinAssetNameStatic(W: CGFloat, H: CGFloat) -> String? {
+        #if canImport(UIKit)
+        let candidate: String
+        let aspect = W / max(1, H)
+        if aspect > 1.2 { candidate = "cabin_mac" }
+        else if min(W, H) > 700 { candidate = "cabin_ipad" }
+        else { candidate = "cabin_iphone" }
+        return UIImage(named: candidate) != nil ? candidate : nil
+        #else
+        return nil
+        #endif
     }
 
     /// The equipped objects the pilot will actually see, in catalog order.
@@ -240,17 +282,20 @@ struct CabinView: View {
     /// Places every object from the same normalized physical transform table in
     /// Store and flight. Slot coordinates represent a real contact/attachment
     /// point; item anchors convert that point into the SwiftUI frame's centre.
-    @ViewBuilder private func slottedProps(W: CGFloat, H: CGFloat, t: Double) -> some View {
+    @ViewBuilder private func slottedProps(art: CabinArtFrame, t: Double) -> some View {
         ForEach(visibleItems) { item in
             let slot = resolvedPlacements[item.id] ?? item.preferredSlot ?? .tableCenter
-            let layout = slot.transform(for: Self.artworkLayout(W: W, H: H))
-            let width = min(W * layout.defaultScale * item.normalizedScale,
-                            W * layout.maximumFootprint)
+            let layout = slot.transform(for: art.layout)
+            // Sizes are a fraction of the ARTWORK's width, so an object keeps
+            // the same size relative to the furniture it stands on however the
+            // picture is cropped into the window.
+            let width = min(art.width(layout.defaultScale * item.normalizedScale),
+                            art.width(layout.maximumFootprint))
             let height = width / Self.assetAspectRatio(for: item)
             let anchor = item.anchorPoint ?? layout.anchor
-            let x = W * (layout.contact.x + item.offsetAdjustment.x)
+            let x = art.x(layout.contact.x + item.offsetAdjustment.x)
                 + (0.5 - anchor.x) * width
-            let y = H * (layout.contact.y + item.offsetAdjustment.y)
+            let y = art.y(layout.contact.y + item.offsetAdjustment.y)
                 + (0.5 - anchor.y) * height
             cabinItemImage(item, t: t)
                 .frame(width: width, height: height)
@@ -463,7 +508,12 @@ struct CabinView: View {
     /// Ceramic Teapot at two fixed points, so every other decoration a pilot
     /// owned simply did not appear here.
     @ViewBuilder private func equippedProps(W: CGFloat, H: CGFloat, t: Double) -> some View {
-        slottedProps(W: W, H: H, t: t)
+        // The procedural cabin is drawn directly in container coordinates, so
+        // here the artwork frame IS the container — no crop to compensate for.
+        slottedProps(art: CabinArtFrame(origin: .zero,
+                                        size: CGSize(width: W, height: H),
+                                        layout: Self.artworkLayout(W: W, H: H)),
+                     t: t)
     }
 
     // MARK: 6 — Floor pet (a curled, softly-breathing cat on a cushion)
