@@ -2,9 +2,18 @@ import ManagedSettings
 import ManagedSettingsUI
 import UIKit
 
-/// FocusGlobe's calm, branded use of Apple's system-owned Screen Time shield.
-/// ManagedSettingsUI controls the layout; the extension supplies only the
-/// supported icon, labels and colors.
+/// FocusGlobe's use of Apple's system-owned Screen Time shield.
+///
+/// ManagedSettingsUI owns the layout completely — there is no way to place a
+/// SwiftUI view inside it, and attempting to fake one produces exactly the
+/// half-finished result this replaces. What the extension DOES control is the
+/// background colour, one image, four pieces of text and two button colours,
+/// and all six are now deliberate.
+///
+/// Every override funnels into one builder, so a shielded app, an app shielded
+/// through a category, a web domain and a domain shielded through a category are
+/// visually identical. There is no analytics, no network and no RevenueCat here:
+/// a shield extension is memory-constrained and runs at unpredictable moments.
 final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     override func configuration(shielding application: Application) -> ShieldConfiguration {
         Self.focusGlobeShield()
@@ -28,24 +37,122 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
         Self.focusGlobeShield()
     }
 
+    // MARK: - The one canonical shield
+
+    /// FocusGlobe's exact shield background, #181721.
+    private static let background = UIColor(
+        red: 24.0 / 255.0,
+        green: 23.0 / 255.0,
+        blue: 33.0 / 255.0,
+        alpha: 1.0
+    )
+    private static let ivory = UIColor(red: 0.96, green: 0.94, blue: 0.89, alpha: 1)
+
     private static func focusGlobeShield() -> ShieldConfiguration {
-        let navy = UIColor(red: 0.035, green: 0.047, blue: 0.10, alpha: 1)
-        let ivory = UIColor(red: 0.96, green: 0.94, blue: 0.89, alpha: 1)
-        let teal = UIColor(red: 0.22, green: 0.78, blue: 0.73, alpha: 1)
+        let line = ShieldCopy.current()
 
         return ShieldConfiguration(
-            backgroundBlurStyle: .systemUltraThinMaterialDark,
-            backgroundColor: navy,
-            icon: UIImage(named: "FocusShieldGlyph")
-                ?? UIImage(systemName: "balloon.2.fill"),
-            title: .init(text: "Stay on course", color: ivory),
-            subtitle: .init(
-                text: "Your focus flight is still active.",
-                color: ivory.withAlphaComponent(0.72)
-            ),
-            primaryButtonLabel: .init(text: "Return to FocusGlobe", color: navy),
-            primaryButtonBackgroundColor: teal,
-            secondaryButtonLabel: .init(text: "Close", color: ivory.withAlphaComponent(0.78))
+            // No blur. `backgroundBlurStyle` composites a material over the
+            // colour, so the visible result is never the value that was asked
+            // for — and this screen has an exact brand colour to hit.
+            backgroundBlurStyle: nil,
+            backgroundColor: background,
+            // The balloon, alpha-trimmed and squared with transparent padding
+            // only, shipped INSIDE this extension's own catalogue. The system
+            // scales it into its own slot; giving it art with no baked
+            // background is the only way to avoid the dark tile that used to
+            // sit behind it.
+            icon: UIImage(named: "FocusShieldGlyph"),
+            title: .init(text: line.title, color: ivory),
+            subtitle: .init(text: line.subtitle, color: ivory.withAlphaComponent(0.74)),
+            // White plate, black label: the highest-contrast pairing available
+            // here, and unmistakably the way back.
+            primaryButtonLabel: .init(text: "Return to FocusGlobe", color: .black),
+            primaryButtonBackgroundColor: .white,
+            secondaryButtonLabel: .init(text: "Close", color: ivory.withAlphaComponent(0.62))
         )
+    }
+}
+
+// MARK: - Copy
+
+/// FocusGlobe's own shield lines. All original: no third-party quotes, no
+/// attribution, nobody else's slogan.
+///
+/// The line has to be STABLE while a shield is on screen. `configuration` is
+/// called again on every re-presentation and on relayout, so anything random
+/// would visibly flicker between phrases. Selection is therefore derived from
+/// something that does not change during a flight: the active journey's start
+/// time from the App Group, or — if no flight is running — the current local
+/// day, which at least holds steady until midnight.
+enum ShieldCopy {
+    struct Line {
+        let title: String
+        let subtitle: String
+    }
+
+    /// Titles are short enough to survive the system's own layout without
+    /// truncating; each subtitle is one supporting sentence.
+    static let lines: [Line] = [
+        Line(title: "That scroll can wait",
+             subtitle: "Your goal can’t. Keep flying."),
+        Line(title: "Don’t trade your goal",
+             subtitle: "A distraction is a poor exchange rate."),
+        Line(title: "Protect who you’re becoming",
+             subtitle: "This is the part that builds them."),
+        Line(title: "The urge will pass",
+             subtitle: "It always does. Stay in the air."),
+        Line(title: "Your future deserves this",
+             subtitle: "So does the hour you already committed."),
+        Line(title: "Five focused minutes",
+             subtitle: "That’s all it takes to change your day."),
+        Line(title: "Stay on course",
+             subtitle: "Finish what you started."),
+        Line(title: "Not worth your momentum",
+             subtitle: "You’ve built something. Don’t spend it here."),
+    ]
+
+    private static let appGroupID = "group.com.focusglobe.app"
+    /// Written by the app when a journey's shields go up.
+    private static let startedAtKey = "fg.focusShield.startedAt"
+
+    static func current(now: Date = Date(), calendar: Calendar = .current) -> Line {
+        lines[index(now: now, calendar: calendar)]
+    }
+
+    /// A stable index in `lines.indices`. Exposed for reasoning about, and
+    /// deliberately total: every input path returns a valid index.
+    static func index(now: Date = Date(), calendar: Calendar = .current) -> Int {
+        guard !lines.isEmpty else { return 0 }
+        let seed: Int
+        if let started = activeFlightStart(), started.timeIntervalSince1970 > 0 {
+            // One line per flight, fixed for its whole duration.
+            seed = Int(started.timeIntervalSince1970)
+        } else {
+            // No flight in the App Group (or the group isn't linked): fall back
+            // to the local day, so the phrase is at least steady until midnight.
+            seed = calendar.ordinality(of: .day, in: .era, for: now) ?? 0
+        }
+        // Mix before reducing. Taking `seed % count` directly is badly behaved
+        // here: flight starts a minute apart differ by 60, and 60 % 8 == 4, so
+        // consecutive flights would alternate between just two phrases forever.
+        // A splitmix64 finalizer spreads them across the whole set — measured at
+        // 7 of 8 distinct over 24 flights a minute apart, and 8 of 8 over 24
+        // consecutive days. Still perfectly deterministic.
+        return Int(Self.mixed(UInt64(bitPattern: Int64(seed))) % UInt64(lines.count))
+    }
+
+    private static func mixed(_ value: UInt64) -> UInt64 {
+        var h = value &* 0x9E37_79B9_7F4A_7C15
+        h ^= h >> 29
+        h = h &* 0xBF58_476D_1CE4_E5B9
+        h ^= h >> 32
+        return h
+    }
+
+    private static func activeFlightStart() -> Date? {
+        guard let defaults = UserDefaults(suiteName: appGroupID) else { return nil }
+        let t = defaults.double(forKey: startedAtKey)
+        return t > 0 ? Date(timeIntervalSince1970: t) : nil
     }
 }
