@@ -12,7 +12,7 @@ import UIKit
 /// premium intro. The review ask now follows the first meaningful product taste
 /// instead of arriving at the very end. Everything lands in the local
 /// `UserProfile`; no backend, no
-/// sign-in — "Continue free" simply opens the app.
+/// sign-in — "Skip for now" simply opens the app.
 struct OnboardingView: View {
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
@@ -133,10 +133,14 @@ struct OnboardingView: View {
         appModel.markPremiumIntroSeen()   // onboarding already made the premium offer
         if thenPaywall {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                // The first-run offer: annual only, because this is the screen
-                // that leads with the free-trial timeline and the monthly product
-                // carries no trial.
-                router.presentPaywall(context: .onboarding)
+                // The STANDARD paywall — the same `.general` context the Home
+                // PRO button opens, with Annual and Monthly, the plan selector,
+                // the trial timeline, the pricing disclosure and the showcase
+                // carousel. It used to open `.onboarding`, which is annual-only
+                // with no selector: someone who wanted the monthly plan had to
+                // finish onboarding, close a paywall and find another entry
+                // point. There is one paywall view; only the context differs.
+                router.presentPaywall(context: .general)
             }
         }
     }
@@ -729,7 +733,10 @@ struct OnboardingView: View {
                 VStack(spacing: AppSpacing.lg) {
                     premiumHero
                     VStack(spacing: 6) {
-                        Text("Focus, elevated.")
+                        // Someone who already holds the entitlement — a
+                        // reinstall, or a sign-in during onboarding that
+                        // restored it — is shown what they own, not a pitch.
+                        Text(appModel.isPro ? "You’re all set." : "Focus, elevated.")
                             .font(.system(size: Layout.pad(30, 40), weight: .bold, design: .default))
                             .foregroundStyle(.white)
                         // NOT "Everything in FocusGlobe, unlocked." — PRO opens
@@ -737,7 +744,9 @@ struct OnboardingView: View {
                         // (Fiji, Northern Aurora, Deep Space are still earned by
                         // flying). Promising "everything" here is a claim the
                         // app then refuses to honour on the Sky selector.
-                        Text("The exclusive Skies, skins and features.")
+                        Text(appModel.isPro
+                             ? "FocusGlobe PRO is active on this account."
+                             : "The exclusive Skies, skins and features.")
                             .font(AppTypography.callout)
                             .foregroundStyle(.white.opacity(0.66))
                     }
@@ -747,19 +756,51 @@ struct OnboardingView: View {
                 .padding(.horizontal, 2)
             }
             VStack(spacing: AppSpacing.sm) {
-                AppPrimaryButton(title: "Try FocusGlobe PRO", systemImage: "sparkles") {
-                    appModel.tapFeedback()
-                    complete(thenPaywall: true)
+                if appModel.isPro {
+                    // No upsell and no paywall for someone who already owns it.
+                    AppPrimaryButton(title: "Continue", systemImage: "checkmark") {
+                        appModel.tapFeedback()
+                        complete(thenPaywall: false)
+                    }
+                } else {
+                    AppPrimaryButton(title: premiumCTATitle, systemImage: "sparkles") {
+                        appModel.tapFeedback()
+                        complete(thenPaywall: true)
+                    }
+                    // Secondary, but readable: this must never feel like a trap.
+                    // It finishes onboarding as a free pilot — no purchase, no
+                    // entitlement change, nothing blocked.
+                    Button("Skip for now") {
+                        appModel.tapFeedback()
+                        complete(thenPaywall: false)
+                    }
+                    .font(AppTypography.headline)
+                    .foregroundStyle(.white.opacity(0.85))
                 }
-                Button("Continue free") {
-                    appModel.tapFeedback()
-                    complete(thenPaywall: false)
-                }
-                .font(AppTypography.headline)
-                .foregroundStyle(.white.opacity(0.85))
             }
             .padding(.bottom, AppSpacing.xl)
         }
+        // Ask for offerings when the step appears so the CTA has a real product
+        // and a real eligibility answer to work from. Until it does, the CTA
+        // says "See PRO Plans", which is true in every case.
+        .onAppear { subs.loadOfferings() }
+    }
+
+    /// "Try for $0.00" is a price claim, so it is only made when the Store has
+    /// actually confirmed one: a loaded annual product, carrying a real
+    /// free-trial introductory offer, that THIS Apple ID is eligible for, and a
+    /// zero formatted by that product's own formatter — so the currency and
+    /// placement are right on every storefront rather than a hardcoded "$".
+    ///
+    /// Anything short of all four — offerings still loading, no trial
+    /// configured, already used the trial, an unknown eligibility result — falls
+    /// back to a claim that is always true.
+    private var premiumCTATitle: String {
+        guard let annual = subs.plan(.annual),
+              annual.offersFreeTrial,
+              let zero = annual.localizedZeroPrice
+        else { return "See PRO Plans" }
+        return "Try for \(zero)"
     }
 
     /// A continuously moving window into real PRO worlds. The scene art is a

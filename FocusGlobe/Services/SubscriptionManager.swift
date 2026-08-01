@@ -92,6 +92,11 @@ struct PlanOption: Identifiable, Equatable {
     var localizedPrice: String       // e.g. "18,99 €" (App Store localized)
     var monthlyEquivalent: String?   // annual only, e.g. "1,58 €/month"
     var available: Bool              // true when a real product is loaded
+    /// Zero, formatted in THIS product's own currency and locale — "$0.00",
+    /// "0,00 €", "¥0". Taken from the StoreProduct's own price formatter, never
+    /// assembled from a hardcoded symbol, so a "free trial" price can be stated
+    /// truthfully on any storefront. Nil when no real product is loaded.
+    var localizedZeroPrice: String? = nil
     /// What the STORE says this product offers. Nil = no introductory offer.
     var introOffer: IntroductoryOffer? = nil
     /// Whether THIS Apple ID may still use that offer, per StoreKit. Defaults to
@@ -584,6 +589,8 @@ final class SubscriptionManager: ObservableObject {
                 localizedPrice: product.localizedPriceString,
                 monthlyEquivalent: kind == .annual ? monthlyEquivalent(for: product) : nil,
                 available: true,
+                localizedZeroPrice: product.priceFormatter?
+                    .string(from: NSDecimalNumber(decimal: 0)),
                 introOffer: Self.introductoryOffer(for: product),
                 // Eligibility is a separate, asynchronous StoreKit question.
                 // Start false — never promise a trial before it is confirmed.
