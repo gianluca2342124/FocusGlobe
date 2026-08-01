@@ -65,9 +65,21 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
             icon: UIImage(named: "FocusShieldGlyph"),
             title: .init(text: line.title, color: ivory),
             subtitle: .init(text: line.subtitle, color: ivory.withAlphaComponent(0.74)),
-            // White plate, black label: the highest-contrast pairing available
-            // here, and unmistakably the way back.
-            primaryButtonLabel: .init(text: "Return to FocusGlobe", color: .black),
+            // "Return to FocusGlobe" was a promise the platform cannot keep.
+            //
+            // A shield action extension's ONLY output is a ShieldActionResponse
+            // — .none, .close or .defer. There is no URL-opening hook, no
+            // extensionContext.open, and UIApplication is unavailable in an app
+            // extension, so nothing here can launch the containing app. What
+            // .close actually does is dismiss the blocked app, which returns the
+            // user to the Home Screen, not to FocusGlobe. Labelling that button
+            // "Return to FocusGlobe" told them something that never happened.
+            //
+            // "Stay Focused" describes the real outcome — you leave the thing
+            // that was pulling at you — and is the encouragement this screen is
+            // for. White plate, black label: the highest-contrast pairing the
+            // API offers.
+            primaryButtonLabel: .init(text: "Stay Focused", color: .black),
             primaryButtonBackgroundColor: .white,
             secondaryButtonLabel: .init(text: "Close", color: ivory.withAlphaComponent(0.62))
         )

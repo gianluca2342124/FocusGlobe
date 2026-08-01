@@ -1,8 +1,15 @@
 import ManagedSettings
 
-/// Apple does not provide a supported URL-opening hook from a shield action.
-/// Both actions therefore close the blocked app without weakening the active
-/// shield. The primary label still guides the pilot back to FocusGlobe.
+/// A shield action extension's only output is a `ShieldActionResponse`, and its
+/// three cases — `.none`, `.close`, `.defer` — do not include "open an app".
+/// There is no URL-opening hook here, no `extensionContext.open`, and
+/// `UIApplication` is unavailable to an app extension, so nothing in this file
+/// can launch FocusGlobe. `.close` dismisses the BLOCKED app, which returns the
+/// user to the Home Screen.
+///
+/// That is why the shield's primary button now reads "Stay Focused" rather than
+/// "Return to FocusGlobe": the label describes what actually happens. Do not
+/// re-label it back without a supported API that genuinely opens the app.
 final class ShieldActionExtension: ShieldActionDelegate {
     override func handle(
         action: ShieldAction,
