@@ -323,6 +323,25 @@ struct OnboardingView: View {
                 }
                 SoundCoverCard(option: option)
                     .frame(maxWidth: .infinity)
+                    // One element that names the soundscape AND its state, so
+                    // VoiceOver never reads decorative artwork and never implies
+                    // a play control that no longer exists. Adjustable, because
+                    // swiping between options is the whole interaction.
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(option.displayName)
+                    .accessibilityValue(isPreviewingSound
+                                        ? "Selected, playing"
+                                        : "Selected")
+                    .accessibilityHint("Swipe up or down to hear another soundscape.")
+                    .accessibilityAdjustableAction { direction in
+                        switch direction {
+                        case .increment where soundIndex < opts.count - 1:
+                            withAnimation(.easeInOut(duration: 0.3)) { soundIndex += 1 }
+                        case .decrement where soundIndex > 0:
+                            withAnimation(.easeInOut(duration: 0.3)) { soundIndex -= 1 }
+                        default: break
+                        }
+                    }
                     .gesture(DragGesture(minimumDistance: 24).onEnded { v in
                         if v.translation.width < -30, soundIndex < opts.count - 1 {
                             withAnimation(.easeInOut(duration: 0.3)) { soundIndex += 1 }
@@ -997,17 +1016,11 @@ private struct SoundCoverCard: View {
                     .foregroundStyle(.white.opacity(0.92))
                     .shadow(color: .black.opacity(0.3), radius: 10, y: 4)
             }
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    Image(systemName: "play.circle.fill")
-                        .font(.system(size: 26, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.85))
-                        .shadow(color: .black.opacity(0.35), radius: 4)
-                        .padding(12)
-                }
-            }
+            // No play affordance of any kind. This card used to carry a
+            // `play.circle.fill` in the bottom corner with no action behind it:
+            // the soundscape already auto-plays and switches on swipe, so the
+            // icon could only ever look broken. A control that appears to play
+            // something must actually do it, or not be there.
         }
         .frame(height: 200)
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
