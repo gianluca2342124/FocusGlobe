@@ -20,6 +20,10 @@ struct HomeView: View {
     /// genuine return to Home we may ask Apple to show its review prompt.
     @AppStorage("home.visitCount") private var homeVisitCount = 0
     @AppStorage("home.lastReviewPromptAt") private var lastReviewPromptAt = 0.0
+    /// The app version FocusGlobe last ASKED on — never "has reviewed", which
+    /// the system does not report and the app must not pretend to know.
+    @AppStorage("home.lastReviewPromptVersion") private var lastReviewPromptVersion = ""
+
     @State private var showSetup = false
     @State private var showPreview = false
     @State private var balloonFloat: CGFloat = 0
@@ -327,19 +331,47 @@ struct HomeView: View {
         }
     }
 
-    /// Every 3rd genuine return to Home, ask StoreKit to consider showing the
-    /// system review prompt — never during onboarding, an active/ resumable
-    /// flight, or while the paywall is up. Apple may still choose not to show it.
+    /// Ask StoreKit to CONSIDER the system rating prompt, when returning to Home
+    /// from a section the pilot went and looked at — the Store, Friends or the
+    /// Passport. Never after a flight: that moment belongs to the landing.
+    ///
+    /// Every condition lives in `ReviewRequestPolicy`, which is a pure function
+    /// of state so it can be reasoned about without running the app. That
+    /// matters here because the real behaviour is close to invisible: StoreKit
+    /// decides whether a prompt actually appears, reports nothing back, and does
+    /// not show it in TestFlight builds at all.
+    ///
+    /// What is recorded is only ever "FocusGlobe asked, on this version, at this
+    /// time". There is no hasReviewed flag, because the system never says.
     private func maybeRequestReview() {
-        guard !router.showPaywall, router.activeJourney == nil,
-              !appModel.hasResumableJourney else { return }
         homeVisitCount += 1
-        guard homeVisitCount % 3 == 0 else { return }
-        let now = Date().timeIntervalSince1970
-        // Don't ask again within ~30 days of the last prompt.
-        if lastReviewPromptAt > 0, now - lastReviewPromptAt < 60 * 60 * 24 * 30 { return }
-        lastReviewPromptAt = now
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { requestReview() }
+        let context = ReviewRequestPolicy.Context(
+            cameFrom: router.previousTab,
+            completedJourneys: appModel.progress.landings,
+            lifetimeFocusedMinutes: appModel.lifetimeFocusMinutes,
+            lastRequestedVersion: lastReviewPromptVersion.isEmpty ? nil : lastReviewPromptVersion,
+            lastRequestedAt: lastReviewPromptAt,
+            currentVersion: ReviewRequestPolicy.currentVersion,
+            now: Date().timeIntervalSince1970,
+            // Anything that would make a rating prompt an interruption: a live or
+            // resumable flight, the paywall, an in-flight purchase, or any
+            // coordinated modal (invite preview, gifts, sign-in).
+            isBusy: router.activeJourney != nil
+                || router.showPaywall
+                || router.activeModal != nil
+                || appModel.hasResumableJourney
+                || appModel.subscriptions.isPurchasing,
+            hasOnboarded: !appModel.needsOnboarding
+        )
+        let decision = ReviewRequestPolicy.decide(context)
+        ReviewRequestPolicy.log(decision, context: context)
+        guard decision.isRequest else { return }
+
+        lastReviewPromptAt = context.now
+        lastReviewPromptVersion = context.currentVersion
+        // A short beat so Home has settled — never straight off a tap, and never
+        // over a transition.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) { requestReview() }
     }
 
     /// Home auto-presents AT MOST ONE popup per appearance, decided in a single

@@ -50,10 +50,18 @@ final class AppRouter: ObservableObject {
     /// ritual/boarding/history), which is empty while you are simply on a tab.
     @Published var selectedTab: Tab = .home
 
+    /// The tab the pilot was on immediately before this one.
+    ///
+    /// Exists so Home can tell "came back from the Store" apart from "the app
+    /// just launched" or "a flight ended" — three arrivals at the same screen
+    /// that mean very different things. Nil until the first switch.
+    @Published private(set) var previousTab: Tab?
+
     /// Switch tabs inside the shell. Clears any pushed flow first so a tab
     /// always shows its own root, never a stale pushed screen underneath.
     func select(_ tab: Tab) {
         if !path.isEmpty { path.removeAll() }
+        if tab != selectedTab { previousTab = selectedTab }
         selectedTab = tab
     }
 
