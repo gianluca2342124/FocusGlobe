@@ -56,11 +56,17 @@ struct FocusNowView: View {
     private func s(_ hex: Int, _ fallback: Int) -> Color { WColor.hex(hex == 0 ? fallback : hex) }
 
     /// Content inset, applied to the CONTENT only so the Sky stays full-bleed.
+    ///
+    /// Small is inset a little harder than medium: a 158 pt tile has the same
+    /// corner radius as a 338 pt one, so the corners eat proportionally far more
+    /// of it, and text starting at the very top-left runs straight into the
+    /// curve.
     private var contentInsets: EdgeInsets {
-        EdgeInsets(top: max(systemMargins.top, 14),
-                   leading: max(systemMargins.leading, 14),
-                   bottom: max(systemMargins.bottom, 15),
-                   trailing: max(systemMargins.trailing, 14))
+        let floor: CGFloat = family == .systemSmall ? 15 : 14
+        return EdgeInsets(top: max(systemMargins.top, floor + (family == .systemSmall ? 2 : 0)),
+                          leading: max(systemMargins.leading, floor),
+                          bottom: max(systemMargins.bottom, floor),
+                          trailing: max(systemMargins.trailing, floor))
     }
 
     var body: some View {
@@ -86,15 +92,22 @@ struct FocusNowView: View {
         .clipShape(ContainerRelativeShape())
     }
 
-    /// The state eyebrow, shared by both families. Fixed size on purpose: this is
-    /// the one line that must never shrink or wrap.
-    private var eyebrow: some View {
+    /// The state eyebrow.
+    ///
+    /// It used to be `.fixedSize()`, described as "must never shrink". That is
+    /// what let it size the tile instead of the tile sizing it: a fixed-size
+    /// child that does not fit makes its ancestors wider than the container, and
+    /// `ContainerRelativeShape` then clips the overflow symmetrically — which is
+    /// why "FOCUS NOW" appeared as "US NOW", losing characters off the LEFT edge
+    /// where nothing was ever laid out. Shrinking a little is strictly better
+    /// than being cut in half.
+    private func eyebrow(size: CGFloat) -> some View {
         Text(snapshot.activeFlight ? "IN FLIGHT" : "FOCUS NOW")
-            .font(.system(size: 10, weight: .heavy, design: .default))
-            .tracking(1.1)
+            .font(.system(size: size, weight: .heavy, design: .default))
+            .tracking(1.0)
             .foregroundStyle(snapshot.activeFlight ? WTheme.teal : WTheme.inkSoft)
             .lineLimit(1)
-            .fixedSize()
+            .minimumScaleFactor(0.75)
     }
 
     @ViewBuilder private var skyArtwork: some View {
@@ -127,44 +140,63 @@ struct FocusNowView: View {
         snapshot.activeFlight || snapshot.hasResumable ? "arrow.uturn.up" : "arrow.up"
     }
 
-    /// Small: a genuinely compact composition — eyebrow and Sky name as one tight
-    /// block at the top, the Sky itself through the middle, and an action pill at
-    /// the bottom that hugs its label. It borrows nothing from the medium layout.
+    /// Small: rebuilt as its own layout, sized by the CONTAINER rather than by
+    /// its content.
     ///
-    /// The clipping this replaces was a modifier-ORDER bug, not a spacing one:
-    /// the content read `.frame(maxWidth: .infinity, maxHeight: .infinity)` and
-    /// THEN `.padding(contentInsets)`. That makes a view which first grows to the
-    /// full container and then adds insets *outside* itself, so the laid-out size
-    /// is the container plus 28-30 pt — text pushed past the left edge and the
-    /// action past the bottom, exactly as reported. Padding must come first, and
-    /// the frame after it.
+    /// The clipping had two causes stacked on each other. The first was modifier
+    /// order — `.frame(maxWidth: .infinity)` before `.padding(...)` grows to the
+    /// full container and then adds insets outside it. The second, which
+    /// survived that fix, was `.fixedSize()` on the eyebrow and the action pill:
+    /// a fixed-size child that does not fit makes the whole stack wider than the
+    /// tile, and `ContainerRelativeShape` clips the excess EVENLY, which is why
+    /// characters disappeared off the left edge as well as the right.
     ///
-    /// Nothing here depends on text shrinking to stay inside: the eyebrow is
-    /// `fixedSize`, the Sky name floors at 80 % of 15 pt, and only the live timer
-    /// (whose width genuinely varies as it counts down) scales hard.
+    /// So nothing in here is fixed-size and every row is `maxWidth: .infinity`.
+    /// The tile's width is the authority: text scales inside it and the button
+    /// is measured from it. Overflow is not tuned down, it is impossible.
     private var smallLayout: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            // Eyebrow + Sky name as ONE tight block at the top.
+        VStack(alignment: .leading, spacing: 5) {
+            // TOP — eyebrow + Sky name as one tight block, inset from the curve.
             VStack(alignment: .leading, spacing: 1) {
-                eyebrow
+                eyebrow(size: 10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                 Text(displayedSkyName)
-                    .font(.system(size: 15, weight: .heavy, design: .default))
+                    .font(.system(size: 14.5, weight: .heavy, design: .default))
                     .foregroundStyle(WTheme.ink)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .minimumScaleFactor(0.72)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
 
+            // MIDDLE — the Sky itself, which is the ZStack behind this. Nothing
+            // is drawn over it: a balloon here would compete with a 158 pt tile
+            // that already has a title and a button on it.
             Spacer(minLength: 2)
 
             if snapshot.activeFlight {
-                remainingTime(fontSize: 20)
+                remainingTime(fontSize: 19)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            actionCapsule(compact: true)
+            // BOTTOM — a centred pill, deliberately narrower than the tile.
+            smallActionButton
         }
         .padding(contentInsets)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    /// The small action pill: 74 % of the CONTENT width (inside the 65–78 %
+    /// target), centred, and measured from the row it is given rather than from
+    /// any screen or device metric. A full-width pill turned the bottom of a
+    /// 158 pt square into a solid gold bar; a fixed-width one clipped.
+    private var smallActionButton: some View {
+        GeometryReader { geo in
+            actionCapsuleBody(compact: true)
+                .frame(width: max(64, geo.size.width * 0.74), height: geo.size.height)
+                .frame(maxWidth: .infinity, alignment: .center)
+        }
+        .frame(height: 28)
     }
 
     /// Medium keeps the horizontal composition — text column left, action right —
@@ -174,7 +206,7 @@ struct FocusNowView: View {
     private var mediumLayout: some View {
         HStack(alignment: .center, spacing: 14) {
             VStack(alignment: .leading, spacing: 5) {
-                eyebrow
+                eyebrow(size: 10)
 
                 Text(displayedSkyName)
                     .font(.system(size: 19, weight: .heavy, design: .default))
@@ -219,7 +251,9 @@ struct FocusNowView: View {
         }
     }
 
-    private func actionCapsule(compact: Bool) -> some View {
+    /// The pill's contents and plate, WITHOUT deciding its own width. Small
+    /// gives it a measured fraction of the row; medium hugs the label.
+    private func actionCapsuleBody(compact: Bool) -> some View {
         HStack(spacing: compact ? 5 : 7) {
             Image(systemName: actionIcon)
                 .font(.system(size: compact ? 11 : 12, weight: .heavy))
@@ -229,14 +263,21 @@ struct FocusNowView: View {
             }
             .font(.system(size: compact ? 12 : 13, weight: .heavy, design: .default))
             .lineLimit(1)
+            // A long state word still shrinks rather than pushing the plate
+            // wider than the space it was given.
+            .minimumScaleFactor(0.75)
         }
         .foregroundStyle(Color(red: 0.08, green: 0.07, blue: 0.05))
-        .padding(.horizontal, compact ? 11 : 13)
-        .padding(.vertical, compact ? 6.5 : 9)
-        // Hugs its label in both families. Spanning the full small tile made a
-        // heavy gold bar that dominated a 158 pt square.
-        .fixedSize()
+        .padding(.horizontal, compact ? 10 : 13)
+        .padding(.vertical, compact ? 6 : 9)
+        .frame(maxWidth: .infinity)
         .background(Capsule().fill(WTheme.gold))
+    }
+
+    /// Medium: hugs its label, so the greedy text column beside it can never
+    /// squeeze the primary action.
+    private func actionCapsule(compact: Bool) -> some View {
+        actionCapsuleBody(compact: compact).fixedSize()
     }
 }
 
