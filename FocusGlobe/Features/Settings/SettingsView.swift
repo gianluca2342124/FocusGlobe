@@ -29,27 +29,39 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
                     ScreenHeader(title: "Settings", showsBack: false)
 
-                    appearanceSection
+                    // Account leads. It is the first thing anyone opens Settings
+                    // for — signing in, or checking that they are — and it took
+                    // the slot the Appearance selector used to occupy.
+                    accountSection
                     experienceSection
                     // FocusGlobe Online / social controls now live inside the
                     // Friends page ("Online & Friends Settings"), behind the
                     // Friends PRO lock — they are no longer duplicated here.
                     FocusShieldSettingsSection(service: appModel.focusShield)
                     ultraSection
-                    accountSection
                     privacyDataSection
                     #if DEBUG
                     debugSection
                     #endif
                     versionFooter
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                // Padding INSIDE the stretch, not outside it. The other order —
+                // `.frame(maxWidth: .infinity)` then `.padding(...)` — grows the
+                // column to the full proposed width and then adds insets around
+                // that, so the content ends up `proposal + 2 × screen` wide. A
+                // vertical UIScrollView still pans horizontally when its content
+                // is wider than its bounds, which is exactly the sideways drag
+                // that was reported: not a stray gesture, an overflowing column.
                 .padding(AppSpacing.screen)
                 .padding(.top, AppSpacing.xs)
                 .padding(.bottom, AppSpacing.xxl)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .settingsMaxWidth()   // centred list on iPad/Mac; full-width on iPhone
             }
             .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+            // Belt and braces: even if a future row proposes something too wide,
+            // it is clipped rather than turned into a pannable content size.
+            .clipped()
         }
         .focusScreenChrome()
         .onAppear {
@@ -65,36 +77,13 @@ struct SettingsView: View {
 
     // MARK: Sections
 
-    private var appearanceSection: some View {
-        SettingsCard(title: "Appearance") {
-            HStack(spacing: 6) {
-                ForEach(AppearanceMode.allCases) { mode in
-                    appearanceOption(mode)
-                }
-            }
-        }
-    }
-
-    private func appearanceOption(_ mode: AppearanceMode) -> some View {
-        let selected = appModel.settings.appearance == mode
-        return Button {
-            appModel.tapFeedback()
-            appModel.settings.appearance = mode
-        } label: {
-            VStack(spacing: 5) {
-                Image(systemName: mode.systemImage).font(.system(size: 16, weight: .semibold))
-                Text(mode.displayName).font(AppTypography.caption)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, AppSpacing.sm)
-            .foregroundStyle(selected ? Color.white : AppColors.textSecondary)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(selected ? AnyShapeStyle(AppColors.selectionGold) : AnyShapeStyle(Color.clear))
-            )
-        }
-        .buttonStyle(SoftPressStyle())
-    }
+    // The Appearance selector is gone: FocusGlobe is a dark product — the Skies,
+    // the cabin and the whole night-flight identity are authored for it — and a
+    // Light option only ever produced a second-class version of the app. Dark is
+    // now forced at the app root (see `FocusGlobeApp` / `RootView`).
+    //
+    // `AppSettings.appearance` is deliberately kept so previously stored values
+    // still decode; nothing reads it any more.
 
     private var experienceSection: some View {
         SettingsCard(title: "Experience") {

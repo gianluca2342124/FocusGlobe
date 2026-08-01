@@ -40,7 +40,10 @@ struct FocusGlobeApp: App {
                 .environmentObject(router)
                 .environmentObject(online)
                 .tint(AppColors.selectionGold)
-                .preferredColorScheme(appModel.settings.appearance.colorScheme)
+                // FocusGlobe is dark, always. Forced at the window root so no
+                // screen, sheet or system control can inherit Light — and so it
+                // holds regardless of the device setting.
+                .preferredColorScheme(.dark)
                 .onAppear {
                     LaunchLog.mark("RootView onAppear")
                     appModel.attachOnline(online)

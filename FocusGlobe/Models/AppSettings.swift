@@ -5,6 +5,11 @@ struct AppSettings: Codable, Equatable {
     /// FocusGlobe is dark-first: the very first launch (and a data reset) starts
     /// in Dark Mode. The user can switch to Light or System in Settings and the
     /// choice is remembered.
+    /// Retained ONLY so settings saved by an older build still decode. The
+    /// Appearance selector is gone and FocusGlobe forces Dark at the window
+    /// root, so nothing reads this. Removing the key would make every stored
+    /// AppSettings fail to decode and silently reset every other preference
+    /// with it, which is a far worse trade than one ignored field.
     var appearance: AppearanceMode = .dark
     var soundEnabled: Bool = true
     var hapticsEnabled: Bool = true

@@ -1756,6 +1756,8 @@ final class AppModel: ObservableObject {
         sound.setEnabled(settings.soundEnabled)
         uiSound.isEnabled = settings.soundEnabled
         persistence.save(settings, for: .settings)
+        // Unreachable now that Appearance is not user-settable; kept so the
+        // event is not lost if a themed surface is ever reintroduced.
         if old.appearance != settings.appearance {
             analytics.log(.appearanceChanged, ["mode": settings.appearance.rawValue])
         }

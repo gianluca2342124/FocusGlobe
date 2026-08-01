@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Hosts the navigation stack, the full-screen journey cover and the paywall
-/// sheet. Applies the user's chosen appearance app-wide.
+/// sheet. Forces the app's Dark appearance window-wide.
 struct RootView: View {
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var appModel: AppModel
@@ -66,7 +66,9 @@ struct RootView: View {
             }
         }
         .animation(.easeOut(duration: 0.25), value: router.takeoffCurtain)
-        .preferredColorScheme(appModel.settings.appearance.colorScheme)
+        // Dark, always — the window root forces the same thing, and this keeps
+        // it true for anything hosted from here.
+        .preferredColorScheme(.dark)
         // Install the supported status-bar container once (reparents the window
         // root on first layout; zero-size, no lifecycle impact).
         .installStatusBarContainer()
