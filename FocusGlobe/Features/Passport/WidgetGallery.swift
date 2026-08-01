@@ -178,14 +178,21 @@ private struct WidgetPreviewTile: View {
         }
     }
 
-    /// Mirrors the real `.systemSmall` Focus Now layout exactly: state eyebrow and
-    /// Sky name at the top, the Sky breathing through the middle, a full-width
-    /// action at the bottom, and the same two-ended legibility scrim. Kept in
-    /// lock-step with `FocusNowView.smallLayout` — if the widget changes, this
-    /// changes with it, or the gallery starts advertising a widget that no longer
-    /// exists.
+    /// Mirrors the real `.systemSmall` Focus Now layout: state eyebrow and Sky
+    /// name at the top, the Sky breathing through the middle, a centred action
+    /// pill at 74 % of the content width at the bottom, and the same two-ended
+    /// legibility scrim. Kept in lock-step with `FocusNowView.smallLayout` — if
+    /// the widget changes, this changes with it, or the gallery starts
+    /// advertising a widget that no longer exists.
+    ///
+    /// Nothing here is `.fixedSize()`, for the same reason it is gone from the
+    /// widget: a fixed-size child that does not fit makes its ancestors wider
+    /// than the tile, and the clip then removes characters from BOTH ends.
     private var focusNowPreview: some View {
         let resumable = appModel.hasResumableJourney
+        // The tile's own content width, matching the widget's inset. Derived
+        // from `side`, so the mirror scales with the tile the gallery draws.
+        let contentWidth = side * (1 - 0.093 * 2)
         return ZStack {
             SkyStillPreview(sky: appModel.selectedSky)
             LinearGradient(stops: [
@@ -198,25 +205,30 @@ private struct WidgetPreviewTile: View {
                 VStack(alignment: .leading, spacing: side * 0.006) {
                     Text("FOCUS NOW")
                         .font(.system(size: max(8, side * 0.065), weight: .heavy))
-                        .tracking(1.1)
+                        .tracking(1.0)
                         .foregroundStyle(WGTheme.inkSoft)
                         .lineLimit(1)
-                        .fixedSize()
+                        .minimumScaleFactor(0.75)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     Text(appModel.selectedSky.name)
-                        .font(.system(size: side * 0.095, weight: .heavy))
+                        .font(.system(size: side * 0.092, weight: .heavy))
                         .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+                        .minimumScaleFactor(0.72)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 Spacer(minLength: side * 0.02)
+                // 74 % of the content width, centred — the same measurement the
+                // widget makes from its own row.
                 Label(resumable ? "Resume" : "Start Focus",
                       systemImage: resumable ? "arrow.uturn.up" : "arrow.up")
-                    .font(.system(size: side * 0.075, weight: .heavy))
+                    .font(.system(size: side * 0.072, weight: .heavy))
                     .lineLimit(1)
+                    .minimumScaleFactor(0.75)
                     .foregroundStyle(Color(red: 0.08, green: 0.07, blue: 0.05))
-                    .padding(.horizontal, side * 0.07)
-                    .padding(.vertical, side * 0.042)
-                    .fixedSize()
+                    .padding(.vertical, side * 0.038)
+                    .frame(width: contentWidth * 0.74)
                     .background(Capsule().fill(WGTheme.gold))
+                    .frame(maxWidth: .infinity, alignment: .center)
             }
             .foregroundStyle(.white)
             // Padding BEFORE frame, matching the real widget — the other order
@@ -339,10 +351,10 @@ private struct FocusNowMediumPreview: View {
                 VStack(alignment: .leading, spacing: 5) {
                     Text("FOCUS NOW")
                         .font(.system(size: 10, weight: .heavy))
-                        .tracking(1.1)
+                        .tracking(1.0)
                         .foregroundStyle(WGTheme.inkSoft)
                         .lineLimit(1)
-                        .fixedSize()
+                        .minimumScaleFactor(0.75)
                     Text(appModel.selectedSky.name)
                         .font(.system(size: 19, weight: .heavy))
                         .foregroundStyle(.white)
