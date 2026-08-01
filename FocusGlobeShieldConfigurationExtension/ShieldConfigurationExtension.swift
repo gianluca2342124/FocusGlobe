@@ -48,6 +48,18 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     )
     private static let ivory = UIColor(red: 0.96, green: 0.94, blue: 0.89, alpha: 1)
 
+    /// Whether the primary button will genuinely open FocusGlobe here.
+    ///
+    /// The identical check lives in `ShieldActionExtension.canOpenParentalControlsApp`.
+    /// It is duplicated rather than shared because these are two separate
+    /// extension targets that cannot import one another — but it is ONE
+    /// condition, `iOS 26.5`, and both sides must be changed together or the
+    /// button's label stops matching its behaviour.
+    private static var primaryOpensFocusGlobe: Bool {
+        if #available(iOS 26.5, *) { return true }
+        return false
+    }
+
     private static func focusGlobeShield() -> ShieldConfiguration {
         let line = ShieldCopy.current()
 
@@ -65,21 +77,23 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
             icon: UIImage(named: "FocusShieldGlyph"),
             title: .init(text: line.title, color: ivory),
             subtitle: .init(text: line.subtitle, color: ivory.withAlphaComponent(0.74)),
-            // "Return to FocusGlobe" was a promise the platform cannot keep.
+            // The label tracks what the button can actually do on THIS device.
             //
-            // A shield action extension's ONLY output is a ShieldActionResponse
-            // — .none, .close or .defer. There is no URL-opening hook, no
-            // extensionContext.open, and UIApplication is unavailable in an app
-            // extension, so nothing here can launch the containing app. What
-            // .close actually does is dismiss the blocked app, which returns the
-            // user to the Home Screen, not to FocusGlobe. Labelling that button
-            // "Return to FocusGlobe" told them something that never happened.
+            // `ShieldActionResponse.openParentalControlsApp` — "an instruction
+            // for the system to open your parental controls app that is
+            // responsible for shielding the application or web browser" — is
+            // exactly the supported way back, and FocusGlobe is that app. It
+            // arrived in iOS 26.5, above this target's 17.0 minimum, so on
+            // anything older the primary button can only close the blocked app.
             //
-            // "Stay Focused" describes the real outcome — you leave the thing
-            // that was pulling at you — and is the encouragement this screen is
-            // for. White plate, black label: the highest-contrast pairing the
-            // API offers.
-            primaryButtonLabel: .init(text: "Stay Focused", color: .black),
+            // Both extensions read the SAME condition, so the promise and the
+            // behaviour cannot drift apart: where the system will open
+            // FocusGlobe the button says so, and where it will not, it doesn't.
+            // White plate, black label either way.
+            primaryButtonLabel: .init(
+                text: primaryOpensFocusGlobe ? "Return to FocusGlobe" : "Stay Focused",
+                color: .black
+            ),
             primaryButtonBackgroundColor: .white,
             secondaryButtonLabel: .init(text: "Close", color: ivory.withAlphaComponent(0.62))
         )
