@@ -1387,9 +1387,14 @@ final class AppModel: ObservableObject {
     /// Banks a completed journey: miles, streak, landing count, best duration,
     /// completed routes and the unlocked postcard. Returns a summary for the
     /// Landing screen.
-    /// Cap applied to the coins banked at landing after all multipliers
-    /// (base → boost → friend ×2). The rewarded-ad double on the Landing
-    /// screen doubles this already-capped amount at most once.
+    /// Cap applied to the coins a FREE pilot banks at landing after all
+    /// multipliers (base → boost → friend ×2). The rewarded-ad double on the
+    /// Landing screen doubles this already-capped amount at most once.
+    ///
+    /// PRO's journey multiplier is applied OUTSIDE this ceiling, so a PRO
+    /// landing is always exactly twice what the identical flight would have paid
+    /// a free pilot — at 120 minutes with a boost and a friend bonus that is 50
+    /// against 100, not 50 against 50.
     static let maximumCoinsPerJourneyAfterMultipliers = 50
 
     /// What a flight would pay if it landed RIGHT NOW, for surfaces that need to
