@@ -120,6 +120,18 @@ struct LandingView: View {
                 .contentTransition(.numericText())
             Text(adState == .doubled ? "Coins ×2" : "Focus Coins")
                 .font(AppTypography.micro).foregroundStyle(AppColors.textTertiary)
+            // Only when the multiplier genuinely paid out on THIS landing, so
+            // the badge can never appear over a single-rate number.
+            if summary.proMultiplierApplied {
+                Text("2× PRO Coins")
+                    .font(.system(size: 9, weight: .heavy))
+                    .tracking(0.3)
+                    .foregroundStyle(AppColors.gold)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(AppColors.gold.opacity(0.14)))
+                    .padding(.top, 1)
+            }
         }
         .frame(maxWidth: .infinity)
     }

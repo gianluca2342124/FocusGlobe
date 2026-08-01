@@ -1428,9 +1428,18 @@ final class AppModel: ObservableObject {
             if rewarded.count > 60 { rewarded.removeFirst(rewarded.count - 60) }
             profile.rewardedFriendSessionIDs = rewarded
         }
-        let awardedMiles = qualifies
+        // Everything a FREE pilot would bank for this identical flight, ceiling
+        // included. This is the number PRO doubles.
+        let creditedForFree = qualifies
             ? min(Self.maximumCoinsPerJourneyAfterMultipliers, (baseMiles + boostBonus) * friendMultiplier)
             : 0
+        // PRO doubles the JOURNEY reward — applied last, exactly once, and read
+        // from the verified RevenueCat entitlement (`isPro` is `revenueCatPro`,
+        // which nothing but the SDK and a real purchase/restore ever writes).
+        // Never a debug flag, a selected plan, Store ownership or a product-load
+        // state. A non-qualifying flight is 0 before this, so it stays 0 after.
+        let proApplied = qualifies && isPro
+        let awardedMiles = FocusEconomy.journeyCoins(creditedForFree: creditedForFree, isPro: proApplied)
         let isNewRoute = qualifies && !progress.completedRouteIDs.contains(route.id)
         let isNewBest = qualifies && focusedSeconds > progress.bestFocusSeconds
 
@@ -1511,7 +1520,8 @@ final class AppModel: ObservableObject {
             streak: landedStreak,
             isNewRoute: isNewRoute,
             isNewBest: isNewBest,
-            streakIncreased: streakIncreased
+            streakIncreased: streakIncreased,
+            proMultiplierApplied: proApplied
         )
     }
 
