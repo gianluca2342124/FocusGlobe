@@ -388,28 +388,42 @@ struct FocusSessionView: View {
                 pausedAt = nil
             }
         }
-        .confirmationDialog("Leave this flight?",
-                            isPresented: $vm.showCancelConfirm,
-                            titleVisibility: .visible) {
-            Button("Leave", role: .destructive) {
-                vm.confirmCancel()
-                // A terminated real flight (given up / Hold-to-leave) uses the
-                // journey's single post-flight ad opportunity: one closable
-                // interstitial for non-Pro users, then Home. AdService no-ops
-                // for Pro or when no ad is loaded.
-                if appModel.postFlightAdSatisfied {
-                    router.finishToHome()
-                } else {
-                    appModel.postFlightAdSatisfied = true
-                    appModel.ads.presentJourneyCompleteInterstitial(isPro: appModel.isPro) {
-                        router.finishToHome()
+        // An OVERLAY, not a sheet or a dialog: the flight stays visible and
+        // running behind it. Presenting this pauses nothing — see
+        // `FocusSessionViewModel.requestCancel`.
+        .overlay {
+            if vm.showCancelConfirm {
+                LeaveFlightConfirmation(
+                    focusedSeconds: vm.bankedFocusSeconds,
+                    isOnline: isOnlineFlight,
+                    isInfinite: isInfinity,
+                    onKeepFlying: {
+                        appModel.tapFeedback()
+                        // No state mutation, no save, no reward, no pause. The
+                        // timer has been running throughout and is still correct.
+                        vm.dismissCancel()
+                    },
+                    onLeave: {
+                        // The one canonical abandonment path, called once.
+                        vm.confirmCancel()
+                        // A terminated real flight (given up / Hold-to-leave) uses
+                        // the journey's single post-flight ad opportunity: one
+                        // closable interstitial for non-Pro users, then Home.
+                        // AdService no-ops for Pro or when no ad is loaded.
+                        if appModel.postFlightAdSatisfied {
+                            router.finishToHome()
+                        } else {
+                            appModel.postFlightAdSatisfied = true
+                            appModel.ads.presentJourneyCompleteInterstitial(isPro: appModel.isPro) {
+                                router.finishToHome()
+                            }
+                        }
                     }
-                }
+                )
+                .environmentObject(appModel)
             }
-            Button("Keep flying", role: .cancel) { vm.dismissCancel() }
-        } message: {
-            Text("You'll lose this flight's progress: no Focus Coins earned, today's missions won't count it, and your streak only grows when you land. You can resume from Home.")
         }
+        .animation(reduceMotion ? .none : AppMotion.content, value: vm.showCancelConfirm)
         .overlay(alignment: .top) { reconnectingBanner }
         // "<alias> joined" — a subtle glass pill, auto-dismissing, once per real
         // join (never for the current user, reconnects, or decorative pilots).

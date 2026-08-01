@@ -1392,6 +1392,27 @@ final class AppModel: ObservableObject {
     /// screen doubles this already-capped amount at most once.
     static let maximumCoinsPerJourneyAfterMultipliers = 50
 
+    /// What a flight would pay if it landed RIGHT NOW, for surfaces that need to
+    /// state the stake before it is banked — today only the leave-flight
+    /// confirmation.
+    ///
+    /// Deliberately built from the same pieces as `completeJourney` rather than
+    /// re-deriving them: same eligibility gate, same base, same boost window,
+    /// same ceiling, same PRO multiplier. A second formula here is exactly how a
+    /// confirmation ends up quoting a number the landing then contradicts.
+    ///
+    /// The friend-flight bonus is NOT included: it depends on verified overlap
+    /// that cannot be known before landing, so this is a floor, not a promise —
+    /// which is why the UI says "up to".
+    func projectedJourneyCoins(focusedSeconds: Int) -> Int {
+        guard focusedSeconds >= FocusConsistency.qualifyingSeconds else { return 0 }
+        let base = FocusEconomy.coins(forFocusedSeconds: focusedSeconds)
+        let boost = isCoinBoostArmed
+            ? FocusEconomy.coins(forFocusedSeconds: min(focusedSeconds, 3600)) : 0
+        let creditedForFree = min(Self.maximumCoinsPerJourneyAfterMultipliers, base + boost)
+        return FocusEconomy.journeyCoins(creditedForFree: creditedForFree, isPro: isPro)
+    }
+
     func completeJourney(origin: JourneyOrigin, route: Route,
                          focusedSeconds: Int, intention: String?,
                          onlineSessionID: String? = nil) -> LandingSummary {
