@@ -891,7 +891,7 @@ final class FocusOnlineModel: ObservableObject {
             // record; the FIRST genuine remote member flips us to Private.
             if socialState == .globalInviteReady, let room = flightRoom {
                 let members = Self.dedupe(await roomService.participants(roomID: room.id, roomActive: true))
-                if members.contains(where: { $0.publicID != myUserID }) {
+                if members.contains(where: { $0.publicID != self.myUserID }) {
                     activatePrivateFlight(room: room, members: members)
                 } else if let me {
                     // No guest yet: keep the pending private record fresh — this
@@ -934,7 +934,7 @@ final class FocusOnlineModel: ObservableObject {
             detectJoins(in: participants)   // "<alias> joined" for in-flight joins
             activeRoomParticipants = participants
             // Deduplicate by UUID and NEVER render myself as a remote pilot.
-            let others = participants.filter { $0.publicID != myUserID }
+            let others = participants.filter { $0.publicID != self.myUserID }
             // Each co-member's OWN authoritative participant row: their own
             // expected_end_at, is_paused and paused_remaining_seconds. RLS scopes
             // this to exactly this room's members.
@@ -1211,7 +1211,7 @@ final class FocusOnlineModel: ObservableObject {
     private func reconcileInviteWatch(roomID: String) async {
         guard socialState == .globalInviteReady, let room = flightRoom, room.id == roomID else { return }
         let members = Self.dedupe(await roomService.participants(roomID: roomID, roomActive: true))
-        if members.contains(where: { $0.publicID != myUserID }) {
+        if members.contains(where: { $0.publicID != self.myUserID }) {
             activatePrivateFlight(room: room, members: members)
         }
     }
@@ -1231,10 +1231,10 @@ final class FocusOnlineModel: ObservableObject {
         // next poll; until then keep whatever real pilots we already have rather
         // than fabricating a room-wide countdown for them.
         let joining = Set(members.map(\.publicID))
-        realPilots = realPilots.filter { joining.contains($0.id) && $0.id != myUserID }
+        realPilots = realPilots.filter { joining.contains($0.id) && $0.id != self.myUserID }
         Task { [weak self] in
             guard let self else { return }
-            let others = members.filter { $0.publicID != myUserID }
+            let others = members.filter { $0.publicID != self.myUserID }
             let pilots = await self.roomPilots(room: room, participants: others)
             guard self.flightRoom?.id == room.id else { return }
             self.realPilots = pilots
@@ -1351,13 +1351,13 @@ final class FocusOnlineModel: ObservableObject {
     func loadParticipants(of room: FocusRoom, announceJoins: Bool = false) async {
         let fresh = Self.dedupe(await roomService.participants(roomID: room.id, roomActive: room.status == .active))
         if announceJoins { detectJoins(in: fresh) }
-        else { knownMemberIDs = Set(fresh.map(\.publicID).filter { $0 != myUserID }) }
+        else { knownMemberIDs = Set(fresh.map(\.publicID).filter { $0 != self.myUserID }) }
         activeRoomParticipants = fresh
     }
 
     /// One-shot "<alias> joined" toast for genuinely new non-self members.
     private func detectJoins(in participants: [RoomParticipant]) {
-        let otherIDs = Set(participants.map(\.publicID).filter { $0 != myUserID })
+        let otherIDs = Set(participants.map(\.publicID).filter { $0 != self.myUserID })
         let newIDs = otherIDs.subtracting(knownMemberIDs)
         knownMemberIDs = otherIDs
         if let id = newIDs.first,
@@ -1370,7 +1370,7 @@ final class FocusOnlineModel: ObservableObject {
     /// Members other than me — the ONLY basis for a "joined" count. Owner is not
     /// counted as a joined friend; dedupe + self-filter are by UUID.
     var joinedOthers: [RoomParticipant] {
-        activeRoomParticipants.filter { $0.publicID != myUserID }
+        activeRoomParticipants.filter { $0.publicID != self.myUserID }
     }
     var joinedOthersCount: Int { joinedOthers.count }
 

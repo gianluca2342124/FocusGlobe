@@ -19,6 +19,15 @@ struct OnboardingView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.requestReview) private var requestReview
 
+    /// The one shared `SubscriptionManager`, reached exactly as `PaywallView`
+    /// reaches it — through the injected `AppModel`, which owns it as a stored
+    /// `let`. It is deliberately NOT a separate `@EnvironmentObject`: there is
+    /// only ever one instance, nothing in the app injects it independently, and
+    /// a second reference would be a second source of offerings and eligibility.
+    /// `AppModel` republishes its changes, so reading it here still re-evaluates
+    /// the CTA when offerings finish loading.
+    private var subs: SubscriptionManager { appModel.subscriptions }
+
     private static let stepCount = 11
 
     @State private var step = 0
