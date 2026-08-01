@@ -661,8 +661,11 @@ struct FocusSessionView: View {
                 // than another. Only its position (screen centre) differs. The
                 // extra shadow is a take-off ground shadow that fades to zero at
                 // cruise, leaving the same baked shadow every balloon shares.
+                // The same canonical equipped skin Home renders and the Store
+                // writes. Was going id → lookup → skin, which resolves to the
+                // identical value but hid the fact that there is one source.
                 BalloonView(height: balloonSize, showBurner: false, showGlow: true,
-                            skin: BalloonSkin.skin(id: appModel.equippedSkinIDForOnline))
+                            skin: appModel.selectedSkin)
                     .scaleEffect(takeoffScale)
                     .rotationEffect(.degrees(Double(balloonSway) * 0.6))
                     .offset(x: balloonSway + balloonDrift, y: balloonBob)

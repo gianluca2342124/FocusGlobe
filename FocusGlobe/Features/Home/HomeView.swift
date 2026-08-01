@@ -155,7 +155,12 @@ struct HomeView: View {
             GeometryReader { geo in
                 // Larger again and truly centred in the main visual area.
                 let size = max(132, min(198, geo.size.height * 0.225))
-                FlightBalloonView(size: size, showGlow: true)
+                // The pilot's OWN balloon. `selectedSkin` is the canonical
+                // equipped state — the same value the Store writes, the journey
+                // flies and Online publishes — and it already falls back to the
+                // default when a skin is locked or a lapsed entitlement takes it
+                // away, so Home can never show something the pilot cannot fly.
+                FlightBalloonView(size: size, showGlow: true, skin: appModel.selectedSkin)
                     .position(x: geo.size.width / 2, y: geo.size.height * 0.45 + balloonFloat)
                     .shadow(color: .black.opacity(0.3), radius: 18, y: 10)
             }

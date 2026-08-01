@@ -585,25 +585,26 @@ struct RollingHillsShape: Shape {
 
 // MARK: - Flight balloon (art asset with a safe vector fallback)
 
-/// The balloon shown across the flight experience. Prefers the bundled
-/// `BalloonSkin_Default` art; if that asset isn't present it falls back to the
-/// crisp vector `MiniBalloonView`, so the build never depends on the image.
-/// `size` is the balloon's height; the art keeps its aspect ratio.
+/// The balloon shown across the flight experience, wearing the pilot's own
+/// skin. `size` is the balloon's height; the art keeps its aspect ratio.
+///
+/// This used to draw `BalloonSkin_Default` unconditionally, which is why Home
+/// showed the plain white balloon no matter what had been equipped in the Store.
+/// It now takes the skin, resolved through the same `BalloonSkinImage` cache
+/// `BalloonView` uses — so a missing or unshipped asset falls back to the
+/// default art rather than to nothing, and the vector `MiniBalloonView` still
+/// covers the case where even that is absent.
+///
+/// The default parameter keeps this honest for callers that genuinely want the
+/// house balloon (a logo, a generic illustration) rather than the pilot's.
 struct FlightBalloonView: View {
     var size: CGFloat = 60
     var showGlow: Bool = true
-
-    /// Resolved once — a missing asset simply means "use the vector".
-    private static let hasAsset: Bool = {
-        #if canImport(UIKit)
-        return UIImage(named: "BalloonSkin_Default") != nil
-        #else
-        return false
-        #endif
-    }()
+    var skin: BalloonSkin = .default
 
     var body: some View {
-        if Self.hasAsset {
+        #if canImport(UIKit)
+        if let art = BalloonSkinImage.image(named: skin.assetName) {
             ZStack {
                 if showGlow {
                     Circle().fill(AppColors.gold.opacity(0.32))
@@ -611,7 +612,7 @@ struct FlightBalloonView: View {
                         .blur(radius: size * 0.16)
                         .offset(y: size * 0.34)
                 }
-                Image("BalloonSkin_Default")
+                Image(uiImage: art)
                     .resizable()
                     .scaledToFit()
                     .frame(height: size)
@@ -622,6 +623,9 @@ struct FlightBalloonView: View {
         } else {
             MiniBalloonView(size: size, showGlow: showGlow)
         }
+        #else
+        MiniBalloonView(size: size, showGlow: showGlow)
+        #endif
     }
 }
 
