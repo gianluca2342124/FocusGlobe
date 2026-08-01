@@ -31,6 +31,9 @@ final class FocusSessionViewModel: ObservableObject {
     @Published private(set) var followInterrupted = false
     @Published private(set) var isPaused = false
     @Published var showCancelConfirm = false
+    /// Set the instant "Leave Flight" is confirmed and never cleared. It is what
+    /// stops any later lifecycle event from resurrecting this journey.
+    private(set) var didAbandon = false
     @Published private(set) var didLand = false
     @Published private(set) var landingSummary: LandingSummary?
 
@@ -397,16 +400,31 @@ final class FocusSessionViewModel: ObservableObject {
         showCancelConfirm = false
     }
 
-    /// Leave the journey before landing. Saved as a resumable snapshot so the
-    /// user can continue (or discard) from Home. The caller dismisses the cover.
+    /// ABANDON the journey. The one canonical destructive path, reached only by
+    /// an explicit "Leave Flight" tap on the confirmation.
+    ///
+    /// This used to call `saveResumeSnapshot()`, which meant confirming a
+    /// destructive action quietly kept the flight alive as a Resume card on
+    /// Home — the pilot said "leave" and the app said "I'll hold that for you".
+    /// It also made the confirmation's own copy true only by accident, and only
+    /// for Solo. Abandoning now abandons: the snapshot is CLEARED rather than
+    /// written, so no Resume card can survive this and none can be inherited
+    /// from an older journey either.
+    ///
+    /// Nothing is awarded here — no coins, no mission credit, no streak. Those
+    /// all live in `completeJourney`, which this never reaches.
     func confirmCancel() {
         showCancelConfirm = false
-        saveResumeSnapshot()
+        didAbandon = true
         timer.stop()
         appModel?.sound.stop()
+        // Definitively not resumable. Clear rather than skip: a stale snapshot
+        // from an earlier journey would otherwise still show a Resume card and
+        // look like this flight came back.
+        appModel?.clearResumableJourney()
         appModel?.onlineFlightDidEnd(sessionID: onlineSessionID)
-        // Leaving before landing → drop the shields (a paused/resumable journey
-        // is not "in flight").
+        // Leaving before landing → drop the shields; an abandoned journey is
+        // not "in flight".
         appModel?.focusShield.clear(reason: .cancel)
     }
 
@@ -424,8 +442,18 @@ final class FocusSessionViewModel: ObservableObject {
         land()
     }
 
+    /// Persist a lightweight snapshot so an unfinished journey can be picked up
+    /// again. Written when the app is BACKGROUNDED mid-flight — never when the
+    /// pilot deliberately leaves.
+    ///
+    /// The `didAbandon` guard is not belt-and-braces, it is load-bearing.
+    /// Confirming Leave presents the post-flight interstitial, which drives the
+    /// scene to `.inactive`, which calls `persistForResume()` — so without it
+    /// the snapshot would be written back moments after being cleared and the
+    /// Resume card would reappear on Home for a journey the pilot had just
+    /// abandoned.
     private func saveResumeSnapshot() {
-        guard let appModel, !didLand else { return }
+        guard let appModel, !didLand, !didAbandon else { return }
         let elapsed = Int(timer.elapsed.rounded())
         let total = Int(timer.total.rounded())
         guard elapsed > 0, elapsed < total else { return }   // nothing to resume / already done

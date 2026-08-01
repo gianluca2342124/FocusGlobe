@@ -17,7 +17,8 @@ import SwiftUI
 struct LeaveFlightConfirmation: View {
     /// Real focused seconds banked so far — the basis for every claim here.
     let focusedSeconds: Int
-    /// Online flights are never resumable, so they must never be offered one.
+    /// Online flights additionally cost the pilot their place in the Sky, which
+    /// is the one loss row the other modes do not have.
     let isOnline: Bool
     let isInfinite: Bool
     let onKeepFlying: () -> Void
@@ -38,22 +39,18 @@ struct LeaveFlightConfirmation: View {
     /// a PRO pilot is told the doubled figure they would actually bank.
     private var coinsAtStake: Int { appModel.projectedJourneyCoins(focusedSeconds: focusedSeconds) }
 
-    /// Solo flights are snapshotted on leave and can be picked up from Home.
-    /// Online never (the room is gone) and Infinite never (there is no span to
-    /// resume into), so neither is ever promised one.
-    private var isResumable: Bool { !isOnline && !isInfinite && focusedSeconds > 0 }
+    /// Nothing is resumable after this. Leaving CLEARS the snapshot rather than
+    /// writing one, for Solo exactly as for Online, so there is no mode in which
+    /// a resume may be offered here. The property is gone with the promise.
 
     private var explanation: String {
         if isOnline {
-            return "This flight ends here. Online flights can’t be picked up again from Home."
+            return "This flight’s progress and rewards will be lost, and you’ll leave the Sky you’re flying in."
         }
         if isInfinite {
-            return "This flight ends here. An open-ended flight can’t be picked up again."
+            return "This open-ended flight will end here. Its progress and rewards will be lost."
         }
-        if isResumable {
-            return "This flight’s rewards are gone. The flight itself can be picked up again from Home."
-        }
-        return "This flight ends here and its progress is discarded."
+        return "This flight’s progress and rewards will be lost."
     }
 
     private var lossRows: [(icon: String, title: String, detail: String)] {
