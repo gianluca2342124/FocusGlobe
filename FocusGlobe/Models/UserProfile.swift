@@ -78,6 +78,15 @@ struct UserProfile: Codable, Equatable {
     /// every launch).
     var lastBoostGiftAt: Double? = nil
     /// FocusGlobe Online: appear in Public Skies (presence visible to others).
+    ///
+    /// Optional on purpose, and `nil` means ON. Three states, not two: never
+    /// chosen, chose yes, chose no. A plain `Bool` could not tell an untouched
+    /// preference from a deliberate opt-out, so flipping the default would have
+    /// silently re-enabled discovery for pilots who had explicitly turned it
+    /// off. Reads use `?? true`; an explicit `false` is never overwritten.
+    ///
+    /// This controls VISIBILITY while genuinely flying an eligible Online
+    /// journey. It never publishes anyone merely for opening the app.
     var onlineDiscoverable: Bool? = nil
     /// FocusGlobe Online: allow Crew (friend) requests from met pilots.
     var onlineAllowsFriendRequests: Bool? = nil

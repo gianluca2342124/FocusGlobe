@@ -460,11 +460,19 @@ final class FocusOnlineModel: ObservableObject {
                     displayName: "SkyPilot\(Int.random(in: 1000...9999))",
                     balloonSkinID: appModel?.equippedSkinIDForOnline ?? "default",
                     countryCode: Locale.current.region?.identifier,
-                    isDiscoverable: appModel?.profile.onlineDiscoverable ?? false,
+                    isDiscoverable: appModel?.profile.onlineDiscoverable ?? true,
                     allowsFriendRequests: appModel?.profile.onlineAllowsFriendRequests ?? true,
                     createdAt: Date(), updatedAt: Date()))
             current.balloonSkinID = appModel?.equippedSkinIDForOnline ?? current.balloonSkinID
+            // The server row wins when this device has no stored preference —
+            // that row may already hold a deliberate opt-out made elsewhere, and
+            // a local default must never overwrite it. Then mirror the resolved
+            // value back into the profile, so the Settings toggle shows what the
+            // account actually holds instead of an optimistic `?? true`.
             current.isDiscoverable = appModel?.profile.onlineDiscoverable ?? current.isDiscoverable
+            if appModel?.profile.onlineDiscoverable == nil {
+                appModel?.profile.onlineDiscoverable = current.isDiscoverable
+            }
             // A failed settings push must not discard a valid fetched profile —
             // the row exists, which is what the FK needs.
             try? await profileService.updateProfile(current)
@@ -647,7 +655,7 @@ final class FocusOnlineModel: ObservableObject {
                     hostCanonicalDeadline = HostDeadline(sessionID: sessionID, deadline: end)
                 }
                 // Public discovery + the realtime Sky nudge stay public-only.
-                if flightMode == .publicSky, appModel?.profile.onlineDiscoverable ?? false {
+                if flightMode == .publicSky, appModel?.profile.onlineDiscoverable ?? true {
                     await realtimeService.joinSky(skyID: skyID, myID: myID) { [weak self] in
                         Task { @MainActor [weak self] in await self?.pollSoon() }
                     }
@@ -1762,6 +1770,9 @@ final class FocusOnlineModel: ObservableObject {
         await realtimeService.teardown()
         try? await profileService.deleteAllOnlineData()
         resetSocialState()
+        // Left EXPLICITLY false, not reset to nil. Someone who just deleted
+        // their online data has made a privacy decision; letting the default
+        // put them back in Public Skies on next use would quietly undo it.
         appModel?.profile.onlineDiscoverable = false
         // Account session survives — the profile is recreated on next use.
         await refreshAvailability()

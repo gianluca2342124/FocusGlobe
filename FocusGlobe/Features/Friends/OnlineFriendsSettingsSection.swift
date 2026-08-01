@@ -82,7 +82,7 @@ struct OnlineFriendsSettingsSection: View {
             }
             ToggleRow(systemImage: "globe.americas.fill", title: "Appear in Public Skies",
                       subtitle: "Let other pilots see your balloon while you focus online.",
-                      isOn: Binding(get: { appModel.profile.onlineDiscoverable ?? false },
+                      isOn: Binding(get: { appModel.profile.onlineDiscoverable ?? true },
                                     set: { appModel.tapFeedback(); online.setDiscoverable($0) }))
             RowDivider()
             ToggleRow(systemImage: "person.crop.circle.badge.plus", title: "Allow Friend Requests",
