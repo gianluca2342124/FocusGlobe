@@ -127,7 +127,7 @@ enum CabinSlot: String, CaseIterable, Codable, Hashable, Identifiable {
         return CabinSlotTransform(contact: .init(x: p.x, y: p.y),
                                   defaultScale: p.scale,
                                   anchor: p.anchor,
-                                  zIndex: depth,
+                                  zIndex: Double(depth),
                                   rotationDegrees: p.rotation,
                                   maximumFootprint: p.maxFootprint)
     }
