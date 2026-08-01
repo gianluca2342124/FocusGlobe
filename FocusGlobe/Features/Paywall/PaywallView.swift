@@ -403,16 +403,17 @@ struct PaywallView: View {
         guard let plan, plan.available else { return "Unavailable" }
         switch kind {
         case .annual:
-            // Restored to the approved wording from ea29608: the billing period
-            // FIRST, then the effective monthly equivalent as the anchor. The
-            // bare "$2.42/month" this briefly became read as the actual charge
-            // on a row that bills once a year.
+            // The conversion anchor, and nothing else. The full annual price is
+            // already the prominent number on the trailing edge of this very
+            // row, so "Billed yearly" here was spending the one line the row has
+            // on a fact stated eight points away — and burying the number that
+            // actually does the persuading.
             //
-            // The trial-only variant from that commit is deliberately NOT
-            // restored: it replaced the whole subtitle with duration text and
-            // took the price anchor away in exactly the case that matters most.
-            // The trial is stated by the timeline and the CTA disclosure.
-            return plan.monthlyEquivalent.map { "Billed yearly · \($0)" } ?? "Billed yearly"
+            // `monthlyEquivalent` is the real annual price divided by twelve and
+            // run through THAT product's own formatter, so the currency, symbol
+            // placement and separators are the storefront's, never assembled
+            // here. Nothing about it is hardcoded.
+            return plan.monthlyEquivalent.map { "Only \($0)" } ?? "Billed yearly"
         case .monthly:
             return "Billed immediately. Cancel anytime."
         case .lifetime:
