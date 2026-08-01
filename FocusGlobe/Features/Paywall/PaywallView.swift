@@ -403,10 +403,16 @@ struct PaywallView: View {
         guard let plan, plan.available else { return "Unavailable" }
         switch kind {
         case .annual:
-            // The effective monthly equivalent — the strongest line this row can
-            // carry. The trial is already stated by the timeline and the CTA
-            // disclosure, so repeating it here would cost the price anchor.
-            return plan.monthlyEquivalent ?? "Billed yearly"
+            // Restored to the approved wording from ea29608: the billing period
+            // FIRST, then the effective monthly equivalent as the anchor. The
+            // bare "$2.42/month" this briefly became read as the actual charge
+            // on a row that bills once a year.
+            //
+            // The trial-only variant from that commit is deliberately NOT
+            // restored: it replaced the whole subtitle with duration text and
+            // took the price anchor away in exactly the case that matters most.
+            // The trial is stated by the timeline and the CTA disclosure.
+            return plan.monthlyEquivalent.map { "Billed yearly · \($0)" } ?? "Billed yearly"
         case .monthly:
             return "Billed immediately. Cancel anytime."
         case .lifetime:
