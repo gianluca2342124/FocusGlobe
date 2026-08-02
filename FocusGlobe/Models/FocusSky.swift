@@ -56,17 +56,41 @@ struct FocusSky: Identifiable, Hashable {
     /// the catalog entries stay stable; the living-sky renderer ignores it.
     let flightOpening: Int?
 
+    /// The one canonical mapping from stable Sky IDs to runtime-only effects.
+    /// Base artwork never decides this from display copy or asset names.
+    enum EffectKind {
+        case none
+        case lagoon
+        case lanterns
+        case rain
+        case snow
+        case aurora
+        case starfall
+    }
+
+    var effectKind: EffectKind {
+        switch id {
+        case "fiji-lagoon":      return .lagoon
+        case "kyoto-lanterns":   return .lanterns
+        case "rainy-tokyo":      return .rain
+        case "swiss-alps":       return .snow
+        case "aurora-snowfield": return .aurora
+        case "galaxy-drift":     return .starfall
+        default:                  return .none
+        }
+    }
+
     /// The Sky's weather/identity particles inside the living flight sky.
     enum FlightParticle { case none, snow, rain, lanterns }
 
     /// Which particles this Sky's flight renders (snow/rain fall as weather;
     /// lanterns are gentle local moments).
     var flightParticles: FlightParticle {
-        switch id {
-        case "kyoto-lanterns":                 return .lanterns
-        case "aurora-snowfield", "swiss-alps": return .snow
-        case "rainy-tokyo":                    return .rain
-        default:                               return .none
+        switch effectKind {
+        case .lanterns:      return .lanterns
+        case .aurora, .snow: return .snow
+        case .rain:          return .rain
+        case .none, .lagoon, .starfall: return .none
         }
     }
 

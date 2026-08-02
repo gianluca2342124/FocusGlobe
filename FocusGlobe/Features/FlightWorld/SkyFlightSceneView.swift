@@ -70,13 +70,14 @@ struct SkyFlightSceneView: View {
     var seed: UInt64 = 1
     var presentationMode: SkyPresentationMode = .activeJourney
     var renderQuality: SkyRenderQuality = .full
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { geo in
             let W = geo.size.width
             let H = max(1, geo.size.height)
             let artwork = SkyArtworkResolver.image(for: sky, landscape: W > H)
-            let isLive = animated && renderQuality != .still
+            let isLive = animated && renderQuality != .still && !reduceMotion
             TimelineView(.animation(minimumInterval: isLive ? renderQuality.minimumInterval : 600)) { _ in
                 // Static frame: a fixed, SETTLED moment (celestial faded in,
                 // scenery composed) — a constant, so Reduce Motion and off-
@@ -490,6 +491,68 @@ struct SkyFlightSceneView: View {
     // MARK: 4 — Per-Sky atmospheric moments (fade in · live · fade out)
 
     @ViewBuilder private func effects(W: CGFloat, H: CGFloat, t: Double) -> some View {
+        switch sky.effectKind {
+        case .lagoon:
+            ZStack {
+                sunBloom(W: W, H: H, t: t)
+                cirrus(W: W, H: H, t: t, tint: Color(hex: 0xEAFBF4))
+                flockCrossing(W: W, H: H, t: t)
+                lagoonLight(W: W, H: H, t: t)
+                horizonHaze(W: W, H: H, t: t, tint: Color(hex: 0x9BE8DA), y: 0.64)
+                dustMotes(W: W, H: H, t: t, tint: Color(hex: 0xD9FFF0), count: 18)
+            }
+        case .lanterns:
+            ZStack {
+                horizonHaze(W: W, H: H, t: t, tint: Color(hex: 0xF2AA6A), y: 0.68)
+                anchoredLanternGlow(W: W, H: H, t: t)
+                lanternMoments(W: W, H: H, t: t)
+                petals(W: W, H: H, t: t, tint: Color(hex: 0xF2C4C8))
+                dustMotes(W: W, H: H, t: t, tint: Color(hex: 0xFFD08A), count: 18)
+                mistBreath(W: W, H: H, t: t, tint: Color(hex: 0xCFA4B8))
+                moonGlow(W: W, H: H, t: t)
+            }
+        case .aurora:
+            ZStack {
+                auroraCurtains(W: W, H: H, t: t)
+                moonGlow(W: W, H: H, t: t)
+                lightPillar(W: W, H: H, t: t)
+                horizonHaze(W: W, H: H, t: t, tint: Color(hex: 0x8FE8D0), y: 0.70)
+                icyAir(W: W, H: H, t: t)
+            }
+        case .rain:
+            ZStack {
+                cloudGlow(W: W, H: H, t: t)
+                cityLightPulse(W: W, H: H, t: t)
+                horizonHaze(W: W, H: H, t: t, tint: Color(hex: 0x6A8ED8), y: 0.64)
+                mistBreath(W: W, H: H, t: t, tint: Color(hex: 0xB5C7E8))
+                distantBeacon(W: W, H: H, t: t, period: 112, salt: 0x701)
+            }
+        case .snow:
+            ZStack {
+                sunBloom(W: W, H: H, t: t)
+                cirrus(W: W, H: H, t: t, tint: Color(hex: 0xEEF6F8))
+                flockCrossing(W: W, H: H, t: t)
+                horizonHaze(W: W, H: H, t: t, tint: Color(hex: 0xD9EDF4), y: 0.68)
+                mistBreath(W: W, H: H, t: t, tint: Color(hex: 0xE7F1F4))
+                distantBeacon(W: W, H: H, t: t, period: 98, salt: 0xA17)
+            }
+        case .starfall:
+            ZStack {
+                nebulaBreath(W: W, H: H, t: t,
+                             tints: [Color(hex: 0x8A6CE8), Color(hex: 0x4C6CE8), Color(hex: 0xE870B4)])
+                cosmicDust(W: W, H: H, t: t, tint: Color(hex: 0xC9B7FF), count: 54)
+                shootingStar(W: W, H: H, t: t, period: 12, phaseOffset: 0.10, salt: 0x41)
+                shootingStar(W: W, H: H, t: t, period: 19, phaseOffset: 0.62, salt: 0x53)
+                rareCelestialFragment(W: W, H: H, t: t, period: 74, salt: 0x6B)
+            }
+        case .none:
+            legacyEffects(W: W, H: H, t: t)
+        }
+    }
+
+    /// Existing non-target Sky moments remain untouched; only the six canonical
+    /// transient-effect Skies route through `FocusSky.effectKind` above.
+    @ViewBuilder private func legacyEffects(W: CGFloat, H: CGFloat, t: Double) -> some View {
         switch sky.id {
         case "golden-hour":
             ZStack {
@@ -505,54 +568,10 @@ struct SkyFlightSceneView: View {
                 flockCrossing(W: W, H: H, t: t)
                 dustMotes(W: W, H: H, t: t, tint: Color(hex: 0xF6C88A), count: 10)
             }
-        case "fiji-lagoon":
-            ZStack {
-                sunBloom(W: W, H: H, t: t)
-                cirrus(W: W, H: H, t: t, tint: Color(hex: 0xEAFBF4))
-                flockCrossing(W: W, H: H, t: t)
-                lagoonLight(W: W, H: H, t: t)
-                horizonHaze(W: W, H: H, t: t, tint: Color(hex: 0x9BE8DA), y: 0.64)
-                dustMotes(W: W, H: H, t: t, tint: Color(hex: 0xD9FFF0), count: 18)
-            }
-        case "kyoto-lanterns":
-            ZStack {
-                horizonHaze(W: W, H: H, t: t, tint: Color(hex: 0xF2AA6A), y: 0.68)
-                anchoredLanternGlow(W: W, H: H, t: t)
-                lanternMoments(W: W, H: H, t: t)
-                petals(W: W, H: H, t: t, tint: Color(hex: 0xF2C4C8))
-                dustMotes(W: W, H: H, t: t, tint: Color(hex: 0xFFD08A), count: 18)
-                mistBreath(W: W, H: H, t: t, tint: Color(hex: 0xCFA4B8))
-                moonGlow(W: W, H: H, t: t)
-            }
-        case "aurora-snowfield":
-            ZStack {
-                auroraCurtains(W: W, H: H, t: t)
-                moonGlow(W: W, H: H, t: t)
-                lightPillar(W: W, H: H, t: t)
-                horizonHaze(W: W, H: H, t: t, tint: Color(hex: 0x8FE8D0), y: 0.70)
-                icyAir(W: W, H: H, t: t)
-            }
-        case "rainy-tokyo":
-            ZStack {
-                cloudGlow(W: W, H: H, t: t)
-                cityLightPulse(W: W, H: H, t: t)
-                horizonHaze(W: W, H: H, t: t, tint: Color(hex: 0x6A8ED8), y: 0.64)
-                mistBreath(W: W, H: H, t: t, tint: Color(hex: 0xB5C7E8))
-                distantBeacon(W: W, H: H, t: t, period: 112, salt: 0x701)
-            }
         case "moon-garden":
             ZStack {
                 mistBreath(W: W, H: H, t: t, tint: Color(hex: 0xB4C4D8))
                 petals(W: W, H: H, t: t, tint: Color(hex: 0xD8DEEE))
-            }
-        case "swiss-alps":
-            ZStack {
-                sunBloom(W: W, H: H, t: t)
-                cirrus(W: W, H: H, t: t, tint: Color(hex: 0xEEF6F8))
-                flockCrossing(W: W, H: H, t: t)
-                horizonHaze(W: W, H: H, t: t, tint: Color(hex: 0xD9EDF4), y: 0.68)
-                mistBreath(W: W, H: H, t: t, tint: Color(hex: 0xE7F1F4))
-                distantBeacon(W: W, H: H, t: t, period: 98, salt: 0xA17)
             }
         case "sahara-night":
             ZStack {
@@ -562,15 +581,6 @@ struct SkyFlightSceneView: View {
                 dustMotes(W: W, H: H, t: t, tint: Color(hex: 0xE8B080), count: 20)
                 horizonHaze(W: W, H: H, t: t, tint: Color(hex: 0xE8A06A), y: 0.72)
                 distantBeacon(W: W, H: H, t: t, period: 126, salt: 0xD35)
-            }
-        case "galaxy-drift":
-            ZStack {
-                nebulaBreath(W: W, H: H, t: t,
-                             tints: [Color(hex: 0x8A6CE8), Color(hex: 0x4C6CE8), Color(hex: 0xE870B4)])
-                cosmicDust(W: W, H: H, t: t, tint: Color(hex: 0xC9B7FF), count: 54)
-                shootingStar(W: W, H: H, t: t, period: 12, phaseOffset: 0.10, salt: 0x41)
-                shootingStar(W: W, H: H, t: t, period: 19, phaseOffset: 0.62, salt: 0x53)
-                rareCelestialFragment(W: W, H: H, t: t, period: 74, salt: 0x6B)
             }
         case "deep-space":
             ZStack {

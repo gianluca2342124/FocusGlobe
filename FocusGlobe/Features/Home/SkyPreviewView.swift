@@ -20,13 +20,14 @@ import UIKit
 struct SkyPreviewView: View {
     let sky: FocusSky
     var animated: Bool = true
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { geo in
             let W = geo.size.width
             let H = geo.size.height
             let art = SkyArtworkResolver.image(for: sky, landscape: W > H)
-            if animated {
+            if animated && !reduceMotion {
                 TimelineView(.animation(minimumInterval: 1.0 / 12.0)) { ctx in
                     content(W: W, H: H, t: ctx.date.timeIntervalSinceReferenceDate, art: art)
                 }
@@ -197,6 +198,43 @@ struct SkyPreviewView: View {
     /// journey's signature behavior, so Home is an honest window into the same
     /// world without duplicating painted planets, terrain or architecture.
     @ViewBuilder private func artworkAccent(W: CGFloat, H: CGFloat, t: Double) -> some View {
+        switch sky.effectKind {
+        case .lagoon:
+            lagoonAccent(W: W, H: H, t: t)
+        case .lanterns:
+            ZStack {
+                lanternAccent(W: W, H: H, t: t)
+                previewHaze(W: W, H: H, t: t, tint: Color(hex: 0xE6A67A), y: 0.68)
+            }
+        case .aurora:
+            ZStack {
+                auroraAccent(W: W, H: H, t: t).opacity(0.42)
+                previewSnow(W: W, H: H, t: t)
+            }
+        case .rain:
+            ZStack {
+                rainAccent(W: W, H: H, t: t)
+                cityGlowAccent(W: W, H: H, t: t)
+                previewHaze(W: W, H: H, t: t, tint: Color(hex: 0x8FA6D8), y: 0.62)
+            }
+        case .snow:
+            ZStack {
+                previewSnow(W: W, H: H, t: t).opacity(0.72)
+                previewHaze(W: W, H: H, t: t, tint: Color(hex: 0xE7F1F4), y: 0.66)
+                previewCloudWisps(W: W, H: H, t: t, tint: Color(hex: 0xF0F7F8))
+            }
+        case .starfall:
+            ZStack {
+                cosmicAccent(W: W, H: H, t: t, tint: Color(hex: 0xB49CE8))
+                previewShootingStars(W: W, H: H, t: t,
+                                     periods: [12, 19], offsets: [0.10, 0.62])
+            }
+        case .none:
+            legacyArtworkAccent(W: W, H: H, t: t)
+        }
+    }
+
+    @ViewBuilder private func legacyArtworkAccent(W: CGFloat, H: CGFloat, t: Double) -> some View {
         switch sky.id {
         case "sahara-night":
             ZStack {
@@ -204,35 +242,6 @@ struct SkyPreviewView: View {
                 previewShootingStars(W: W, H: H, t: t,
                                      periods: [14, 23], offsets: [0.08, 0.58])
                 previewHaze(W: W, H: H, t: t, tint: Color(hex: 0xE8A06A), y: 0.72)
-            }
-        case "fiji-lagoon":
-            lagoonAccent(W: W, H: H, t: t)
-        case "kyoto-lanterns":
-            ZStack {
-                lanternAccent(W: W, H: H, t: t)
-                previewHaze(W: W, H: H, t: t, tint: Color(hex: 0xE6A67A), y: 0.68)
-            }
-        case "aurora-snowfield":
-            ZStack {
-                auroraAccent(W: W, H: H, t: t).opacity(0.42)
-                previewSnow(W: W, H: H, t: t)
-            }
-        case "rainy-tokyo":
-            ZStack {
-                rainAccent(W: W, H: H, t: t)
-                cityGlowAccent(W: W, H: H, t: t)
-                previewHaze(W: W, H: H, t: t, tint: Color(hex: 0x8FA6D8), y: 0.62)
-            }
-        case "swiss-alps":
-            ZStack {
-                previewHaze(W: W, H: H, t: t, tint: Color(hex: 0xE7F1F4), y: 0.66)
-                previewCloudWisps(W: W, H: H, t: t, tint: Color(hex: 0xF0F7F8))
-            }
-        case "galaxy-drift":
-            ZStack {
-                cosmicAccent(W: W, H: H, t: t, tint: Color(hex: 0xB49CE8))
-                previewShootingStars(W: W, H: H, t: t,
-                                     periods: [12, 19], offsets: [0.10, 0.62])
             }
         case "deep-space":
             ZStack {
