@@ -44,35 +44,35 @@ actor FriendService {
     }
 
     /// Pending requests addressed to me / sent by me.
-    func pendingRequests(myID: String) async -> (incoming: [FriendRequestRow], outgoing: [FriendRequestRow]) {
-        guard let client else { return ([], []) }
-        let incoming: [FriendRequestRow] = (try? await client.from("friend_requests")
+    func pendingRequests(myID: String) async throws -> (incoming: [FriendRequestRow], outgoing: [FriendRequestRow]) {
+        guard let client else { throw OnlineError.unavailable(.projectUnavailable) }
+        let incoming: [FriendRequestRow] = try await client.from("friend_requests")
             .select()
             .eq("receiver_id", value: myID)
             .eq("status", value: "pending")
             .order("created_at", ascending: false)
             .limit(40)
-            .execute().value) ?? []
-        let outgoing: [FriendRequestRow] = (try? await client.from("friend_requests")
+            .execute().value
+        let outgoing: [FriendRequestRow] = try await client.from("friend_requests")
             .select()
             .eq("sender_id", value: myID)
             .eq("status", value: "pending")
             .order("created_at", ascending: false)
             .limit(40)
-            .execute().value) ?? []
+            .execute().value
         return (incoming, outgoing)
     }
 
     // MARK: Friendships
 
     /// The other participant of each of my friendships.
-    func friendIDs(myID: String) async -> [String] {
-        guard let client else { return [] }
-        let rows: [FriendshipRow] = (try? await client.from("friendships")
+    func friendIDs(myID: String) async throws -> [String] {
+        guard let client else { throw OnlineError.unavailable(.projectUnavailable) }
+        let rows: [FriendshipRow] = try await client.from("friendships")
             .select()
             .or("user_low.eq.\(myID),user_high.eq.\(myID)")
             .limit(200)
-            .execute().value) ?? []
+            .execute().value
         return rows.map { $0.userLow == myID ? $0.userHigh : $0.userLow }
     }
 

@@ -26,7 +26,10 @@ final class AppModel: ObservableObject {
     /// invite state). Persisted under its own key; auto-saves on every change.
     /// (didSet doesn't fire during `init`, matching the other stores.)
     @Published var profile: UserProfile {
-        didSet { persistence.save(profile, for: .profile) }
+        didSet {
+            guard !isBatchingPersistence else { return }
+            persistence.save(profile, for: .profile)
+        }
     }
     @Published private(set) var progress: UserProgress
     @Published private(set) var history: [FocusSessionRecord]
@@ -120,6 +123,9 @@ final class AppModel: ObservableObject {
 
     private let persistence: PersistenceService
     private var cancellables: Set<AnyCancellable> = []
+    /// Suppresses per-domain `didSet` writes while a cross-domain economy or
+    /// identity mutation is assembled for one atomic snapshot commit.
+    private var isBatchingPersistence = false
 
     // MARK: Init
 
@@ -694,6 +700,103 @@ final class AppModel: ObservableObject {
     func attachOnline(_ online: FocusOnlineModel) {
         onlineRef = online
         online.bootstrap(appModel: self)
+    }
+
+    /// Called only by the canonical Online identity coordinator when the stable
+    /// Supabase user UUID changes. Local progress is committed before switching,
+    /// then the selected account's complete state is loaded as one revision.
+    func persistenceAccountDidChange(to stableUserID: String?) {
+        flushPersistentState()
+        guard persistence.activateAccount(stableUserID) else { return }
+
+        let loadedSettings = persistence.load(AppSettings.self, for: .settings) ?? .default
+        let loadedProgress = persistence.load(UserProgress.self, for: .progress) ?? .empty
+        let loadedHistory = persistence.load([FocusSessionRecord].self, for: .history) ?? []
+        var loadedProfile = persistence.load(UserProfile.self, for: .profile) ?? .empty
+
+        if !loadedProfile.hasCompletedOnboarding
+            && (loadedProgress.hasAnyProgress || !loadedHistory.isEmpty) {
+            loadedProfile.hasCompletedOnboarding = true
+        }
+        if let skyID = loadedProfile.selectedSkyID, FocusSky.byID(skyID) == nil {
+            loadedProfile.selectedSkyID = FocusSky.defaultFree.id
+        }
+
+        // Account files may have last been opened by an older catalog. Remove
+        // only invalid references; valid ownership and semantic Cabin slots stay
+        // byte-for-byte account specific.
+        let validStoreIDs = StoreItem.validIDs
+        loadedProfile.ownedStoreItemIDs = loadedProfile.ownedStoreItemIDs?.intersection(validStoreIDs)
+        if let trail = loadedProfile.equippedTrailID, !validStoreIDs.contains(trail) {
+            loadedProfile.equippedTrailID = nil
+        }
+        var equipped = loadedProfile.equippedCabinItemIDs?.intersection(validStoreIDs) ?? []
+        if equipped.count > StoreItem.maxEquipped {
+            equipped = Set(StoreItem.cabinDecorations
+                .filter { equipped.contains($0.id) }
+                .prefix(StoreItem.maxEquipped)
+                .map(\.id))
+        }
+        var placements = loadedProfile.cabinItemSlotByID ?? [:]
+        placements = placements.filter { itemID, rawSlot in
+            guard equipped.contains(itemID),
+                  let item = StoreItem.byID(itemID),
+                  let slot = CabinSlot.persisted(rawSlot) else { return false }
+            return item.supports(slot)
+        }
+        // Deterministically resolve old duplicate-slot data without moving any
+        // valid earlier catalog item to arbitrary device coordinates.
+        var occupied = Set<CabinSlot>()
+        for item in StoreItem.cabinDecorations where equipped.contains(item.id) {
+            guard let raw = placements[item.id], let slot = CabinSlot.persisted(raw) else {
+                equipped.remove(item.id)
+                continue
+            }
+            if occupied.contains(slot) {
+                equipped.remove(item.id)
+                placements.removeValue(forKey: item.id)
+            } else {
+                occupied.insert(slot)
+            }
+        }
+        loadedProfile.equippedCabinItemIDs = equipped
+        loadedProfile.cabinItemSlotByID = placements.filter { equipped.contains($0.key) }
+
+        isBatchingPersistence = true
+        progress = loadedProgress
+        history = loadedHistory
+        settings = loadedSettings
+        profile = loadedProfile
+
+        let loadedResume = persistence.load(ResumableJourney.self, for: .resumableJourney)
+        if let loadedResume, loadedResume.isResumable {
+            resumableJourney = loadedResume
+        } else {
+            resumableJourney = nil
+            persistence.remove(.resumableJourney)
+        }
+        isBatchingPersistence = false
+
+        haptics.isEnabled = settings.hapticsEnabled
+        sound.setEnabled(settings.soundEnabled)
+        uiSound.isEnabled = settings.soundEnabled
+        reconcileStreakIfNeeded()
+        initializeBadgeTrackingIfNeeded()
+        flushPersistentState()
+        syncWidgets()
+        refreshNotifications()
+    }
+
+    /// Immediate durable checkpoint for lifecycle and identity boundaries.
+    /// Normal mutations already save synchronously; this prevents a future
+    /// debounced writer from weakening the force-quit guarantee.
+    func flushPersistentState() {
+        persistence.saveCanonicalState(settings: settings,
+                                       progress: progress,
+                                       history: history,
+                                       profile: profile,
+                                       resumableJourney: resumableJourney)
+        persistence.flush()
     }
 
     /// The skin id shown to other pilots online.
@@ -1781,7 +1884,9 @@ final class AppModel: ObservableObject {
         haptics.isEnabled = settings.hapticsEnabled
         sound.setEnabled(settings.soundEnabled)
         uiSound.isEnabled = settings.soundEnabled
-        persistence.save(settings, for: .settings)
+        if !isBatchingPersistence {
+            persistence.save(settings, for: .settings)
+        }
         // Unreachable now that Appearance is not user-settable; kept so the
         // event is not lost if a themed surface is ever reintroduced.
         if old.appearance != settings.appearance {
@@ -1840,9 +1945,23 @@ final class AppModel: ObservableObject {
     }
 
     private func persistAll() {
-        persistence.save(progress, for: .progress)
-        persistence.save(history, for: .history)
+        persistence.saveCanonicalState(settings: settings,
+                                       progress: progress,
+                                       history: history,
+                                       profile: profile,
+                                       resumableJourney: resumableJourney)
         syncWidgets()
+    }
+
+    /// Groups a mutation that spans two or more canonical domains into a single
+    /// snapshot write. This is used for rewards whose claim marker and wallet
+    /// credit must never become durable independently.
+    private func performPersistedTransaction(_ mutation: () -> Void) {
+        let wasAlreadyBatching = isBatchingPersistence
+        isBatchingPersistence = true
+        mutation()
+        isBatchingPersistence = wasAlreadyBatching
+        if !wasAlreadyBatching { persistAll() }
     }
 
     // MARK: - Widget snapshot

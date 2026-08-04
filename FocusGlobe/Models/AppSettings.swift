@@ -44,5 +44,30 @@ struct AppSettings: Codable, Equatable {
     /// persisted). Retained only so older saved settings keep decoding.
     var premiumIntroSeen: Bool? = nil
 
+    init() {}
+
     static let `default` = AppSettings()
+
+    private enum CodingKeys: String, CodingKey {
+        case appearance, soundEnabled, hapticsEnabled, mapStyle
+        case startingCity, virtualOrigin, previousOrigin
+        case selectedSkinID, selectedJourneyAudioID, premiumIntroSeen
+    }
+
+    /// Missing or newly-added preference keys must never reset the rest of a
+    /// pilot's settings. This decoder also tolerates obsolete enum values by
+    /// falling back only that individual preference.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        appearance = (try? c.decodeIfPresent(AppearanceMode.self, forKey: .appearance)) ?? .dark
+        soundEnabled = try c.decodeIfPresent(Bool.self, forKey: .soundEnabled) ?? true
+        hapticsEnabled = try c.decodeIfPresent(Bool.self, forKey: .hapticsEnabled) ?? true
+        mapStyle = (try? c.decodeIfPresent(MapDisplayStyle.self, forKey: .mapStyle)) ?? .terra
+        startingCity = try? c.decodeIfPresent(JourneyOrigin.self, forKey: .startingCity)
+        virtualOrigin = try? c.decodeIfPresent(JourneyOrigin.self, forKey: .virtualOrigin)
+        previousOrigin = try? c.decodeIfPresent(JourneyOrigin.self, forKey: .previousOrigin)
+        selectedSkinID = try c.decodeIfPresent(String.self, forKey: .selectedSkinID)
+        selectedJourneyAudioID = try c.decodeIfPresent(String.self, forKey: .selectedJourneyAudioID)
+        premiumIntroSeen = try c.decodeIfPresent(Bool.self, forKey: .premiumIntroSeen)
+    }
 }

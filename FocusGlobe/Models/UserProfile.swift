@@ -106,5 +106,59 @@ struct UserProfile: Codable, Equatable {
     /// `AppModel.recordNewBadgeUnlocks`).
     var badgeUnlockEventDayKey: String? = nil
 
+    init() {}
+
     static let empty = UserProfile()
+
+    private enum CodingKeys: String, CodingKey {
+        case hasCompletedOnboarding, name, yearGoal, ageRange, focusStruggle, focusStyle
+        case focusShieldOptIn, selectedSkyID, referralCode, acceptedInviteCount, createdAt
+        case spentFocusCoins, ownedStoreItemIDs, equippedTrailID, equippedCabinItemIDs
+        case cabinItemSlotByID, soloFlights, unlockedSkyIDs, unlockedSkinIDs
+        case inviteProgressBySkyID, lastDailyGiftDay, cleanFlightMode, lastCoinSpinAt
+        case coinSpinEventDayKey, coinBoostExpiresAt, lastBoostGiftAt, onlineDiscoverable
+        case onlineAllowsFriendRequests, rewardedFriendSessionIDs, hiddenPilotIDs
+        case coinEarningsDayKey, coinsEarnedOnDay, observedBadgeKeys, badgeUnlockEventDayKey
+    }
+
+    /// Field-by-field recovery is deliberate: a malformed or absent optional
+    /// value from an older release must not discard Coins, inventory, Cabin
+    /// slots, unlocks, daily claim markers, or unrelated onboarding answers.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        hasCompletedOnboarding = (try? c.decode(Bool.self, forKey: .hasCompletedOnboarding)) ?? false
+        name = try? c.decode(String.self, forKey: .name)
+        yearGoal = try? c.decode(String.self, forKey: .yearGoal)
+        ageRange = try? c.decode(String.self, forKey: .ageRange)
+        focusStruggle = try? c.decode(String.self, forKey: .focusStruggle)
+        focusStyle = try? c.decode(String.self, forKey: .focusStyle)
+        focusShieldOptIn = (try? c.decode(Bool.self, forKey: .focusShieldOptIn)) ?? false
+        selectedSkyID = try? c.decode(String.self, forKey: .selectedSkyID)
+        referralCode = try? c.decode(String.self, forKey: .referralCode)
+        acceptedInviteCount = max(0, (try? c.decode(Int.self, forKey: .acceptedInviteCount)) ?? 0)
+        createdAt = try? c.decode(Date.self, forKey: .createdAt)
+        spentFocusCoins = try? c.decode(Int.self, forKey: .spentFocusCoins)
+        ownedStoreItemIDs = try? c.decode(Set<String>.self, forKey: .ownedStoreItemIDs)
+        equippedTrailID = try? c.decode(String.self, forKey: .equippedTrailID)
+        equippedCabinItemIDs = try? c.decode(Set<String>.self, forKey: .equippedCabinItemIDs)
+        cabinItemSlotByID = try? c.decode([String: String].self, forKey: .cabinItemSlotByID)
+        soloFlights = try? c.decode(Bool.self, forKey: .soloFlights)
+        unlockedSkyIDs = try? c.decode(Set<String>.self, forKey: .unlockedSkyIDs)
+        unlockedSkinIDs = try? c.decode(Set<String>.self, forKey: .unlockedSkinIDs)
+        inviteProgressBySkyID = try? c.decode([String: Int].self, forKey: .inviteProgressBySkyID)
+        lastDailyGiftDay = try? c.decode(Int.self, forKey: .lastDailyGiftDay)
+        cleanFlightMode = try? c.decode(Bool.self, forKey: .cleanFlightMode)
+        lastCoinSpinAt = try? c.decode(Double.self, forKey: .lastCoinSpinAt)
+        coinSpinEventDayKey = try? c.decode(String.self, forKey: .coinSpinEventDayKey)
+        coinBoostExpiresAt = try? c.decode(Double.self, forKey: .coinBoostExpiresAt)
+        lastBoostGiftAt = try? c.decode(Double.self, forKey: .lastBoostGiftAt)
+        onlineDiscoverable = try? c.decode(Bool.self, forKey: .onlineDiscoverable)
+        onlineAllowsFriendRequests = try? c.decode(Bool.self, forKey: .onlineAllowsFriendRequests)
+        rewardedFriendSessionIDs = try? c.decode([String].self, forKey: .rewardedFriendSessionIDs)
+        hiddenPilotIDs = try? c.decode(Set<String>.self, forKey: .hiddenPilotIDs)
+        coinEarningsDayKey = try? c.decode(String.self, forKey: .coinEarningsDayKey)
+        coinsEarnedOnDay = try? c.decode(Int.self, forKey: .coinsEarnedOnDay)
+        observedBadgeKeys = try? c.decode(Set<String>.self, forKey: .observedBadgeKeys)
+        badgeUnlockEventDayKey = try? c.decode(String.self, forKey: .badgeUnlockEventDayKey)
+    }
 }

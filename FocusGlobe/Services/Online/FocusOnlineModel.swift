@@ -183,6 +183,19 @@ final class FocusOnlineModel: ObservableObject {
             // observe sign-in state directly. Derived here, in the one place the
             // identity can change, so it cannot drift from `myUserID`.
             isAuthenticated = myUserID != nil
+            OnlineCache.activateAccount(myUserID)
+            flightMode = OnlineCache.lastFlightMode
+            profile = OnlineCache.loadProfile()
+            if let cached = OnlineCache.loadSocial() {
+                crew = cached.crew
+                incomingRequests = cached.incoming
+                outgoingRequests = cached.outgoing
+            } else {
+                crew = []
+                incomingRequests = []
+                outgoingRequests = []
+            }
+            appModel?.persistenceAccountDidChange(to: myUserID)
             appModel?.subscriptions.syncIdentity(supabaseUserID: myUserID)
         }
     }
@@ -252,7 +265,13 @@ final class FocusOnlineModel: ObservableObject {
 
     func bootstrap(appModel: AppModel) {
         self.appModel = appModel
+        OnlineCache.activateAccount(nil)
         profile = OnlineCache.loadProfile()
+        if let cached = OnlineCache.loadSocial() {
+            crew = cached.crew
+            incomingRequests = cached.incoming
+            outgoingRequests = cached.outgoing
+        }
         if let retry = OnlineCache.roomCreationRetryAfterDate, retry > Date() {
             roomCreationState = .waitingUntil(retry)
             scheduleThrottleReset(until: retry)
@@ -430,7 +449,7 @@ final class FocusOnlineModel: ObservableObject {
     }
 
     private func resetSocialState() {
-        OnlineCache.resetForAccountChange()
+        OnlineCache.clearEphemeralState()
         profile = nil
         crew = []
         incomingRequests = []
@@ -1592,43 +1611,54 @@ final class FocusOnlineModel: ObservableObject {
 
     func refreshSocial() async {
         guard availability.isAvailable, let myID = myUserID else { return }
-        let (incomingRows, outgoingRows) = await friendService.pendingRequests(myID: myID)
-        let counterpartIDs = Set(incomingRows.map(\.senderID) + outgoingRows.map(\.receiverID))
-        let requestProfiles = await profileService.fetchProfiles(publicIDs: Array(counterpartIDs))
-        func alias(_ id: String) -> (String, String) {
-            let p = requestProfiles.first { $0.publicID == id }
-            return (p?.displayName ?? "Sky Pilot", p?.balloonSkinID ?? "default")
-        }
-        incomingRequests = incomingRows.map { row in
-            let (name, skin) = alias(row.senderID)
-            return FriendRequest(id: row.id, senderPublicID: row.senderID,
-                                 recipientPublicID: row.receiverID,
-                                 senderDisplayName: name, senderBalloonSkinID: skin,
-                                 createdAt: PostgresDate.parse(row.createdAt) ?? Date())
-        }
-        outgoingRequests = outgoingRows.map { row in
-            FriendRequest(id: row.id, senderPublicID: row.senderID,
-                          recipientPublicID: row.receiverID,
-                          senderDisplayName: profile?.displayName ?? "Me",
-                          senderBalloonSkinID: profile?.balloonSkinID ?? "default",
-                          createdAt: PostgresDate.parse(row.createdAt) ?? Date())
-        }
+        do {
+            let (incomingRows, outgoingRows) = try await friendService.pendingRequests(myID: myID)
+            let counterpartIDs = Set(incomingRows.map(\.senderID) + outgoingRows.map(\.receiverID))
+            let requestProfiles = await profileService.fetchProfiles(publicIDs: Array(counterpartIDs))
+            func alias(_ id: String) -> (String, String) {
+                let p = requestProfiles.first { $0.publicID == id }
+                return (p?.displayName ?? "Sky Pilot", p?.balloonSkinID ?? "default")
+            }
+            let freshIncoming = incomingRows.map { row in
+                let (name, skin) = alias(row.senderID)
+                return FriendRequest(id: row.id, senderPublicID: row.senderID,
+                                     recipientPublicID: row.receiverID,
+                                     senderDisplayName: name, senderBalloonSkinID: skin,
+                                     createdAt: PostgresDate.parse(row.createdAt) ?? Date())
+            }
+            let freshOutgoing = outgoingRows.map { row in
+                FriendRequest(id: row.id, senderPublicID: row.senderID,
+                              recipientPublicID: row.receiverID,
+                              senderDisplayName: profile?.displayName ?? "Me",
+                              senderBalloonSkinID: profile?.balloonSkinID ?? "default",
+                              createdAt: PostgresDate.parse(row.createdAt) ?? Date())
+            }
 
-        let ids = await friendService.friendIDs(myID: myID)
-        let profiles = await profileService.fetchProfiles(publicIDs: ids)
-        var list: [FocusFriend] = ids.map { id in
-            let p = profiles.first { $0.publicID == id }
-            return FocusFriend(id: id, publicID: id,
-                               displayName: p?.displayName ?? "Sky Pilot",
-                               balloonSkinID: p?.balloonSkinID ?? "default",
-                               countryCode: p?.countryCode,
-                               since: Date(), activePilot: nil)
+            let ids = try await friendService.friendIDs(myID: myID)
+            let profiles = await profileService.fetchProfiles(publicIDs: ids)
+            var list: [FocusFriend] = ids.map { id in
+                let p = profiles.first { $0.publicID == id }
+                return FocusFriend(id: id, publicID: id,
+                                   displayName: p?.displayName ?? "Sky Pilot",
+                                   balloonSkinID: p?.balloonSkinID ?? "default",
+                                   countryCode: p?.countryCode,
+                                   since: Date(), activePilot: nil)
+            }
+            // "Focusing now" only from a real fresh flight row (cap the lookups).
+            for index in list.indices.prefix(12) {
+                list[index].activePilot = await flightService.activeFlight(of: list[index].publicID)
+            }
+            incomingRequests = freshIncoming
+            outgoingRequests = freshOutgoing
+            crew = list.sorted { $0.displayName < $1.displayName }
+            OnlineCache.saveSocial(crew: crew,
+                                   incoming: incomingRequests,
+                                   outgoing: outgoingRequests)
+        } catch {
+            // Keep the already-loaded account-scoped display cache. Supabase is
+            // authoritative, so no local mutation or empty replacement occurs.
+            applyOperationError(error)
         }
-        // "Focusing now" only from a real fresh flight row (cap the lookups).
-        for index in list.indices.prefix(12) {
-            list[index].activePilot = await flightService.activeFlight(of: list[index].publicID)
-        }
-        crew = list.sorted { $0.displayName < $1.displayName }
     }
 
     /// Returns a friendly, typed result (nil on success) — never the generic

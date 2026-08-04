@@ -18,6 +18,8 @@ struct UserProgress: Codable, Equatable {
     /// progress keeps decoding.
     var missionRewardDay: String? = nil
 
+    init() {}
+
     static let empty = UserProgress()
 
     var hasAnyProgress: Bool {
@@ -25,4 +27,26 @@ struct UserProgress: Codable, Equatable {
     }
 
     var bestFocusMinutes: Int { bestFocusSeconds / 60 }
+
+    private enum CodingKeys: String, CodingKey {
+        case totalFocusMiles, completedRouteIDs, postcards, landings
+        case bestFocusSeconds, currentStreak, longestStreak, lastLandingDay
+        case missionRewardDay
+    }
+
+    /// Decode each aggregate independently so one missing field in an older
+    /// build cannot zero Coins, landings, streaks and Passport data together.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        totalFocusMiles = max(0, try c.decodeIfPresent(Int.self, forKey: .totalFocusMiles) ?? 0)
+        completedRouteIDs = (try? c.decodeIfPresent(Set<String>.self, forKey: .completedRouteIDs)) ?? []
+        postcards = (try? c.decodeIfPresent([Postcard].self, forKey: .postcards)) ?? []
+        landings = max(0, try c.decodeIfPresent(Int.self, forKey: .landings) ?? 0)
+        bestFocusSeconds = max(0, try c.decodeIfPresent(Int.self, forKey: .bestFocusSeconds) ?? 0)
+        currentStreak = max(0, try c.decodeIfPresent(Int.self, forKey: .currentStreak) ?? 0)
+        longestStreak = max(currentStreak,
+                            try c.decodeIfPresent(Int.self, forKey: .longestStreak) ?? 0)
+        lastLandingDay = try c.decodeIfPresent(Date.self, forKey: .lastLandingDay)
+        missionRewardDay = try c.decodeIfPresent(String.self, forKey: .missionRewardDay)
+    }
 }

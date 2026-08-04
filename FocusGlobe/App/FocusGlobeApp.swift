@@ -22,6 +22,9 @@ struct FocusGlobeApp: App {
         // Guard the consistency-grid qualification rule (299 inactive / 300
         // active / same-day sum / two-day split / cancelled excluded).
         assert(FocusConsistency._selfCheck() == nil, FocusConsistency._selfCheck() ?? "")
+        if let persistenceFailure = PersistenceService._selfCheck() {
+            assertionFailure(persistenceFailure)
+        }
         #endif
         // Google Maps is the temporary MVP provider. Keep all business logic
         // provider-independent so we can migrate to Apple Maps / MapKit later.
@@ -69,7 +72,13 @@ struct FocusGlobeApp: App {
                     }
                 }
                 .onChange(of: scenePhase) { _, phase in
-                    guard phase == .active else { return }
+                    guard phase == .active else {
+                        // iOS may terminate a suspended process without a
+                        // termination callback. Critical mutations are already
+                        // synchronous; this is the explicit lifecycle checkpoint.
+                        appModel.flushPersistentState()
+                        return
+                    }
                     // FIRST: a streak can break while the app sits in the
                     // background — over midnight, or over a whole missed day —
                     // and nothing is running to notice. Correct it before the

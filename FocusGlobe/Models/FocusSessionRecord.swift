@@ -71,4 +71,32 @@ struct FocusSessionRecord: Identifiable, Codable, Hashable {
         self.intention = intention
         self.completed = completed
     }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, routeID, routeName, originName, destinationName, mood, theme
+        case date, plannedMinutes, focusedSeconds, distanceKm, focusMiles
+        case intention, completed
+    }
+
+    /// Historical records are Passport evidence. Decode conservatively and
+    /// independently so a field added by a later build cannot erase the entire
+    /// journey history. Missing completion always defaults to `false`, which
+    /// cannot fabricate Coins, a landing, or a streak.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = (try? c.decode(UUID.self, forKey: .id)) ?? UUID()
+        routeID = (try? c.decode(String.self, forKey: .routeID)) ?? "legacy"
+        routeName = (try? c.decode(String.self, forKey: .routeName)) ?? "Focus Flight"
+        originName = (try? c.decode(String.self, forKey: .originName)) ?? "Unknown"
+        destinationName = (try? c.decode(String.self, forKey: .destinationName)) ?? "Unknown"
+        mood = (try? c.decode(RouteMood.self, forKey: .mood)) ?? .calm
+        theme = (try? c.decode(RouteTheme.self, forKey: .theme)) ?? .teal
+        date = (try? c.decode(Date.self, forKey: .date)) ?? .distantPast
+        plannedMinutes = max(0, (try? c.decode(Int.self, forKey: .plannedMinutes)) ?? 0)
+        focusedSeconds = max(0, (try? c.decode(Int.self, forKey: .focusedSeconds)) ?? 0)
+        distanceKm = max(0, (try? c.decode(Double.self, forKey: .distanceKm)) ?? 0)
+        focusMiles = max(0, (try? c.decode(Int.self, forKey: .focusMiles)) ?? 0)
+        intention = try? c.decode(String.self, forKey: .intention)
+        completed = (try? c.decode(Bool.self, forKey: .completed)) ?? false
+    }
 }
