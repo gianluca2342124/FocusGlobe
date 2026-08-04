@@ -48,6 +48,21 @@ struct BalloonSkin: Identifiable, Hashable {
 
     var isPremium: Bool { unlock.isPremium }
 
+    /// Pure progression rule shared by runtime gates and Debug regression
+    /// fixtures. PRO is deliberately not an input: it can never bypass a free
+    /// milestone, and a `.pro` skin is resolved separately by the entitlement.
+    func progressionRequirementMet(focusMinutes: Int,
+                                   journeys: Int,
+                                   focusMiles: Int) -> Bool {
+        switch unlock {
+        case .free:                return true
+        case .focusMinutes(let n): return focusMinutes >= n
+        case .journeys(let n):     return journeys >= n
+        case .miles(let n):        return focusMiles >= n
+        case .pro:                 return false
+        }
+    }
+
     /// A short human description of how the skin is earned.
     var requirementText: String {
         switch unlock {
@@ -83,7 +98,8 @@ struct BalloonSkin: Identifiable, Hashable {
 
     /// The full skin roadmap, in display order. Premium skins (Moon, Galaxy,
     /// Cloudy, King) require an active subscription; the rest are free milestone
-    /// unlocks based on completed journeys.
+    /// unlocks based on completed focus time. Earth is intentionally the hardest
+    /// free skin at exactly 10,000 completed focused minutes.
     static let all: [BalloonSkin] = [
         BalloonSkin(id: "default", name: "Default",
                     subtitle: "The calm default", assetName: "BalloonSkin_Default",
@@ -103,18 +119,22 @@ struct BalloonSkin: Identifiable, Hashable {
         BalloonSkin(id: "sky-pilot", name: "Sky Pilot",
                     subtitle: "Ready for the skies", assetName: "BalloonSkin_Sky-Pilot1",
                     systemImage: "airplane", theme: .mint, unlock: .focusMinutes(5000), sortOrder: 5),
+        BalloonSkin(id: "earth", name: "Earth",
+                    subtitle: "A world of focus", assetName: "BalloonSkin_Earth",
+                    systemImage: "globe.americas.fill", theme: .teal,
+                    unlock: .focusMinutes(10_000), sortOrder: 6),
         BalloonSkin(id: "moon", name: "Moon",
                     subtitle: "Lunar glow", assetName: "BalloonSkin_Moon1",
-                    systemImage: "moon.stars.fill", theme: .indigo, unlock: .pro, sortOrder: 6),
+                    systemImage: "moon.stars.fill", theme: .indigo, unlock: .pro, sortOrder: 7),
         BalloonSkin(id: "galaxy", name: "Galaxy",
                     subtitle: "Cosmic drift", assetName: "BalloonSkin_Galaxy1",
-                    systemImage: "sparkles", theme: .aurora, unlock: .pro, sortOrder: 7),
+                    systemImage: "sparkles", theme: .aurora, unlock: .pro, sortOrder: 8),
         BalloonSkin(id: "cloudy", name: "Cloudy",
                     subtitle: "Head in the clouds", assetName: "BalloonSkin_Cloudy",
-                    systemImage: "cloud.sun.fill", theme: .mint, unlock: .pro, sortOrder: 8),
+                    systemImage: "cloud.sun.fill", theme: .mint, unlock: .pro, sortOrder: 9),
         BalloonSkin(id: "king", name: "King",
                     subtitle: "Rule the skies", assetName: "BalloonSkin_King1",
-                    systemImage: "crown.fill", theme: .gold, unlock: .pro, sortOrder: 9),
+                    systemImage: "crown.fill", theme: .gold, unlock: .pro, sortOrder: 10),
     ]
 
     static let `default` = all[0]
@@ -123,4 +143,28 @@ struct BalloonSkin: Identifiable, Hashable {
         guard let id else { return `default` }
         return all.first { $0.id == id } ?? `default`
     }
+
+    #if DEBUG
+    static func _selfCheck() -> String? {
+        guard let earth = all.first(where: { $0.id == "earth" }), earth.name == "Earth" else {
+            return "Earth skin is missing from the canonical catalog"
+        }
+        guard earth.unlock == .focusMinutes(10_000), !earth.isPremium else {
+            return "Earth must be a free 10,000-minute progression skin"
+        }
+        guard !earth.progressionRequirementMet(focusMinutes: 9_999, journeys: 0, focusMiles: 0),
+              earth.progressionRequirementMet(focusMinutes: 10_000, journeys: 0, focusMiles: 0),
+              earth.progressionRequirementMet(focusMinutes: 10_001, journeys: 0, focusMiles: 0) else {
+            return "Earth unlock boundary is not exact"
+        }
+        let highestFreeMinuteRequirement = all.compactMap { skin -> Int? in
+            guard !skin.isPremium, case .focusMinutes(let minutes) = skin.unlock else { return nil }
+            return minutes
+        }.max()
+        guard highestFreeMinuteRequirement == 10_000 else {
+            return "Earth is not the hardest free minute-progression skin"
+        }
+        return nil
+    }
+    #endif
 }

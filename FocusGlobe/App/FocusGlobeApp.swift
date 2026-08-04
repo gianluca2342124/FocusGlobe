@@ -25,6 +25,9 @@ struct FocusGlobeApp: App {
         if let persistenceFailure = PersistenceService._selfCheck() {
             assertionFailure(persistenceFailure)
         }
+        if let skinFailure = BalloonSkin._selfCheck() {
+            assertionFailure(skinFailure)
+        }
         #endif
         // Google Maps is the temporary MVP provider. Keep all business logic
         // provider-independent so we can migrate to Apple Maps / MapKit later.
