@@ -88,14 +88,17 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
             //
             // Both extensions read the SAME condition, so the promise and the
             // behaviour cannot drift apart: where the system will open
-            // FocusGlobe the button says so, and where it will not, it doesn't.
+            // FocusGlobe the button says so; older systems expose one truthful
+            // Close action instead of two controls that both do the same thing.
             // White plate, black label either way.
             primaryButtonLabel: .init(
-                text: primaryOpensFocusGlobe ? "Return to FocusGlobe" : "Stay Focused",
+                text: primaryOpensFocusGlobe ? "Return to FocusGlobe" : "Close",
                 color: .black
             ),
             primaryButtonBackgroundColor: .white,
-            secondaryButtonLabel: .init(text: "Close", color: ivory.withAlphaComponent(0.62))
+            secondaryButtonLabel: primaryOpensFocusGlobe
+                ? .init(text: "Close", color: ivory.withAlphaComponent(0.62))
+                : nil
         )
     }
 }
