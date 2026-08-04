@@ -66,6 +66,13 @@ struct RootView: View {
             }
         }
         .animation(.easeOut(duration: 0.25), value: router.takeoffCurtain)
+        // The modal coordinator starts in a neutral/unknown state. Keep it tied
+        // to the one RevenueCat-backed entitlement so every paywall entry point
+        // shares the same no-flash, no-owner-promotion rule.
+        .onAppear { router.updatePremiumAccess(appModel.entitlement) }
+        .onChange(of: appModel.entitlement) { _, access in
+            router.updatePremiumAccess(access)
+        }
         // Dark, always — the window root forces the same thing, and this keeps
         // it true for anything hosted from here.
         .preferredColorScheme(.dark)
@@ -105,6 +112,7 @@ struct RootView: View {
     private var paywallModalBinding: Binding<AppModal?> {
         Binding(
             get: {
+                guard appModel.entitlement == .free else { return nil }
                 guard case .paywall = router.activeModal else { return nil }
                 return router.activeModal
             },

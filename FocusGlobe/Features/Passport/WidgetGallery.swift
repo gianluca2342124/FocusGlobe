@@ -64,7 +64,9 @@ struct WidgetsGallerySection: View {
     @State private var selected: WidgetGalleryItem?
 
     /// A PRO widget the pilot hasn't unlocked yet.
-    private func locked(_ item: WidgetGalleryItem) -> Bool { item.isPro && !appModel.isPro }
+    private func locked(_ item: WidgetGalleryItem) -> Bool {
+        item.isPro && appModel.entitlement == .free
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {

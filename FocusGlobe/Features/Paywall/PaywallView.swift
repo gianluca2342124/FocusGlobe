@@ -76,6 +76,10 @@ struct PaywallView: View {
         }
         .environment(\.colorScheme, .dark)
         .onAppear {
+            guard appModel.entitlement == .free else {
+                dismiss()
+                return
+            }
             appModel.analytics.log(.paywallOpened)
             subs.loadOfferings()
             syncSelection()
@@ -85,6 +89,9 @@ struct PaywallView: View {
             if context.isOnboardingOffer { page = .trial }
         }
         .onChange(of: subs.plans) { _, _ in syncSelection() }
+        .onChange(of: appModel.entitlement) { _, access in
+            if access != .free { dismiss() }
+        }
     }
 
     // MARK: - Page one
@@ -136,29 +143,25 @@ struct PaywallView: View {
             }
             .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
 
-            if appModel.isPro {
-                proState
-            } else {
-                Button {
-                    appModel.tapFeedback()
-                    withAnimation(AppMotion.content.respecting(reduceMotion)) {
-                        page = .trial
-                    }
-                } label: {
-                    Text(trialOfferAvailable ? "Start My Free Trial" : "See Plans")
-                        .font(.system(size: viewport.isWide ? 19 : 17, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: paywallButtonHeight)
-                        .background(Capsule().fill(ProBrand.primaryButton))
-                        .overlay(Capsule().strokeBorder(.white.opacity(0.16), lineWidth: 1))
+            Button {
+                appModel.tapFeedback()
+                withAnimation(AppMotion.content.respecting(reduceMotion)) {
+                    page = .trial
                 }
-                .buttonStyle(SoftPressStyle())
-                .accessibilityHint("Shows trial timing and subscription options. No purchase is made.")
-                .frame(maxWidth: viewport.modalWidth)
-                .padding(.horizontal, viewport.pagePadding)
-                .padding(.bottom, max(12, viewport.pagePadding * 0.65))
+            } label: {
+                Text(trialOfferAvailable ? "Start My Free Trial" : "See Plans")
+                    .font(.system(size: viewport.isWide ? 19 : 17, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: paywallButtonHeight)
+                    .background(Capsule().fill(ProBrand.primaryButton))
+                    .overlay(Capsule().strokeBorder(.white.opacity(0.16), lineWidth: 1))
             }
+            .buttonStyle(SoftPressStyle())
+            .accessibilityHint("Shows trial timing and subscription options. No purchase is made.")
+            .frame(maxWidth: viewport.modalWidth)
+            .padding(.horizontal, viewport.pagePadding)
+            .padding(.bottom, max(12, viewport.pagePadding * 0.65))
         }
     }
 
@@ -205,11 +208,7 @@ struct PaywallView: View {
             // a centred block.
             .frame(maxHeight: .infinity)
 
-            if appModel.isPro {
-                proState
-            } else {
-                purchaseFooter
-            }
+            purchaseFooter
         }
     }
 
@@ -520,24 +519,6 @@ struct PaywallView: View {
         .padding(.horizontal, viewport.pagePadding)
         .padding(.top, max(6, viewport.pagePadding * 0.25))
         .padding(.bottom, 4)
-    }
-
-    private var proState: some View {
-        VStack(spacing: 10) {
-            Label("Your PRO is active", systemImage: "checkmark.seal.fill")
-                .font(.system(size: 17, weight: .bold))
-                .foregroundStyle(AppColors.success)
-            Button("Close") { dismiss() }
-                .font(.system(size: 17, weight: .bold))
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: viewport.buttonHeight)
-                .background(Capsule().fill(ProBrand.primaryButton))
-                .buttonStyle(SoftPressStyle())
-        }
-        .frame(maxWidth: viewport.modalWidth)
-        .padding(.horizontal, viewport.pagePadding)
-        .padding(.bottom, viewport.pagePadding)
     }
 
     private var background: some View {

@@ -81,7 +81,7 @@ final class AppModel: ObservableObject {
     /// ever reported while RevenueCat is still resolving CustomerInfo for a pilot
     /// who isn't already Pro — so a gate must NEVER treat `.loading` as Free and
     /// flash a paywall at a PRO/Lifetime owner whose entitlement hasn't arrived.
-    enum Entitlement { case loading, free, premium }
+    enum Entitlement: Equatable { case loading, free, premium }
     var entitlement: Entitlement {
         if isPro { return .premium }
         if subscriptions.isAvailable && !subscriptions.hasResolvedEntitlement { return .loading }
@@ -973,7 +973,7 @@ final class AppModel: ObservableObject {
     /// Whether the launch paywall should auto-present: once per session, only
     /// after the app has a real origin and the user isn't already Pro.
     var shouldShowPremiumIntro: Bool {
-        !isPro && !launchPaywallShown && currentOrigin != nil
+        isConfirmedFree && !launchPaywallShown && currentOrigin != nil
     }
 
     func markPremiumIntroSeen() {

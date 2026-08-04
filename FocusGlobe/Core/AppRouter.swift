@@ -75,8 +75,22 @@ final class AppRouter: ObservableObject {
     /// supported"). Setting it replaces whatever was up — one modal at a time.
     @Published var activeModal: AppModal?
 
-    /// Present a coordinated modal (replaces any current one).
-    func present(_ modal: AppModal) { activeModal = modal }
+    /// The entitlement state used by the modal coordinator. It starts unknown so
+    /// a cold launch can never flash a Free-user paywall before RevenueCat has
+    /// answered. `RootView` keeps it synchronized with `AppModel.entitlement`.
+    @Published private(set) var premiumAccess: AppModel.Entitlement = .loading
+    private var pendingPaywallContext: PaywallContext?
+
+    /// Present a coordinated modal (replaces any current one). Paywalls always
+    /// pass through the canonical entitlement guard below, including any future
+    /// caller that constructs `.paywall` directly instead of using the helper.
+    func present(_ modal: AppModal) {
+        if case .paywall(let context) = modal {
+            presentPaywall(context: context)
+        } else {
+            activeModal = modal
+        }
+    }
     /// Dismiss the coordinated modal.
     func dismissModal() { activeModal = nil }
 
@@ -129,7 +143,43 @@ final class AppRouter: ObservableObject {
     func openHistory() { path.append(.history) }
     func openSettings() { select(.settings) }
     func presentPaywall(context: PaywallContext = .general) {
-        present(.paywall(context))
+        switch premiumAccess {
+        case .premium:
+            // Subscription management lives in Settings. A verified owner never
+            // enters a promotional surface merely to be told what they own.
+            pendingPaywallContext = nil
+            if case .paywall = activeModal { activeModal = nil }
+        case .free:
+            pendingPaywallContext = nil
+            activeModal = .paywall(context)
+        case .loading:
+            // Hold the exact request without showing an upsell. Once RevenueCat
+            // resolves, `updatePremiumAccess` either presents it for a confirmed
+            // Free pilot or drops it for an owner.
+            pendingPaywallContext = context
+            if case .paywall = activeModal { activeModal = nil }
+        }
+    }
+
+    /// Synchronize the router with the one RevenueCat-backed entitlement state.
+    /// If a purchase/restore activates while a paywall is visible, this dismisses
+    /// it instead of replacing it with a redundant success promotion.
+    func updatePremiumAccess(_ access: AppModel.Entitlement) {
+        premiumAccess = access
+        switch access {
+        case .premium:
+            pendingPaywallContext = nil
+            if case .paywall = activeModal { activeModal = nil }
+        case .free:
+            guard let context = pendingPaywallContext else { return }
+            pendingPaywallContext = nil
+            activeModal = .paywall(context)
+        case .loading:
+            if case .paywall(let context) = activeModal {
+                pendingPaywallContext = context
+                activeModal = nil
+            }
+        }
     }
 
     /// Raise the take-off curtain (with a 3 s watchdog so an interrupted

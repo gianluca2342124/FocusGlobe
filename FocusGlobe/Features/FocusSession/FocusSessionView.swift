@@ -105,6 +105,10 @@ struct FocusSessionView: View {
     /// the app-wide `router` coordinator would collapse the flight cover and
     /// strand `activeModal`. One at a time; dismiss returns to the flight.
     @State private var journeyPaywall: JourneyPaywall?
+    /// A tap made while RevenueCat is still resolving. The timer and Online
+    /// session keep running; once the canonical entitlement resolves, this
+    /// continues the exact requested action or opens the matching paywall.
+    @State private var pendingProAction: PendingProAction?
     /// The single compact flight-controls panel (replaces the old button cluster).
     @State private var showControlsPanel = false
     /// Pilot-label visibility.
@@ -184,8 +188,16 @@ struct FocusSessionView: View {
         // opens the Invite paywall and creates NO token, room or share link.
         // (Online is already PRO-gated, so this is defence-in-depth. The Kyoto
         // referral share is a separate, still-free flow and is untouched.)
-        guard appModel.isPro else {
+        switch appModel.entitlement {
+        case .premium:
+            break
+        case .free:
             appModel.tapFeedback(); journeyPaywall = JourneyPaywall(context: .invite); return
+        case .loading:
+            appModel.tapFeedback()
+            pendingProAction = .invite
+            appModel.refreshSubscriptionStatus()
+            return
         }
         // The tap is HONOURED even if the flight session isn't established yet:
         // show the restrained "Preparing…" state, wait briefly for readiness — which
@@ -474,6 +486,22 @@ struct FocusSessionView: View {
             case .active:                vm.refresh()
             case .inactive, .background: vm.persistForResume()
             @unknown default:            break
+            }
+        }
+        .onChange(of: appModel.entitlement) { _, access in
+            guard access != .loading, let pending = pendingProAction else { return }
+            pendingProAction = nil
+            switch (access, pending) {
+            case (.premium, .invite):
+                Task { await inviteFriends() }
+            case (.premium, .pause):
+                if !vm.isPaused { vm.togglePause() }
+            case (.free, .invite):
+                journeyPaywall = JourneyPaywall(context: .invite)
+            case (.free, .pause):
+                journeyPaywall = JourneyPaywall(context: .pause)
+            case (.loading, _):
+                break
             }
         }
         .onAppear {
@@ -833,7 +861,10 @@ struct FocusSessionView: View {
                     case .free:
                         appModel.tapFeedback(); journeyPaywall = JourneyPaywall(context: .pause); return
                     case .loading:
-                        appModel.tapFeedback(); appModel.refreshSubscriptionStatus(); return
+                        appModel.tapFeedback()
+                        pendingProAction = .pause
+                        appModel.refreshSubscriptionStatus()
+                        return
                     }
                 }
                 vm.togglePause()
@@ -1347,6 +1378,11 @@ private struct FlightShareURL: Identifiable {
 private struct JourneyPaywall: Identifiable {
     let context: PaywallContext
     var id: String { String(describing: context) }
+}
+
+private enum PendingProAction {
+    case invite
+    case pause
 }
 
 // MARK: - Hero balloon idle motion

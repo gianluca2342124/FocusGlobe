@@ -161,7 +161,8 @@ struct StoreView: View {
                             skin: previewSkin)
                     .offset(y: float)
                     .shadow(color: .black.opacity(0.25), radius: 16, y: 10)
-                if !appModel.isSkinUnlocked(previewSkin) {
+                if !appModel.isSkinUnlocked(previewSkin)
+                    && (!previewSkin.isPremium || appModel.isConfirmedFree) {
                     lockBadge(premium: previewSkin.isPremium)
                         .offset(x: Layout.pad(56, 74), y: -Layout.pad(64, 84))
                 }
@@ -254,7 +255,9 @@ struct StoreView: View {
                     .foregroundStyle(.white)
                     .lineLimit(1).minimumScaleFactor(0.8)
                 Text(equipped ? "Equipped" : unlocked ? "Owned"
-                     : skin.isPremium ? "FocusGlobe PRO" : skinProgressText(skin))
+                     : skin.isPremium
+                        ? (appModel.entitlement == .loading ? "Checking access…" : "FocusGlobe PRO")
+                        : skinProgressText(skin))
                     .font(.system(size: 12.5, weight: .semibold, design: .default))
                     .foregroundStyle(equipped ? AppColors.success : .white.opacity(0.7))
                     .lineLimit(1).minimumScaleFactor(0.8)
@@ -266,7 +269,7 @@ struct StoreView: View {
                     .foregroundStyle(AppColors.gold)
             } else if unlocked {
                 goldAction("Equip") { appModel.selectSkin(skin); appModel.tapFeedback() }
-            } else if skin.isPremium {
+            } else if skin.isPremium && appModel.isConfirmedFree {
                 goldAction("Unlock with FocusGlobe PRO", pro: true) {
                     appModel.tapFeedback(); router.presentPaywall(context: .balloonSkin)
                 }
@@ -290,7 +293,9 @@ struct StoreView: View {
                          ? "Cabin full — remove one to place this"
                          : placed ? "In your cabin"
                          : owned ? "Owned"
-                         : item.isPremium ? "FocusGlobe PRO" : "Previewing")
+                         : item.isPremium
+                            ? (appModel.entitlement == .loading ? "Checking access…" : "FocusGlobe PRO")
+                            : "Previewing")
                         .font(.system(size: 12.5, weight: .semibold, design: .default))
                         .foregroundStyle(blocked ? AppColors.gold
                                          : placed ? AppColors.success : .white.opacity(0.7))
@@ -314,10 +319,14 @@ struct StoreView: View {
                     Label("Owned", systemImage: "checkmark.circle.fill")
                         .font(.system(size: 13, weight: .bold, design: .default))
                         .foregroundStyle(AppColors.success)
-                } else if item.isPremium && !appModel.isPro {
+                } else if item.isPremium && appModel.isConfirmedFree {
                     goldAction("Unlock with FocusGlobe PRO", pro: true) {
                         appModel.tapFeedback(); router.presentPaywall(context: .interior)
                     }
+                } else if item.isPremium && appModel.entitlement == .loading {
+                    ProgressView()
+                        .tint(.white)
+                        .accessibilityLabel("Checking FocusGlobe PRO access")
                 } else {
                     Button {
                         if appModel.purchaseStoreItem(item), item.kind == .cabinDecoration {

@@ -133,7 +133,7 @@ struct RouteSelectionView: View {
             }
             Spacer()
             // The crown only opens the paywall — hide it once the user is Pro.
-            if !appModel.isPro {
+            if appModel.isConfirmedFree {
                 CrownButton(size: 44) { appModel.tapFeedback(); router.presentPaywall() }
             } else {
                 Color.clear.frame(width: 44, height: 44)   // keep the title centered
@@ -278,9 +278,11 @@ struct RouteSelectionView: View {
             appModel.uiSound.play(.transition)
             appModel.analytics.log(.routeSelected, ["route": journey.id, "source": "discovery"])
             router.openFocusLoadout(journey.route)
-        } else {
+        } else if appModel.entitlement == .free {
             appModel.tapFeedback()
             router.presentPaywall(context: .sky)
+        } else if appModel.entitlement == .loading {
+            appModel.refreshSubscriptionStatus()
         }
     }
 }

@@ -49,6 +49,10 @@ struct OnboardingView: View {
     /// `requestAuthorization` twice or advance the step twice.
     @State private var notificationRequestInFlight = false
     @State private var premiumPreviewIndex = 0
+    /// The final Continue was tapped while RevenueCat was unresolved. We hold
+    /// that intent without showing the PRO page, then either finish for an owner
+    /// or advance for a confirmed Free pilot.
+    @State private var pendingPremiumResolution = false
     @FocusState private var textFocused: Bool
 
     var body: some View {
@@ -64,6 +68,16 @@ struct OnboardingView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .onChange(of: appModel.entitlement) { _, access in
+            guard step == Self.stepCount - 1 || pendingPremiumResolution else { return }
+            if access == .premium {
+                pendingPremiumResolution = false
+                complete(thenPaywall: false)
+            } else if access == .free, pendingPremiumResolution {
+                pendingPremiumResolution = false
+                withAnimation(AppMotion.soft) { step = Self.stepCount - 1 }
+            }
+        }
     }
 
     // MARK: Scene
@@ -123,6 +137,18 @@ struct OnboardingView: View {
     private func advance() {
         textFocused = false
         appModel.tapFeedback()
+        if step == Self.stepCount - 2 {
+            switch appModel.entitlement {
+            case .premium:
+                complete(thenPaywall: false)
+            case .free:
+                withAnimation(AppMotion.soft) { step = Self.stepCount - 1 }
+            case .loading:
+                pendingPremiumResolution = true
+                appModel.refreshSubscriptionStatus()
+            }
+            return
+        }
         withAnimation(AppMotion.soft) { step = min(Self.stepCount - 1, step + 1) }
     }
 
@@ -742,10 +768,7 @@ struct OnboardingView: View {
                 VStack(spacing: AppSpacing.lg) {
                     premiumHero
                     VStack(spacing: 6) {
-                        // Someone who already holds the entitlement — a
-                        // reinstall, or a sign-in during onboarding that
-                        // restored it — is shown what they own, not a pitch.
-                        Text(appModel.isPro ? "You’re all set." : "Focus, elevated.")
+                        Text("Focus, elevated.")
                             .font(.system(size: Layout.pad(30, 40), weight: .bold, design: .default))
                             .foregroundStyle(.white)
                         // NOT "Everything in FocusGlobe, unlocked." — PRO opens
@@ -753,9 +776,7 @@ struct OnboardingView: View {
                         // (Fiji, Northern Aurora, Deep Space are still earned by
                         // flying). Promising "everything" here is a claim the
                         // app then refuses to honour on the Sky selector.
-                        Text(appModel.isPro
-                             ? "FocusGlobe PRO is active on this account."
-                             : "The exclusive Skies, skins and features.")
+                        Text("The exclusive Skies, skins and features.")
                             .font(AppTypography.callout)
                             .foregroundStyle(.white.opacity(0.66))
                     }
@@ -765,27 +786,17 @@ struct OnboardingView: View {
                 .padding(.horizontal, 2)
             }
             VStack(spacing: AppSpacing.sm) {
-                if appModel.isPro {
-                    // No upsell and no paywall for someone who already owns it.
-                    AppPrimaryButton(title: "Continue", systemImage: "checkmark") {
-                        appModel.tapFeedback()
-                        complete(thenPaywall: false)
-                    }
-                } else {
-                    AppPrimaryButton(title: premiumCTATitle, systemImage: "sparkles") {
-                        appModel.tapFeedback()
-                        complete(thenPaywall: true)
-                    }
-                    // Secondary, but readable: this must never feel like a trap.
-                    // It finishes onboarding as a free pilot — no purchase, no
-                    // entitlement change, nothing blocked.
-                    Button("Skip for now") {
-                        appModel.tapFeedback()
-                        complete(thenPaywall: false)
-                    }
-                    .font(AppTypography.headline)
-                    .foregroundStyle(.white.opacity(0.85))
+                AppPrimaryButton(title: premiumCTATitle, systemImage: "sparkles") {
+                    appModel.tapFeedback()
+                    complete(thenPaywall: true)
                 }
+                // Secondary, but readable: this must never feel like a trap.
+                Button("Skip for now") {
+                    appModel.tapFeedback()
+                    complete(thenPaywall: false)
+                }
+                .font(AppTypography.headline)
+                .foregroundStyle(.white.opacity(0.85))
             }
             .padding(.bottom, AppSpacing.xl)
         }

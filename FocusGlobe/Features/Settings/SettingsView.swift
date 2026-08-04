@@ -150,7 +150,7 @@ struct SettingsView: View {
                         .buttonStyle(SoftPressStyle())
                     }
                     #endif
-                } else {
+                } else if appModel.isConfirmedFree {
                     Button {
                         appModel.tapFeedback()
                         router.presentPaywall()

@@ -64,6 +64,11 @@ struct HomeView: View {
         FocusSky.all[skyCursor]
     }
     private var currentSkyUnlocked: Bool { appModel.isSkyUnlocked(currentSky) }
+    /// A PRO Sky whose entitlement has not resolved is neither locked nor
+    /// temporarily unlocked. Hold its action without showing an upsell.
+    private var currentSkyAccessPending: Bool {
+        currentSky.isProExclusive && !currentSkyUnlocked && appModel.entitlement == .loading
+    }
     /// The Resume tab may ONLY appear when the main CTA is the real "Start Focus"
     /// action (an unlocked Sky). On a locked Sky the CTA is a Preview button, and
     /// a resume tab hanging off a preview would be nonsensical — so it's hidden.
@@ -423,7 +428,7 @@ struct HomeView: View {
             // no gap. Subscription management lives in Settings, not here. Shown
             // during `.loading` (isPro still false) so it never flickers for a free
             // user; a PRO owner simply sees it vanish, never a forced paywall.
-            if !appModel.isPro {
+            if appModel.isConfirmedFree {
                 StatusCircleButton(size: viewport.navigationControlSize,
                                    ring: nil,
                                    accessibilityText: "Unlock FocusGlobe PRO") {
@@ -583,7 +588,7 @@ struct HomeView: View {
                         .font(.system(size: viewport.titleSize - 3, weight: .semibold, design: .serif))
                         .foregroundStyle(AppColors.gold)
                         .lineLimit(1).minimumScaleFactor(0.6)
-                    if !currentSkyUnlocked {
+                    if !currentSkyUnlocked && !currentSkyAccessPending {
                         Image(systemName: "lock.fill")
                             .font(.system(size: Layout.pad(14, 16), weight: .bold))
                             .foregroundStyle(.white.opacity(0.75))
@@ -617,6 +622,11 @@ struct HomeView: View {
                             appModel.selectSky(currentSky)
                             showSetup = true
                         }
+                    } else if currentSkyAccessPending {
+                        AppPrimaryButton(title: "Checking PRO access…", systemImage: "hourglass") {
+                            appModel.refreshSubscriptionStatus()
+                        }
+                        .disabled(true)
                     } else {
                         lockedCTA
                     }
@@ -831,7 +841,12 @@ private struct SkyPreviewFlightView: View {
 
     private var actions: some View {
         VStack(spacing: AppSpacing.sm) {
-            if isFreeMinutesSky {
+            if sky.isProExclusive && appModel.entitlement == .loading {
+                ProgressView()
+                    .tint(.white)
+                    .accessibilityLabel("Checking FocusGlobe PRO access")
+                softSecondary(title: "Keep focusing") { dismiss() }
+            } else if isFreeMinutesSky {
                 // Fiji Lagoon (and any focus-minute Sky): the progress IS the hero;
                 // never a PRO upsell.
                 secondaryButton
