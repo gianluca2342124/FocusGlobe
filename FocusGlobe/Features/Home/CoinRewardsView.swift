@@ -152,16 +152,6 @@ struct CoinSpinSheet: View {
                 .font(.system(size: 15, weight: .heavy, design: .default))
                 .tracking(0.5)
                 .foregroundStyle(AppColors.gold)
-            // One promise for every pilot, PRO included: the video is the price
-            // of the spin, so nobody is told they can skip it and nobody is
-            // shown a button that claims the wheel turns on its own.
-            Text("Watch a short video and spin for a reward.")
-                .font(AppTypography.callout)
-                .foregroundStyle(AppColors.textSecondary)
-                .multilineTextAlignment(.center)
-            Text("1 · 2 · 3 · 5 · 10 · 15 · 20 · 25")
-                .font(.system(size: 13, weight: .bold, design: .default))
-                .foregroundStyle(AppColors.textTertiary)
             if let note {
                 Text(note)
                     .font(AppTypography.caption)
@@ -178,7 +168,7 @@ struct CoinSpinSheet: View {
     /// Names the exchange rather than the outcome. "Spin now" would promise a
     /// wheel that turns on tap, which it never does — the reward callback has to
     /// fire first. `busy` is the ad's load/present window, unchanged.
-    private var spinButtonTitle: String { busy ? "Loading ad…" : "Watch Ad & Spin" }
+    private var spinButtonTitle: String { busy ? "Loading ad…" : "Watch & Spin" }
 
     private var spinning: some View {
         VStack(spacing: AppSpacing.md) {
