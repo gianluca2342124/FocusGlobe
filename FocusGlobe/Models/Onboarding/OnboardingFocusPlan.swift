@@ -22,6 +22,32 @@ struct OnboardingAnswers: Codable, Equatable, Sendable {
         goal != nil && obstacle != nil && sessionChoice != nil
             && cadence != nil && company != nil && shieldIntent != nil && skyID != nil
     }
+
+    /// Fill in the answers a given flow never ASKED for.
+    ///
+    /// This exists because a variant that drops a question still has to produce
+    /// a plan, and the failure is silent in the worst way: the concise arm never
+    /// asks about company, `build(from:)` requires it, so the builder returns
+    /// nil and the pilot reaches a plan reveal with no plan. Skipping the
+    /// soundscape question is subtler still — a missing `soundID` is
+    /// indistinguishable from "chose Silence", so the plan would quietly mute
+    /// every flight for an answer nobody gave.
+    ///
+    /// The defaults are the conservative ones: focusing alone, and the Sky's own
+    /// recommended ambience. Both are also what the app would have done anyway.
+    /// `OnboardingFlow._selfCheck()` asserts that every variant, normalized this
+    /// way, produces a plan.
+    func normalized(for flow: OnboardingFlow, fallbackSoundID: String?) -> OnboardingAnswers {
+        var filled = self
+        let asked = Set(flow.steps)
+        if !asked.contains(.focusStyle), filled.company == nil {
+            filled.company = .alone
+        }
+        if !asked.contains(.soundSelection), filled.soundID == nil, !filled.choseSilence {
+            filled.soundID = fallbackSoundID
+        }
+        return filled
+    }
 }
 
 /// The plan itself — the artefact the pilot is shown and, crucially, the one

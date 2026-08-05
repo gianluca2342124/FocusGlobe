@@ -287,6 +287,29 @@ struct OnboardingFlow: Equatable, Sendable {
                                     let resumed = flow.resolvedResume(step)
                                     if !s.contains(resumed) { return "resume from \(step) landed outside the flow" }
                                 }
+                                // EVERY variant must be able to produce a
+                                // plan from the questions it actually asks.
+                                // The concise arm drops two of them, and a
+                                // builder that quietly returns nil would land
+                                // a pilot on a plan reveal with no plan.
+                                var answered = a
+                                answered.sessionChoice = .recommended
+                                answered.skyID = "regression-sky"
+                                answered.company = flow.steps.contains(.focusStyle) ? .alone : nil
+                                answered.soundID = flow.steps.contains(.soundSelection) ? "wind" : nil
+                                let normalized = answered.normalized(for: flow,
+                                                                     fallbackSoundID: "wind")
+                                guard let built = OnboardingPlanBuilder.build(
+                                    from: normalized, fallbackSkyID: "regression-sky") else {
+                                    return "\(variant) cannot build a plan from the questions it asks"
+                                }
+                                if built.selectedSoundID == nil && !normalized.choseSilence {
+                                    return "\(variant) silenced a pilot who never chose Silence"
+                                }
+                                if built.recommendedDurationMinutes < 15
+                                    || built.recommendedDurationMinutes > 60 {
+                                    return "\(variant) produced an out-of-range first flight"
+                                }
                                 // Progress must be monotonic across the flow.
                                 var last = -1.0
                                 for step in s {

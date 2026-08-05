@@ -305,9 +305,15 @@ struct OnboardingView: View {
 
     @discardableResult
     private func buildAndApplyPlan() -> Bool {
-        guard let built = OnboardingPlanBuilder.build(from: answers,
+        // Normalized against THIS flow first: a variant that never asked about
+        // company or soundscape must still produce a plan, and a missing
+        // soundscape must not be read as "chose Silence".
+        let resolved = answers.normalized(for: flow,
+                                          fallbackSoundID: previewSky.soundscapeID)
+        guard let built = OnboardingPlanBuilder.build(from: resolved,
                                                       fallbackSkyID: FocusSky.defaultFree.id)
         else { return false }
+        answers = resolved
         plan = built
         // Applied, not just displayed. This writes the first-flight length, the
         // weekly target, the Sky, the soundscape and the Shield intent into the
