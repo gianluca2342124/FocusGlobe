@@ -50,23 +50,14 @@ struct OnboardingFocusPlan: Codable, Equatable, Sendable {
     /// Whether a reminder warm-up is worth showing at all.
     let suggestsReminders: Bool
 
-    /// One honest sentence, built from the pilot's own two answers. Never a
-    /// claim about outcomes, diagnosis or science — it describes what the plan
-    /// is FOR, in their words.
-    var rationale: String {
-        "Designed to make \(primaryGoal.shortNoun) easier to start\(obstacleClause)."
-    }
-
-    private var obstacleClause: String {
-        switch primaryObstacle {
-        case .distractingApps: return " and harder to interrupt"
-        case .procrastination: return " on the days you don’t feel like it"
-        case .losingMomentum:  return " and easier to come back to"
-        case .overwhelm:       return " without feeling like a lot"
-        case .environment:     return " somewhere calmer"
-        case .unsureDuration:  return " with a length that fits"
-        }
-    }
+    /// The one honest sentence shown under the plan card, as a string KEY.
+    ///
+    /// A key rather than a sentence because a plan is `Codable` and long-lived:
+    /// storing prose would freeze today's English into a pilot's profile, and
+    /// re-rendering it later in another language would be impossible. It never
+    /// claims an outcome, a diagnosis or a study — it says what the plan is FOR,
+    /// in terms of the obstacle the pilot named.
+    var rationaleKey: FocusStringKey { primaryObstacle.rationaleKey }
 }
 
 /// The deterministic rules that turn answers into a plan.

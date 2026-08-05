@@ -42,6 +42,23 @@ struct FocusGlobeApp: App {
         if let flowFailure = OnboardingFlow._selfCheck() {
             assertionFailure(flowFailure)
         }
+        // Localization is gated on computed coverage, so the computation itself
+        // has to be trustworthy: English complete, no placeholder lost in
+        // translation, no key rendered raw, and no language offered before it
+        // is genuinely finished.
+        if let keyFailure = FocusStringKey._selfCheck() {
+            assertionFailure(keyFailure)
+        }
+        if let tableFailure = FocusStringTable._selfCheck() {
+            assertionFailure(tableFailure)
+        }
+        if let stringsFailure = FocusStrings._selfCheck() {
+            assertionFailure(stringsFailure)
+        }
+        if let coverageFailure = LocalizationCoverage._selfCheck() {
+            assertionFailure(coverageFailure)
+        }
+        print("[Localization]\n" + LocalizationCoverage.manifest())
         #endif
         // Google Maps is the temporary MVP provider. Keep all business logic
         // provider-independent so we can migrate to Apple Maps / MapKit later.
@@ -56,6 +73,10 @@ struct FocusGlobeApp: App {
         WindowGroup {
             RootView()
                 .focusResponsiveLayout()
+                // Language at the window root, above every screen and sheet, so
+                // a change takes effect on the next frame — no relaunch, and no
+                // screen that kept a copy of the old one.
+                .focusLanguage(appModel.language)
                 .environmentObject(appModel)
                 .environmentObject(router)
                 .environmentObject(online)

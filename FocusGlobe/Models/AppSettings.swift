@@ -53,6 +53,22 @@ struct AppSettings: Codable, Equatable {
     /// flexible" — and must stay distinguishable from "never asked".
     var weeklyFocusDayGoal: Int? = nil
 
+    /// The pilot's language choice (`AppLanguage.rawValue`).
+    ///
+    /// Stored here rather than in `UserProfile` because it belongs to the same
+    /// account-scoped canonical snapshot as every other preference: signing in
+    /// carries it across, and the anonymous profile keeps its own. `nil` means
+    /// the pilot never chose, which is `.system` — deliberately distinguishable
+    /// from having chosen English, so a device set to a language FocusGlobe
+    /// later finishes translating picks it up without a migration.
+    var languageID: String? = nil
+
+    /// The resolved preference. Reads never have to remember the `nil` rule.
+    var language: AppLanguage {
+        get { AppLanguage.fromStoredID(languageID) }
+        set { languageID = newValue == .system ? nil : newValue.rawValue }
+    }
+
     init() {}
 
     static let `default` = AppSettings()
@@ -61,7 +77,7 @@ struct AppSettings: Codable, Equatable {
         case appearance, soundEnabled, hapticsEnabled, mapStyle
         case startingCity, virtualOrigin, previousOrigin
         case selectedSkinID, selectedJourneyAudioID, premiumIntroSeen
-        case preferredFlightMinutes, weeklyFocusDayGoal
+        case preferredFlightMinutes, weeklyFocusDayGoal, languageID
     }
 
     /// Missing or newly-added preference keys must never reset the rest of a
@@ -81,5 +97,6 @@ struct AppSettings: Codable, Equatable {
         premiumIntroSeen = try c.decodeIfPresent(Bool.self, forKey: .premiumIntroSeen)
         preferredFlightMinutes = try? c.decodeIfPresent(Int.self, forKey: .preferredFlightMinutes)
         weeklyFocusDayGoal = try? c.decodeIfPresent(Int.self, forKey: .weeklyFocusDayGoal)
+        languageID = try? c.decodeIfPresent(String.self, forKey: .languageID)
     }
 }

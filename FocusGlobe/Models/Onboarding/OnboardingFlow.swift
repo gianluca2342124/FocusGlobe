@@ -81,18 +81,6 @@ enum OnboardingSection: Int, CaseIterable, Sendable {
 
     /// Sections that count toward the visible bar (welcome has no bar).
     static var measured: [OnboardingSection] { [.about, .rhythm, .atmosphere, .plan, .offer, .finish] }
-
-    var title: String {
-        switch self {
-        case .welcome:    return ""
-        case .about:      return "About you"
-        case .rhythm:     return "Your rhythm"
-        case .atmosphere: return "Your atmosphere"
-        case .plan:       return "Your plan"
-        case .offer:      return "FocusGlobe PRO"
-        case .finish:     return "Ready"
-        }
-    }
 }
 
 /// A/B assignment, decided once per install and then frozen.

@@ -52,6 +52,9 @@ enum AnalyticsEvent: String {
     case firstFlightCompleted = "first_flight_completed"
     case paywallOpened = "paywall_opened"
     case appearanceChanged = "appearance_changed"
+    /// The app language changed outside onboarding (Settings). Carries the
+    /// language code only — never anything about the pilot.
+    case languageChanged = "language_changed"
     // AdMob / UMP consent
     case admobConsentRequested = "admob_consent_requested"
     case admobConsentReady = "admob_consent_ready"

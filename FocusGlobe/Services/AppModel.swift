@@ -2011,7 +2011,33 @@ final class AppModel: ObservableObject {
         if old.appearance != settings.appearance {
             analytics.log(.appearanceChanged, ["mode": settings.appearance.rawValue])
         }
+        if old.languageID != settings.languageID {
+            analytics.log(.languageChanged, ["language": settings.language.analyticsID,
+                                             "resolved": settings.language.resolved.analyticsID])
+        }
         syncWidgets()
+    }
+
+    // MARK: - Language
+
+    /// The pilot's language choice, which may be `.system`.
+    var language: AppLanguage { settings.language }
+
+    /// The string lookup for anything outside a SwiftUI view (an accessibility
+    /// announcement assembled in a model, a notification body). Views should
+    /// read `\.focusStrings` instead so they re-render on a change.
+    var strings: FocusStrings { FocusStrings(settings.language) }
+
+    /// Change the app language.
+    ///
+    /// Nothing here reloads, relaunches or invalidates a cache: the value flows
+    /// into `AppSettings`, the root re-reads it through the environment, and the
+    /// next frame is in the new language. The widget snapshot carries the code
+    /// so the extension can follow once its own strings are translated.
+    func setLanguage(_ language: AppLanguage) {
+        guard settings.language != language else { return }
+        settings.language = language      // didSet persists, logs and syncs widgets
+        haptics.tap()
     }
 
     // MARK: - Notifications
@@ -2178,6 +2204,7 @@ final class AppModel: ObservableObject {
         snap.badgeUnlockedCount = badges.filter { $0.earned }.count
         snap.badgeTotal = badges.count
 
+        snap.languageCode = settings.language.resolved.languageCode ?? "en"
         snap.updatedAt = Date()
         return snap
     }

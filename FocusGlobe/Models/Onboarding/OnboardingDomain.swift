@@ -7,6 +7,11 @@ import Foundation
 // is what lets the copy be rewritten or translated without silently changing
 // what a stored answer means, and what lets the plan builder be tested.
 //
+// No user-facing words live in this file. Each case maps to a `FocusStringKey`
+// (see FocusStrings.swift) and the words themselves live once, in
+// `FocusStringTable`. Keeping an English `displayName` here as well would mean
+// two places to change a line of copy and only one of them translated.
+//
 // The rule this file exists to enforce: an answer that changes nothing must not
 // be asked. The previous onboarding collected six answers and read exactly one
 // of them — age, year-goal, obstacle and shield intent were written to the
@@ -24,29 +29,6 @@ enum FocusGoal: String, Codable, CaseIterable, Sendable {
     case readLearn
     case reduceScreenTime
     case consistency
-
-    var displayName: String {
-        switch self {
-        case .study:            return "Studying and exams"
-        case .deepWork:         return "Deep work"
-        case .buildProject:     return "Building a project"
-        case .readLearn:        return "Reading and learning"
-        case .reduceScreenTime: return "Reducing screen time"
-        case .consistency:      return "Building daily consistency"
-        }
-    }
-
-    /// Used in the commitment bridge and the plan reveal, in the pilot's own terms.
-    var shortNoun: String {
-        switch self {
-        case .study:            return "studying"
-        case .deepWork:         return "deep work"
-        case .buildProject:     return "building"
-        case .readLearn:        return "reading"
-        case .reduceScreenTime: return "time off your phone"
-        case .consistency:      return "showing up"
-        }
-    }
 
     var systemImage: String {
         switch self {
@@ -71,17 +53,6 @@ enum FocusObstacle: String, Codable, CaseIterable, Sendable {
     case environment
     case unsureDuration
 
-    var displayName: String {
-        switch self {
-        case .distractingApps: return "I reach for distracting apps"
-        case .procrastination: return "I procrastinate starting"
-        case .losingMomentum:  return "I lose momentum"
-        case .overwhelm:       return "I feel overwhelmed"
-        case .environment:     return "My environment distracts me"
-        case .unsureDuration:  return "I don’t know how long to focus"
-        }
-    }
-
     var systemImage: String {
         switch self {
         case .distractingApps: return "hand.tap.fill"
@@ -102,15 +73,6 @@ enum FocusCompany: String, Codable, CaseIterable, Sendable {
     case aroundOthers
     case mixed
 
-    var displayName: String {
-        switch self {
-        case .alone:        return "On my own"
-        case .withFriends:  return "With friends"
-        case .aroundOthers: return "Around other focused people"
-        case .mixed:        return "A mix of both"
-        }
-    }
-
     /// The existing canonical mode type — deliberately not a parallel enum.
     var recommendedMode: OnlineFlightMode {
         switch self {
@@ -118,15 +80,6 @@ enum FocusCompany: String, Codable, CaseIterable, Sendable {
         case .withFriends:  return .privateRoom
         case .aroundOthers: return .publicSky
         case .mixed:        return .publicSky
-        }
-    }
-
-    var modeLabel: String {
-        switch self {
-        case .alone:        return "Solo"
-        case .withFriends:  return "With friends"
-        case .aroundOthers: return "Online"
-        case .mixed:        return "Solo or Online"
         }
     }
 }
@@ -139,15 +92,6 @@ enum FocusCadence: String, Codable, CaseIterable, Sendable {
     case fiveDays
     case everyDay
     case flexible
-
-    var displayName: String {
-        switch self {
-        case .threeDays: return "3 days a week"
-        case .fiveDays:  return "5 days a week"
-        case .everyDay:  return "Every day"
-        case .flexible:  return "Keep it flexible"
-        }
-    }
 
     var weeklyTarget: Int? {
         switch self {
@@ -172,16 +116,6 @@ enum FocusSessionChoice: String, Codable, CaseIterable, Sendable {
     case sixty
     case recommended
 
-    var displayName: String {
-        switch self {
-        case .fifteen:     return "15 min"
-        case .twentyFive:  return "25 min"
-        case .fortyFive:   return "45 min"
-        case .sixty:       return "60 min"
-        case .recommended: return "Choose for me"
-        }
-    }
-
     /// Nil for `.recommended`; the builder resolves it.
     var explicitMinutes: Int? {
         switch self {
@@ -199,13 +133,6 @@ enum FocusSessionChoice: String, Codable, CaseIterable, Sendable {
 enum ShieldIntent: String, Codable, CaseIterable, Sendable {
     case yes
     case later
-
-    var displayName: String {
-        switch self {
-        case .yes:   return "Yes — block selected apps during flights"
-        case .later: return "Maybe later"
-        }
-    }
 }
 
 /// The PRO benefits the bridge and paywall may lead with, ordered per pilot.
@@ -221,30 +148,6 @@ enum ProBenefit: String, Codable, CaseIterable, Sendable {
     case skinsAndItems
     case widgetsAndPassport
     case doubleCoins
-
-    var title: String {
-        switch self {
-        case .focusShield:        return "Focus Shield"
-        case .unlimitedTime:      return "Unlimited focus time"
-        case .onlineAndFriends:   return "Online & Friends"
-        case .exclusiveSkies:     return "Exclusive Skies"
-        case .skinsAndItems:      return "Exclusive skins & Cabin items"
-        case .widgetsAndPassport: return "Widgets & Passport"
-        case .doubleCoins:        return "2× Coins in journeys"
-        }
-    }
-
-    var detail: String {
-        switch self {
-        case .focusShield:        return "Block the apps that pull you away, for the length of a flight."
-        case .unlimitedTime:      return "Fly for as long as the work takes."
-        case .onlineAndFriends:   return "Focus alongside other pilots, or invite your own."
-        case .exclusiveSkies:     return "Four Skies only PRO pilots can fly."
-        case .skinsAndItems:      return "Make the balloon and the Cabin yours."
-        case .widgetsAndPassport: return "Your streak and next flight, one tap from the Home Screen."
-        case .doubleCoins:        return "Every completed journey pays twice as much."
-        }
-    }
 
     var systemImage: String {
         switch self {
