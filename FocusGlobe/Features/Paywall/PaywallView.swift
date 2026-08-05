@@ -1275,13 +1275,29 @@ struct PaywallComparisonTable: View {
     var highlighted: String? = nil
     @Environment(\.focusViewport) private var viewport
 
-    private static let rows: [String] = [
-        "No Ads",
-        "Online & Friends",
-        "Unlimited Time  ∞",
-        "Exclusive Skies",
-        "Exclusive Skins & Items",
-        "2x Coins in trips",
+    /// One canonical benefit list, shared by every paywall that shows this table.
+    ///
+    /// A row now carries its own FREE availability instead of the column being
+    /// hardcoded to a dash. That is what lets the table open with something the
+    /// pilot ALREADY has: a comparison whose free column is empty top to bottom
+    /// reads as a list of things withheld rather than as a comparison.
+    struct Row: Identifiable {
+        let title: String
+        /// Whether the FREE column shows a checkmark rather than a dash.
+        var inFree: Bool = false
+        var id: String { title }
+    }
+
+    static let rows: [Row] = [
+        // The core timer is free, has always been free, and saying so first
+        // costs nothing and makes every row under it more credible.
+        Row(title: "Focus Timer", inFree: true),
+        Row(title: "No Ads"),
+        Row(title: "Online & Friends"),
+        Row(title: "Unlimited Time  ∞"),
+        Row(title: "Exclusive Skies"),
+        Row(title: "Exclusive Skins & Items"),
+        Row(title: "2x Coins in trips"),
     ]
 
     private var freeWidth: CGFloat { viewport.isCompact ? 52 : 66 }
@@ -1301,8 +1317,8 @@ struct PaywallComparisonTable: View {
             }
             .padding(.vertical, 8)
 
-            ForEach(Array(Self.rows.enumerated()), id: \.offset) { index, title in
-                row(title)
+            ForEach(Array(Self.rows.enumerated()), id: \.element.id) { index, item in
+                row(item)
                 if index < Self.rows.count - 1 {
                     HStack(spacing: 0) {
                         Rectangle().fill(.white.opacity(0.09)).frame(height: 1)
@@ -1321,7 +1337,8 @@ struct PaywallComparisonTable: View {
         }
     }
 
-    private func row(_ title: String) -> some View {
+    private func row(_ item: Row) -> some View {
+        let title = item.title
         let isHighlighted = title == highlighted
         return HStack(spacing: 0) {
             Text(title)
@@ -1334,9 +1351,12 @@ struct PaywallComparisonTable: View {
                 .minimumScaleFactor(0.72)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            Image(systemName: "minus")
-                .font(.system(size: 15, weight: .heavy))
-                .foregroundStyle(.white.opacity(0.24))
+            // The same checkmark glyph in both columns when a benefit is genuinely
+            // in both — a different tick for FREE would read as a lesser version
+            // of the feature rather than the same one.
+            Image(systemName: item.inFree ? "checkmark" : "minus")
+                .font(.system(size: item.inFree ? 16 : 15, weight: .heavy))
+                .foregroundStyle(.white.opacity(item.inFree ? 0.78 : 0.24))
                 .frame(width: freeWidth)
 
             Image(systemName: "checkmark")
@@ -1346,6 +1366,6 @@ struct PaywallComparisonTable: View {
         }
         .frame(height: viewport.isCompact ? 39 : 44)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(title). PRO only.")
+        .accessibilityLabel(item.inFree ? "\(title). Free and PRO." : "\(title). PRO only.")
     }
 }

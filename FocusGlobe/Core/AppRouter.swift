@@ -415,7 +415,10 @@ enum PaywallContext: Equatable {
         case .online, .invite:       return "Online & Friends"
         case .infinite:              return "Unlimited Time  ∞"
         case .sky:                   return "Exclusive Skies"
-        case .balloonSkin:           return "Exclusive Balloon Skins"
+        // The skins and cabin-items rows were merged into one benefit; this
+        // still pointed at the retired title, so opening the paywall from a
+        // premium balloon highlighted nothing at all.
+        case .balloonSkin:           return "Exclusive Skins & Items"
         case .noAds:                return "No Ads"
         // Cabin now has a curated premium item set, so the interior entry points
         // to the combined skins-and-items benefit row.
