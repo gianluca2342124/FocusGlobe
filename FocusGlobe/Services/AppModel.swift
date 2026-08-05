@@ -1055,6 +1055,11 @@ final class AppModel: ObservableObject {
         // The pilot's stated intent, which the Shield warm-up reads. Not an
         // authorization, and not a shield.
         p.focusShieldOptIn = plan.recommendsFocusShield
+        // Online presence publishes this as the flight category. It used to come
+        // from a free-text onboarding question; it now comes from the goal, so
+        // the field keeps carrying a real preset title instead of silently
+        // becoming "Focus" for every pilot.
+        p.focusStyle = plan.primaryGoal.presetTitle
         profile = p
 
         var s = settings
@@ -1078,26 +1083,47 @@ final class AppModel: ObservableObject {
 
     /// Save an in-progress answer set and the step the pilot is on, so a
     /// force-quit resumes exactly there.
-    func saveOnboardingProgress(answers: OnboardingAnswers, stepID: String) {
+    func saveOnboardingProgress(answers: OnboardingAnswers,
+                                stepID: String,
+                                variantID: String) {
         var p = profile
         p.onboardingAnswers = answers
         p.onboardingStepID = stepID
+        // Written on the first save and never re-rolled. An assignment that
+        // changes between launches attributes a pilot's behaviour to whichever
+        // arm happened to render, which is noise wearing the shape of data.
+        if p.onboardingVariantID == nil { p.onboardingVariantID = variantID }
         profile = p
         persistAll()
     }
 
-    func completeOnboarding(name: String?, yearGoal: String?, ageRange: String?,
-                            struggle: String?, focusStyle: String?, shieldOptIn: Bool) {
+    /// Finish the first run.
+    ///
+    /// Takes the ANSWERS, not six loose strings. The previous signature carried
+    /// a name, a year goal, an age band and a free-text struggle — four values
+    /// that were written to the profile and then read by nothing at all. Every
+    /// field here is either applied to a real setting by `applyOnboardingPlan`
+    /// or kept so the plan can be re-rendered later.
+    func completeOnboarding(answers: OnboardingAnswers, plan: OnboardingFocusPlan?) {
         var p = profile
-        p.name = name?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? name : nil
-        p.yearGoal = yearGoal?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? yearGoal : nil
-        p.ageRange = ageRange
-        p.focusStruggle = struggle
-        p.focusStyle = focusStyle
-        p.focusShieldOptIn = shieldOptIn
+        p.onboardingAnswers = answers
+        if let plan {
+            p.onboardingPlan = plan
+            p.focusShieldOptIn = plan.recommendsFocusShield
+        }
+        // Nil, not the last step: a completed onboarding has no position to
+        // resume, and leaving one behind is how a finished pilot gets dropped
+        // back into a question after a reinstall-and-restore.
+        p.onboardingStepID = nil
         p.createdAt = p.createdAt ?? Date()
         p.hasCompletedOnboarding = true
         profile = p
+        analytics.log(.onboardingCompleted, [
+            "variant": p.onboardingVariantID ?? OnboardingVariant.productionDefault.rawValue,
+            "minutes": plan?.recommendedDurationMinutes ?? -1,
+            "pro": isPro,
+        ])
+        persistAll()
     }
 
     /// Whether the manual starting-city picker should be offered. It appears only

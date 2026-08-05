@@ -30,6 +30,24 @@ enum FocusGoal: String, Codable, CaseIterable, Sendable {
     case reduceScreenTime
     case consistency
 
+    /// The existing `FocusPreset` title this goal maps to.
+    ///
+    /// Stable English, not display copy: it is what Online presence publishes as
+    /// a pilot's flight category, and the previous onboarding fed that field
+    /// from a free-text question the new flow no longer asks. Mapping to a real
+    /// preset keeps the Online contract exactly as it was rather than quietly
+    /// letting every pilot fall back to "Focus".
+    var presetTitle: String {
+        switch self {
+        case .study:            return "Study"
+        case .deepWork:         return "Work"
+        case .buildProject:     return "Create"
+        case .readLearn:        return "Read"
+        case .reduceScreenTime: return "Reflect"
+        case .consistency:      return "Fly"
+        }
+    }
+
     var systemImage: String {
         switch self {
         case .study:            return "book.closed.fill"

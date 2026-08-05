@@ -10,14 +10,12 @@ enum OnboardingStepID: String, Codable, CaseIterable, Sendable {
     case welcome
     case primaryGoal
     case focusObstacle
-    case commitmentBridge
     case sessionLength
     case weeklyFrequency
     case focusStyle
     case shieldPreference
     case skySelection
     case soundSelection
-    case planGeneration
     case planReveal
     case flightPreview
     case proBridge
@@ -32,13 +30,13 @@ enum OnboardingStepID: String, Codable, CaseIterable, Sendable {
         switch self {
         case .welcome:
             return .welcome
-        case .primaryGoal, .focusObstacle, .commitmentBridge:
+        case .primaryGoal, .focusObstacle:
             return .about
         case .sessionLength, .weeklyFrequency, .focusStyle, .shieldPreference:
             return .rhythm
         case .skySelection, .soundSelection:
             return .atmosphere
-        case .planGeneration, .planReveal, .flightPreview:
+        case .planReveal, .flightPreview:
             return .plan
         case .proBridge, .paywall:
             return .offer
@@ -57,11 +55,17 @@ enum OnboardingStepID: String, Codable, CaseIterable, Sendable {
         }
     }
 
+    /// Position in the canonical declaration order. Used to find the nearest
+    /// still-reachable step when the flow changes underneath a pilot — buying
+    /// PRO mid-onboarding removes `.paywall` from the flow while they are
+    /// standing on it.
+    var ordinal: Int { OnboardingStepID.allCases.firstIndex(of: self) ?? 0 }
+
     var showsBack: Bool {
         switch self {
         // Never back out of a purchase screen into the plan, and never back
         // out of an arrival.
-        case .welcome, .planGeneration, .paywall, .completion: return false
+        case .welcome, .planReveal, .paywall, .completion: return false
         default: return true
         }
     }
@@ -114,17 +118,27 @@ struct OnboardingFlow: Equatable, Sendable {
     /// step drops out of the flow entirely rather than being rendered and
     /// skipped.
     let isPro: Bool
+    /// Whether Screen Time blocking is usable on this device at all. A warm-up
+    /// for a permission the build cannot honour is worse than no warm-up: it
+    /// spends a screen and a system prompt on a feature that will not appear.
+    let shieldAvailable: Bool
+
+    /// The most app-controlled screens any branch may reach, welcome and paywall
+    /// included. System permission dialogs are not app-controlled and are not
+    /// counted; the warm-up screens that precede them are.
+    static let maximumVisibleSteps = 15
 
     var steps: [OnboardingStepID] {
         var s: [OnboardingStepID] = [
-            .welcome, .primaryGoal, .focusObstacle, .commitmentBridge,
-            .sessionLength, .weeklyFrequency, .focusStyle, .shieldPreference,
-            .skySelection, .soundSelection, .planGeneration, .planReveal,
+            .welcome, .primaryGoal, .focusObstacle, .sessionLength,
+            .weeklyFrequency, .focusStyle, .shieldPreference,
+            .skySelection, .soundSelection, .planReveal,
         ]
-        // The concise arm drops the two screens that shape the plan least and
-        // the interactive preview, going from reveal straight to the offer.
+        // The concise arm drops the two questions the plan can survive without
+        // — company (which only reorders benefits) and soundscape (which has a
+        // good default) — plus the interactive preview.
         if variant == .concisePersonalized {
-            s.removeAll { $0 == .weeklyFrequency || $0 == .commitmentBridge }
+            s.removeAll { $0 == .focusStyle || $0 == .soundSelection }
         } else {
             s.append(.flightPreview)
         }
@@ -143,7 +157,7 @@ struct OnboardingFlow: Equatable, Sendable {
         // about reminders; someone who never mentioned apps is not asked for
         // Screen Time.
         if answers.cadence?.suggestsReminders == true { s.append(.notificationWarmup) }
-        if wantsShield { s.append(.shieldWarmup) }
+        if shieldAvailable && wantsShield { s.append(.shieldWarmup) }
         // Sign in with Apple is NOT its own step. It is an optional offer, not
         // a permission and not a gate, and giving it a full screen both pads
         // the flow and implies it is required. It lives on the completion
@@ -169,13 +183,25 @@ struct OnboardingFlow: Equatable, Sendable {
         return steps[i - 1]
     }
 
+    /// The next step to show, even when `step` is no longer part of the flow.
+    ///
+    /// This is the case a plain `next(after:)` cannot handle: a pilot standing
+    /// on the paywall buys PRO, the paywall leaves the flow, and asking "what
+    /// follows the paywall" has no answer. Falling back to declaration order
+    /// lands them on the following warm-up instead of at the welcome screen.
+    func nextReachable(after step: OnboardingStepID) -> OnboardingStepID? {
+        if let next = next(after: step) { return next }
+        guard index(of: step) == nil else { return nil }
+        return steps.first { $0.ordinal > step.ordinal }
+    }
+
     /// A resumed step may no longer exist in the flow — the pilot could have
     /// bought PRO in another session, or answers may have changed the branch.
     /// Fall back to the nearest still-valid step rather than a blank screen.
     func resolvedResume(_ stored: OnboardingStepID?) -> OnboardingStepID {
         guard let stored else { return .welcome }
         if steps.contains(stored) { return stored }
-        return .welcome
+        return steps.first { $0.ordinal >= stored.ordinal } ?? .welcome
     }
 
     /// Progress as completed SECTIONS, so skipping a screen inside a section
@@ -204,7 +230,7 @@ struct OnboardingFlow: Equatable, Sendable {
         let cadences = FocusCadence.allCases
         let intents: [ShieldIntent?] = [nil, .yes, .later]
         for variant in OnboardingVariant.allCases {
-            for isPro in [false, true] {
+            for (isPro, shieldAvailable) in [(false, false), (false, true), (true, false), (true, true)] {
                 for goal in goals {
                     for obstacle in obstacles {
                         for cadence in cadences {
@@ -212,7 +238,9 @@ struct OnboardingFlow: Equatable, Sendable {
                                 var a = OnboardingAnswers()
                                 a.goal = goal; a.obstacle = obstacle
                                 a.cadence = cadence; a.shieldIntent = intent
-                                let flow = OnboardingFlow(variant: variant, answers: a, isPro: isPro)
+                                let flow = OnboardingFlow(variant: variant, answers: a,
+                                                          isPro: isPro,
+                                                          shieldAvailable: shieldAvailable)
                                 let s = flow.steps
                                 if Set(s).count != s.count { return "duplicate step in \(variant)/\(isPro)" }
                                 if s.first != .welcome { return "flow must start at welcome" }
@@ -221,8 +249,27 @@ struct OnboardingFlow: Equatable, Sendable {
                                     return "PRO pilot was offered a paywall or bridge"
                                 }
                                 if !isPro && !s.contains(.paywall) { return "free pilot never sees the offer" }
+                                // The hard ceiling. Fifteen app-controlled
+                                // screens is a product decision, not a
+                                // guideline, and it is exactly the kind of
+                                // thing that regresses one innocuous screen at
+                                // a time — so it is asserted rather than
+                                // remembered.
+                                if s.count > OnboardingFlow.maximumVisibleSteps {
+                                    return "\(variant) reached \(s.count) screens (max \(OnboardingFlow.maximumVisibleSteps))"
+                                }
                                 if cadence == .flexible && s.contains(.notificationWarmup) {
                                     return "flexible cadence must not ask about reminders"
+                                }
+                                if !shieldAvailable && s.contains(.shieldWarmup) {
+                                    return "Shield warm-up offered where Screen Time is unavailable"
+                                }
+                                // Every step must be reachable forwards from the
+                                // one before it, and resuming onto any step must
+                                // land somewhere that exists.
+                                for step in OnboardingStepID.allCases {
+                                    let resumed = flow.resolvedResume(step)
+                                    if !s.contains(resumed) { return "resume from \(step) landed outside the flow" }
                                 }
                                 // Progress must be monotonic across the flow.
                                 var last = -1.0
