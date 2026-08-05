@@ -1,5 +1,25 @@
 import SwiftUI
 
+/// Dynamic Type for the onboarding.
+///
+/// The rest of FocusGlobe sizes its type with fixed points through
+/// `AppTypography`, which does not respond to Larger Text at all. Converting
+/// the whole app is a separate piece of work; the first run cannot wait for it,
+/// because a pilot who needs bigger text needs it most on the screens that
+/// decide whether they stay.
+///
+/// `@ScaledMetric` gives these screens real Dynamic Type. Titles are clamped
+/// more tightly than body copy on purpose: an unclamped 34 pt heading at the
+/// largest accessibility size pushes the answers themselves off screen, which
+/// helps nobody.
+enum OnboardingType {
+    static let titleCeiling: CGFloat = 1.45
+    static let bodyCeiling: CGFloat = 1.9
+    static func clamp(_ scale: CGFloat, _ ceiling: CGFloat) -> CGFloat {
+        min(max(scale, 1), ceiling)
+    }
+}
+
 // ============================================================================
 // The pieces every onboarding screen is built from.
 //
@@ -141,6 +161,7 @@ struct OnboardingScaffold<Content: View, Footer: View>: View {
     @ViewBuilder var footer: () -> Footer
 
     @Environment(\.focusViewport) private var viewport
+    @ScaledMetric(relativeTo: .body) private var typeScale: CGFloat = 1
 
     var body: some View {
         VStack(spacing: 0) {
@@ -155,7 +176,8 @@ struct OnboardingScaffold<Content: View, Footer: View>: View {
                                 .padding(.bottom, 2)
                         }
                         Text(title)
-                            .font(.system(size: viewport.isShort ? viewport.titleSize * 0.86 : viewport.titleSize,
+                            .font(.system(size: (viewport.isShort ? viewport.titleSize * 0.86 : viewport.titleSize)
+                                          * OnboardingType.clamp(typeScale, OnboardingType.titleCeiling),
                                           weight: .bold, design: .default))
                             .foregroundStyle(.white)
                             .fixedSize(horizontal: false, vertical: true)
@@ -227,6 +249,7 @@ struct OnboardingOptionRow: View {
     let action: () -> Void
 
     @Environment(\.focusViewport) private var viewport
+    @ScaledMetric(relativeTo: .body) private var typeScale: CGFloat = 1
 
     var body: some View {
         Button(action: action) {
@@ -238,7 +261,9 @@ struct OnboardingOptionRow: View {
                         .frame(width: 26)
                 }
                 Text(title)
-                    .font(.system(size: viewport.bodySize, weight: .semibold, design: .default))
+                    .font(.system(size: viewport.bodySize
+                                  * OnboardingType.clamp(typeScale, OnboardingType.bodyCeiling),
+                                  weight: .semibold, design: .default))
                     .foregroundStyle(isSelected ? Color(hex: 0x14120E) : .white)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
@@ -256,7 +281,9 @@ struct OnboardingOptionRow: View {
             }
             .padding(.horizontal, AppSpacing.md)
             .padding(.vertical, 15)
-            .frame(minHeight: 56)
+            // Grows with the text rather than clipping it: the row's height is a
+            // FLOOR, never a fixed size.
+            .frame(minHeight: 56 * OnboardingType.clamp(typeScale, OnboardingType.bodyCeiling))
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(isSelected ? Color(hex: 0xF4EFE4) : Color.white.opacity(0.08)))
@@ -280,11 +307,14 @@ struct OnboardingCompactOption: View {
     let isSelected: Bool
     let action: () -> Void
 
+    @ScaledMetric(relativeTo: .body) private var typeScale: CGFloat = 1
+
     var body: some View {
         Button(action: action) {
             VStack(spacing: 3) {
                 Text(title)
-                    .font(.system(size: 17, weight: .semibold, design: .default))
+                    .font(.system(size: 17 * OnboardingType.clamp(typeScale, OnboardingType.bodyCeiling),
+                                  weight: .semibold, design: .default))
                     .foregroundStyle(isSelected ? Color(hex: 0x14120E) : .white)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
@@ -299,7 +329,7 @@ struct OnboardingCompactOption: View {
             .padding(.horizontal, AppSpacing.xs)
             .padding(.vertical, 12)
             .frame(maxWidth: .infinity)
-            .frame(minHeight: 56)
+            .frame(minHeight: 56 * OnboardingType.clamp(typeScale, OnboardingType.bodyCeiling))
             .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(isSelected ? Color(hex: 0xF4EFE4) : Color.white.opacity(0.08)))
             .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)

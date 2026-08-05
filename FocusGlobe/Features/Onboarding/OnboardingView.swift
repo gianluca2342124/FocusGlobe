@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// FocusGlobe's first run.
 ///
@@ -273,6 +276,7 @@ struct OnboardingView: View {
 
     private func move(to next: OnboardingStepID) {
         withAnimation(reduceMotion ? nil : AppMotion.soft) { step = next }
+        announce(next)
         // Persisted on every move, which is what makes the flow resumable: the
         // previous onboarding kept its position in `@State` alone, so a
         // force-quit discarded every answer.
@@ -281,6 +285,20 @@ struct OnboardingView: View {
                                         variantID: variant.rawValue)
         appModel.analytics.log(.onboardingStepViewed,
                                ["step": next.rawValue, "variant": variant.rawValue])
+    }
+
+    /// Tell VoiceOver the screen changed.
+    ///
+    /// A SwiftUI transition is invisible to assistive technology: without this,
+    /// focus stays wherever the previous screen's Continue button was and the
+    /// pilot hears nothing about the question they are now on. `.screenChanged`
+    /// (rather than an announcement) also moves focus to the top of the new
+    /// screen, which is where the question is.
+    private func announce(_ step: OnboardingStepID) {
+        guard let key = step.section.titleKey else { return }
+        #if canImport(UIKit)
+        UIAccessibility.post(notification: .screenChanged, argument: strings(key))
+        #endif
     }
 
     // MARK: - Plan
