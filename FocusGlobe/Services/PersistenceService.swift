@@ -538,6 +538,31 @@ final class PersistenceService {
                 return "Account B was not restored after switching"
             }
 
+            // A Daily Gift is a cross-domain economy transaction: the local-day
+            // claim marker and the wallet credit must survive together. An
+            // account that claimed today must stay ineligible after an update,
+            // while another account keeps an independent marker and balance.
+            service.activateAccount("user-a")
+            accountA.totalFocusMiles = 121
+            var accountAProfile = UserProfile.empty
+            accountAProfile.lastDailyGiftDay = 7_500
+            service.saveCanonicalState(settings: .default,
+                                       progress: accountA,
+                                       history: [],
+                                       profile: accountAProfile,
+                                       resumableJourney: nil)
+            let relaunchedA = PersistenceService(defaults: testDefaults, rootURL: testRoot)
+            relaunchedA.activateAccount("user-a")
+            guard relaunchedA.load(UserProgress.self, for: .progress)?.totalFocusMiles == 121,
+                  relaunchedA.load(UserProfile.self, for: .profile)?.lastDailyGiftDay == 7_500 else {
+                return "Daily Gift credit and claim marker did not relaunch atomically"
+            }
+            relaunchedA.activateAccount("user-b")
+            guard relaunchedA.load(UserProgress.self, for: .progress)?.totalFocusMiles == 222,
+                  relaunchedA.load(UserProfile.self, for: .profile)?.lastDailyGiftDay != 7_500 else {
+                return "Daily Gift claim state leaked between accounts"
+            }
+
             // Force two revisions, corrupt the primary, and verify recovery from
             // the immediately preceding valid snapshot rather than resetting.
             service.activateAccount("user-a")

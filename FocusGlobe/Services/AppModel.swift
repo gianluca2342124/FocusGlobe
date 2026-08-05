@@ -558,32 +558,64 @@ final class AppModel: ObservableObject {
 
     // MARK: - Daily gift (Shop)
 
-    static let dailyGiftCoins = 5
+    static let dailyGiftCoins = 10
 
     private var todayDayOrdinal: Int {
         Calendar.current.ordinality(of: .day, in: .era, for: Date()) ?? 0
     }
 
     /// True at most once per calendar day, until the gift is collected.
-    var canClaimDailyGift: Bool { profile.lastDailyGiftDay != todayDayOrdinal }
+    var canClaimDailyGift: Bool {
+        Self.canClaimDailyGift(lastClaimedDay: profile.lastDailyGiftDay,
+                               today: todayDayOrdinal)
+    }
 
-    /// Collect the daily gift: +5 Focus Coins, once per day. Returns the amount
+    /// Kept pure so the once-per-local-day rule and update behavior can be
+    /// regression-tested without mutating a real pilot's profile.
+    private static func canClaimDailyGift(lastClaimedDay: Int?, today: Int) -> Bool {
+        lastClaimedDay != today
+    }
+
+    /// Collect the daily gift: +10 Coins, once per day. Returns the amount
     /// granted (0 if already claimed today). Premium pilots receive it too.
     @discardableResult
     func claimDailyGift() -> Int {
         guard canClaimDailyGift else { return 0 }
-        profile.lastDailyGiftDay = todayDayOrdinal
-        var p = progress
-        p.totalFocusMiles += Self.dailyGiftCoins
-        progress = p
-        recordCoinEarnings(Self.dailyGiftCoins)
-        recordNewBadgeUnlocks()
-        persistAll()
+        let claimedDay = todayDayOrdinal
+        performPersistedTransaction {
+            profile.lastDailyGiftDay = claimedDay
+            var p = progress
+            p.totalFocusMiles += Self.dailyGiftCoins
+            progress = p
+            recordCoinEarnings(Self.dailyGiftCoins)
+            recordNewBadgeUnlocks()
+        }
         haptics.rewardClaim()
         uiSound.play(.claim)
         analytics.log(.rewardClaimed, ["source": "daily_gift", "miles": Self.dailyGiftCoins])
         return Self.dailyGiftCoins
     }
+
+    #if DEBUG
+    /// Pure policy checks for the economy change. Durable transaction and
+    /// account-isolation coverage lives in `PersistenceService._selfCheck()`.
+    static func _dailyGiftSelfCheck() -> String? {
+        guard dailyGiftCoins == 10 else { return "Daily Gift is not exactly 10 Coins" }
+        guard canClaimDailyGift(lastClaimedDay: nil, today: 7_500) else {
+            return "A never-claimed Daily Gift was not eligible"
+        }
+        guard !canClaimDailyGift(lastClaimedDay: 7_500, today: 7_500) else {
+            return "An already-claimed local day became eligible again"
+        }
+        guard canClaimDailyGift(lastClaimedDay: 7_500, today: 7_501) else {
+            return "The next local day did not become eligible"
+        }
+        guard 42 + dailyGiftCoins == 52 else {
+            return "Daily Gift balance delta was not exactly 10"
+        }
+        return nil
+    }
+    #endif
 
     // MARK: - Free Coin Spin (rewarded) & Coins Boost
 

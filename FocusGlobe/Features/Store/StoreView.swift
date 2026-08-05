@@ -1045,7 +1045,7 @@ struct DailyGiftSheet: View {
                     .multilineTextAlignment(.center)
                 HStack(spacing: 9) {
                     FocusCoinIcon(size: viewport.isWide ? 34 : 28)
-                    Text("+\(AppModel.dailyGiftCoins) Focus Coins")
+                    Text("+\(AppModel.dailyGiftCoins) Coins")
                         .font(.system(size: viewport.isWide ? 25 : 21,
                                       weight: .heavy, design: .default))
                         .foregroundStyle(AppColors.gold)
