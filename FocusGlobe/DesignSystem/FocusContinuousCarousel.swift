@@ -5,7 +5,9 @@ import SwiftUI
 /// Each item is rendered once. Its position is wrapped mathematically, so the
 /// conveyor can run forever without duplicated view trees, sentinel indexes or
 /// visible resets. Automatic motion fully yields while the pilot drags and
-/// resumes after a short pause without snapping away the drag's momentum.
+/// resumes the instant the finger lifts, from the exact position the flick
+/// landed on — there is no waiting period, because a carousel that freezes for
+/// a second and a half after every touch reads as broken rather than as polite.
 ///
 /// ## Why the motion is derived, not stated
 ///
@@ -38,9 +40,12 @@ struct FocusContinuousCarousel<Item: Identifiable, Card: View>: View {
     /// Points per second — THE shared cadence. Call sites inherit this rather
     /// than restating it, so the paywalls cannot drift apart; only onboarding
     /// overrides it, deliberately calmer for a first-run surface.
-    var speed: CGFloat = 42
-    /// How long the conveyor stays still after a drag ends.
-    var resumeDelay: TimeInterval = 1.6
+    ///
+    /// 53 pt/s, up from 42 (+26%). At 42 the reel read as drifting rather than
+    /// presenting: a pilot who glanced at the page saw roughly one card change.
+    /// Raising it here rather than per-paywall is the point of the value living
+    /// on the component — five surfaces move together and cannot drift apart.
+    var speed: CGFloat = 53
     @ViewBuilder let card: (Item, Double) -> Card
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -55,7 +60,6 @@ struct FocusContinuousCarousel<Item: Identifiable, Card: View>: View {
     @State private var heldDistance: CGFloat?
     @State private var dragTranslation: CGFloat = 0
     @State private var isDragging = false
-    @State private var resumeTask: Task<Void, Never>?
 
     var body: some View {
         GeometryReader { geometry in
@@ -98,10 +102,9 @@ struct FocusContinuousCarousel<Item: Identifiable, Card: View>: View {
         .clipped()
         .onAppear { selectedIndex = normalized(selectedIndex) }
         .onDisappear {
-            // The clock dies with the view; this only stops the pending resume so
-            // no task outlives the paywall.
-            resumeTask?.cancel()
-            resumeTask = nil
+            // The clock dies with the view, so nothing keeps running after the
+            // paywall closes. There is no pending task to cancel any more —
+            // clearing the drag state is all that is left.
             isDragging = false
             dragTranslation = 0
         }
@@ -122,8 +125,6 @@ struct FocusContinuousCarousel<Item: Identifiable, Card: View>: View {
                     freezeAutomaticMotion(at: Date())
                     isDragging = true
                 }
-                resumeTask?.cancel()
-                resumeTask = nil
                 dragTranslation = value.translation.width
             }
             .onEnded { value in
@@ -134,11 +135,19 @@ struct FocusContinuousCarousel<Item: Identifiable, Card: View>: View {
                     + Double(held - projected) / Double(step)
                 let nearest = globalIndex.rounded()
 
+                // Fold the drag into the base offset and hand control straight
+                // back to the clock. `bankedDistance` becomes the residual
+                // relative to the newly selected card and the origin is restamped
+                // to NOW, so at the first automatic frame elapsed is zero and the
+                // conveyor is at precisely the position the flick landed on.
+                // Nothing snaps back, nothing jumps forward, and there is no
+                // interval during which the pilot's touch has stopped the page.
                 selectedIndex = normalized(Int(nearest))
-                heldDistance = CGFloat(globalIndex - nearest) * step
+                bankedDistance = CGFloat(globalIndex - nearest) * step
+                heldDistance = nil
+                motionOrigin = Date()
                 dragTranslation = 0
                 isDragging = false
-                scheduleAutomaticResume()
             }
     }
 
@@ -156,29 +165,16 @@ struct FocusContinuousCarousel<Item: Identifiable, Card: View>: View {
         heldDistance = automaticDistance(at: date)
     }
 
-    private func scheduleAutomaticResume() {
-        guard !reduceMotion else { return }
-        resumeTask?.cancel()
-        resumeTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: UInt64(resumeDelay * 1_000_000_000))
-            guard !Task.isCancelled, !isDragging, !reduceMotion else { return }
-            // Bank what was held and restart the clock from now, so motion picks
-            // up exactly where it stopped instead of jumping.
-            bankedDistance = heldDistance ?? bankedDistance
-            heldDistance = nil
-            motionOrigin = Date()
-        }
-    }
-
+    /// VoiceOver's adjustable action. Centres the requested card and lets the
+    /// clock carry on from there — deliberately NOT frozen, so the reel behaves
+    /// the same way whether it was moved by a finger or by assistive technology.
     private func moveSelection(by delta: Int) {
         guard items.count > 1 else { return }
-        resumeTask?.cancel()
-        resumeTask = nil
         selectedIndex = normalized(selectedIndex + delta)
         bankedDistance = 0
-        heldDistance = 0
+        heldDistance = nil
         dragTranslation = 0
-        scheduleAutomaticResume()
+        motionOrigin = Date()
     }
 
     /// Prominence handed to the CARD BUILDER is stepped; the engine keeps the

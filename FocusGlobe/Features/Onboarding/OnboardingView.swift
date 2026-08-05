@@ -834,10 +834,11 @@ struct OnboardingView: View {
             maximumCardWidth: 210,
             cardWidthFraction: 0.54,
             minimumCardWidth: 140,
-            // Deliberately below the shared 42: this is a first-run surface and
+            // Deliberately below the shared 53: this is a first-run surface and
             // the only carousel that mixes landscape Skies with balloons, so it
-            // stays a touch calmer. Still +25% on its previous 28.
-            speed: 35
+            // stays a touch calmer. Raised with the shared cadence (35 to 44,
+            // +26%) so it keeps exactly the same relationship to it.
+            speed: 44
         ) { preview, prominence in
             premiumPreviewCard(preview, prominence: prominence)
         }
