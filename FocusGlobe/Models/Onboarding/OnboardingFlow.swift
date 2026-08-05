@@ -18,7 +18,6 @@ enum OnboardingStepID: String, Codable, CaseIterable, Sendable {
     case soundSelection
     case planReveal
     case flightPreview
-    case proBridge
     case paywall
     case notificationWarmup
     case shieldWarmup
@@ -38,7 +37,7 @@ enum OnboardingStepID: String, Codable, CaseIterable, Sendable {
             return .atmosphere
         case .planReveal, .flightPreview:
             return .plan
-        case .proBridge, .paywall:
+        case .paywall:
             return .offer
         case .notificationWarmup, .shieldWarmup, .completion:
             return .finish
@@ -103,6 +102,25 @@ enum OnboardingVariant: String, Codable, CaseIterable, Sendable {
     case concisePersonalized
 
     static let productionDefault: OnboardingVariant = .personalizedPreview
+
+    /// Share of new installs routed to the concise arm.
+    ///
+    /// Zero today: the experiment is BUILT, not running. Shipping a live split
+    /// before the funnel has produced a single clean baseline would compare two
+    /// arms against nothing. Raising this number is the whole change needed to
+    /// start it — there is no other switch, and no release required beyond this
+    /// constant.
+    static let concisePersonalizedRollout: Double = 0
+
+    /// Roll an assignment for a NEW install, once.
+    ///
+    /// Called only when the profile holds no assignment; the result is persisted
+    /// immediately and never re-rolled. Random-per-launch assignment is worse
+    /// than no experiment: it attributes a pilot's behaviour to whichever arm
+    /// happened to render, which is noise wearing the shape of data.
+    static func assignForNewInstall(draw: Double = Double.random(in: 0..<1)) -> OnboardingVariant {
+        draw < concisePersonalizedRollout ? .concisePersonalized : productionDefault
+    }
 }
 
 /// The ordered flow, derived from the answers so far.
@@ -142,15 +160,13 @@ struct OnboardingFlow: Equatable, Sendable {
         } else {
             s.append(.flightPreview)
         }
-        // An active PRO pilot sees no bridge and no paywall. Not hidden behind
-        // a guard inside those views — absent from the flow.
-        // The personalized three-benefit bridge is NOT a separate screen. The
-        // brief allows merging it where that is cleaner, and it is: the paywall
-        // already owns a hero area, so leading it with the pilot's own top three
-        // benefits is one screen doing one job instead of a tap-through that
-        // says something the next screen repeats. `.proBridge` stays in the
-        // enum so experiment D (personalized bridge vs generic) can split it
-        // back out without a model change.
+        // An active PRO pilot sees no paywall. Not hidden behind a guard inside
+        // the view — absent from the flow.
+        //
+        // There is no separate PRO bridge screen. The personalized three-benefit
+        // pitch lives at the top of the paywall itself, which already owns a
+        // hero area: one screen doing one job, rather than a tap-through that
+        // says something the next screen immediately repeats.
         if !isPro { s.append(.paywall) }
         // Permission warm-ups appear only when the pilot's own answers make
         // them relevant. Someone who chose "keep it flexible" is not asked
@@ -245,8 +261,8 @@ struct OnboardingFlow: Equatable, Sendable {
                                 if Set(s).count != s.count { return "duplicate step in \(variant)/\(isPro)" }
                                 if s.first != .welcome { return "flow must start at welcome" }
                                 if s.last != .completion { return "flow must end at completion" }
-                                if isPro && (s.contains(.paywall) || s.contains(.proBridge)) {
-                                    return "PRO pilot was offered a paywall or bridge"
+                                if isPro && s.contains(.paywall) {
+                                    return "PRO pilot was offered a paywall"
                                 }
                                 if !isPro && !s.contains(.paywall) { return "free pilot never sees the offer" }
                                 // The hard ceiling. Fifteen app-controlled

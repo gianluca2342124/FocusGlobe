@@ -37,7 +37,6 @@ enum AnalyticsEvent: String {
     case onboardingPlanRevealed = "onboarding_plan_revealed"
     case onboardingPreviewStarted = "onboarding_preview_started"
     case onboardingPreviewCompleted = "onboarding_preview_completed"
-    case onboardingProBridgeViewed = "onboarding_pro_bridge_viewed"
     case onboardingPaywallViewed = "onboarding_paywall_viewed"
     case onboardingPlanSelected = "onboarding_plan_selected"
     case onboardingTrialStarted = "onboarding_trial_started"

@@ -27,6 +27,10 @@ struct OnboardingPlanRevealStep: View {
     let skyName: String
     let soundName: String?
     let onContinue: () -> Void
+    /// Fired when the finished card actually appears — not when the step is
+    /// entered. The gap between the two is the checklist, and counting a reveal
+    /// that a pilot backgrounded through would overstate the funnel.
+    var onRevealed: () -> Void = {}
 
     @Environment(\.focusStrings) private var strings
     @Environment(\.focusViewport) private var viewport
@@ -59,6 +63,7 @@ struct OnboardingPlanRevealStep: View {
         guard !reduceMotion else {
             completedLines = checklist.count
             showsPlan = true
+            onRevealed()
             return
         }
         for index in checklist.indices {
@@ -69,6 +74,7 @@ struct OnboardingPlanRevealStep: View {
         try? await Task.sleep(nanoseconds: 120_000_000)
         guard !Task.isCancelled else { return }
         showsPlan = true
+        onRevealed()
     }
 
     // MARK: Preparation
@@ -178,6 +184,7 @@ struct OnboardingPlanRevealStep: View {
 struct OnboardingFlightPreviewStep: View {
     let sky: FocusSky
     let onContinue: () -> Void
+    var onStarted: () -> Void = {}
 
     @Environment(\.focusStrings) private var strings
     @Environment(\.focusViewport) private var viewport
@@ -233,7 +240,7 @@ struct OnboardingFlightPreviewStep: View {
         .padding(.bottom, viewport.isShort ? AppSpacing.md : AppSpacing.lg)
         .frame(maxWidth: viewport.readableContentWidth)
         .frame(maxWidth: .infinity)
-        .onAppear { startedAt = Date() }
+        .onAppear { startedAt = Date(); onStarted() }
     }
 
     private func stage(progress t: Double) -> some View {

@@ -108,6 +108,19 @@ struct PaywallView: View {
             if context.isOnboardingOffer && personalization == nil { page = .trial }
         }
         .onChange(of: subs.plans) { _, _ in syncSelection() }
+        .onChange(of: selectedKind) { _, kind in
+            guard let personalization else { return }
+            var properties = personalization.analyticsProperties
+            properties["plan"] = kind.rawValue
+            appModel.analytics.log(.onboardingPlanSelected, properties)
+        }
+        .onDisappear {
+            // Only a pilot who left WITHOUT buying is a dismissal. A purchase
+            // dismisses this screen too, and counting that as a dismissal would
+            // make the funnel's biggest success look like its biggest drop-off.
+            guard let personalization, appModel.entitlement != .premium else { return }
+            appModel.analytics.log(.onboardingPaywallDismissed, personalization.analyticsProperties)
+        }
         .onChange(of: appModel.entitlement) { _, access in
             if access != .free { dismiss() }
         }
@@ -665,6 +678,16 @@ struct PaywallView: View {
 
     private func purchase() {
         guard page == .trial, let kind = effectiveKind else { return }
+        if let personalization {
+            var properties = personalization.analyticsProperties
+            properties["plan"] = kind.rawValue
+            // A trial start and a paid purchase are different funnel outcomes,
+            // and reporting one as the other is the fastest way to a conversion
+            // number that cannot be reconciled with revenue.
+            appModel.analytics.log(showsTrialCopy ? .onboardingTrialStarted
+                                                  : .onboardingPurchaseCompleted,
+                                   properties)
+        }
         Task { @MainActor in
             let ok = await subs.purchase(kind)
             if ok {

@@ -19,6 +19,7 @@ struct OnboardingView: View {
     @EnvironmentObject private var router: AppRouter
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.focusStrings) private var strings
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var answers = OnboardingAnswers()
     @State private var step: OnboardingStepID = .welcome
@@ -63,6 +64,14 @@ struct OnboardingView: View {
         // Buying PRO removes the paywall from the flow entirely. Without this,
         // a pilot who purchases is left standing on a step that no longer
         // exists, and the next tap has nowhere to go.
+        // Backgrounding an unfinished first run is the funnel's most important
+        // signal and the previous onboarding emitted nothing at all. Recorded
+        // with the step reached — never with anything about the pilot.
+        .onChange(of: scenePhase) { _, phase in
+            guard phase != .active, step != .completion else { return }
+            appModel.analytics.log(.onboardingAbandoned,
+                                   ["step": step.rawValue, "variant": variant.rawValue])
+        }
         .onChange(of: appModel.isPro) { _, isPro in
             guard isPro, step == .paywall else { return }
             router.dismissModal()
@@ -119,7 +128,13 @@ struct OnboardingView: View {
                 OnboardingPlanRevealStep(plan: plan,
                                          skyName: FocusSky.byID(plan.selectedSkyID)?.name ?? "",
                                          soundName: soundName(for: plan),
-                                         onContinue: advance)
+                                         onContinue: advance,
+                                         onRevealed: {
+                    appModel.analytics.log(.onboardingPlanRevealed, [
+                        "variant": variant.rawValue,
+                        "minutes": plan.recommendedDurationMinutes,
+                    ])
+                })
             } else {
                 // Unreachable in practice — the plan is built on the way into
                 // this step. If it somehow is not, rebuild; and if the answers
@@ -129,9 +144,13 @@ struct OnboardingView: View {
             }
 
         case .flightPreview:
-            OnboardingFlightPreviewStep(sky: previewSky, onContinue: advance)
+            OnboardingFlightPreviewStep(sky: previewSky,
+                                        onContinue: completePreview,
+                                        onStarted: {
+                appModel.analytics.log(.onboardingPreviewStarted, ["sky": previewSky.id])
+            })
 
-        case .proBridge, .paywall:
+        case .paywall:
             // The paywall is the standard one — Annual and Monthly, the plan
             // selector, the real localized StoreKit prices — presented as the
             // app's one coordinated modal. Onboarding does not own a second
@@ -184,6 +203,11 @@ struct OnboardingView: View {
         if let storedVariant = appModel.profile.onboardingVariantID,
            let decoded = OnboardingVariant(rawValue: storedVariant) {
             variant = decoded
+        } else {
+            // Rolled once here and persisted on the first `move(to:)`. Never
+            // re-rolled: `saveOnboardingProgress` only writes it when the
+            // profile holds none.
+            variant = OnboardingVariant.assignForNewInstall()
         }
         if let stored = appModel.profile.onboardingAnswers { answers = stored }
         plan = appModel.profile.onboardingPlan
@@ -195,6 +219,9 @@ struct OnboardingView: View {
 
     private func advance() {
         appModel.tapFeedback()
+        logAnswer(for: step)
+        appModel.analytics.log(.onboardingStepCompleted,
+                               ["step": step.rawValue, "variant": variant.rawValue])
         guard let next = flow.nextReachable(after: step) else { finish(); return }
         // The plan is built ON THE WAY INTO the reveal, so the checklist the
         // pilot sees is running alongside work that genuinely happened.
@@ -206,6 +233,35 @@ struct OnboardingView: View {
             answers.soundID = previewSky.soundscapeID
         }
         move(to: next)
+    }
+
+    /// The answer a step produced, as its STABLE id.
+    ///
+    /// Never the localized text the pilot tapped: a copy rewrite would silently
+    /// re-label every historical event, and a funnel that changes meaning
+    /// between releases is worse than one that reports nothing.
+    private func logAnswer(for step: OnboardingStepID) {
+        let answer: String?
+        switch step {
+        case .primaryGoal:      answer = answers.goal?.rawValue
+        case .focusObstacle:    answer = answers.obstacle?.rawValue
+        case .sessionLength:    answer = answers.sessionChoice?.rawValue
+        case .weeklyFrequency:  answer = answers.cadence?.rawValue
+        case .focusStyle:       answer = answers.company?.rawValue
+        case .shieldPreference: answer = answers.shieldIntent?.rawValue
+        case .skySelection:     answer = answers.skyID
+        case .soundSelection:   answer = answers.choseSilence ? "silence" : answers.soundID
+        default:                answer = nil
+        }
+        guard let answer else { return }
+        appModel.analytics.log(.onboardingAnswerSelected,
+                               ["step": step.rawValue, "answer": answer,
+                                "variant": variant.rawValue])
+    }
+
+    private func completePreview() {
+        appModel.analytics.log(.onboardingPreviewCompleted, ["sky": previewSky.id])
+        advance()
     }
 
     private func goBack() {

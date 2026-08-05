@@ -93,6 +93,16 @@ struct LanguagePicker: View {
 
     private var languageBinding: Binding<AppLanguage> {
         Binding(get: { appModel.language },
-                set: { appModel.setLanguage($0) })
+                set: { language in
+                    // `setLanguage` already logs the app-wide change. The
+                    // compact style is the welcome screen's control, and a
+                    // language chosen BEFORE any question is a different funnel
+                    // fact from one changed later in Settings.
+                    if style == .compact, language != appModel.language {
+                        appModel.analytics.log(.onboardingLanguageChanged,
+                                               ["language": language.analyticsID])
+                    }
+                    appModel.setLanguage(language)
+                })
     }
 }

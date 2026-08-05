@@ -432,6 +432,11 @@ final class AppModel: ObservableObject {
     /// which auto-completes it when progress/history already exist).
     var needsOnboarding: Bool { !profile.hasCompletedOnboarding }
 
+    /// True until the pilot's first journey is genuinely completed. Read from
+    /// real history rather than a flag, so a reinstall-and-restore cannot make
+    /// an experienced pilot look like a new one.
+    var hasNoCompletedJourneys: Bool { !history.contains(where: \.completed) }
+
     // MARK: - Skies (destination system) + invites
 
     /// The currently selected Sky. Falls back to the free default (Desert Night)
@@ -1775,6 +1780,16 @@ final class AppModel: ObservableObject {
             "route": route.id, "minutes": focusedSeconds / 60, "miles": baseMiles,
             "qualified": qualifies
         ])
+        // The metric the whole first run exists to move. Counted from the
+        // history that was just written, so it fires exactly once — for the
+        // first completed journey and no other.
+        if history.filter(\.completed).count == 1 {
+            analytics.log(.firstFlightCompleted, [
+                "minutes": focusedSeconds / 60,
+                "variant": profile.onboardingVariantID ?? OnboardingVariant.productionDefault.rawValue,
+                "planned": settings.preferredFlightMinutes ?? -1,
+            ])
+        }
 
         // Re-engagement: reschedule reminders from the new progress. Permission
         // is NOT requested here — landing is not the moment to interrupt the
