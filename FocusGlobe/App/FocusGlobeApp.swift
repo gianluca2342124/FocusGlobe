@@ -31,6 +31,13 @@ struct FocusGlobeApp: App {
         if let dailyGiftFailure = AppModel._dailyGiftSelfCheck() {
             assertionFailure(dailyGiftFailure)
         }
+        // The general PRO reel alternates categories, including across the loop
+        // seam. It is a property of the CATALOG, so adding a cabin item or
+        // retiring a Sky is exactly what would silently reintroduce a run of
+        // three identical-looking slides.
+        if let showcaseFailure = PaywallShowcaseCarousel._selfCheck() {
+            assertionFailure(showcaseFailure)
+        }
         #endif
         // Google Maps is the temporary MVP provider. Keep all business logic
         // provider-independent so we can migrate to Apple Maps / MapKit later.

@@ -906,7 +906,7 @@ private struct PaywallSkyCarousel: View {
 /// object — deliberately share ONE card shape, one caption block and one
 /// ground. That is the whole trick: mixed content only reads as random when
 /// each piece brings its own presentation with it.
-private enum PaywallShowcaseSlide: Identifiable {
+enum PaywallShowcaseSlide: Identifiable {
     case sky(FocusSky)
     case feature(key: String, title: String, asset: String)
     case skin(BalloonSkin)
@@ -930,6 +930,19 @@ private enum PaywallShowcaseSlide: Identifiable {
         }
     }
 
+    /// Which bucket this slide came from. The interleave is defined in terms of
+    /// this, and so is the check that no two neighbours share it.
+    enum Category: String { case sky, feature, skin, item }
+
+    var category: Category {
+        switch self {
+        case .sky:     return .sky
+        case .feature: return .feature
+        case .skin:    return .skin
+        case .item:    return .item
+        }
+    }
+
     /// The small line above the name. It is what makes a starfield, a balloon
     /// and a pair of headphones on one conveyor feel like a single offer being
     /// presented rather than three unrelated pictures going past.
@@ -945,33 +958,51 @@ private enum PaywallShowcaseSlide: Identifiable {
 
 /// The general/onboarding paywall's hero: everything PRO opens up, on the same
 /// clock-driven conveyor the Sky and collectible paywalls already use.
-private struct PaywallShowcaseCarousel: View {
+struct PaywallShowcaseCarousel: View {
     @Binding var selectedIndex: Int
     @EnvironmentObject private var appModel: AppModel
     @Environment(\.focusViewport) private var viewport
 
-    /// The PRO features that own real artwork. Ordered so the strongest pitch
-    /// (flying with other people) leads the reel.
+    /// The PRO features shown in the GENERAL reel.
+    ///
+    /// Online Mode alone. Infinite Time and Pause a Flight were removed from
+    /// this surface: both are timer *modifiers* whose artwork reads as a screen
+    /// rather than as a thing you get, and next to four Skies, four balloons and
+    /// three cabin objects they made the flagship reel look like a features list
+    /// instead of a catalogue. Their assets and their own dedicated paywalls
+    /// (`.infinite`, `.pause`) are untouched — this is the general reel's
+    /// composition, not a change to what PRO includes.
     private static let features: [PaywallShowcaseSlide] = [
-        .feature(key: "online",   title: "Online Mode",    asset: "PaywallHero_OnlineMode"),
-        .feature(key: "infinite", title: "Infinite Time",  asset: "PaywallHero_InfiniteFocus"),
-        .feature(key: "pause",    title: "Pause a Flight", asset: "PaywallHero_Pause"),
+        .feature(key: "online", title: "Online Mode", asset: "PaywallHero_OnlineMode"),
     ]
 
-    /// Curated, not concatenated. One from each bucket per round, so the reel
-    /// alternates Sky → feature → skin → item and never shows two Skies or two
-    /// balloons back to back. Deterministic: the flagship page looks the same
-    /// every time it opens, which a shuffle could not promise.
-    private var slides: [PaywallShowcaseSlide] {
-        Self.roundRobin([
-            FocusSky.proExclusive.map(PaywallShowcaseSlide.sky),
-            Self.features,
+    /// The canonical buckets, in presentation order. Every promotional surface
+    /// that shows "what PRO opens up" reads these lists, so the reel can never
+    /// drift from the real catalog.
+    static var buckets: [[PaywallShowcaseSlide]] {
+        [
             BalloonSkin.all.filter(\.isPremium).map(PaywallShowcaseSlide.skin),
+            FocusSky.proExclusive.map(PaywallShowcaseSlide.sky),
             StoreItem.all.filter(\.isPremium).map(PaywallShowcaseSlide.item),
-        ])
+            Self.features,
+        ]
     }
 
-    private static func roundRobin(_ buckets: [[PaywallShowcaseSlide]]) -> [PaywallShowcaseSlide] {
+    /// Curated, not concatenated — and computed in ONE place rather than being
+    /// spelled out slide by slide in the view body.
+    ///
+    /// Deterministic: the flagship page looks identical every time it opens,
+    /// which a shuffle could not promise and which makes the layout reviewable.
+    static var slides: [PaywallShowcaseSlide] { interleaved(buckets) }
+
+    private var slides: [PaywallShowcaseSlide] { Self.slides }
+
+    /// One slide from each non-empty bucket per round, buckets that run out
+    /// simply dropping away. With the current catalog — 4 skins, 4 Skies, 3
+    /// items, 1 feature — that yields skin → Sky → item → Online → skin → Sky →
+    /// item → … : categories alternate, nothing repeats back to back, and the
+    /// distribution is as even as unequal bucket sizes allow.
+    static func interleaved(_ buckets: [[PaywallShowcaseSlide]]) -> [PaywallShowcaseSlide] {
         var result: [PaywallShowcaseSlide] = []
         var cursors = Array(repeating: 0, count: buckets.count)
         var placed = true
@@ -985,6 +1016,29 @@ private struct PaywallShowcaseCarousel: View {
         }
         return result
     }
+
+    #if DEBUG
+    /// The reel's one visual promise: no two neighbours share a category — and
+    /// that includes the wrap from the last slide back to the first, because the
+    /// conveyor loops and a seam is just another adjacency.
+    ///
+    /// Asserted rather than eyeballed because it is a property of the CATALOG,
+    /// not of this file: adding a fifth cabin item or retiring a Sky changes the
+    /// bucket sizes, and the tail of an uneven round-robin is exactly where a run
+    /// of three items would appear.
+    static func _selfCheck() -> String? {
+        let reel = slides
+        guard reel.count > 1 else { return nil }
+        for index in reel.indices {
+            let next = reel[(index + 1) % reel.count]
+            if reel[index].category == next.category {
+                return "showcase reel repeats \(reel[index].category.rawValue) at \(index)"
+            }
+        }
+        if Set(reel.map(\.id)).count != reel.count { return "showcase reel duplicates a slide" }
+        return nil
+    }
+    #endif
 
     private var cardRadius: CGFloat { viewport.isCompact ? 24 : 28 }
     private var balloonHeight: CGFloat { viewport.paywallHeroHeight * 0.60 }
@@ -1086,29 +1140,42 @@ private struct PaywallShowcaseCarousel: View {
         }
     }
 
-    /// Wide feature artwork, letterboxed against an out-of-focus copy of itself.
-    /// Filling the card would crop a 2:1 picture roughly in half; fitting it
-    /// alone would strand it in dead space. The blurred backdrop fills the card
-    /// without touching the composition.
+    /// Wide feature artwork, presented SQUARE.
+    ///
+    /// The Online Mode hero is a 1670×950 (≈16:9) capture of a real flight. Shown
+    /// at its own ratio it was the odd one out on a reel of square-ish balloons,
+    /// Skies and cabin objects — either letterboxed into dead space or blurred
+    /// out to the card edges. Here it is centre-cropped into a square that sits
+    /// on the same ground every other slide uses, so the four kinds of artwork
+    /// finally read as one catalogue.
+    ///
+    /// Centre alignment is correct for this specific asset rather than a default:
+    /// "YOU", the remaining time and the ring of other pilots are all in the
+    /// middle third, and it is the far-left and far-right columns of names the
+    /// crop discards. `.fill` + `.clipped()` crops the VIEW; the source asset is
+    /// never modified, and the dedicated Online paywall still shows it whole.
     @ViewBuilder private func featureArt(_ asset: String) -> some View {
         #if canImport(UIKit)
         if let image = UIImage(named: asset) {
-            ZStack {
-                GeometryReader { geo in
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: geo.size.width, height: geo.size.height)
-                        .clipped()
-                        .blur(radius: 22)
-                        .opacity(0.5)
-                }
+            GeometryReader { geo in
+                // The caption band owns the bottom of the card, so the square is
+                // measured against what is left above it — never against the
+                // full height, which would slide it under the title.
+                let captionBand: CGFloat = 42
+                let side = max(0, min(geo.size.width - 22,
+                                      geo.size.height - captionBand - 14))
+                let radius = max(10, cardRadius - 8)
                 Image(uiImage: image)
                     .resizable()
-                    .scaledToFit()
-                    .padding(.horizontal, 10)
-                    .padding(.bottom, 34)
-                    .shadow(color: .black.opacity(0.45), radius: 12, y: 8)
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: side, height: side)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous)
+                        .strokeBorder(.white.opacity(0.11), lineWidth: 1))
+                    .shadow(color: .black.opacity(0.42), radius: 12, y: 7)
+                    .position(x: geo.size.width / 2,
+                              y: (geo.size.height - captionBand) / 2)
             }
         }
         #endif
