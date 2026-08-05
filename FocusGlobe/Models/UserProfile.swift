@@ -13,13 +13,20 @@ struct UserProfile: Codable, Equatable {
     var hasCompletedOnboarding: Bool = false
     /// How FocusGlobe addresses the pilot. Optional — never required.
     var name: String? = nil
-    /// "What do you want to achieve this year?" — kept for personalisation.
+    /// LEGACY. The old onboarding asked "What do you want to achieve this
+    /// year?" as free text, wrote it here, and read it nowhere. The question is
+    /// gone; the key stays so profiles saved by older builds keep decoding.
+    /// Nothing writes it any more.
     var yearGoal: String? = nil
-    /// Optional age band ("18–24" …). Stored as the display string.
+    /// LEGACY, for the same reason: an age band nothing ever read.
     var ageRange: String? = nil
-    /// "When you try to focus, what usually happens?"
+    /// LEGACY, for the same reason: a free-text struggle nothing ever read.
+    /// Its job — knowing what gets in a pilot's way — is now done by
+    /// `onboardingAnswers.obstacle`, which is a stable id and drives the plan.
     var focusStruggle: String? = nil
-    /// "What are you focusing on most?" (matches a FocusPreset title).
+    /// The pilot's flight category, published by Online presence. Still live:
+    /// `applyOnboardingPlan` writes a real `FocusPreset` title derived from the
+    /// goal, replacing the free-text question that used to fill it.
     var focusStyle: String? = nil
     /// The user opted into Focus Shield during onboarding (intent only until
     /// the full Screen Time infrastructure ships).
