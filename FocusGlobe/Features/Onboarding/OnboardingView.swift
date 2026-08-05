@@ -242,11 +242,16 @@ struct OnboardingView: View {
 
     private func presentOnboardingPaywall() {
         guard !router.showPaywall else { return }
+        // The SAME paywall the Home PRO button opens — Annual and Monthly, the
+        // plan selector, the real localized StoreKit prices. Only the argument
+        // it leads with is the pilot's: their headline, their Sky, their three
+        // benefits, and a named free path.
+        let personalization = plan.map { PaywallPersonalization(plan: $0) }
         appModel.analytics.log(.onboardingPaywallViewed, [
             "variant": variant.rawValue,
-            "lead": plan?.personalizedBenefitOrder.first?.rawValue ?? "",
+            "lead": personalization?.leadBenefit.rawValue ?? "",
         ])
-        router.presentPaywall(context: .general)
+        router.presentPaywall(context: .general, personalization: personalization)
     }
 
     // MARK: - Permissions

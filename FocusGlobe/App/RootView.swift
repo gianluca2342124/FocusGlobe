@@ -91,6 +91,11 @@ struct RootView: View {
                 .environmentObject(appModel)
                 .environmentObject(router)
                 .focusResponsiveLayout()
+                // Re-applied for the same reason the environment objects are:
+                // this is a separate presentation, and the paywall's
+                // personalized copy must never fall back to a default language
+                // because a cover did not inherit one.
+                .focusLanguage(appModel.language)
         case .onlineSignIn:
             OnlineSignInView { }
                 .environmentObject(online)

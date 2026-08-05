@@ -12,6 +12,8 @@ struct PaywallView: View {
     var context: PaywallContext = .general
 
     @EnvironmentObject private var appModel: AppModel
+    @EnvironmentObject private var router: AppRouter
+    @Environment(\.focusStrings) private var strings
     @Environment(\.dismiss) private var dismiss
     @Environment(\.focusViewport) private var viewport
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -30,6 +32,20 @@ struct PaywallView: View {
     /// selected there meant the whole screen promised a trial while one selectable
     /// product charged immediately. Every other paywall keeps both, and the monthly
     /// product itself is untouched in RevenueCat.
+    /// First-run context, when the offer came from onboarding. It changes which
+    /// argument the page LEADS with — never which products are offered, never a
+    /// price, never the purchase or restore path.
+    private var personalization: PaywallPersonalization? { router.paywallPersonalization }
+
+    private var headline: String {
+        guard let personalization else { return context.benefitTitle }
+        return strings(personalization.headlineKey)
+    }
+
+    private var subhead: String {
+        personalization == nil ? context.supportingCopy : strings(.paywallSubhead)
+    }
+
     private var offeredPlans: [PlanKind] {
         context.isOnboardingOffer ? [.annual] : [.annual, .monthly]
     }
@@ -80,13 +96,16 @@ struct PaywallView: View {
                 dismiss()
                 return
             }
-            appModel.analytics.log(.paywallOpened)
+            appModel.analytics.log(.paywallOpened, personalization?.analyticsProperties ?? [:])
             subs.loadOfferings()
             syncSelection()
             selectedHeroIndex = context.initialHeroIndex
             // The first-run offer IS the offer page: one product, one CTA, no
             // benefit/trial two-step. Onboarding has already made the pitch.
-            if context.isOnboardingOffer { page = .trial }
+            // …unless the offer is personalized: the first-run pitch IS this
+            // page now, so skipping it would discard the pilot's own headline,
+            // their Sky and their three benefits.
+            if context.isOnboardingOffer && personalization == nil { page = .trial }
         }
         .onChange(of: subs.plans) { _, _ in syncSelection() }
         .onChange(of: appModel.entitlement) { _, access in
@@ -105,7 +124,7 @@ struct PaywallView: View {
                     FocusGlobePROBrand(size: .compact)
 
                     VStack(spacing: 7) {
-                        Text(context.benefitTitle)
+                        Text(headline)
                             .font(.system(
                                 size: viewport.isWide ? 43 : (viewport.isCompact ? 31 : 37),
                                 weight: .bold
@@ -115,7 +134,7 @@ struct PaywallView: View {
                             .lineLimit(2)
                             .minimumScaleFactor(0.75)
 
-                        Text(context.supportingCopy)
+                        Text(subhead)
                             .font(.system(size: viewport.bodySize, weight: .medium))
                             .foregroundStyle(.white.opacity(0.68))
                             .multilineTextAlignment(.center)
@@ -124,6 +143,11 @@ struct PaywallView: View {
 
                     contextualHero
                         .frame(height: viewport.paywallHeroHeight)
+
+                    if let personalization {
+                        PaywallPersonalizedBenefits(benefits: personalization.supportingBenefits)
+                            .frame(maxWidth: viewport.isWide ? 650 : 560)
+                    }
 
                     Text("+ Unlock so much more with PRO")
                         .font(.system(
@@ -161,11 +185,49 @@ struct PaywallView: View {
             .accessibilityHint("Shows trial timing and subscription options. No purchase is made.")
             .frame(maxWidth: viewport.modalWidth)
             .padding(.horizontal, viewport.pagePadding)
-            .padding(.bottom, max(12, viewport.pagePadding * 0.65))
+            .padding(.bottom, personalization == nil ? max(12, viewport.pagePadding * 0.65) : 2)
+
+            // A named way out, not just an X in the corner. During onboarding
+            // the free path has to be as legible as the offer — the plan the
+            // pilot just built works without PRO, and the page says so.
+            if let personalization {
+                Button {
+                    appModel.tapFeedback()
+                    appModel.analytics.log(.onboardingFreePathSelected,
+                                           personalization.analyticsProperties)
+                    dismiss()
+                } label: {
+                    Text(strings(.paywallFreePath))
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.62))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                        .contentShape(Rectangle())
+                }
+                .frame(maxWidth: viewport.modalWidth)
+                .padding(.horizontal, viewport.pagePadding)
+                .padding(.bottom, max(10, viewport.pagePadding * 0.5))
+            }
         }
     }
 
+
+
     @ViewBuilder private var contextualHero: some View {
+        // A pilot who has just chosen a Sky should see THAT Sky, not a reel of
+        // ones they did not pick.
+        if let sky = personalization?.skyID.flatMap(FocusSky.byID) {
+            SkyStillPreview(sky: sky, landscape: true)
+                .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
+                    .strokeBorder(.white.opacity(0.14), lineWidth: 1))
+                .accessibilityHidden(true)
+        } else {
+            genericHero
+        }
+    }
+
+    @ViewBuilder private var genericHero: some View {
         switch context {
         case .sky:
             PaywallSkyCarousel(selectedIndex: $selectedHeroIndex)
@@ -1280,5 +1342,41 @@ struct PaywallComparisonTable: View {
         .frame(height: viewport.isCompact ? 39 : 44)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(title). PRO only.")
+    }
+}
+
+/// The pilot's own top benefits, under their own headline.
+///
+/// Ordered by the obstacle they named, not by what converts best on average.
+/// Nothing here is a claim about outcomes and nothing is invented: each row is
+/// a feature PRO genuinely unlocks.
+private struct PaywallPersonalizedBenefits: View {
+    let benefits: [ProBenefit]
+
+    @Environment(\.focusStrings) private var strings
+
+    var body: some View {
+        VStack(spacing: 10) {
+            ForEach(benefits, id: \.self) { benefit in
+                HStack(alignment: .top, spacing: AppSpacing.sm) {
+                    Image(systemName: benefit.systemImage)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(AppColors.gold)
+                        .frame(width: 26)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(strings(benefit.titleKey))
+                            .font(.system(size: 15.5, weight: .semibold))
+                            .foregroundStyle(.white)
+                        Text(strings(benefit.detailKey))
+                            .font(AppTypography.caption)
+                            .foregroundStyle(.white.opacity(0.62))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .accessibilityElement(children: .combine)
+            }
+        }
+        .padding(.vertical, 2)
     }
 }

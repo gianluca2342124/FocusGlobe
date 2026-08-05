@@ -73,13 +73,30 @@ final class AppRouter: ObservableObject {
     /// share) routes through this single coordinator so SwiftUI never has two
     /// sheets contending ("Currently, only presenting a single sheet is
     /// supported"). Setting it replaces whatever was up — one modal at a time.
-    @Published var activeModal: AppModal?
+    @Published var activeModal: AppModal? {
+        didSet {
+            // Personalization belongs to ONE presentation. Clearing it here —
+            // rather than at each dismissal site — is what stops the next
+            // paywall, opened from anywhere, inheriting an onboarding pitch.
+            if activeModal == nil { paywallPersonalization = nil }
+        }
+    }
+
+    /// Optional first-run context for the paywall: which benefit to lead with,
+    /// which Sky to show, and where the offer came from. Set only by the
+    /// onboarding flow, cleared automatically when the modal closes. It never
+    /// changes which products are offered or what they cost.
+    @Published private(set) var paywallPersonalization: PaywallPersonalization?
 
     /// The entitlement state used by the modal coordinator. It starts unknown so
     /// a cold launch can never flash a Free-user paywall before RevenueCat has
     /// answered. `RootView` keeps it synchronized with `AppModel.entitlement`.
     @Published private(set) var premiumAccess: AppModel.Entitlement = .loading
     private var pendingPaywallContext: PaywallContext?
+    /// Held alongside the deferred context. Without it, a first-run offer made
+    /// while RevenueCat is still resolving would be re-presented moments later
+    /// as a generic one — personalization lost to a race nobody would notice.
+    private var pendingPaywallPersonalization: PaywallPersonalization?
 
     /// Present a coordinated modal (replaces any current one). Paywalls always
     /// pass through the canonical entitlement guard below, including any future
@@ -142,23 +159,35 @@ final class AppRouter: ObservableObject {
     func openFriends() { select(.friends) }
     func openHistory() { path.append(.history) }
     func openSettings() { select(.settings) }
-    func presentPaywall(context: PaywallContext = .general) {
+    func presentPaywall(context: PaywallContext = .general,
+                        personalization: PaywallPersonalization? = nil) {
         switch premiumAccess {
         case .premium:
             // Subscription management lives in Settings. A verified owner never
             // enters a promotional surface merely to be told what they own.
-            pendingPaywallContext = nil
+            clearPendingPaywall()
             if case .paywall = activeModal { activeModal = nil }
         case .free:
-            pendingPaywallContext = nil
+            clearPendingPaywall()
+            // Order matters: assigning a non-nil modal does not trip the
+            // clearing `didSet`, so the personalization is set afterwards and
+            // survives. A plain `presentPaywall()` from any other surface passes
+            // nil here and therefore clears a stale one.
             activeModal = .paywall(context)
+            paywallPersonalization = personalization
         case .loading:
-            // Hold the exact request without showing an upsell. Once RevenueCat
-            // resolves, `updatePremiumAccess` either presents it for a confirmed
-            // Free pilot or drops it for an owner.
+            // Hold the exact request — context AND personalization — without
+            // showing an upsell. Once RevenueCat resolves, `updatePremiumAccess`
+            // either presents it for a confirmed Free pilot or drops it.
             pendingPaywallContext = context
+            pendingPaywallPersonalization = personalization
             if case .paywall = activeModal { activeModal = nil }
         }
+    }
+
+    private func clearPendingPaywall() {
+        pendingPaywallContext = nil
+        pendingPaywallPersonalization = nil
     }
 
     /// Synchronize the router with the one RevenueCat-backed entitlement state.
@@ -168,15 +197,18 @@ final class AppRouter: ObservableObject {
         premiumAccess = access
         switch access {
         case .premium:
-            pendingPaywallContext = nil
+            clearPendingPaywall()
             if case .paywall = activeModal { activeModal = nil }
         case .free:
             guard let context = pendingPaywallContext else { return }
-            pendingPaywallContext = nil
+            let personalization = pendingPaywallPersonalization
+            clearPendingPaywall()
             activeModal = .paywall(context)
+            paywallPersonalization = personalization
         case .loading:
             if case .paywall(let context) = activeModal {
                 pendingPaywallContext = context
+                pendingPaywallPersonalization = paywallPersonalization
                 activeModal = nil
             }
         }
