@@ -56,6 +56,24 @@ struct PaywallView: View {
 
     private var trialOfferAvailable: Bool { trialOfferPlan != nil }
 
+    /// The CTA that advances from the benefit page to the plan page.
+    ///
+    /// It states a price, so it may only state one it can prove. Every
+    /// precondition is carried by `trialOfferPlan` — a real loaded product, a
+    /// real free-trial introductory offer, and a StoreKit-confirmed eligibility
+    /// for THIS Apple ID — plus `localizedZeroPrice`, which is zero formatted by
+    /// that product's own price formatter. That is why there is no "$" anywhere
+    /// here: on a euro storefront it renders "Try for 0,00 €", and on a
+    /// storefront whose product has not loaded it renders nothing of the sort.
+    ///
+    /// Anything less than all four — offer withdrawn, account ineligible,
+    /// eligibility still resolving, offerings still loading — falls back to a
+    /// claim that is true in every one of those cases.
+    private var benefitCTATitle: String {
+        guard let zero = trialOfferPlan?.localizedZeroPrice else { return "See PRO Plans" }
+        return "Try for \(zero)"
+    }
+
     private var trialDuration: String {
         effectivePlan?.introOffer?.localizedDuration ?? "3 days"
     }
@@ -149,7 +167,7 @@ struct PaywallView: View {
                     page = .trial
                 }
             } label: {
-                Text(trialOfferAvailable ? "Start My Free Trial" : "See Plans")
+                Text(benefitCTATitle)
                     .font(.system(size: viewport.isWide ? 19 : 17, weight: .bold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -557,10 +575,15 @@ struct PaywallView: View {
     /// when there genuinely is one for this account.
     private var purchaseButtonTitle: String {
         guard let kind = effectiveKind else { return "Products unavailable" }
-        if showsTrialCopy { return "Start My Free Trial" }
         switch kind {
-        case .annual:   return "Continue with Annual"
-        // Monthly is exactly "Continue" — never "Continue with Monthly".
+        case .annual:
+            // `showsTrialCopy` is the eligibility of the EXACT plan being
+            // charged, so this can never promise a free trial to an account the
+            // App Store would bill immediately.
+            return showsTrialCopy ? "Try PRO for FREE" : "Continue with Annual"
+        // Monthly has no introductory offer and is charged today, so it is
+        // exactly "Continue" — never "Continue with Monthly", and never trial
+        // language, whatever the annual product is offering alongside it.
         case .monthly:  return "Continue"
         case .lifetime: return "Unlock FocusGlobe PRO"
         }
@@ -1209,22 +1232,25 @@ private struct TrialTimeline: View {
     /// Store will actually apply rather than a hardcoded schedule.
     var trialDays: Int = 3
 
+    /// Milestones, not arithmetic.
+    ///
+    /// The labels used to be "Today / Day 5 / Day 7", which asked the reader to
+    /// do the subtraction and — on a three-day offer — printed two day numbers
+    /// two apart under a title that says "2 days before". Naming the moments
+    /// instead says the same true thing without a single number that could
+    /// disagree with the App Store.
     private var steps: [(icon: String, title: String, detail: String, color: Color)] {
-        // The reminder lands TWO days before the trial ends, matching the title.
-        let endDay = max(1, trialDays)
-        let reminderDay = max(1, endDay - 2)
         var result: [(icon: String, title: String, detail: String, color: Color)] = [
-            ("lock.open.fill", "Today", "Unlock all FocusGlobe PRO features.", ProBrand.c1)
+            ("lock.open.fill", "Today", "Enjoy all PRO features and content", ProBrand.c1)
         ]
-        // Only when it is genuinely a different day. A one-day offer cannot have
-        // a reminder two days earlier, and printing "Day 1" twice reads as a bug
-        // rather than as a short trial.
-        if reminderDay < endDay {
-            result.append(("bell.fill", "Day \(reminderDay)",
-                           "We’ll remind you 2 days before your trial ends.", ProBrand.c2))
+        // A trial shorter than three days has no "2 days before" to speak of,
+        // and claiming one would contradict the reminder the app schedules.
+        if trialDays > 2 {
+            result.append(("bell.fill", "2 days before",
+                           "We notify you about your trial end", ProBrand.c2))
         }
-        result.append(("star.fill", "Day \(endDay)",
-                       "Your subscription begins. Cancel anytime.", ProBrand.c4))
+        result.append(("star.fill", "Trial end date",
+                       "Your annual subscription begins", ProBrand.c4))
         return result
     }
 
