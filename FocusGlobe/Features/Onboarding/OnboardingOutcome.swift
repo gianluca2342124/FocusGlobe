@@ -257,6 +257,7 @@ struct OnboardingFlightPreviewStep: View {
 struct OnboardingNotificationWarmupStep: View {
     let onAllow: () -> Void
     let onSkip: () -> Void
+    var onAppearAnalytics: () -> Void = {}
 
     @Environment(\.focusStrings) private var strings
     @Environment(\.focusViewport) private var viewport
@@ -270,6 +271,7 @@ struct OnboardingNotificationWarmupStep: View {
                              secondaryAction: onSkip)
         }
         .padding(.horizontal, viewport.pagePadding)
+        .onAppear(perform: onAppearAnalytics)
     }
 }
 
@@ -279,6 +281,7 @@ struct OnboardingNotificationWarmupStep: View {
 struct OnboardingShieldWarmupStep: View {
     let onAllow: () -> Void
     let onSkip: () -> Void
+    var onAppearAnalytics: () -> Void = {}
 
     @Environment(\.focusStrings) private var strings
     @Environment(\.focusViewport) private var viewport
@@ -292,6 +295,7 @@ struct OnboardingShieldWarmupStep: View {
                              secondaryAction: onSkip)
         }
         .padding(.horizontal, viewport.pagePadding)
+        .onAppear(perform: onAppearAnalytics)
     }
 }
 

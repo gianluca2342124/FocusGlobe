@@ -139,10 +139,14 @@ struct OnboardingView: View {
             Color.clear.onAppear(perform: presentOnboardingPaywall)
 
         case .notificationWarmup:
-            OnboardingNotificationWarmupStep(onAllow: requestNotifications, onSkip: advance)
+            OnboardingNotificationWarmupStep(onAllow: requestNotifications,
+                                             onSkip: { skipWarmup("notifications") },
+                                             onAppearAnalytics: { warmupViewed("notifications") })
 
         case .shieldWarmup:
-            OnboardingShieldWarmupStep(onAllow: requestShield, onSkip: advance)
+            OnboardingShieldWarmupStep(onAllow: requestShield,
+                                       onSkip: { skipWarmup("screen_time") },
+                                       onAppearAnalytics: { warmupViewed("screen_time") })
 
         case .completion:
             OnboardingCompletionStep(minutes: plan?.recommendedDurationMinutes
@@ -256,12 +260,27 @@ struct OnboardingView: View {
 
     // MARK: - Permissions
 
+    private func warmupViewed(_ kind: String) {
+        appModel.analytics.log(.onboardingPermissionWarmupViewed, ["kind": kind])
+    }
+
+    /// Declining is an ANSWER, not an absence of one: it is recorded, so the
+    /// funnel can tell "was never asked" from "was asked and said no".
+    private func skipWarmup(_ kind: String) {
+        appModel.analytics.log(.onboardingPermissionResult, ["kind": kind, "granted": false,
+                                                             "asked": false])
+        advance()
+    }
+
     private func requestNotifications() {
         guard !permissionInFlight else { return }
         permissionInFlight = true
         appModel.analytics.log(.onboardingPermissionRequested, ["kind": "notifications"])
         Task { @MainActor in
-            await appModel.requestOnboardingNotificationPermission()
+            let granted = await appModel.requestOnboardingNotificationPermission()
+            appModel.analytics.log(.onboardingPermissionResult, ["kind": "notifications",
+                                                                 "granted": granted,
+                                                                 "asked": true])
             permissionInFlight = false
             advance()
         }
@@ -282,6 +301,7 @@ struct OnboardingView: View {
             appModel.analytics.log(.onboardingPermissionResult, [
                 "kind": "screen_time",
                 "granted": appModel.focusShield.authState == .approved,
+                "asked": true,
             ])
             permissionInFlight = false
             advance()

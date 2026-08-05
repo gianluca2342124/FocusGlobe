@@ -2109,10 +2109,18 @@ final class AppModel: ObservableObject {
 
     /// Explicit onboarding opt-in. Awaiting the system response lets the
     /// onboarding layer keep its visual guidance aligned with the real prompt.
-    func requestOnboardingNotificationPermission() async {
+    /// Returns whether the pilot actually granted it, so the caller can record
+    /// the OUTCOME rather than just the ask. A warm-up that reports "requested"
+    /// and never "granted" or "denied" measures the button, not the permission.
+    @discardableResult
+    func requestOnboardingNotificationPermission() async -> Bool {
         notifications.setEnabled(true)
-        _ = await notifications.requestAuthorization(state: notificationState())
+        let granted = await notifications.requestAuthorization(state: notificationState())
         refreshNotifications()
+        // A refusal must not leave reminders switched on in Settings for
+        // something iOS will never deliver.
+        if !granted { notifications.setEnabled(false) }
+        return granted
     }
 
     private func persistAll() {
