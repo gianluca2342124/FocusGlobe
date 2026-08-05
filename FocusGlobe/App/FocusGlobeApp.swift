@@ -31,6 +31,17 @@ struct FocusGlobeApp: App {
         if let dailyGiftFailure = AppModel._dailyGiftSelfCheck() {
             assertionFailure(dailyGiftFailure)
         }
+        // The onboarding rules are pure functions, so they can be proven at
+        // launch rather than hoped about: every answer combination produces a
+        // plan in range, every obstacle changes the benefit order, no branch
+        // duplicates or drops a step, an entitled pilot is never offered a
+        // paywall, and progress never runs backwards.
+        if let planFailure = OnboardingPlanBuilder._selfCheck() {
+            assertionFailure(planFailure)
+        }
+        if let flowFailure = OnboardingFlow._selfCheck() {
+            assertionFailure(flowFailure)
+        }
         #endif
         // Google Maps is the temporary MVP provider. Keep all business logic
         // provider-independent so we can migrate to Apple Maps / MapKit later.

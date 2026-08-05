@@ -43,6 +43,15 @@ struct AppSettings: Codable, Equatable {
     /// Legacy flag (the launch paywall is now gated per-session in memory, not
     /// persisted). Retained only so older saved settings keep decoding.
     var premiumIntroSeen: Bool? = nil
+    /// The first-flight length the onboarding plan resolved, in minutes.
+    ///
+    /// This is the difference between a plan card and a plan: without somewhere
+    /// to put it, "25 minutes" is a picture of a decision rather than the
+    /// decision itself. `nil` means no plan has been built.
+    var preferredFlightMinutes: Int? = nil
+    /// Focus days per week the pilot chose. `nil` is a real answer — "keep it
+    /// flexible" — and must stay distinguishable from "never asked".
+    var weeklyFocusDayGoal: Int? = nil
 
     init() {}
 
@@ -52,6 +61,7 @@ struct AppSettings: Codable, Equatable {
         case appearance, soundEnabled, hapticsEnabled, mapStyle
         case startingCity, virtualOrigin, previousOrigin
         case selectedSkinID, selectedJourneyAudioID, premiumIntroSeen
+        case preferredFlightMinutes, weeklyFocusDayGoal
     }
 
     /// Missing or newly-added preference keys must never reset the rest of a
@@ -69,5 +79,7 @@ struct AppSettings: Codable, Equatable {
         selectedSkinID = try c.decodeIfPresent(String.self, forKey: .selectedSkinID)
         selectedJourneyAudioID = try c.decodeIfPresent(String.self, forKey: .selectedJourneyAudioID)
         premiumIntroSeen = try c.decodeIfPresent(Bool.self, forKey: .premiumIntroSeen)
+        preferredFlightMinutes = try? c.decodeIfPresent(Int.self, forKey: .preferredFlightMinutes)
+        weeklyFocusDayGoal = try? c.decodeIfPresent(Int.self, forKey: .weeklyFocusDayGoal)
     }
 }

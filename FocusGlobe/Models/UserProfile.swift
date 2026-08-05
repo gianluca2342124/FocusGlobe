@@ -24,6 +24,17 @@ struct UserProfile: Codable, Equatable {
     /// The user opted into Focus Shield during onboarding (intent only until
     /// the full Screen Time infrastructure ships).
     var focusShieldOptIn: Bool = false
+    /// Everything the first-run flow captured, kept so a force-quit resumes
+    /// where it stopped instead of restarting from the welcome screen.
+    var onboardingAnswers: OnboardingAnswers? = nil
+    /// The plan built from those answers, versioned so older plans are
+    /// recognisable when the rules change.
+    var onboardingPlan: OnboardingFocusPlan? = nil
+    /// The step the pilot was last on. Nil once onboarding completes.
+    var onboardingStepID: String? = nil
+    /// Experiment assignment, decided once and never re-rolled — a variant that
+    /// changes per launch measures nothing.
+    var onboardingVariantID: String? = nil
     /// The currently selected Sky (see `FocusSky`). `nil` → Golden Hour.
     var selectedSkyID: String? = nil
     /// This pilot's shareable invite code (generated lazily, then stable).
@@ -119,6 +130,7 @@ struct UserProfile: Codable, Equatable {
         case coinSpinEventDayKey, coinBoostExpiresAt, lastBoostGiftAt, onlineDiscoverable
         case onlineAllowsFriendRequests, rewardedFriendSessionIDs, hiddenPilotIDs
         case coinEarningsDayKey, coinsEarnedOnDay, observedBadgeKeys, badgeUnlockEventDayKey
+        case onboardingAnswers, onboardingPlan, onboardingStepID, onboardingVariantID
     }
 
     /// Field-by-field recovery is deliberate: a malformed or absent optional
@@ -133,6 +145,10 @@ struct UserProfile: Codable, Equatable {
         focusStruggle = try? c.decode(String.self, forKey: .focusStruggle)
         focusStyle = try? c.decode(String.self, forKey: .focusStyle)
         focusShieldOptIn = (try? c.decode(Bool.self, forKey: .focusShieldOptIn)) ?? false
+        onboardingAnswers = try? c.decode(OnboardingAnswers.self, forKey: .onboardingAnswers)
+        onboardingPlan = try? c.decode(OnboardingFocusPlan.self, forKey: .onboardingPlan)
+        onboardingStepID = try? c.decode(String.self, forKey: .onboardingStepID)
+        onboardingVariantID = try? c.decode(String.self, forKey: .onboardingVariantID)
         selectedSkyID = try? c.decode(String.self, forKey: .selectedSkyID)
         referralCode = try? c.decode(String.self, forKey: .referralCode)
         acceptedInviteCount = max(0, (try? c.decode(Int.self, forKey: .acceptedInviteCount)) ?? 0)

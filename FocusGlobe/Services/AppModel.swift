@@ -1028,6 +1028,64 @@ final class AppModel: ObservableObject {
     // MARK: - Onboarding completion
 
     /// Persist everything gathered by first-run onboarding and open the app.
+    // MARK: - Onboarding plan
+
+    /// Make the plan REAL.
+    ///
+    /// This is the half that separates a personalized onboarding from a
+    /// personalized-looking one. Everything the pilot chose is written into the
+    /// same canonical settings the rest of the app already reads — the Sky the
+    /// Home selector shows, the soundscape a flight plays, the length the setup
+    /// screen opens on, the weekly target the Passport presents, and the Focus
+    /// Shield intent the warm-up honours. Nothing here is a private onboarding
+    /// copy of state that the app then ignores.
+    ///
+    /// Deliberately does NOT: sign anyone in, open a room, schedule a
+    /// notification, or request an authorization. The plan records what the
+    /// pilot wants; the permission warm-ups ask for it later, in context.
+    func applyOnboardingPlan(_ plan: OnboardingFocusPlan) {
+        var p = profile
+        p.onboardingPlan = plan
+        // Only adopt the Sky if it is a real, currently-unlocked one. A plan
+        // must never leave a pilot pointed at something they cannot fly.
+        let sky = FocusSky.byID(plan.selectedSkyID)
+        if let sky, isSkyUnlocked(sky) {
+            p.selectedSkyID = sky.id
+        }
+        // The pilot's stated intent, which the Shield warm-up reads. Not an
+        // authorization, and not a shield.
+        p.focusShieldOptIn = plan.recommendsFocusShield
+        profile = p
+
+        var s = settings
+        s.preferredFlightMinutes = plan.recommendedDurationMinutes
+        s.weeklyFocusDayGoal = plan.weeklyTarget
+        // Silence is a real choice: nil the stored audio rather than leaving
+        // whatever was there before.
+        s.selectedJourneyAudioID = plan.selectedSoundID
+        settings = s
+
+        analytics.log(.onboardingPlanCreated, [
+            "goal": plan.primaryGoal.rawValue,
+            "obstacle": plan.primaryObstacle.rawValue,
+            "minutes": plan.recommendedDurationMinutes,
+            "weekly": plan.weeklyTarget ?? -1,
+            "mode": plan.recommendedMode.rawValue,
+            "shield": plan.recommendsFocusShield,
+        ])
+        persistAll()
+    }
+
+    /// Save an in-progress answer set and the step the pilot is on, so a
+    /// force-quit resumes exactly there.
+    func saveOnboardingProgress(answers: OnboardingAnswers, stepID: String) {
+        var p = profile
+        p.onboardingAnswers = answers
+        p.onboardingStepID = stepID
+        profile = p
+        persistAll()
+    }
+
     func completeOnboarding(name: String?, yearGoal: String?, ageRange: String?,
                             struggle: String?, focusStyle: String?, shieldOptIn: Bool) {
         var p = profile
