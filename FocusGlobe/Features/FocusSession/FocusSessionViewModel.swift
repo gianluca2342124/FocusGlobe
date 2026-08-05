@@ -174,17 +174,6 @@ final class FocusSessionViewModel: ObservableObject {
         }
 
         appModel.analytics.log(.journeyStarted, ["route": route.id, "minutes": route.durationMinutes])
-        // The first flight a pilot ever takes off on — the one metric the whole
-        // first run exists to move. Read from real history, so it fires exactly
-        // once and never for a pilot who already had journeys behind them.
-        if appModel.hasNoCompletedJourneys {
-            appModel.analytics.log(.firstFlightStarted, [
-                "minutes": route.durationMinutes,
-                "planned": appModel.settings.preferredFlightMinutes ?? -1,
-                "variant": appModel.profile.onboardingVariantID
-                    ?? OnboardingVariant.productionDefault.rawValue,
-            ])
-        }
         appModel.haptics.takeoff()
         appModel.uiSound.play(.journeyStart)
         // Preload the journey-complete interstitial now so it's ready by landing,

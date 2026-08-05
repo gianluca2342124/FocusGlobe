@@ -17,43 +17,8 @@ enum AnalyticsEvent: String {
     case passportOpened = "passport_opened"
     case historyOpened = "history_opened"
     case settingsOpened = "settings_opened"
-
-    // MARK: Onboarding funnel
-    //
-    // The whole point of naming these now: a first-run flow that cannot be
-    // measured cannot be improved, and the previous onboarding emitted nothing
-    // at all. Properties carry SEMANTIC ids only — step, answer, variant,
-    // plan shape. Never a name, an email, an Apple or Supabase id, free text,
-    // a notification schedule, or anything about which apps were shielded.
-    case onboardingStarted = "onboarding_started"
-    case onboardingResumed = "onboarding_resumed"
-    case onboardingLanguageChanged = "onboarding_language_changed"
-    case onboardingStepViewed = "onboarding_step_viewed"
-    case onboardingAnswerSelected = "onboarding_answer_selected"
-    case onboardingBackTapped = "onboarding_back_tapped"
-    case onboardingStepCompleted = "onboarding_step_completed"
-    case onboardingAbandoned = "onboarding_abandoned"
-    case onboardingPlanCreated = "onboarding_plan_created"
-    case onboardingPlanRevealed = "onboarding_plan_revealed"
-    case onboardingPreviewStarted = "onboarding_preview_started"
-    case onboardingPreviewCompleted = "onboarding_preview_completed"
-    case onboardingPaywallViewed = "onboarding_paywall_viewed"
-    case onboardingPlanSelected = "onboarding_plan_selected"
-    case onboardingTrialStarted = "onboarding_trial_started"
-    case onboardingPurchaseCompleted = "onboarding_purchase_completed"
-    case onboardingPaywallDismissed = "onboarding_paywall_dismissed"
-    case onboardingFreePathSelected = "onboarding_free_path_selected"
-    case onboardingPermissionWarmupViewed = "onboarding_permission_warmup_viewed"
-    case onboardingPermissionRequested = "onboarding_permission_requested"
-    case onboardingPermissionResult = "onboarding_permission_result"
-    case onboardingCompleted = "onboarding_completed"
-    case firstFlightStarted = "first_flight_started"
-    case firstFlightCompleted = "first_flight_completed"
     case paywallOpened = "paywall_opened"
     case appearanceChanged = "appearance_changed"
-    /// The app language changed outside onboarding (Settings). Carries the
-    /// language code only — never anything about the pilot.
-    case languageChanged = "language_changed"
     // AdMob / UMP consent
     case admobConsentRequested = "admob_consent_requested"
     case admobConsentReady = "admob_consent_ready"

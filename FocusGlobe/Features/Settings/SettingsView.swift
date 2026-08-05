@@ -100,13 +100,6 @@ struct SettingsView: View {
                           subtitle: "Streak, focus & goal nudges",
                           isOn: Binding(get: { appModel.notifications.isEnabled },
                                         set: { appModel.tapFeedback(); appModel.setNotificationsEnabled($0) }))
-                // The divider is inside the gate too: the picker renders nothing
-                // while only one language is release-ready, and a divider with
-                // nothing under it reads as a row that failed to load.
-                if AppLanguage.offersLanguageChoice {
-                    RowDivider()
-                    LanguagePicker(style: .row)
-                }
                 RowDivider()
                 // The pilot's PRIVATE preferred name — personalises the Home
                 // greeting only; it is never published as the Online alias.

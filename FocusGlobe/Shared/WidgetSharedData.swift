@@ -118,14 +118,6 @@ struct WidgetSnapshot: Codable, Hashable {
     var badgeUnlockedCount = 0
     var badgeTotal = 0
 
-    /// The language FocusGlobe is currently presenting itself in, as a BCP-47
-    /// code ("en", "es", "it"). The widget extension has its own bundle and its
-    /// own strings, so it cannot see the app's in-process choice — this is how
-    /// it will follow one. Written now so the app side is already correct when
-    /// the widgets' own copy is translated; until then they stay English and are
-    /// reported as untranslated by `LocalizationCoverage`.
-    var languageCode = "en"
-
     var updatedAt = Date(timeIntervalSince1970: 0)
 
     /// Total focused time as minutes (widget stat).
@@ -220,7 +212,6 @@ extension WidgetSnapshot {
         badges = v(.badges, badges)
         badgeUnlockedCount = v(.badgeUnlockedCount, badgeUnlockedCount)
         badgeTotal = v(.badgeTotal, badgeTotal)
-        languageCode = v(.languageCode, languageCode)
         updatedAt = v(.updatedAt, updatedAt)
     }
 }

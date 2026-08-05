@@ -432,11 +432,6 @@ final class AppModel: ObservableObject {
     /// which auto-completes it when progress/history already exist).
     var needsOnboarding: Bool { !profile.hasCompletedOnboarding }
 
-    /// True until the pilot's first journey is genuinely completed. Read from
-    /// real history rather than a flag, so a reinstall-and-restore cannot make
-    /// an experienced pilot look like a new one.
-    var hasNoCompletedJourneys: Bool { !history.contains(where: \.completed) }
-
     // MARK: - Skies (destination system) + invites
 
     /// The currently selected Sky. Falls back to the free default (Desert Night)
@@ -1033,102 +1028,18 @@ final class AppModel: ObservableObject {
     // MARK: - Onboarding completion
 
     /// Persist everything gathered by first-run onboarding and open the app.
-    // MARK: - Onboarding plan
-
-    /// Make the plan REAL.
-    ///
-    /// This is the half that separates a personalized onboarding from a
-    /// personalized-looking one. Everything the pilot chose is written into the
-    /// same canonical settings the rest of the app already reads — the Sky the
-    /// Home selector shows, the soundscape a flight plays, the length the setup
-    /// screen opens on, the weekly target the Passport presents, and the Focus
-    /// Shield intent the warm-up honours. Nothing here is a private onboarding
-    /// copy of state that the app then ignores.
-    ///
-    /// Deliberately does NOT: sign anyone in, open a room, schedule a
-    /// notification, or request an authorization. The plan records what the
-    /// pilot wants; the permission warm-ups ask for it later, in context.
-    func applyOnboardingPlan(_ plan: OnboardingFocusPlan) {
+    func completeOnboarding(name: String?, yearGoal: String?, ageRange: String?,
+                            struggle: String?, focusStyle: String?, shieldOptIn: Bool) {
         var p = profile
-        p.onboardingPlan = plan
-        // Only adopt the Sky if it is a real, currently-unlocked one. A plan
-        // must never leave a pilot pointed at something they cannot fly.
-        let sky = FocusSky.byID(plan.selectedSkyID)
-        if let sky, isSkyUnlocked(sky) {
-            p.selectedSkyID = sky.id
-        }
-        // The pilot's stated intent, which the Shield warm-up reads. Not an
-        // authorization, and not a shield.
-        p.focusShieldOptIn = plan.recommendsFocusShield
-        // Online presence publishes this as the flight category. It used to come
-        // from a free-text onboarding question; it now comes from the goal, so
-        // the field keeps carrying a real preset title instead of silently
-        // becoming "Focus" for every pilot.
-        p.focusStyle = plan.primaryGoal.presetTitle
-        profile = p
-
-        var s = settings
-        s.preferredFlightMinutes = plan.recommendedDurationMinutes
-        s.weeklyFocusDayGoal = plan.weeklyTarget
-        // Silence is a real choice: nil the stored audio rather than leaving
-        // whatever was there before.
-        s.selectedJourneyAudioID = plan.selectedSoundID
-        settings = s
-
-        analytics.log(.onboardingPlanCreated, [
-            "goal": plan.primaryGoal.rawValue,
-            "obstacle": plan.primaryObstacle.rawValue,
-            "minutes": plan.recommendedDurationMinutes,
-            "weekly": plan.weeklyTarget ?? -1,
-            "mode": plan.recommendedMode.rawValue,
-            "shield": plan.recommendsFocusShield,
-        ])
-        persistAll()
-    }
-
-    /// Save an in-progress answer set and the step the pilot is on, so a
-    /// force-quit resumes exactly there.
-    func saveOnboardingProgress(answers: OnboardingAnswers,
-                                stepID: String,
-                                variantID: String) {
-        var p = profile
-        p.onboardingAnswers = answers
-        p.onboardingStepID = stepID
-        // Written on the first save and never re-rolled. An assignment that
-        // changes between launches attributes a pilot's behaviour to whichever
-        // arm happened to render, which is noise wearing the shape of data.
-        if p.onboardingVariantID == nil { p.onboardingVariantID = variantID }
-        profile = p
-        persistAll()
-    }
-
-    /// Finish the first run.
-    ///
-    /// Takes the ANSWERS, not six loose strings. The previous signature carried
-    /// a name, a year goal, an age band and a free-text struggle — four values
-    /// that were written to the profile and then read by nothing at all. Every
-    /// field here is either applied to a real setting by `applyOnboardingPlan`
-    /// or kept so the plan can be re-rendered later.
-    func completeOnboarding(answers: OnboardingAnswers, plan: OnboardingFocusPlan?) {
-        var p = profile
-        p.onboardingAnswers = answers
-        if let plan {
-            p.onboardingPlan = plan
-            p.focusShieldOptIn = plan.recommendsFocusShield
-        }
-        // Nil, not the last step: a completed onboarding has no position to
-        // resume, and leaving one behind is how a finished pilot gets dropped
-        // back into a question after a reinstall-and-restore.
-        p.onboardingStepID = nil
+        p.name = name?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? name : nil
+        p.yearGoal = yearGoal?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? yearGoal : nil
+        p.ageRange = ageRange
+        p.focusStruggle = struggle
+        p.focusStyle = focusStyle
+        p.focusShieldOptIn = shieldOptIn
         p.createdAt = p.createdAt ?? Date()
         p.hasCompletedOnboarding = true
         profile = p
-        analytics.log(.onboardingCompleted, [
-            "variant": p.onboardingVariantID ?? OnboardingVariant.productionDefault.rawValue,
-            "minutes": plan?.recommendedDurationMinutes ?? -1,
-            "pro": isPro,
-        ])
-        persistAll()
     }
 
     /// Whether the manual starting-city picker should be offered. It appears only
@@ -1780,16 +1691,6 @@ final class AppModel: ObservableObject {
             "route": route.id, "minutes": focusedSeconds / 60, "miles": baseMiles,
             "qualified": qualifies
         ])
-        // The metric the whole first run exists to move. Counted from the
-        // history that was just written, so it fires exactly once — for the
-        // first completed journey and no other.
-        if history.filter(\.completed).count == 1 {
-            analytics.log(.firstFlightCompleted, [
-                "minutes": focusedSeconds / 60,
-                "variant": profile.onboardingVariantID ?? OnboardingVariant.productionDefault.rawValue,
-                "planned": settings.preferredFlightMinutes ?? -1,
-            ])
-        }
 
         // Re-engagement: reschedule reminders from the new progress. Permission
         // is NOT requested here — landing is not the moment to interrupt the
@@ -2052,33 +1953,7 @@ final class AppModel: ObservableObject {
         if old.appearance != settings.appearance {
             analytics.log(.appearanceChanged, ["mode": settings.appearance.rawValue])
         }
-        if old.languageID != settings.languageID {
-            analytics.log(.languageChanged, ["language": settings.language.analyticsID,
-                                             "resolved": settings.language.resolved.analyticsID])
-        }
         syncWidgets()
-    }
-
-    // MARK: - Language
-
-    /// The pilot's language choice, which may be `.system`.
-    var language: AppLanguage { settings.language }
-
-    /// The string lookup for anything outside a SwiftUI view (an accessibility
-    /// announcement assembled in a model, a notification body). Views should
-    /// read `\.focusStrings` instead so they re-render on a change.
-    var strings: FocusStrings { FocusStrings(settings.language) }
-
-    /// Change the app language.
-    ///
-    /// Nothing here reloads, relaunches or invalidates a cache: the value flows
-    /// into `AppSettings`, the root re-reads it through the environment, and the
-    /// next frame is in the new language. The widget snapshot carries the code
-    /// so the extension can follow once its own strings are translated.
-    func setLanguage(_ language: AppLanguage) {
-        guard settings.language != language else { return }
-        settings.language = language      // didSet persists, logs and syncs widgets
-        haptics.tap()
     }
 
     // MARK: - Notifications
@@ -2124,18 +1999,10 @@ final class AppModel: ObservableObject {
 
     /// Explicit onboarding opt-in. Awaiting the system response lets the
     /// onboarding layer keep its visual guidance aligned with the real prompt.
-    /// Returns whether the pilot actually granted it, so the caller can record
-    /// the OUTCOME rather than just the ask. A warm-up that reports "requested"
-    /// and never "granted" or "denied" measures the button, not the permission.
-    @discardableResult
-    func requestOnboardingNotificationPermission() async -> Bool {
+    func requestOnboardingNotificationPermission() async {
         notifications.setEnabled(true)
-        let granted = await notifications.requestAuthorization(state: notificationState())
+        _ = await notifications.requestAuthorization(state: notificationState())
         refreshNotifications()
-        // A refusal must not leave reminders switched on in Settings for
-        // something iOS will never deliver.
-        if !granted { notifications.setEnabled(false) }
-        return granted
     }
 
     private func persistAll() {
@@ -2253,7 +2120,6 @@ final class AppModel: ObservableObject {
         snap.badgeUnlockedCount = badges.filter { $0.earned }.count
         snap.badgeTotal = badges.count
 
-        snap.languageCode = settings.language.resolved.languageCode ?? "en"
         snap.updatedAt = Date()
         return snap
     }
