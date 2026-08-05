@@ -199,6 +199,15 @@ struct FocusSessionView: View {
             appModel.refreshSubscriptionStatus()
             return
         }
+        // Minting an invite link is a network round trip. Offline it would sit
+        // on "Preparing…" until the readiness timeout and then report a generic
+        // failure; saying so immediately is both faster and truer. Reuses this
+        // screen's own transient pill, so nothing new appears mid-flight.
+        guard !appModel.connectivity.isDefinitelyOffline else {
+            appModel.tapFeedback()
+            note(FocusConnectivity.offlineMessage)
+            return
+        }
         // The tap is HONOURED even if the flight session isn't established yet:
         // show the restrained "Preparing…" state, wait briefly for readiness — which
         // also replays a `flightDidStart` that had to bail — then continue

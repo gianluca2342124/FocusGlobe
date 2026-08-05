@@ -120,6 +120,9 @@ final class AppModel: ObservableObject {
     /// Screen Time app-blocking ("Focus Shield") during journeys. A safe no-op on
     /// unsupported platforms (Mac Designed for iPad, missing FamilyControls).
     let focusShield = FocusShieldService()
+    /// The app's ONE network-path monitor. Owned here so no view ever creates a
+    /// second `NWPathMonitor`; started once in `init`.
+    let connectivity = FocusConnectivity()
 
     private let persistence: PersistenceService
     private var cancellables: Set<AnyCancellable> = []
@@ -312,6 +315,10 @@ final class AppModel: ObservableObject {
         // RevenueCat: configure once (non-blocking) and let it drive Pro state
         // when it's the source of truth. When the SDK isn't linked it stays inert
         // and the local/mock Pro flag is used instead.
+        // One path monitor for the whole app, started once. Cheap, and the
+        // only thing that can answer "is there a connection right now" before a
+        // request has already failed.
+        connectivity.start()
         LaunchLog.mark("subscriptions.configure")
         subscriptions.configure()
         subscriptions.$isPro

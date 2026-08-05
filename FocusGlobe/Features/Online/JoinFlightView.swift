@@ -13,6 +13,8 @@ struct JoinFlightView: View {
     var onDecline: () -> Void
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var online: FocusOnlineModel
+    /// Brief offline notice; one value, so repeated taps refresh rather than stack.
+    @State private var notice = FocusNoticeState()
 
     private var room: FocusRoom { preview.room }
     private var sky: FocusSky { FocusSky.byID(room.skyID) ?? .defaultFree }
@@ -65,7 +67,14 @@ struct JoinFlightView: View {
                 Spacer()
                 VStack(spacing: AppSpacing.sm) {
                     AppPrimaryButton(title: "Join Flight", systemImage: "arrow.up", iconTrailing: true) {
-                        appModel.tapFeedback(); onJoin()
+                        appModel.tapFeedback()
+                        // Accepting an invitation is an atomic server write. Say
+                        // so up front rather than letting the tap disappear.
+                        guard !appModel.connectivity.isDefinitelyOffline else {
+                            notice.show(FocusConnectivity.offlineMessage)
+                            return
+                        }
+                        onJoin()
                     }
                     Button("Not now") { appModel.tapFeedback(); onDecline() }
                         .font(AppTypography.callout)
@@ -76,6 +85,7 @@ struct JoinFlightView: View {
             .frame(maxWidth: 460)
             .frame(maxWidth: .infinity)
         }
+        .focusTransientNotice($notice, alignment: .bottom, inset: 20)
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
     }

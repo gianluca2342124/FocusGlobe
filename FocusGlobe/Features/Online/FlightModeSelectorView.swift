@@ -24,6 +24,9 @@ struct FlightModeSelectorView: View {
     /// Set when a PRO pilot presses Continue while signed out — after Sign in with
     /// Apple succeeds we continue exactly once (never a second time).
     @State private var pendingOnlineContinue = false
+    /// The brief "Online needs a connection" notice. One value, so repeated taps
+    /// refresh it instead of stacking pills.
+    @State private var notice = FocusNoticeState()
 
     private var onlineAvailable: Bool { online.availability.isAvailable }
     private var canSignIn: Bool {
@@ -62,6 +65,7 @@ struct FlightModeSelectorView: View {
                 continueTapped()
             }
         }
+        .focusTransientNotice($notice, alignment: .bottom, inset: 8)
         .animation(.snappy(duration: 0.22), value: onlineSelected)
         .animation(.snappy(duration: 0.22), value: canSignIn)
         .onAppear {
@@ -120,7 +124,21 @@ struct FlightModeSelectorView: View {
         case .premium:
             break   // PRO / Lifetime — proceed.
         }
-        // PRO from here. Online requires a signed-in session first.
+        // PRO from here — and the first thing an Online flight needs is a
+        // network. Without this the offline path fell straight through to the
+        // `return` below: not signed out, so no sign-in prompt, and nothing
+        // else to show. The pilot pressed Continue and the app did nothing,
+        // which reads as a broken button rather than as "you are offline".
+        //
+        // `isDefinitelyOffline` only, never `!isOnline` — the monitor's initial
+        // `unknown` must not block someone who is perfectly connected in the
+        // moment after launch.
+        if appModel.connectivity.isDefinitelyOffline {
+            appModel.tapFeedback()
+            notice.show(FocusConnectivity.offlineMessage)
+            return
+        }
+        // Online requires a signed-in session first.
         if !onlineAvailable {
             if canSignIn {
                 pendingOnlineContinue = true          // continue once after auth
