@@ -419,7 +419,11 @@ struct OnboardingView: View {
     // MARK: - 7. Results
 
     private var resultsStep: some View {
-        OnboardingResultsStep(plan: resultPlan, onContinue: advance)
+        // Wrapped rather than passed as `advance` directly: a bare method
+        // reference does not carry its default argument, so `advance` has type
+        // `(Bool) -> Void` and will not satisfy `() -> Void`. The closure calls
+        // it with the default `withFeedback: true` — the CTA plays its own tap.
+        OnboardingResultsStep(plan: resultPlan, onContinue: { advance() })
     }
 
     /// Built from the pilot's own answers. `targetDate` is derived here rather
