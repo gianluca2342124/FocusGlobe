@@ -277,8 +277,8 @@ struct OnboardingView: View {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: AppSpacing.xs),
                                 GridItem(.flexible(), spacing: AppSpacing.xs)],
                       spacing: AppSpacing.xs) {
-                ForEach([15, 25, 45, 60], id: \.self) { value in
-                    choiceTile("\(value) min",
+                ForEach(Self.flightLengths, id: \.self) { value in
+                    choiceTile(Formatters.durationLabel(minutes: value),
                                systemImage: nil,
                                isSelected: minutes == value) {
                         minutes = value
@@ -288,6 +288,17 @@ struct OnboardingView: View {
             }
         }
     }
+
+    /// The offered first-flight lengths.
+    ///
+    /// Six, because six fills three even rows of a two-column grid — seven would
+    /// leave an orphan tile and a lopsided screen. 90 min is the common
+    /// deep-work block and 120 is the ceiling; 75 was dropped in their favour as
+    /// the rarer choice. Every value is an exact stop on `DurationScale`, so the
+    /// setup dial can open on it precisely rather than snapping to a neighbour,
+    /// and none of them is PRO-gated — only `infinite` is — so a free pilot can
+    /// actually fly whatever they pick here.
+    static let flightLengths = [15, 25, 45, 60, 90, 120]
 
     // MARK: - 5. Atmosphere
 
