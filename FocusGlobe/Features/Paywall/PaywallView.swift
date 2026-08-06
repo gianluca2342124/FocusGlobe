@@ -236,16 +236,16 @@ struct PaywallView: View {
 
     private var trialPage: some View {
         VStack(spacing: 0) {
-            // Close is also shown when this paywall is INLINE (`onClose` set):
-            // there is no cover to swipe away, so without it page two's only
-            // exit is Back then X — two non-obvious taps at the highest-friction
-            // moment of the first run.
+            // The trial page has NO close control, inline or presented. It is
+            // the page a pilot lands on after asking to see the price, and its
+            // only exit is Back — deliberately, so the price is never dismissed
+            // by a stray tap in the corner. Page one keeps its X.
             paywallHeader(backAction: context.isOnboardingOffer ? nil : {
                 appModel.tapFeedback()
                 withAnimation(AppMotion.content.respecting(reduceMotion)) {
                     page = .benefit
                 }
-            }, showsClose: context.isOnboardingOffer || onClose != nil)
+            }, showsClose: context.isOnboardingOffer)
 
             ViewThatFits(in: .vertical) {
                 trialContent
@@ -541,6 +541,15 @@ struct PaywallView: View {
 
     // MARK: - Shared chrome and actions
 
+    /// Onboarding wants a quieter exit: there the offer is the last step of a
+    /// flow the pilot is moving through, not a modal they have been dropped
+    /// into, and a full-size X reads as "get out of here" at exactly the wrong
+    /// moment. Every other entry point is unchanged.
+    private var closeControlSize: CGFloat {
+        backdrop == .onboarding ? viewport.navigationControlSize * 0.74
+                                : viewport.navigationControlSize
+    }
+
     private func paywallHeader(
         backAction: (() -> Void)?,
         showsClose: Bool
@@ -555,11 +564,16 @@ struct PaywallView: View {
             }
             Spacer()
             if showsClose {
-                AppIconButton(systemImage: "xmark", size: viewport.navigationControlSize,
-                              tint: .white, accessibilityLabel: "Close") {
+                AppIconButton(systemImage: "xmark", size: closeControlSize,
+                              tint: .white.opacity(backdrop == .onboarding ? 0.62 : 1),
+                              accessibilityLabel: "Close") {
                     appModel.tapFeedback()
                     close()
                 }
+                // The tap target stays a full control even when the glyph is
+                // smaller, so shrinking it visually never makes it harder to hit.
+                .frame(width: viewport.navigationControlSize,
+                       height: viewport.navigationControlSize)
             } else {
                 Color.clear.frame(width: viewport.navigationControlSize,
                                   height: viewport.navigationControlSize)

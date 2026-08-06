@@ -41,12 +41,15 @@ struct OnboardingView: View {
     @EnvironmentObject private var router: AppRouter
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// The screens BEFORE the offer. The paywall is a seventh surface but not a
-    /// question, so the progress bar completes as the pilot reaches it.
-    private static let questionCount = 6
+    /// The last step's index. The offer is now counted: it is presented as the
+    /// final step of the first run rather than as a separate interruption, so
+    /// the bar completes ON it rather than before it. The bar still measures
+    /// only what is really left — it never advances past 100% and there is no
+    /// step hidden behind the purchase.
+    private static let lastStepIndex = Step.allCases.count - 1
 
     private enum Step: Int, CaseIterable {
-        case welcome, intent, friction, duration, atmosphere, reveal, offer
+        case welcome, intent, friction, duration, atmosphere, setup, results, offer
     }
 
     @State private var step: Step = .welcome
@@ -65,8 +68,8 @@ struct OnboardingView: View {
     /// reach `finish()` in the same instant when a purchase lands. Handing off
     /// twice would set the tab and rewrite the profile twice for no reason.
     @State private var didFinish = false
-    /// How long the reveal's Continue may wait on RevenueCat before showing the
-    /// offer anyway. Falling through to the paywall is the SAFE default: it
+    /// How long the results screen's Continue may wait on RevenueCat before
+    /// showing the offer anyway. Falling through to the paywall is the SAFE default: it
     /// grants nothing, and the paywall closes itself the moment the entitlement
     /// turns out to be premium. Waiting forever is not safe — offline, a first
     /// run could never be finished at all.
@@ -75,15 +78,22 @@ struct OnboardingView: View {
     var body: some View {
         ZStack {
             if step == .offer {
-                // The offer owns the whole screen. It paints the SAME sky as its
-                // own background, so the root backdrop must not also be drawn:
-                // two copies composite the gold bloom over itself and draw 140
-                // stars where every previous screen drew 70, producing a visible
-                // brightening at exactly the hand-off this is meant to make
-                // seamless. It also drops the 560 pt column and the progress bar,
-                // so the paywall lays itself out from the real window the way it
-                // does everywhere else.
+                // The offer paints the SAME sky as its own background, so the
+                // root backdrop must not also be drawn: two copies composite the
+                // gold bloom over itself and draw 140 stars where every previous
+                // screen drew 70 — a visible brightening at exactly the hand-off
+                // this is meant to make seamless.
+                //
+                // The onboarding bar rides on top as a safe-area inset rather
+                // than an overlay, so the paywall lays itself out BELOW it
+                // instead of underneath it, and the flow reads as one continuous
+                // run of screens rather than a purchase page that appeared. It
+                // is full-bleed otherwise — no 560 pt column — so the paywall
+                // sizes from the real window exactly as it does from Home.
                 offerStep
+                    .safeAreaInset(edge: .top, spacing: 0) {
+                        progressBar.padding(.bottom, AppSpacing.xs)
+                    }
             } else {
                 OnboardingBackdrop()
                 VStack(spacing: 0) {
@@ -138,10 +148,7 @@ struct OnboardingView: View {
     }
 
     private var progress: CGFloat {
-        // The offer completes the bar rather than extending it: the questions
-        // are what the bar measures, and pretending the purchase screen is a
-        // seventh step would make the bar a sales device.
-        CGFloat(min(step.rawValue, Self.questionCount)) / CGFloat(Self.questionCount)
+        CGFloat(step.rawValue) / CGFloat(Self.lastStepIndex)
     }
 
     @ViewBuilder private var stepBody: some View {
@@ -151,9 +158,10 @@ struct OnboardingView: View {
         case .friction:   frictionStep
         case .duration:   durationStep
         case .atmosphere: atmosphereStep
-        case .reveal:     revealStep
-        // `.offer` is handled by `body` directly: it replaces the chrome rather
-        // than living inside it.
+        case .setup:      setupStep
+        case .results:    resultsStep
+        // `.offer` is handled by `body` directly: it is full-bleed with only the
+        // progress bar inset above it.
         case .offer:      EmptyView()
         }
     }
@@ -387,105 +395,51 @@ struct OnboardingView: View {
         appModel.previewJourneyAudio(option)
     }
 
-    // MARK: - 6. Reveal
+    // MARK: - 6. Setting up
 
-    /// The bridge into the offer.
-    ///
-    /// It restates only things the pilot actually chose, and only things the app
-    /// has genuinely configured — this card is a receipt, not a promise. The
-    /// three lines under it are the honest consequences of the setup, phrased
-    /// against the friction they named.
-    private var revealStep: some View {
-        VStack(spacing: AppSpacing.lg) {
-            Spacer(minLength: 0)
-
-            VStack(spacing: AppSpacing.sm) {
-                Text("Your first focus flight is ready")
-                    .font(.system(size: Layout.pad(30, 38), weight: .bold, design: .default))
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.white)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text("A calmer, clearer way to stay with what matters.")
-                    .font(AppTypography.callout)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.white.opacity(0.68))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .accessibilityElement(children: .combine)
-            .accessibilityAddTraits(.isHeader)
-
-            VStack(spacing: 0) {
-                summaryRow("target", "Focus", intent?.title ?? "Fly")
-                summaryDivider
-                summaryRow("timer", "First flight", "\(minutes ?? 25) min")
-                summaryDivider
-                summaryRow("waveform", "Atmosphere", appModel.selectedJourneyAudio.displayName)
-            }
-            .padding(AppSpacing.md)
-            .background(RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
-                .fill(.white.opacity(0.07)))
-            .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
-                .strokeBorder(.white.opacity(0.12), lineWidth: 1))
-
-            VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                ForEach(revealBenefits, id: \.self) { line in
-                    HStack(alignment: .firstTextBaseline, spacing: AppSpacing.sm) {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 13, weight: .heavy))
-                            .foregroundStyle(AppColors.selectionGold)
-                            .frame(width: 18)
-                        Text(line)
-                            .font(AppTypography.callout)
-                            .foregroundStyle(.white.opacity(0.82))
-                            .fixedSize(horizontal: false, vertical: true)
-                        Spacer(minLength: 0)
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Spacer(minLength: 0)
-
-            AppPrimaryButton(title: "Continue", systemImage: "arrow.right", iconTrailing: true) {
-                advance()
-            }
-            .padding(.bottom, AppSpacing.xl)
-        }
-        .padding(.horizontal, AppSpacing.screen)
+    /// The list names things the app is genuinely configuring, in the order it
+    /// configures them — `onApply` commits the pilot's answers to the canonical
+    /// settings partway through, so by the last tick the work described has
+    /// actually happened.
+    private var setupStep: some View {
+        OnboardingSetupStep(
+            items: [
+                "Your first focus route",
+                "Your preferred flight length",
+                "Your focus atmosphere",
+                "A distraction-free session",
+                "Your progress path",
+                "Your launch-ready Home",
+            ],
+            onApply: applySelections,
+            onFinished: { move(to: .results) }
+        )
     }
 
-    /// Three consequences of the setup, led by the one that answers the friction
-    /// the pilot named. Nothing here claims an outcome, a statistic or a study.
-    private var revealBenefits: [String] {
-        let lead = friction?.reassurance ?? "A calmer place to start"
-        return [lead, "One clear flight at a time", "Progress you can actually see"]
+    // MARK: - 7. Results
+
+    private var resultsStep: some View {
+        OnboardingResultsStep(plan: resultPlan, onContinue: advance)
     }
 
-    private func summaryRow(_ icon: String, _ label: String, _ value: String) -> some View {
-        HStack(spacing: AppSpacing.sm) {
-            Image(systemName: icon)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(AppColors.gold)
-                .frame(width: 22)
-            Text(label)
-                .font(AppTypography.callout)
-                .foregroundStyle(.white.opacity(0.66))
-            Spacer(minLength: AppSpacing.xs)
-            Text(value)
-                .font(.system(size: 16, weight: .semibold, design: .default))
-                .foregroundStyle(.white)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-        }
-        .padding(.vertical, 11)
-        .accessibilityElement(children: .combine)
+    /// Built from the pilot's own answers. `targetDate` is derived here rather
+    /// than inside the view so the screen renders a stable value instead of a
+    /// new one on every redraw.
+    private var resultPlan: OnboardingResultPlan {
+        OnboardingResultPlan(
+            focusTitle: intent?.title ?? "Focus",
+            frictionTitle: friction?.shortTitle ?? "Distractions",
+            minutes: minutes ?? 25,
+            atmosphere: appModel.selectedJourneyAudio.displayName,
+            targetDate: Calendar.current.date(
+                byAdding: .day,
+                value: OnboardingResultPlan.weeks * 7,
+                to: Date()
+            ) ?? Date()
+        )
     }
 
-    private var summaryDivider: some View {
-        Rectangle().fill(.white.opacity(0.08)).frame(height: 1)
-    }
-
-    // MARK: - 7. The offer
+    // MARK: - 8. The offer
 
     /// The SAME paywall the Home PRO button opens — same carousel, same
     /// comparison table, same Annual and Monthly products, same real StoreKit
@@ -529,7 +483,7 @@ struct OnboardingView: View {
     /// answer produces one haptic and one earcon rather than two 180 ms apart.
     private func advance(withFeedback: Bool = true) {
         // Once the offer is up, ITS controls own every exit. Without this a
-        // second tap on the reveal's Continue — easy while it is still sliding
+        // second tap on the results screen's CTA — easy while it is still sliding
         // away — ran off the end of the step list and completed onboarding,
         // skipping the paywall entirely.
         guard step != .offer else { return }
@@ -549,10 +503,10 @@ struct OnboardingView: View {
             appModel.refreshSubscriptionStatus()
             // Bounded, not indefinite. RevenueCat may never answer — no network
             // on a fresh install is enough — and without this the pilot is left
-            // on the reveal with a Continue that gives no feedback and no way
+            // on the results screen with a CTA that gives no feedback and no way
             // forward, unable to finish the first run at all.
             DispatchQueue.main.asyncAfter(deadline: .now() + Self.entitlementGraceSeconds) {
-                guard pendingEntitlementResolution, step == .reveal else { return }
+                guard pendingEntitlementResolution, step == .results else { return }
                 pendingEntitlementResolution = false
                 move(to: .offer)
             }
@@ -562,6 +516,18 @@ struct OnboardingView: View {
     private func move(to next: Step) {
         if next != .atmosphere { appModel.stopJourneyAudioPreview() }
         withAnimation(reduceMotion ? nil : AppMotion.soft) { step = next }
+    }
+
+    /// Commit the pilot's answers to the canonical settings.
+    ///
+    /// Called from the setup screen, not from `finish()`, for two reasons: it
+    /// makes that screen truthful — it says the app is setting things up
+    /// because at that moment it is — and it means a pilot who closes the app
+    /// on the offer keeps everything they chose instead of losing all six
+    /// answers. Idempotent, so `finish()` can safely call it again.
+    private func applySelections() {
+        appModel.applyOnboardingSelections(focusPresetTitle: intent?.title,
+                                           preferredMinutes: minutes)
     }
 
     /// Persist and hand off to Home.
@@ -574,8 +540,11 @@ struct OnboardingView: View {
         appModel.stopJourneyAudioPreview()
         router.path.removeAll()
         router.selectedTab = .home
-        appModel.completeOnboarding(focusPresetTitle: intent?.title,
-                                    preferredMinutes: minutes)
+        // Safe if the setup screen already ran: both are idempotent, and a
+        // branch that reached the offer without passing through setup (a PRO
+        // owner resolving mid-flow) still gets its answers written.
+        applySelections()
+        appModel.completeOnboarding()
         // Onboarding has already made the PRO offer; Home must not open a second
         // one on top of the arrival.
         appModel.markPremiumIntroSeen()
@@ -767,15 +736,20 @@ enum FocusFriction: String, CaseIterable, Identifiable {
         }
     }
 
-    /// The first line of the reveal, phrased against this friction. A statement
-    /// about the setup that was just made — never a claim about results.
-    var reassurance: String {
+    /// A compact noun for the results screen's "Main distraction" row.
+    ///
+    /// This is what the friction answer is FOR. It is not persisted — nothing
+    /// outside the first run reads it, and storing it again with no reader is
+    /// exactly what made the old `focusStruggle` field dead — but it is named
+    /// back to the pilot on the screen that leads into the offer, which is the
+    /// whole reason the question is asked.
+    var shortTitle: String {
         switch self {
-        case .phone:           return "One place to be, with the rest further away"
-        case .procrastination: return "A first flight small enough to just start"
-        case .momentum:        return "A flight you can finish, then come back to"
-        case .overwhelm:       return "One thing at a time, for as long as you chose"
-        case .starting:        return "Take-off is one tap, already set up"
+        case .phone:           return "My phone"
+        case .procrastination: return "Putting it off"
+        case .momentum:        return "Losing momentum"
+        case .overwhelm:       return "Feeling overwhelmed"
+        case .starting:        return "Getting started"
         }
     }
 }

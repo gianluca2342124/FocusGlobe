@@ -1028,22 +1028,22 @@ final class AppModel: ObservableObject {
     // MARK: - Onboarding completion
 
     /// Persist everything gathered by first-run onboarding and open the app.
-    /// Finish the first run.
+    /// Write the pilot's onboarding answers into the canonical settings.
     ///
-    /// Takes only what something actually reads. The previous signature carried
-    /// six values, and an audit found four of them — a free-text year goal, an
-    /// age band, a free-text struggle and a Shield opt-in — were written here and
-    /// read by nothing at all. Asking for data nobody consumes is a screen spent
-    /// for free, so those questions and their parameters are gone together.
+    /// Separate from `completeOnboarding()` on purpose. The first run commits
+    /// these while its setup screen is on display — so that screen is describing
+    /// work that is really happening — and a pilot who abandons on the offer
+    /// still keeps every answer they gave. Flipping `hasCompletedOnboarding`
+    /// here would tear the flow down mid-run, which is why that stayed separate.
     ///
-    /// What remains has a named reader:
-    /// * `focusPresetTitle` -> the Online presence category, and the pre-selected
-    ///   focus token in the flight-setup ritual.
-    /// * `preferredMinutes` -> the flight-setup duration dial's opening value.
+    /// Only values something reads:
+    /// * `focusPresetTitle` -> the Online presence category, and the focus token
+    ///   the flight-setup ritual opens on.
+    /// * `preferredMinutes` -> the setup dial's opening value for the first flight.
     ///
-    /// The soundscape is not a parameter because the selector already commits it
-    /// to `settings.selectedJourneyAudioID` as the pilot browses.
-    func completeOnboarding(focusPresetTitle: String?, preferredMinutes: Int?) {
+    /// The soundscape is not a parameter: the selector commits it to
+    /// `settings.selectedJourneyAudioID` as the pilot browses.
+    func applyOnboardingSelections(focusPresetTitle: String?, preferredMinutes: Int?) {
         var p = profile
         // Only a real `FocusPreset` title is stored: this value is published as
         // an Online flight category, so it must stay a known token rather than
@@ -1052,11 +1052,47 @@ final class AppModel: ObservableObject {
             p.focusStyle = title
         }
         p.createdAt = p.createdAt ?? Date()
-        p.hasCompletedOnboarding = true
         profile = p
 
         if let preferredMinutes {
             settings.preferredFlightMinutes = preferredMinutes
+        }
+    }
+
+    /// Mark the first run finished. Nothing else — the answers were already
+    /// committed by `applyOnboardingSelections`.
+    func completeOnboarding() {
+        var p = profile
+        p.createdAt = p.createdAt ?? Date()
+        p.hasCompletedOnboarding = true
+        profile = p
+        // Home consumes this on its first appearance. Deliberately NOT
+        // persisted: onboarding completing and Home appearing happen in the same
+        // run loop, so a stored flag would only add a way for the prompt to
+        // resurface on some later launch.
+        wantsNotificationPromptOnHome = true
+    }
+
+    /// Set the instant the first run finishes, cleared the first time Home reads
+    /// it. The permission ask belongs HERE rather than inside onboarding: a
+    /// system dialog before the offer is friction at the worst possible moment,
+    /// and one on arrival lands when the pilot has just been told their first
+    /// flight is ready.
+    @Published private(set) var wantsNotificationPromptOnHome = false
+
+    /// Consume the flag and ask iOS — once, and only if the pilot has never been
+    /// asked. `requestAuthorization` returns early for any status other than
+    /// `.notDetermined`, so a denial is never re-prompted.
+    func consumeNotificationPromptIfNeeded() {
+        guard wantsNotificationPromptOnHome else { return }
+        wantsNotificationPromptOnHome = false
+        Task { @MainActor in
+            notifications.setEnabled(true)
+            let granted = await notifications.requestAuthorization(state: notificationState())
+            // A refusal must not leave "Reminders" reading as on in Settings for
+            // something iOS will never deliver.
+            if !granted { notifications.setEnabled(false) }
+            refreshNotifications()
         }
     }
 
