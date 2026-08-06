@@ -238,10 +238,10 @@ struct HomeView: View {
                 skyIndex = FocusSky.all.firstIndex(of: appModel.selectedSky) ?? 0
                 didInitSky = true
             }
-            // The first arrival after onboarding, and only then: `AppModel`
-            // clears the flag as it reads it, and the request itself returns
-            // early unless iOS has never asked, so a pilot who declined is
-            // never prompted again.
+            // The first arrival after onboarding, and only then. Safe to call on
+            // every appearance: the pending flag is persisted and one-shot, it
+            // is cleared only once iOS has actually been consulted, and the
+            // system is asked at all only while the status is `.notDetermined`.
             appModel.consumeNotificationPromptIfNeeded()
             presentHomeAutoPopup()
             maybeRequestReview()

@@ -17,6 +17,27 @@ final class PersistenceService {
         case isPro = "fg.isPro"
         case resumableJourney = "fg.resumableJourney"
         case profile = "fg.profile"
+        case pendingNotificationPrompt = "fg.pendingPostOnboardingNotificationPrompt"
+
+        /// Keys that live in `UserDefaults` instead of the account-scoped
+        /// snapshot, because what they describe belongs to the DEVICE rather
+        /// than to whoever happens to be signed in.
+        ///
+        /// Two things qualify. An App Store entitlement is granted to an Apple
+        /// ID and RevenueCat stays authoritative over it. And iOS grants exactly
+        /// one chance to ask for notification permission per install — a pending
+        /// ask that followed an account into a different profile, or vanished
+        /// when one was activated, would be asking about the wrong device.
+        ///
+        /// They are `Bool`-only by construction: `bool(for:)` / `setBool(_:for:)`
+        /// are the only accessors that reach them, and `save`/`load`/`remove`
+        /// route around the snapshot for them entirely.
+        var isDeviceScoped: Bool {
+            switch self {
+            case .isPro, .pendingNotificationPrompt: return true
+            case .settings, .progress, .history, .resumableJourney, .profile: return false
+            }
+        }
     }
 
     private struct PersistedUserState: Codable {
@@ -77,7 +98,7 @@ final class PersistenceService {
             case .history: return history
             case .profile: return profile
             case .resumableJourney: return resumableJourney
-            case .isPro: return nil
+            case .isPro, .pendingNotificationPrompt: return nil
             }
         }
 
@@ -88,7 +109,7 @@ final class PersistenceService {
             case .history: history = data
             case .profile: profile = data
             case .resumableJourney: resumableJourney = data
-            case .isPro: break
+            case .isPro, .pendingNotificationPrompt: break
             }
         }
     }
@@ -243,7 +264,7 @@ final class PersistenceService {
     }
 
     func save<T: Encodable>(_ value: T, for key: Key) {
-        guard key != .isPro else { return }
+        guard !key.isDeviceScoped else { return }
         let data: Data
         do {
             data = try encoder.encode(value)
@@ -300,8 +321,15 @@ final class PersistenceService {
         lock.unlock()
     }
 
-    /// RevenueCat remains authoritative and deliberately independent from the
-    /// account-scoped local progression snapshot.
+    /// Device-scoped flags (see `Key.isDeviceScoped`): the RevenueCat mirror,
+    /// which stays authoritative and deliberately independent of the
+    /// account-scoped progression snapshot, and the pending post-onboarding
+    /// notification ask, which belongs to this install's one permission
+    /// opportunity.
+    ///
+    /// An absent key reads `false`, which is what makes the pending ask safe to
+    /// introduce: every pilot who finished onboarding before it existed has no
+    /// key, so nothing is ever asked of them.
     func bool(for key: Key) -> Bool {
         defaults.bool(forKey: key.rawValue)
     }
@@ -311,7 +339,7 @@ final class PersistenceService {
     }
 
     func remove(_ key: Key) {
-        if key == .isPro {
+        if key.isDeviceScoped {
             defaults.removeObject(forKey: key.rawValue)
             return
         }

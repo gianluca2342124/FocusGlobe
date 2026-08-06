@@ -34,6 +34,18 @@ enum NotificationCategory: String {
     }
 }
 
+/// What `requestFirstRunAuthorization` found. In BOTH cases iOS has been
+/// consulted, which is the point: either way the install's one pending ask is
+/// spent and the caller can retire its durable flag.
+enum FirstRunAuthorizationOutcome {
+    /// iOS had never asked. The system sheet was presented, and this is the
+    /// pilot's answer to it.
+    case asked(granted: Bool)
+    /// Already authorized, provisional, ephemeral or denied. Nothing was
+    /// presented and nothing was changed.
+    case alreadyDecided
+}
+
 /// Centralised, tasteful **local** notification strategy for retention — streak
 /// protection, a daily focus / study nudge, unfinished-journey reminders and a
 /// gentle comeback sequence. Duolingo-inspired but never manipulative: warm,
@@ -96,6 +108,32 @@ final class NotificationService {
     }
 
     // MARK: Permission
+
+    /// What iOS currently thinks, read without asking anything.
+    private func authorizationStatus() async -> UNAuthorizationStatus {
+        await center.notificationSettings().authorizationStatus
+    }
+
+    /// The one-shot ask made on the first arrival at Home after onboarding.
+    ///
+    /// The status is read BEFORE anything is requested, so `.notDetermined` is
+    /// the only branch that can put a dialog on screen — authorized,
+    /// provisional, ephemeral and denied all return `.alreadyDecided` untouched,
+    /// which is what stops a pilot who said no from ever being asked again.
+    ///
+    /// This exists as its own entry point, rather than the caller reading the
+    /// status itself, because the caller has a durable flag to retire and needs
+    /// to know that iOS was genuinely consulted. A bare `false` from
+    /// `requestAuthorization` cannot tell it that: the same `false` covers a
+    /// denial, a disabled preference and a failed request.
+    func requestFirstRunAuthorization(state: NotificationState) async -> FirstRunAuthorizationOutcome {
+        guard await authorizationStatus() == .notDetermined else { return .alreadyDecided }
+        // The Reminders preference gates the request below. A fresh install
+        // defaults it on; setting it covers a DEBUG reset that had turned it off
+        // before onboarding ran again.
+        setEnabled(true)
+        return .asked(granted: await requestAuthorization(state: state))
+    }
 
     /// Normal, prompting permission — only for an **explicit** opt-in (the Settings
     /// → Reminders toggle). Requests once, when undecided.

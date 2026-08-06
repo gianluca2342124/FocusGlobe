@@ -1066,32 +1066,64 @@ final class AppModel: ObservableObject {
         p.createdAt = p.createdAt ?? Date()
         p.hasCompletedOnboarding = true
         profile = p
-        // Home consumes this on its first appearance. Deliberately NOT
-        // persisted: onboarding completing and Home appearing happen in the same
-        // run loop, so a stored flag would only add a way for the prompt to
-        // resurface on some later launch.
-        wantsNotificationPromptOnHome = true
+        // Durable, and written in the same breath as the flag that ends
+        // onboarding. Held only in memory, this was a real hole: the profile is
+        // persisted, so a termination between here and Home's first appearance
+        // skipped onboarding on relaunch AND lost the pending ask permanently.
+        // Device-scoped rather than account-scoped, because iOS grants the one
+        // permission opportunity to this install, not to whoever signs in.
+        persistence.setBool(true, for: .pendingNotificationPrompt)
     }
 
-    /// Set the instant the first run finishes, cleared the first time Home reads
-    /// it. The permission ask belongs HERE rather than inside onboarding: a
-    /// system dialog before the offer is friction at the worst possible moment,
-    /// and one on arrival lands when the pilot has just been told their first
-    /// flight is ready.
-    @Published private(set) var wantsNotificationPromptOnHome = false
+    /// True from the instant the first run finishes until Home has genuinely
+    /// dealt with the ask. Survives termination, force quit, a purchase, a
+    /// restore, an entitlement refresh and any delay in reaching Home, because
+    /// none of those touch it — only `consumeNotificationPromptIfNeeded` clears
+    /// it, and only after the system has actually been consulted.
+    var hasPendingNotificationPrompt: Bool {
+        persistence.bool(for: .pendingNotificationPrompt)
+    }
 
-    /// Consume the flag and ask iOS — once, and only if the pilot has never been
-    /// asked. `requestAuthorization` returns early for any status other than
-    /// `.notDetermined`, so a denial is never re-prompted.
+    /// Guards re-entry only. Home's `onAppear` fires again on every return to
+    /// the tab, and the pending flag deliberately stays set for the whole time
+    /// the system sheet is up — without this, coming back mid-request would
+    /// start a second one.
+    private var isResolvingNotificationPrompt = false
+
+    /// The one-shot post-onboarding ask.
+    ///
+    /// The permission belongs here rather than inside onboarding: a system sheet
+    /// before the offer is friction at the worst possible moment, and one on
+    /// arrival lands just after the pilot has been told their first flight is
+    /// ready. Home is also structurally safe — `RootView` swaps onboarding OUT
+    /// for the shell, so nothing can fire while onboarding or its inline paywall
+    /// is still on screen.
+    ///
+    /// `requestFirstRunAuthorization` reads the status BEFORE requesting
+    /// anything, so `.notDetermined` is the only branch that shows a dialog.
+    /// Authorized, provisional, ephemeral and denied all fall straight through
+    /// to the clear — iOS was consulted either way, so the ask is spent either
+    /// way, and a pilot who said no is never asked twice.
     func consumeNotificationPromptIfNeeded() {
-        guard wantsNotificationPromptOnHome else { return }
-        wantsNotificationPromptOnHome = false
+        guard !isResolvingNotificationPrompt, hasPendingNotificationPrompt else { return }
+        isResolvingNotificationPrompt = true
         Task { @MainActor in
-            notifications.setEnabled(true)
-            let granted = await notifications.requestAuthorization(state: notificationState())
+            defer { isResolvingNotificationPrompt = false }
+
+            let outcome = await notifications.requestFirstRunAuthorization(state: notificationState())
             // A refusal must not leave "Reminders" reading as on in Settings for
-            // something iOS will never deliver.
-            if !granted { notifications.setEnabled(false) }
+            // something iOS will never deliver. Only an answer to OUR sheet
+            // moves the preference — `.alreadyDecided` leaves whatever the pilot
+            // set previously exactly as it was.
+            if case .asked(let granted) = outcome, !granted {
+                notifications.setEnabled(false)
+            }
+
+            // Cleared only now: the status has been checked and, where the
+            // status made it applicable, the request has been made. A crash
+            // before this point leaves the flag set and the ask simply happens
+            // on the next launch, which is the correct failure direction.
+            persistence.setBool(false, for: .pendingNotificationPrompt)
             refreshNotifications()
         }
     }
