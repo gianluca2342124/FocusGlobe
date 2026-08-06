@@ -255,14 +255,23 @@ struct FlightSetupView: View {
         .onAppear {
             guard !didSeedFromPreferences else { return }
             didSeedFromPreferences = true
-            if let preferred = appModel.settings.preferredFlightMinutes {
+            // Only until the pilot has actually flown. `preferredFlightMinutes`
+            // is written once, by onboarding, and nothing else updates it — so
+            // seeding on every ritual would drag a pilot who has settled into
+            // 60-minute flights back to their first-run answer forever. It
+            // configures the FIRST flight, which is exactly what it was asked
+            // for; after that the dial behaves as it always did.
+            if appModel.history.isEmpty,
+               let preferred = appModel.settings.preferredFlightMinutes {
                 minutes = preferred
             }
-            // The focus token they named, pre-selected — still fully changeable
-            // here, and left alone entirely if they never answered.
-            if focus == nil, let title = appModel.profile.focusStyle {
-                focus = FocusPreset.all.first { $0.title == title }
-            }
+            // NOTE: the focus token is deliberately NOT pre-seeded. `PackFocusView`
+            // has no Continue button — `onContinue()` is scheduled only by
+            // `assign(_:)`, which runs only on a chip tap or an accepted drag —
+            // so arriving with a token already in the socket renders the step in
+            // its finished state ("… packed — taking off") with nothing to
+            // advance it. The intent answer still has a real reader: it is the
+            // Online flight category on `profile.focusStyle`.
         }
         // The ritual's OWN presenter remains inside its full-screen boundary.
         // Paywalls are full-screen; sign-in remains a sheet. Both filtered

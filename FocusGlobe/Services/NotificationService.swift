@@ -106,8 +106,10 @@ final class NotificationService {
         }
     }
 
-    /// Awaitable variant used by onboarding so its guidance remains visible
-    /// for exactly as long as the system permission sheet is onscreen.
+    /// Awaitable variant, for a caller that must keep its own guidance on
+    /// screen for exactly as long as the system permission sheet is. Onboarding
+    /// is no longer that caller — the first run asks for nothing; the request
+    /// happens in context, from Passport and Settings.
     @discardableResult
     func requestAuthorization(state: NotificationState) async -> Bool {
         guard isEnabled else { return false }

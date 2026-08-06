@@ -5,9 +5,7 @@ import SwiftUI
 import UIKit
 #endif
 
-/// FocusGlobe's single contextual PRO experience. Page one explains the exact
-/// benefit the pilot touched; page two explains the trial and is the only page
-/// capable of starting a RevenueCat purchase.
+
 /// Which sky the paywall stands in.
 ///
 /// NOT a paywall variant — the products, the carousel, the comparison table, the
@@ -20,6 +18,9 @@ enum PaywallBackdrop {
     case onboarding
 }
 
+/// FocusGlobe's single contextual PRO experience. Page one explains the exact
+/// benefit the pilot touched; page two explains the trial and is the only page
+/// capable of starting a RevenueCat purchase.
 struct PaywallView: View {
     var context: PaywallContext = .general
     var backdrop: PaywallBackdrop = .standard
@@ -235,12 +236,16 @@ struct PaywallView: View {
 
     private var trialPage: some View {
         VStack(spacing: 0) {
+            // Close is also shown when this paywall is INLINE (`onClose` set):
+            // there is no cover to swipe away, so without it page two's only
+            // exit is Back then X — two non-obvious taps at the highest-friction
+            // moment of the first run.
             paywallHeader(backAction: context.isOnboardingOffer ? nil : {
                 appModel.tapFeedback()
                 withAnimation(AppMotion.content.respecting(reduceMotion)) {
                     page = .benefit
                 }
-            }, showsClose: context.isOnboardingOffer)
+            }, showsClose: context.isOnboardingOffer || onClose != nil)
 
             ViewThatFits(in: .vertical) {
                 trialContent

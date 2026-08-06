@@ -59,23 +59,43 @@ struct OnboardingView: View {
     /// intent is held WITHOUT showing an offer, then either finishes for an owner
     /// or opens the paywall for a confirmed Free pilot.
     @State private var pendingEntitlementResolution = false
+    /// True between a choice tap and the deferred advance it scheduled.
+    @State private var isAdvancing = false
     /// Both the paywall's own exit and this view's entitlement observer can
     /// reach `finish()` in the same instant when a purchase lands. Handing off
     /// twice would set the tab and rewrite the profile twice for no reason.
     @State private var didFinish = false
+    /// How long the reveal's Continue may wait on RevenueCat before showing the
+    /// offer anyway. Falling through to the paywall is the SAFE default: it
+    /// grants nothing, and the paywall closes itself the moment the entitlement
+    /// turns out to be premium. Waiting forever is not safe — offline, a first
+    /// run could never be finished at all.
+    private static let entitlementGraceSeconds: TimeInterval = 2.5
 
     var body: some View {
         ZStack {
-            OnboardingBackdrop()
-            VStack(spacing: 0) {
-                progressBar
-                stepBody
-                    .id(step)
-                    .transition(.asymmetric(
-                        insertion: .opacity.combined(with: .offset(y: reduceMotion ? 0 : 20)),
-                        removal: .opacity.combined(with: .offset(y: reduceMotion ? 0 : -14))))
-                    .frame(maxWidth: 560)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            if step == .offer {
+                // The offer owns the whole screen. It paints the SAME sky as its
+                // own background, so the root backdrop must not also be drawn:
+                // two copies composite the gold bloom over itself and draw 140
+                // stars where every previous screen drew 70, producing a visible
+                // brightening at exactly the hand-off this is meant to make
+                // seamless. It also drops the 560 pt column and the progress bar,
+                // so the paywall lays itself out from the real window the way it
+                // does everywhere else.
+                offerStep
+            } else {
+                OnboardingBackdrop()
+                VStack(spacing: 0) {
+                    progressBar
+                    stepBody
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .offset(y: reduceMotion ? 0 : 20)),
+                            removal: .opacity.combined(with: .offset(y: reduceMotion ? 0 : -14))))
+                        .id(step)
+                        .frame(maxWidth: 560)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
         }
         .preferredColorScheme(.dark)
@@ -132,7 +152,9 @@ struct OnboardingView: View {
         case .duration:   durationStep
         case .atmosphere: atmosphereStep
         case .reveal:     revealStep
-        case .offer:      offerStep
+        // `.offer` is handled by `body` directly: it replaces the chrome rather
+        // than living inside it.
+        case .offer:      EmptyView()
         }
     }
 
@@ -471,16 +493,37 @@ struct OnboardingView: View {
 
     // MARK: - Navigation
 
+    /// A single-choice question needs no Continue: the tap IS the answer, and
+    /// making the pilot confirm it doubles the taps for no information.
+    ///
+    /// The short delay lets the selected state be seen before the screen moves,
+    /// which is why it has to be guarded twice over: `isAdvancing` drops a
+    /// second tap inside the window, and the captured step means a queued
+    /// advance that is no longer relevant simply does nothing. Without both, two
+    /// taps 100 ms apart ran two advances and skipped an entire question — the
+    /// pilot never saw it, and the answer it collects stayed nil.
     private func advanceAfterChoice() {
+        guard !isAdvancing else { return }
+        isAdvancing = true
         appModel.tapFeedback()
-        // A single-choice question needs no Continue: the tap IS the answer, and
-        // making the pilot confirm it doubles the taps for no information.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) { advance() }
+        let from = step
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+            isAdvancing = false
+            guard step == from else { return }
+            advance(withFeedback: false)
+        }
     }
 
-    private func advance() {
-        appModel.tapFeedback()
-        guard let next = Step(rawValue: step.rawValue + 1) else { finish(); return }
+    /// `withFeedback` is false when the caller already played the tap, so one
+    /// answer produces one haptic and one earcon rather than two 180 ms apart.
+    private func advance(withFeedback: Bool = true) {
+        // Once the offer is up, ITS controls own every exit. Without this a
+        // second tap on the reveal's Continue — easy while it is still sliding
+        // away — ran off the end of the step list and completed onboarding,
+        // skipping the paywall entirely.
+        guard step != .offer else { return }
+        if withFeedback { appModel.tapFeedback() }
+        guard let next = Step(rawValue: step.rawValue + 1) else { return }
         guard next == .offer else { move(to: next) ; return }
 
         // The offer is skipped entirely for someone who already owns PRO, and
@@ -493,6 +536,15 @@ struct OnboardingView: View {
         case .loading:
             pendingEntitlementResolution = true
             appModel.refreshSubscriptionStatus()
+            // Bounded, not indefinite. RevenueCat may never answer — no network
+            // on a fresh install is enough — and without this the pilot is left
+            // on the reveal with a Continue that gives no feedback and no way
+            // forward, unable to finish the first run at all.
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.entitlementGraceSeconds) {
+                guard pendingEntitlementResolution, step == .reveal else { return }
+                pendingEntitlementResolution = false
+                move(to: .offer)
+            }
         }
     }
 
