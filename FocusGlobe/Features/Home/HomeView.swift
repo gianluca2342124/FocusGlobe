@@ -238,6 +238,11 @@ struct HomeView: View {
                 skyIndex = FocusSky.all.firstIndex(of: appModel.selectedSky) ?? 0
                 didInitSky = true
             }
+            // The first arrival after onboarding, and only then: `AppModel`
+            // clears the flag as it reads it, and the request itself returns
+            // early unless iOS has never asked, so a pilot who declined is
+            // never prompted again.
+            appModel.consumeNotificationPromptIfNeeded()
             presentHomeAutoPopup()
             maybeRequestReview()
             guard !reduceMotion else { return }

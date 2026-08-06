@@ -106,10 +106,12 @@ final class NotificationService {
         }
     }
 
-    /// Awaitable variant, for a caller that must keep its own guidance on
-    /// screen for exactly as long as the system permission sheet is. Onboarding
-    /// is no longer that caller — the first run asks for nothing; the request
-    /// happens in context, from Passport and Settings.
+    /// Awaitable variant, for a caller that must know whether the pilot said
+    /// yes. Onboarding itself asks for nothing — a system sheet before the offer
+    /// is friction at the worst possible moment — so the first-run request is
+    /// made by Home on arrival, plus the in-context asks from Passport and
+    /// Settings. Every one of them lands here, and every one is a no-op unless
+    /// iOS has genuinely never asked.
     @discardableResult
     func requestAuthorization(state: NotificationState) async -> Bool {
         guard isEnabled else { return false }
