@@ -44,6 +44,14 @@ struct AppSettings: Codable, Equatable {
     /// persisted). Retained only so older saved settings keep decoding.
     var premiumIntroSeen: Bool? = nil
 
+    /// The first-flight length the pilot chose during onboarding, in minutes.
+    ///
+    /// This is what makes that question a setting rather than a survey: the
+    /// flight-setup dial opens on it instead of on a hardcoded 25. `nil` means
+    /// never asked, which is why it is optional rather than defaulted — a stored
+    /// 25 and an unanswered 25 are different facts.
+    var preferredFlightMinutes: Int? = nil
+
     init() {}
 
     static let `default` = AppSettings()
@@ -52,6 +60,7 @@ struct AppSettings: Codable, Equatable {
         case appearance, soundEnabled, hapticsEnabled, mapStyle
         case startingCity, virtualOrigin, previousOrigin
         case selectedSkinID, selectedJourneyAudioID, premiumIntroSeen
+        case preferredFlightMinutes
     }
 
     /// Missing or newly-added preference keys must never reset the rest of a
@@ -69,5 +78,6 @@ struct AppSettings: Codable, Equatable {
         selectedSkinID = try c.decodeIfPresent(String.self, forKey: .selectedSkinID)
         selectedJourneyAudioID = try c.decodeIfPresent(String.self, forKey: .selectedJourneyAudioID)
         premiumIntroSeen = try c.decodeIfPresent(Bool.self, forKey: .premiumIntroSeen)
+        preferredFlightMinutes = try? c.decodeIfPresent(Int.self, forKey: .preferredFlightMinutes)
     }
 }

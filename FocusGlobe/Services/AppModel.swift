@@ -1028,18 +1028,36 @@ final class AppModel: ObservableObject {
     // MARK: - Onboarding completion
 
     /// Persist everything gathered by first-run onboarding and open the app.
-    func completeOnboarding(name: String?, yearGoal: String?, ageRange: String?,
-                            struggle: String?, focusStyle: String?, shieldOptIn: Bool) {
+    /// Finish the first run.
+    ///
+    /// Takes only what something actually reads. The previous signature carried
+    /// six values, and an audit found four of them — a free-text year goal, an
+    /// age band, a free-text struggle and a Shield opt-in — were written here and
+    /// read by nothing at all. Asking for data nobody consumes is a screen spent
+    /// for free, so those questions and their parameters are gone together.
+    ///
+    /// What remains has a named reader:
+    /// * `focusPresetTitle` -> the Online presence category, and the pre-selected
+    ///   focus token in the flight-setup ritual.
+    /// * `preferredMinutes` -> the flight-setup duration dial's opening value.
+    ///
+    /// The soundscape is not a parameter because the selector already commits it
+    /// to `settings.selectedJourneyAudioID` as the pilot browses.
+    func completeOnboarding(focusPresetTitle: String?, preferredMinutes: Int?) {
         var p = profile
-        p.name = name?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? name : nil
-        p.yearGoal = yearGoal?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? yearGoal : nil
-        p.ageRange = ageRange
-        p.focusStruggle = struggle
-        p.focusStyle = focusStyle
-        p.focusShieldOptIn = shieldOptIn
+        // Only a real `FocusPreset` title is stored: this value is published as
+        // an Online flight category, so it must stay a known token rather than
+        // whatever a future copy edit calls it.
+        if let title = focusPresetTitle, FocusPreset.all.contains(where: { $0.title == title }) {
+            p.focusStyle = title
+        }
         p.createdAt = p.createdAt ?? Date()
         p.hasCompletedOnboarding = true
         profile = p
+
+        if let preferredMinutes {
+            settings.preferredFlightMinutes = preferredMinutes
+        }
     }
 
     /// Whether the manual starting-city picker should be offered. It appears only

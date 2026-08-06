@@ -8,8 +8,30 @@ import UIKit
 /// FocusGlobe's single contextual PRO experience. Page one explains the exact
 /// benefit the pilot touched; page two explains the trial and is the only page
 /// capable of starting a RevenueCat purchase.
+/// Which sky the paywall stands in.
+///
+/// NOT a paywall variant — the products, the carousel, the comparison table, the
+/// CTAs, the eligibility rules and the purchase path are identical either way.
+/// It swaps the backdrop and nothing else, so the first run can end on the same
+/// page the Home PRO button opens without the sky changing underneath the pilot
+/// mid-flow.
+enum PaywallBackdrop {
+    case standard
+    case onboarding
+}
+
 struct PaywallView: View {
     var context: PaywallContext = .general
+    var backdrop: PaywallBackdrop = .standard
+    /// How this paywall goes away.
+    ///
+    /// `nil` — every existing call site — means it was PRESENTED, so SwiftUI's
+    /// `dismiss` closes it. Onboarding renders it inline for visual continuity,
+    /// and an inline view has nothing to dismiss: `DismissAction` would be a
+    /// no-op and the close button, the post-purchase exit and the
+    /// entitlement-resolved exit would all silently do nothing. Supplying this
+    /// hands those three exits somewhere real to go.
+    var onClose: (() -> Void)? = nil
 
     @EnvironmentObject private var appModel: AppModel
     @Environment(\.dismiss) private var dismiss
@@ -21,6 +43,12 @@ struct PaywallView: View {
     @State private var selectedHeroIndex = 0
 
     private enum Page { case benefit, trial }
+
+    /// The ONE exit. Every path that used to call `dismiss()` goes through here
+    /// so a presented paywall and an inline one cannot diverge.
+    private func close() {
+        if let onClose { onClose() } else { dismiss() }
+    }
     private var subs: SubscriptionManager { appModel.subscriptions }
 
     /// Which subscriptions this entry point may sell.
@@ -95,7 +123,7 @@ struct PaywallView: View {
         .environment(\.colorScheme, .dark)
         .onAppear {
             guard appModel.entitlement == .free else {
-                dismiss()
+                close()
                 return
             }
             appModel.analytics.log(.paywallOpened)
@@ -108,7 +136,7 @@ struct PaywallView: View {
         }
         .onChange(of: subs.plans) { _, _ in syncSelection() }
         .onChange(of: appModel.entitlement) { _, access in
-            if access != .free { dismiss() }
+            if access != .free { close() }
         }
     }
 
@@ -525,7 +553,7 @@ struct PaywallView: View {
                 AppIconButton(systemImage: "xmark", size: viewport.navigationControlSize,
                               tint: .white, accessibilityLabel: "Close") {
                     appModel.tapFeedback()
-                    dismiss()
+                    close()
                 }
             } else {
                 Color.clear.frame(width: viewport.navigationControlSize,
@@ -539,7 +567,14 @@ struct PaywallView: View {
         .padding(.bottom, 4)
     }
 
-    private var background: some View {
+    @ViewBuilder private var background: some View {
+        switch backdrop {
+        case .onboarding: OnboardingBackdrop()
+        case .standard:   standardBackground
+        }
+    }
+
+    private var standardBackground: some View {
         ZStack {
             LinearGradient(
                 colors: [Color(hex: 0x111329), AppColors.neutralBase, Color(hex: 0x080A16)],
@@ -630,7 +665,7 @@ struct PaywallView: View {
             let ok = await subs.purchase(kind)
             if ok {
                 appModel.haptics.rewardClaim()
-                dismiss()
+                close()
             }
         }
     }
@@ -639,7 +674,7 @@ struct PaywallView: View {
         appModel.tapFeedback()
         Task { @MainActor in
             let ok = await appModel.restorePurchases()
-            if ok { dismiss() }
+            if ok { close() }
         }
     }
 }

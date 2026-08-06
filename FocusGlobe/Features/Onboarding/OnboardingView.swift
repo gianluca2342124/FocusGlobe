@@ -1,395 +1,319 @@
-import StoreKit
 import SwiftUI
 #if canImport(UIKit)
 import UIKit
 #endif
 
-/// First-run onboarding — a calm, premium, conversion-aware welcome that runs
-/// **once** (gated by `appModel.needsOnboarding`; pre-existing pilots are
-/// auto-skipped in `AppModel.init`). Eleven gentle steps over one continuous
-/// night-sky scene: promise → goal → name → age → struggle → focus style →
-/// soundscape → a small favour (review) → Focus Shield → notifications →
-/// premium intro. The review ask now follows the first meaningful product taste
-/// instead of arriving at the very end. Everything lands in the local
-/// `UserProfile`; no backend, no
-/// sign-in — "Skip for now" simply opens the app.
+/// First-run onboarding.
+///
+/// Six screens, then the paywall — and the paywall is the REAL one, the same
+/// `PaywallView(context: .general)` the Home PRO button opens, rendered against
+/// this flow's own sky so the hand-off is a change of subject rather than a
+/// change of app.
+///
+/// The previous version had ten screens before the offer. An audit of what each
+/// answer fed found four of them were write-only: the free-text year goal, the
+/// age band, the free-text struggle and the Shield opt-in were stored on the
+/// profile and read by nothing in the codebase. A screen that collects data
+/// nobody consumes is a screen spent for nothing, so those questions are gone
+/// rather than restyled. The name screen is gone too — not because the field is
+/// unused (Home and Passport read it) but because Settings already asks for it,
+/// and a keyboard on screen three is the most expensive thing in a first run.
+///
+/// Every remaining question has a named reader:
+/// * focus intent -> `profile.focusStyle`: the Online flight category, and the
+///   pre-selected focus token in the flight-setup ritual.
+/// * first-flight length -> `settings.preferredFlightMinutes`: the opening value
+///   of the setup dial.
+/// * atmosphere -> `settings.selectedJourneyAudioID`: what a flight plays.
+///
+/// The friction question is the one exception and is deliberate: its answer
+/// never leaves the flow. It exists to be named by the pilot and then answered,
+/// three screens later, by the summary that leads into the offer. That is its
+/// job, and it is the only screen here whose value is entirely about the arrival
+/// at the paywall.
+///
+/// No review request, no testimonials, no back button, no skip labels, no
+/// permission prompts. Notifications and Screen Time are asked for later, in
+/// context, where they already were — a system dialog before the offer buys
+/// friction at the worst possible moment.
 struct OnboardingView: View {
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.requestReview) private var requestReview
 
-    /// The one shared `SubscriptionManager`, reached exactly as `PaywallView`
-    /// reaches it — through the injected `AppModel`, which owns it as a stored
-    /// `let`. It is deliberately NOT a separate `@EnvironmentObject`: there is
-    /// only ever one instance, nothing in the app injects it independently, and
-    /// a second reference would be a second source of offerings and eligibility.
-    /// `AppModel` republishes its changes, so reading it here still re-evaluates
-    /// the CTA when offerings finish loading.
-    private var subs: SubscriptionManager { appModel.subscriptions }
+    /// The screens BEFORE the offer. The paywall is a seventh surface but not a
+    /// question, so the progress bar completes as the pilot reaches it.
+    private static let questionCount = 6
 
-    private static let stepCount = 11
+    private enum Step: Int, CaseIterable {
+        case welcome, intent, friction, duration, atmosphere, reveal, offer
+    }
 
-    @State private var step = 0
-    @State private var name = ""
-    @State private var yearGoal = ""
-    @State private var ageRange: String?
-    @State private var struggle: String?
-    @State private var focusStyle: String?
-    @State private var shieldOptIn = false
-    @State private var introFloat: CGFloat = 0
-    /// The soundscape carousel's current index.
+    @State private var step: Step = .welcome
+    @State private var intent: FocusPreset?
+    @State private var friction: FocusFriction?
+    @State private var minutes: Int?
     @State private var soundIndex = 0
-    /// Whether a soundscape preview is currently playing on the music step.
-    @State private var isPreviewingSound = false
-    /// Guards the review request so a double-tap can't fire it twice or race the
-    /// transition to the premium page.
-    @State private var reviewRequested = false
-    /// Guards the permission request so a double-tap can't call
-    /// `requestAuthorization` twice or advance the step twice.
-    @State private var notificationRequestInFlight = false
-    @State private var premiumPreviewIndex = 0
-    /// The final Continue was tapped while RevenueCat was unresolved. We hold
-    /// that intent without showing the PRO page, then either finish for an owner
-    /// or advance for a confirmed Free pilot.
-    @State private var pendingPremiumResolution = false
-    @FocusState private var textFocused: Bool
+    @State private var introFloat: CGFloat = 0
+    /// The final Continue was tapped while RevenueCat was still resolving. The
+    /// intent is held WITHOUT showing an offer, then either finishes for an owner
+    /// or opens the paywall for a confirmed Free pilot.
+    @State private var pendingEntitlementResolution = false
+    /// Both the paywall's own exit and this view's entitlement observer can
+    /// reach `finish()` in the same instant when a purchase lands. Handing off
+    /// twice would set the tab and rewrite the profile twice for no reason.
+    @State private var didFinish = false
 
     var body: some View {
         ZStack {
-            backdrop
+            OnboardingBackdrop()
             VStack(spacing: 0) {
-                header
-                ZStack {
-                    stepBody
-                }
-                .frame(maxWidth: 560)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                progressBar
+                stepBody
+                    .id(step)
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .offset(y: reduceMotion ? 0 : 20)),
+                        removal: .opacity.combined(with: .offset(y: reduceMotion ? 0 : -14))))
+                    .frame(maxWidth: 560)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .preferredColorScheme(.dark)
         .onChange(of: appModel.entitlement) { _, access in
-            guard step == Self.stepCount - 1 || pendingPremiumResolution else { return }
-            if access == .premium {
-                pendingPremiumResolution = false
-                complete(thenPaywall: false)
-            } else if access == .free, pendingPremiumResolution {
-                pendingPremiumResolution = false
-                withAnimation(AppMotion.soft) { step = Self.stepCount - 1 }
+            // An owner never sees an offer. If the entitlement resolves to
+            // premium at any point — including while the paywall is on screen —
+            // onboarding simply finishes.
+            if access == .premium, step == .offer || pendingEntitlementResolution {
+                pendingEntitlementResolution = false
+                finish()
+            } else if access == .free, pendingEntitlementResolution {
+                pendingEntitlementResolution = false
+                move(to: .offer)
             }
         }
+        .onDisappear { appModel.stopJourneyAudioPreview() }
     }
 
-    // MARK: Scene
+    // MARK: - Chrome
 
-    private var backdrop: some View {
-        ZStack {
-            LinearGradient(colors: [Color(hex: 0x0B1024), Color(hex: 0x1C2444), Color(hex: 0x2E2350)],
-                           startPoint: .top, endPoint: .bottom)
-            RadialGradient(colors: [AppColors.gold.opacity(0.14), .clear],
-                           center: UnitPoint(x: 0.5, y: 0.85), startRadius: 8, endRadius: 420)
-            StarSprinkle()
-        }
-        .ignoresSafeArea()
-        .onTapGesture { textFocused = false }
-    }
-
-    // MARK: Header — back + progress
-
-    // Progress only — no back arrow (a clean, forward-moving onboarding).
-    private var header: some View {
+    /// One thin bar. No back control and no step numbers: this flow is short
+    /// enough that a count invites counting, and a forward-only run is what keeps
+    /// it feeling like an arrival rather than a form.
+    private var progressBar: some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
                 Capsule().fill(.white.opacity(0.12))
                 Capsule().fill(AppColors.brand)
-                    .frame(width: geo.size.width * CGFloat(step + 1) / CGFloat(Self.stepCount))
+                    .frame(width: geo.size.width * progress)
             }
         }
         .frame(height: 4)
-        .animation(.easeOut(duration: 0.3), value: step)
+        .opacity(step == .welcome ? 0 : 1)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.3), value: step)
         .padding(.horizontal, AppSpacing.screen)
         .padding(.top, AppSpacing.md)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Setup progress")
+        .accessibilityValue("\(Int((progress * 100).rounded()))%")
+    }
+
+    private var progress: CGFloat {
+        // The offer completes the bar rather than extending it: the questions
+        // are what the bar measures, and pretending the purchase screen is a
+        // seventh step would make the bar a sales device.
+        CGFloat(min(step.rawValue, Self.questionCount)) / CGFloat(Self.questionCount)
     }
 
     @ViewBuilder private var stepBody: some View {
-        Group {
-            switch step {
-            case 0:  welcomeStep
-            case 1:  goalStep
-            case 2:  nameStep
-            case 3:  ageStep
-            case 4:  struggleStep
-            case 5:  styleStep
-            case 6:  soundscapeStep
-            case 7:  favourStep
-            case 8:  shieldStep
-            case 9:  notificationsStep
-            default: premiumStep
-            }
-        }
-        .transition(.asymmetric(
-            insertion: .opacity.combined(with: .offset(y: 24)),
-            removal: .opacity.combined(with: .offset(y: -16))))
-        .id(step)
-        .padding(.horizontal, AppSpacing.screen)
-    }
-
-    private func advance() {
-        textFocused = false
-        appModel.tapFeedback()
-        if step == Self.stepCount - 2 {
-            switch appModel.entitlement {
-            case .premium:
-                complete(thenPaywall: false)
-            case .free:
-                withAnimation(AppMotion.soft) { step = Self.stepCount - 1 }
-            case .loading:
-                pendingPremiumResolution = true
-                appModel.refreshSubscriptionStatus()
-            }
-            return
-        }
-        withAnimation(AppMotion.soft) { step = min(Self.stepCount - 1, step + 1) }
-    }
-
-    /// Finish onboarding (persist the profile). `needsOnboarding` flips and
-    /// RootView cross-fades onto Home.
-    private func complete(thenPaywall: Bool) {
-        // Onboarding must always hand off to Home, whatever the user did on the
-        // premium page (continue free / open + close the paywall / purchase /
-        // restore). Set the root tab explicitly and clear any transient route
-        // BEFORE flipping `needsOnboarding`, so AppShell can never restore a
-        // stale tab (e.g. Settings) behind the cross-fade.
-        router.path.removeAll()
-        router.selectedTab = .home
-        appModel.completeOnboarding(name: name, yearGoal: yearGoal, ageRange: ageRange,
-                                    struggle: struggle, focusStyle: focusStyle,
-                                    shieldOptIn: shieldOptIn)
-        appModel.markPremiumIntroSeen()   // onboarding already made the premium offer
-        if thenPaywall {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                // The STANDARD paywall — the same `.general` context the Home
-                // PRO button opens, with Annual and Monthly, the plan selector,
-                // the trial timeline, the pricing disclosure and the showcase
-                // carousel. It used to open `.onboarding`, which is annual-only
-                // with no selector: someone who wanted the monthly plan had to
-                // finish onboarding, close a paywall and find another entry
-                // point. There is one paywall view; only the context differs.
-                router.presentPaywall(context: .general)
-            }
+        switch step {
+        case .welcome:    welcomeStep
+        case .intent:     intentStep
+        case .friction:   frictionStep
+        case .duration:   durationStep
+        case .atmosphere: atmosphereStep
+        case .reveal:     revealStep
+        case .offer:      offerStep
         }
     }
 
-    // MARK: Step 1 — Welcome / promise
+    // MARK: - 1. Welcome
 
     private var welcomeStep: some View {
         VStack(spacing: AppSpacing.lg) {
-            Spacer()
-            // The hero balloon drifts gently — a magical, alive first impression.
-            ZStack {
-                // Light, not a lit shape. The gradient must reach fully clear
-                // BEFORE it meets its own frame, otherwise the frame crops a
-                // still-visible ring and the balloon appears to sit on a disc.
-                // (The previous ellipse was 220×270 with endRadius 128 — 128 is
-                // larger than the 105 pt half-width, so the shape sliced the
-                // glow at ~8% alpha and a 17 pt blur only softened that arc.)
-                // Here the shortest centre-to-edge distance is 150 pt against a
-                // 128 pt falloff, so every edge is genuinely transparent.
-                RadialGradient(
-                    colors: [
-                        AppColors.gold.opacity(0.27),
-                        Color(hex: 0x8F7BE8).opacity(0.08),
-                        .clear,
-                    ],
-                    center: .center,
-                    startRadius: 2,
-                    endRadius: 128
-                )
-                .frame(width: 300, height: 300)
-                .scaleEffect(x: 1, y: 1.14)      // the soft vertical bloom, kept
-                .blur(radius: 18)
-                .allowsHitTesting(false)
-                introHero
-            }
-            .offset(y: introFloat)
+            Spacer(minLength: 0)
+            hero.offset(y: introFloat)
             VStack(spacing: AppSpacing.sm) {
-                Text("Your phone becomes\na focus flight.")
+                Text("Welcome to FocusGlobe")
                     .font(.system(size: Layout.pad(34, 44), weight: .bold, design: .default))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.white)
-                Text("Choose a time, lift off, and let FocusGlobe keep you away from distractions.")
+                Text("A calmer way to focus, one flight at a time.")
                     .font(AppTypography.body)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.white.opacity(0.7))
-                    .padding(.horizontal, AppSpacing.md)
             }
-            Spacer()
-            AppPrimaryButton(title: "Begin", systemImage: "arrow.right", iconTrailing: true) { advance() }
-                .padding(.bottom, AppSpacing.xl)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isHeader)
+            Spacer(minLength: 0)
+            AppPrimaryButton(title: "Begin", systemImage: "arrow.right", iconTrailing: true) {
+                advance()
+            }
+            .padding(.bottom, AppSpacing.xl)
         }
+        .padding(.horizontal, AppSpacing.screen)
         .onAppear {
             guard !reduceMotion else { return }
-            withAnimation(.easeInOut(duration: 3.2).repeatForever(autoreverses: true)) { introFloat = -14 }
-        }
-    }
-
-    /// The intro hero — bundled `OnboardingHero_Balloon` if present, else the
-    /// procedural balloon.
-    @ViewBuilder private var introHero: some View {
-        #if canImport(UIKit)
-        if let ui = UIImage(named: "OnboardingHero_Balloon") {
-            Image(uiImage: ui).resizable().scaledToFit().frame(height: 170)
-        } else {
-            BalloonView(height: 156, showBurner: true, showGlow: true, glow: AppColors.gold.opacity(0.7))
-        }
-        #else
-        BalloonView(height: 156, showBurner: true, showGlow: true, glow: AppColors.gold.opacity(0.7))
-        #endif
-    }
-
-    // MARK: Step 2 — Goal
-
-    private var goalStep: some View {
-        questionScaffold(
-            title: "What do you want to achieve this year?",
-            subtitle: "FocusGlobe keeps your journey pointed somewhere that matters.") {
-            TextField("e.g. Study for my exams", text: $yearGoal, axis: .vertical)
-                .lineLimit(3...5)
-                .focused($textFocused)
-                .font(AppTypography.body)
-                .foregroundStyle(Color(hex: 0x26221D))
-                .tint(AppColors.selectionGold)
-                .padding(AppSpacing.md)
-                .background(RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color(hex: 0xF4EFE4)))
-        } footer: {
-            continueRow(skippable: true)
-        }
-    }
-
-    // MARK: Step 3 — Name
-
-    private var nameStep: some View {
-        questionScaffold(
-            title: "What's your name?",
-            subtitle: "This is how FocusGlobe will personalize your journey.") {
-            TextField("e.g. Alex", text: $name)
-                .focused($textFocused)
-                .textInputAutocapitalization(.words)
-                .font(.system(size: 22, weight: .semibold, design: .default))
-                .foregroundStyle(Color(hex: 0x26221D))
-                .tint(AppColors.selectionGold)
-                .multilineTextAlignment(.center)
-                .padding(AppSpacing.md)
-                .background(RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color(hex: 0xF4EFE4)))
-        } footer: {
-            continueRow(skippable: true)
-        }
-    }
-
-    // MARK: Step 4 — Age range (optional)
-
-    private var ageStep: some View {
-        questionScaffold(
-            title: "How old are you?",
-            subtitle: "Optional — it helps us shape FocusGlobe.") {
-            optionList(["13 or under", "14–17", "18–24", "25–34", "35+"],
-                       selected: ageRange) { choice in
-                ageRange = choice
-                advance()
+            withAnimation(.easeInOut(duration: 3.2).repeatForever(autoreverses: true)) {
+                introFloat = -14
             }
-        } footer: {
-            skipButton
         }
     }
 
-    // MARK: Step 5 — Focus struggle
-
-    private var struggleStep: some View {
-        questionScaffold(
-            title: "When you try to focus, what usually happens?",
-            subtitle: "So your flights can protect the right things.") {
-            optionList(["I pick up my phone", "I lose motivation", "I get overwhelmed",
-                        "I procrastinate", "I study well alone", "Other"],
-                       selected: struggle) { choice in
-                struggle = choice
-                advance()
+    @ViewBuilder private var hero: some View {
+        ZStack {
+            // Light, not a lit shape: the gradient reaches fully clear before it
+            // meets its own frame, so no edge can slice a still-visible ring and
+            // leave the balloon sitting on a disc.
+            RadialGradient(colors: [AppColors.gold.opacity(0.27),
+                                    Color(hex: 0x8F7BE8).opacity(0.08),
+                                    .clear],
+                           center: .center, startRadius: 2, endRadius: 128)
+                .frame(width: 300, height: 300)
+                .scaleEffect(x: 1, y: 1.14)
+                .blur(radius: 18)
+                .allowsHitTesting(false)
+            #if canImport(UIKit)
+            if let ui = UIImage(named: "OnboardingHero_Balloon") {
+                Image(uiImage: ui).resizable().scaledToFit().frame(height: 170)
+            } else {
+                BalloonView(height: 156, showBurner: true, showGlow: true,
+                            glow: AppColors.gold.opacity(0.7))
             }
-        } footer: {
-            skipButton
+            #else
+            BalloonView(height: 156, showBurner: true, showGlow: true,
+                        glow: AppColors.gold.opacity(0.7))
+            #endif
         }
+        .accessibilityHidden(true)
     }
 
-    // MARK: Step 6 — Focus style
+    // MARK: - 2. Intent
 
-    private var styleStep: some View {
+    /// The options ARE the app's real focus tokens. Inventing a separate intent
+    /// vocabulary would mean the answer either mapped to nothing or needed a
+    /// translation table nobody maintains; these titles are already the flight
+    /// category and the focus token, so the answer is wired the moment it is
+    /// given.
+    private var intentStep: some View {
         questionScaffold(
-            title: "What are you focusing on most?",
-            subtitle: "Your focus tokens will be waiting in the basket.") {
-            optionGrid(FocusPreset.all.map { $0.title }, selected: focusStyle) { choice in
-                focusStyle = choice
-                advance()
+            title: "What do you want FocusGlobe to help with most?",
+            subtitle: "We'll shape your first flight around it."
+        ) {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: AppSpacing.xs),
+                                GridItem(.flexible(), spacing: AppSpacing.xs)],
+                      spacing: AppSpacing.xs) {
+                ForEach(FocusPreset.all) { preset in
+                    choiceTile(preset.title,
+                               systemImage: preset.systemImage,
+                               isSelected: intent?.title == preset.title) {
+                        intent = preset
+                        advanceAfterChoice()
+                    }
+                }
             }
-        } footer: {
-            skipButton
         }
     }
 
-    // MARK: Step 7 — Soundscape
+    // MARK: - 3. Friction
 
-    private var soundscapeStep: some View {
+    private var frictionStep: some View {
+        questionScaffold(
+            title: "What usually breaks your focus?",
+            subtitle: "So FocusGlobe can meet you where you are."
+        ) {
+            VStack(spacing: AppSpacing.xs) {
+                ForEach(FocusFriction.allCases) { item in
+                    choiceRow(item.title,
+                              systemImage: item.systemImage,
+                              isSelected: friction == item) {
+                        friction = item
+                        advanceAfterChoice()
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - 4. First flight length
+
+    private var durationStep: some View {
+        questionScaffold(
+            title: "How long can you focus today?",
+            subtitle: "We'll set up your first flight. You can change it before every take-off."
+        ) {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: AppSpacing.xs),
+                                GridItem(.flexible(), spacing: AppSpacing.xs)],
+                      spacing: AppSpacing.xs) {
+                ForEach([15, 25, 45, 60], id: \.self) { value in
+                    choiceTile("\(value) min",
+                               systemImage: nil,
+                               isSelected: minutes == value) {
+                        minutes = value
+                        advanceAfterChoice()
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - 5. Atmosphere
+
+    private var atmosphereStep: some View {
         questionScaffold(
             title: "Pick your focus atmosphere",
-            subtitle: "Every soundscape is free. Swipe between them and choose your favourite.") {
+            subtitle: "Choose the sound you want to lift off with. Every one is free."
+        ) {
             soundCarousel
         } footer: {
-            continueRow(skippable: false)
+            AppPrimaryButton(title: "Continue", systemImage: "arrow.right", iconTrailing: true) {
+                advance()
+            }
+            .padding(.bottom, AppSpacing.xl)
         }
     }
 
     private var soundOptions: [JourneyAudioOption] { JourneyAudioOption.all }
 
-    /// A radio/Spotify-style carousel: a large central cover with left/right
-    /// arrows, dots, the title and a short line. Selecting persists the choice.
     private var soundCarousel: some View {
         let opts = soundOptions
         let option = opts[max(0, min(opts.count - 1, soundIndex))]
         return VStack(spacing: AppSpacing.md) {
             HStack(spacing: AppSpacing.sm) {
                 carouselArrow(system: "chevron.left", enabled: soundIndex > 0) {
-                    withAnimation(.easeInOut(duration: 0.3)) { soundIndex = max(0, soundIndex - 1) }
+                    selectSound(at: soundIndex - 1)
                 }
                 SoundCoverCard(option: option)
                     .frame(maxWidth: .infinity)
                     // One element that names the soundscape AND its state, so
-                    // VoiceOver never reads decorative artwork and never implies
-                    // a play control that no longer exists. Adjustable, because
-                    // swiping between options is the whole interaction.
+                    // VoiceOver never reads decorative artwork.
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(option.displayName)
-                    .accessibilityValue(isPreviewingSound
-                                        ? "Selected, playing"
-                                        : "Selected")
+                    .accessibilityValue("Selected, playing")
                     .accessibilityHint("Swipe up or down to hear another soundscape.")
                     .accessibilityAdjustableAction { direction in
                         switch direction {
-                        case .increment where soundIndex < opts.count - 1:
-                            withAnimation(.easeInOut(duration: 0.3)) { soundIndex += 1 }
-                        case .decrement where soundIndex > 0:
-                            withAnimation(.easeInOut(duration: 0.3)) { soundIndex -= 1 }
-                        default: break
+                        case .increment: selectSound(at: soundIndex + 1)
+                        case .decrement: selectSound(at: soundIndex - 1)
+                        @unknown default: break
                         }
                     }
                     .gesture(DragGesture(minimumDistance: 24).onEnded { v in
-                        if v.translation.width < -30, soundIndex < opts.count - 1 {
-                            withAnimation(.easeInOut(duration: 0.3)) { soundIndex += 1 }
-                        } else if v.translation.width > 30, soundIndex > 0 {
-                            withAnimation(.easeInOut(duration: 0.3)) { soundIndex -= 1 }
-                        }
+                        if v.translation.width < -30 { selectSound(at: soundIndex + 1) }
+                        else if v.translation.width > 30 { selectSound(at: soundIndex - 1) }
                     })
                 carouselArrow(system: "chevron.right", enabled: soundIndex < opts.count - 1) {
-                    withAnimation(.easeInOut(duration: 0.3)) { soundIndex = min(opts.count - 1, soundIndex + 1) }
+                    selectSound(at: soundIndex + 1)
                 }
             }
             VStack(spacing: 3) {
@@ -401,8 +325,6 @@ struct OnboardingView: View {
                     .foregroundStyle(.white.opacity(0.6))
                     .multilineTextAlignment(.center)
             }
-            // No Play button: the selected soundscape auto-plays on this step.
-            // A minimal equalizer indicator confirms audio is playing.
             nowPlayingIndicator
             HStack(spacing: 6) {
                 ForEach(opts.indices, id: \.self) { i in
@@ -411,34 +333,302 @@ struct OnboardingView: View {
                         .frame(width: i == soundIndex ? 18 : 6, height: 6)
                 }
             }
+            .accessibilityHidden(true)
         }
         .onAppear {
-            let idx = soundOptions.firstIndex { $0.id == appModel.selectedJourneyAudio.id } ?? 0
-            soundIndex = idx
-            // Auto-play the selected soundscape the moment the step appears.
-            let opt = soundOptions[max(0, min(soundOptions.count - 1, idx))]
-            appModel.previewJourneyAudio(opt)
-            isPreviewingSound = true
-        }
-        .onChange(of: soundIndex) { _, i in
-            let opt = soundOptions[max(0, min(soundOptions.count - 1, i))]
-            appModel.selectJourneyAudio(opt)
-            appModel.haptics.tap()
-            // Swiping to a new soundscape switches the preview instantly (one at
-            // a time) — always playing, never a silent step.
-            appModel.previewJourneyAudio(opt)
-            isPreviewingSound = true
-        }
-        // Stop the preview whenever the step leaves the screen (advance / back)
-        // or onboarding completes, so audio never bleeds into the first flight.
-        .onDisappear {
-            appModel.stopJourneyAudioPreview()
-            isPreviewingSound = false
+            let index = soundOptions.firstIndex { $0.id == appModel.selectedJourneyAudio.id } ?? 0
+            soundIndex = index
+            appModel.previewJourneyAudio(soundOptions[index])
         }
     }
 
-    /// A minimal "now playing" indicator (animated equalizer) — the music step
-    /// auto-plays the selected soundscape, so there is no Play/Pause button.
+    /// Browsing IS choosing here. The soundscape a pilot is listening to is the
+    /// one committed, so there is no separate confirm step and no way to leave
+    /// this screen having heard one sound and saved another.
+    private func selectSound(at index: Int) {
+        let clamped = max(0, min(soundOptions.count - 1, index))
+        guard clamped != soundIndex else { return }
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) { soundIndex = clamped }
+        let option = soundOptions[clamped]
+        appModel.selectJourneyAudio(option)
+        appModel.previewJourneyAudio(option)
+    }
+
+    // MARK: - 6. Reveal
+
+    /// The bridge into the offer.
+    ///
+    /// It restates only things the pilot actually chose, and only things the app
+    /// has genuinely configured — this card is a receipt, not a promise. The
+    /// three lines under it are the honest consequences of the setup, phrased
+    /// against the friction they named.
+    private var revealStep: some View {
+        VStack(spacing: AppSpacing.lg) {
+            Spacer(minLength: 0)
+
+            VStack(spacing: AppSpacing.sm) {
+                Text("Your first focus flight is ready")
+                    .font(.system(size: Layout.pad(30, 38), weight: .bold, design: .default))
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.white)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("A calmer, clearer way to stay with what matters.")
+                    .font(AppTypography.callout)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.white.opacity(0.68))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isHeader)
+
+            VStack(spacing: 0) {
+                summaryRow("target", "Focus", intent?.title ?? "Fly")
+                summaryDivider
+                summaryRow("timer", "First flight", "\(minutes ?? 25) min")
+                summaryDivider
+                summaryRow("waveform", "Atmosphere", appModel.selectedJourneyAudio.displayName)
+            }
+            .padding(AppSpacing.md)
+            .background(RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
+                .fill(.white.opacity(0.07)))
+            .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
+                .strokeBorder(.white.opacity(0.12), lineWidth: 1))
+
+            VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                ForEach(revealBenefits, id: \.self) { line in
+                    HStack(alignment: .firstTextBaseline, spacing: AppSpacing.sm) {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 13, weight: .heavy))
+                            .foregroundStyle(AppColors.selectionGold)
+                            .frame(width: 18)
+                        Text(line)
+                            .font(AppTypography.callout)
+                            .foregroundStyle(.white.opacity(0.82))
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 0)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Spacer(minLength: 0)
+
+            AppPrimaryButton(title: "Continue", systemImage: "arrow.right", iconTrailing: true) {
+                advance()
+            }
+            .padding(.bottom, AppSpacing.xl)
+        }
+        .padding(.horizontal, AppSpacing.screen)
+    }
+
+    /// Three consequences of the setup, led by the one that answers the friction
+    /// the pilot named. Nothing here claims an outcome, a statistic or a study.
+    private var revealBenefits: [String] {
+        let lead = friction?.reassurance ?? "A calmer place to start"
+        return [lead, "One clear flight at a time", "Progress you can actually see"]
+    }
+
+    private func summaryRow(_ icon: String, _ label: String, _ value: String) -> some View {
+        HStack(spacing: AppSpacing.sm) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(AppColors.gold)
+                .frame(width: 22)
+            Text(label)
+                .font(AppTypography.callout)
+                .foregroundStyle(.white.opacity(0.66))
+            Spacer(minLength: AppSpacing.xs)
+            Text(value)
+                .font(.system(size: 16, weight: .semibold, design: .default))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .padding(.vertical, 11)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var summaryDivider: some View {
+        Rectangle().fill(.white.opacity(0.08)).frame(height: 1)
+    }
+
+    // MARK: - 7. The offer
+
+    /// The SAME paywall the Home PRO button opens — same carousel, same
+    /// comparison table, same Annual and Monthly products, same real StoreKit
+    /// prices, same trial eligibility, same restore and legal links, same
+    /// purchase path. Onboarding does not own a paywall; it borrows the one the
+    /// app already has, and the only thing it changes is the sky behind it.
+    ///
+    /// Rendered inline rather than presented as a cover, because a modal sliding
+    /// over the last screen would announce "now you are being sold to". Here the
+    /// sky is continuous and the offer is simply the next thing in the flow.
+    private var offerStep: some View {
+        PaywallView(context: .general, backdrop: .onboarding, onClose: finish)
+            .environmentObject(appModel)
+            .environmentObject(router)
+    }
+
+    // MARK: - Navigation
+
+    private func advanceAfterChoice() {
+        appModel.tapFeedback()
+        // A single-choice question needs no Continue: the tap IS the answer, and
+        // making the pilot confirm it doubles the taps for no information.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) { advance() }
+    }
+
+    private func advance() {
+        appModel.tapFeedback()
+        guard let next = Step(rawValue: step.rawValue + 1) else { finish(); return }
+        guard next == .offer else { move(to: next) ; return }
+
+        // The offer is skipped entirely for someone who already owns PRO, and
+        // never flashed at someone whose entitlement has not resolved.
+        switch appModel.entitlement {
+        case .premium:
+            finish()
+        case .free:
+            move(to: .offer)
+        case .loading:
+            pendingEntitlementResolution = true
+            appModel.refreshSubscriptionStatus()
+        }
+    }
+
+    private func move(to next: Step) {
+        if next != .atmosphere { appModel.stopJourneyAudioPreview() }
+        withAnimation(reduceMotion ? nil : AppMotion.soft) { step = next }
+    }
+
+    /// Persist and hand off to Home.
+    ///
+    /// The tab and the navigation path are set BEFORE `hasCompletedOnboarding`
+    /// flips, so `AppShell` can never restore a stale tab behind the cross-fade.
+    private func finish() {
+        guard !didFinish else { return }
+        didFinish = true
+        appModel.stopJourneyAudioPreview()
+        router.path.removeAll()
+        router.selectedTab = .home
+        appModel.completeOnboarding(focusPresetTitle: intent?.title,
+                                    preferredMinutes: minutes)
+        // Onboarding has already made the PRO offer; Home must not open a second
+        // one on top of the arrival.
+        appModel.markPremiumIntroSeen()
+    }
+
+    // MARK: - Shared pieces
+
+    private func questionScaffold<Content: View>(
+        title: String,
+        subtitle: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        questionScaffold(title: title, subtitle: subtitle, content: content) { EmptyView() }
+    }
+
+    private func questionScaffold<Content: View, Footer: View>(
+        title: String,
+        subtitle: String,
+        @ViewBuilder content: () -> Content,
+        @ViewBuilder footer: () -> Footer
+    ) -> some View {
+        VStack(spacing: 0) {
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: AppSpacing.lg) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(title)
+                            .font(.system(size: Layout.pad(28, 36), weight: .bold, design: .default))
+                            .foregroundStyle(.white)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text(subtitle)
+                            .font(AppTypography.callout)
+                            .foregroundStyle(.white.opacity(0.66))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityAddTraits(.isHeader)
+                    content()
+                }
+                .padding(.top, AppSpacing.xl)
+                .padding(.bottom, AppSpacing.lg)
+            }
+            footer()
+        }
+        .padding(.horizontal, AppSpacing.screen)
+    }
+
+    /// A full-width answer. Used where the copy is a sentence.
+    private func choiceRow(_ title: String,
+                           systemImage: String?,
+                           isSelected: Bool,
+                           action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: AppSpacing.sm) {
+                if let systemImage {
+                    Image(systemName: systemImage)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(isSelected ? Color(hex: 0x14120E) : AppColors.gold)
+                        .frame(width: 26)
+                }
+                Text(title)
+                    .font(.system(size: 16, weight: .semibold, design: .default))
+                    .foregroundStyle(isSelected ? Color(hex: 0x14120E) : .white)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.vertical, 15)
+            // A floor, not a fixed height: a long answer at an accessibility
+            // text size grows the row instead of being clipped inside it.
+            .frame(minHeight: 56)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(isSelected ? Color(hex: 0xF4EFE4) : Color.white.opacity(0.08)))
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(.white.opacity(isSelected ? 0 : 0.12), lineWidth: 1))
+        }
+        .buttonStyle(SoftPressStyle(scale: 0.985))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+    }
+
+    /// A half-width answer. Used where the copy is a word or a number.
+    private func choiceTile(_ title: String,
+                            systemImage: String?,
+                            isSelected: Bool,
+                            action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                if let systemImage {
+                    Image(systemName: systemImage)
+                        .font(.system(size: 19, weight: .semibold))
+                        .foregroundStyle(isSelected ? Color(hex: 0x14120E) : AppColors.gold)
+                }
+                Text(title)
+                    .font(.system(size: 16.5, weight: .semibold, design: .default))
+                    .foregroundStyle(isSelected ? Color(hex: 0x14120E) : .white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+            }
+            .padding(.horizontal, AppSpacing.xs)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity)
+            .frame(minHeight: 74)
+            .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(isSelected ? Color(hex: 0xF4EFE4) : Color.white.opacity(0.08)))
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(.white.opacity(isSelected ? 0 : 0.12), lineWidth: 1))
+        }
+        .buttonStyle(SoftPressStyle(scale: 0.98))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+    }
+
     private var nowPlayingIndicator: some View {
         HStack(spacing: 8) {
             EqualizerBars()
@@ -449,7 +639,7 @@ struct OnboardingView: View {
         .padding(.horizontal, 15).padding(.vertical, 9)
         .background(Capsule().fill(.white.opacity(0.08)))
         .overlay(Capsule().strokeBorder(AppColors.selectionGold.opacity(0.32), lineWidth: 1))
-        .accessibilityLabel("Now playing a preview")
+        .accessibilityHidden(true)
     }
 
     private func carouselArrow(system: String, enabled: Bool, action: @escaping () -> Void) -> some View {
@@ -463,6 +653,7 @@ struct OnboardingView: View {
         }
         .buttonStyle(SoftPressStyle())
         .disabled(!enabled)
+        .accessibilityHidden(true)
     }
 
     private func soundBlurb(_ option: JourneyAudioOption) -> String {
@@ -477,580 +668,55 @@ struct OnboardingView: View {
         default:            return "A calm atmosphere for focus."
         }
     }
-
-    // MARK: Step 8 — Focus Shield
-
-    private var shieldStep: some View {
-        questionScaffold(
-            title: "Protect your flight",
-            subtitle: "Focus Shield keeps distracting apps grounded while you fly. A protected flight makes distractions feel further away, so it's easier to stay with your plan.") {
-            shieldPreviewCard
-        } footer: {
-            VStack(spacing: AppSpacing.sm) {
-                AppPrimaryButton(title: "Enable Focus Shield", systemImage: "shield.fill") {
-                    shieldOptIn = true
-                    advance()
-                }
-                Button("Set up later") { shieldOptIn = false; advance() }
-                    .font(AppTypography.callout)
-                    .foregroundStyle(.white.opacity(0.65))
-            }
-            .padding(.bottom, AppSpacing.xl)
-        }
-    }
-
-    /// The pre-permission explainer: the shield artwork floating free above the
-    /// three promises. Deliberately NOT a bordered card — a single hero image
-    /// boxed inside a gold-outlined rectangle reads as a widget preview or an
-    /// ad, and the frame competes with the artwork it is supposed to present.
-    private var shieldPreviewCard: some View {
-        VStack(spacing: AppSpacing.md) {
-            shieldHero
-            VStack(spacing: AppSpacing.sm) {
-                bulletPoint(icon: "airplane", text: "Your flight becomes a protected space")
-                bulletPoint(icon: "app.badge", text: "Distracting apps stay on the ground")
-                bulletPoint(icon: "checkmark.seal", text: "You choose exactly what is blocked")
-            }
-        }
-        .padding(.vertical, AppSpacing.md)
-        .frame(maxWidth: .infinity)
-    }
-
-    /// The shield hero — the real `focusshield` art (transparent PNG, soft
-    /// natural glow), falling back to older bundled names, else the glyph.
-    @ViewBuilder private var shieldHero: some View {
-        #if canImport(UIKit)
-        if let ui = UIImage(named: "focusshield")
-            ?? UIImage(named: "protectyourflight")
-            ?? UIImage(named: "OnboardingHero_FocusShield") {
-            // Floats free. The art already carries its own natural glow, so this
-            // adds only a grounding drop shadow — a 24 pt gold bloom on top of a
-            // glowing PNG is what made the shield look like a sticker.
-            Image(uiImage: ui).resizable().scaledToFit()
-                .frame(maxHeight: 158)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 6)
-                .shadow(color: .black.opacity(0.28), radius: 14, y: 8)
-        } else {
-            shieldGlyph
-        }
-        #else
-        shieldGlyph
-        #endif
-    }
-
-    private var shieldGlyph: some View {
-        Image(systemName: "shield.lefthalf.filled")
-            .font(.system(size: 58, weight: .semibold))
-            .foregroundStyle(LinearGradient(colors: [Color(hex: 0xF4EFE4), AppColors.gold],
-                                            startPoint: .top, endPoint: .bottom))
-            .shadow(color: AppColors.gold.opacity(0.4), radius: 14)
-    }
-
-    private func bulletPoint(icon: String, text: String) -> some View {
-        HStack(spacing: AppSpacing.sm) {
-            Image(systemName: icon)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(AppColors.gold)
-                .frame(width: 26)
-            Text(text)
-                .font(AppTypography.callout)
-                .foregroundStyle(.white.opacity(0.85))
-            Spacer(minLength: 0)
-        }
-        .padding(AppSpacing.md)
-        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(.white.opacity(0.07)))
-    }
-
-    // MARK: Step 9 — Notifications
-
-    private var notificationsStep: some View {
-        VStack(spacing: AppSpacing.lg) {
-            Spacer(minLength: 0)
-            VStack(spacing: 8) {
-                Text("Stay on track")
-                    .font(.system(size: Layout.pad(28, 36), weight: .bold, design: .default))
-                    .foregroundStyle(.white)
-                Text("A gentle nudge for your streak, planned flights and landings — never noise.")
-                    .font(AppTypography.callout)
-                    .foregroundStyle(.white.opacity(0.66))
-                    .multilineTextAlignment(.center)
-            }
-            .padding(.horizontal, AppSpacing.md)
-            simulatedNotifCard
-            Spacer(minLength: 0)
-        }
-        .padding(.top, AppSpacing.xl)
-        // Deliberately no bottom Skip button on this step — the card's own
-        // buttons drive it: "Don't Allow" continues; "Allow" triggers the real
-        // iOS notification prompt (a custom SwiftUI card, never a real alert).
-    }
-
-    /// A custom, Apple-styled notification-permission preview. Visual only — the
-    /// real system prompt is only requested when the user taps Allow.
-    private var simulatedNotifCard: some View {
-        VStack(spacing: 0) {
-            VStack(spacing: AppSpacing.sm) {
-                appIconMark
-                Text("\u{201C}FocusGlobe\u{201D} Would Like to\nSend You Notifications")
-                    .font(.system(size: 16, weight: .semibold))
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(Color(hex: 0x14120E))
-                Text("Notifications may include gentle reminders, streak nudges and landing notes.")
-                    .font(.system(size: 12.5))
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(Color(hex: 0x14120E).opacity(0.6))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(AppSpacing.md)
-            Rectangle().fill(Color.black.opacity(0.12)).frame(height: 1)
-            HStack(spacing: 0) {
-                Button {
-                    appModel.tapFeedback()
-                    advance()
-                } label: {
-                    Text("Don't Allow")
-                        .font(.system(size: 16, weight: .regular))
-                        .foregroundStyle(Color(hex: 0x0A84FF))
-                        .frame(maxWidth: .infinity).frame(height: 46)
-                }
-                Rectangle().fill(Color.black.opacity(0.12)).frame(width: 1, height: 46)
-                Button {
-                    appModel.tapFeedback()
-                    guard !notificationRequestInFlight else { return }
-                    notificationRequestInFlight = true
-                    Task { @MainActor in
-                        // Straight to the system prompt. There is nothing of ours
-                        // left to render first, so no artificial delay.
-                        await appModel.requestOnboardingNotificationPermission()
-                        notificationRequestInFlight = false
-                        advance()
-                    }
-                } label: {
-                    Text("Allow")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(Color(hex: 0x0A84FF))
-                        .frame(maxWidth: .infinity).frame(height: 46)
-                }
-            }
-        }
-        .frame(maxWidth: 300)
-        .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color(hex: 0xEDECEF)))
-        .shadow(color: .black.opacity(0.4), radius: 24, y: 12)
-        .frame(maxWidth: .infinity)
-    }
-
-    // The 👆 "Tap Allow" cue that used to live here has been removed. iOS
-    // presents its permission alert in a system-owned `UIWindow` above the app's
-    // own window, so an overlay drawn inside our hierarchy can never sit on top
-    // of it — no `zIndex` applies across windows. It could only ever appear
-    // BEHIND the alert, or flash as a stray hand on the onboarding page as the
-    // alert dismissed. The Apple-styled preview card above already shows the
-    // pilot exactly which button is coming.
-
-    /// The REAL FocusGlobe app icon (the `AppLogo` asset) inside the Apple-style
-    /// permission card, so the branding is correct — never a procedural mock.
-    /// Falls back to the balloon mark only if the asset is somehow missing.
-    private var appIconMark: some View {
-        Group {
-            #if canImport(UIKit)
-            if let ui = UIImage(named: "AppLogo") {
-                Image(uiImage: ui).resizable().scaledToFill()
-            } else {
-                appIconFallback
-            }
-            #else
-            appIconFallback
-            #endif
-        }
-        .frame(width: 58, height: 58)
-        .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous)
-            .strokeBorder(.black.opacity(0.12), lineWidth: 1))
-    }
-
-    private var appIconFallback: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 13, style: .continuous)
-                .fill(LinearGradient(colors: [Color(hex: 0x2E2350), Color(hex: 0x0B1024)],
-                                     startPoint: .top, endPoint: .bottom))
-            MiniBalloonView(size: 34, showGlow: false)
-        }
-    }
-
-    // MARK: Step 10 — A little favour ❤️
-
-    private var favourStep: some View {
-        questionScaffold(
-            title: "A little favour… ❤️",
-            subtitle: "FocusGlobe was built on a simple belief: focus should feel calm, beautiful, and worth returning to. Phones usually pull us away — FocusGlobe tries to turn yours into a tiny journey instead. If it helps you, a review genuinely helps a tiny team keep building.") {
-            VStack(spacing: AppSpacing.md) {
-                // Reviews first (social proof), then the large emotional hero
-                // below them, then the review/continue actions in the footer.
-                reviewCarousel
-                favourHero
-                Text("— the FocusGlobe team")
-                    .font(AppTypography.caption)
-                    .italic()
-                    .foregroundStyle(.white.opacity(0.55))
-                    .frame(maxWidth: .infinity, alignment: .center)
-            }
-        } footer: {
-            VStack(spacing: AppSpacing.sm) {
-                if reviewRequested {
-                    // The Apple prompt was requested over THIS screen (an
-                    // intentional tap). We do NOT auto-advance: Continue moves on
-                    // only after the user is done, so the system sheet can never
-                    // appear stacked over the next ("Focus, elevated") screen.
-                    AppPrimaryButton(title: "Continue", systemImage: "arrow.right", iconTrailing: true) {
-                        appModel.tapFeedback(); advance()
-                    }
-                } else {
-                    AppPrimaryButton(title: "Leave a review", systemImage: "heart.fill") {
-                        reviewRequested = true
-                        appModel.tapFeedback()
-                        // Requested here, over the favour screen — Apple decides if
-                        // it shows; either way the user then taps Continue.
-                        requestReview()
-                    }
-                    Button("Maybe later") { advance() }
-                        .font(AppTypography.callout)
-                        .foregroundStyle(.white.opacity(0.65))
-                }
-            }
-            .padding(.bottom, AppSpacing.xl)
-        }
-    }
-
-    /// The bundled `alittlefavour` art if present — a warm emotional hero. Falls
-    /// back to a soft heart so the page never looks empty before the art lands.
-    @ViewBuilder private var favourHero: some View {
-        #if canImport(UIKit)
-        if let ui = UIImage(named: "alittlefavour") {
-            // A large, editorial emotional hero — bigger, with soft rounded edges
-            // + a shadow so it reads as immersive, never a tiny boxed thumbnail.
-            // (The step scrolls, so the extra height is fine on any screen.)
-            Image(uiImage: ui).resizable().scaledToFit()
-                .frame(maxWidth: .infinity)
-                .frame(maxHeight: Layout.pad(360, 440))
-                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                .shadow(color: .black.opacity(0.4), radius: 22, y: 10)
-        } else {
-            Image(systemName: "heart.fill")
-                .font(.system(size: 64, weight: .bold))
-                .foregroundStyle(LinearGradient(colors: [Color(hex: 0xF2643C), Color(hex: 0xFFB65C)],
-                                                startPoint: .top, endPoint: .bottom))
-                .frame(maxHeight: 120)
-        }
-        #else
-        EmptyView()
-        #endif
-    }
-
-    // Static, illustrative review cards (App Store-style copy — not live data).
-    private var reviewCarousel: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: AppSpacing.sm) {
-                OnboardingReviewCard(name: "Maya", quote: "The first focus timer I actually want to open.")
-                OnboardingReviewCard(name: "Daniel", quote: "It makes studying feel calm instead of stressful.")
-                OnboardingReviewCard(name: "Priya", quote: "The balloon idea is weirdly motivating.")
-                OnboardingReviewCard(name: "Leo", quote: "Beautiful, and it genuinely keeps me off my phone.")
-            }
-            .padding(.horizontal, 2).padding(.vertical, 4)
-        }
-    }
-
-    // MARK: Step 11 — Premium intro (soft, never blocking)
-
-    private var premiumStep: some View {
-        VStack(spacing: 0) {
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: AppSpacing.lg) {
-                    premiumHero
-                    VStack(spacing: 6) {
-                        Text("Focus, elevated.")
-                            .font(.system(size: Layout.pad(30, 40), weight: .bold, design: .default))
-                            .foregroundStyle(.white)
-                        // NOT "Everything in FocusGlobe, unlocked." — PRO opens
-                        // the four exclusive Skies, not the progression ones
-                        // (Fiji, Northern Aurora, Deep Space are still earned by
-                        // flying). Promising "everything" here is a claim the
-                        // app then refuses to honour on the Sky selector.
-                        Text("The exclusive Skies, skins and features.")
-                            .font(AppTypography.callout)
-                            .foregroundStyle(.white.opacity(0.66))
-                    }
-                    premiumBenefits
-                }
-                .padding(.top, AppSpacing.lg)
-                .padding(.horizontal, 2)
-            }
-            VStack(spacing: AppSpacing.sm) {
-                AppPrimaryButton(title: premiumCTATitle, systemImage: "sparkles") {
-                    appModel.tapFeedback()
-                    complete(thenPaywall: true)
-                }
-                // Secondary, but readable: this must never feel like a trap.
-                Button("Skip for now") {
-                    appModel.tapFeedback()
-                    complete(thenPaywall: false)
-                }
-                .font(AppTypography.headline)
-                .foregroundStyle(.white.opacity(0.85))
-            }
-            .padding(.bottom, AppSpacing.xl)
-        }
-        // Ask for offerings when the step appears so the CTA has a real product
-        // and a real eligibility answer to work from. Until it does, the CTA
-        // says "See PRO Plans", which is true in every case.
-        .onAppear { subs.loadOfferings() }
-    }
-
-    /// "Try for $0.00" is a price claim, so it is only made when the Store has
-    /// actually confirmed one: a loaded annual product, carrying a real
-    /// free-trial introductory offer, that THIS Apple ID is eligible for, and a
-    /// zero formatted by that product's own formatter — so the currency and
-    /// placement are right on every storefront rather than a hardcoded "$".
-    ///
-    /// Anything short of all four — offerings still loading, no trial
-    /// configured, already used the trial, an unknown eligibility result — falls
-    /// back to a claim that is always true.
-    private var premiumCTATitle: String {
-        guard let annual = subs.plan(.annual),
-              annual.offersFreeTrial,
-              let zero = annual.localizedZeroPrice
-        else { return "See PRO Plans" }
-        return "Try for \(zero)"
-    }
-
-    /// A continuously moving window into real PRO worlds. The scene art is a
-    /// still foundation and only the conveyor moves, keeping this first-run
-    /// surface rich without running several living-Sky timelines at once.
-    private var premiumHero: some View {
-        FocusContinuousCarousel(
-            items: premiumPreviewItems,
-            selectedIndex: $premiumPreviewIndex,
-            spacing: 4,
-            maximumCardWidth: 210,
-            cardWidthFraction: 0.54,
-            minimumCardWidth: 140,
-            // Deliberately below the shared 53: this is a first-run surface and
-            // the only carousel that mixes landscape Skies with balloons, so it
-            // stays a touch calmer. Raised with the shared cadence (35 to 44,
-            // +26%) so it keeps exactly the same relationship to it.
-            speed: 44
-        ) { preview, prominence in
-            premiumPreviewCard(preview, prominence: prominence)
-        }
-        .frame(height: Layout.pad(170, 190))
-    }
-
-    /// A Sky reads as a place (full landscape card); a balloon skin reads as an
-    /// object (isolated artwork, no scenery, no card) — never a balloon stuffed
-    /// inside a Sky.
-    @ViewBuilder
-    private func premiumPreviewCard(_ preview: OnboardingPremiumPreview,
-                                    prominence: Double) -> some View {
-        switch preview {
-        case .sky(let sky):
-            ZStack {
-                SkyStillPreview(sky: sky)
-                LinearGradient(colors: [.clear, .black.opacity(0.42)],
-                               startPoint: .center, endPoint: .bottom)
-                previewCaption(sky.name)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .strokeBorder(.white.opacity(0.10 + prominence * 0.10), lineWidth: 1)
-            )
-
-        case .skin(let skin):
-            // Isolated balloon: transparent artwork floating on the page, lifted
-            // gently as it reaches centre. No landscape, no rectangle, no border.
-            ZStack {
-                BalloonView(height: 104 + 16 * prominence,
-                            showBurner: true,
-                            showGlow: prominence > 0.5,
-                            skin: skin)
-                    .offset(y: -6 - 4 * prominence)
-                    .shadow(color: .black.opacity(0.28), radius: 14, y: 9)
-                previewCaption(skin.name)
-            }
-        }
-    }
-
-    private func previewCaption(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 13, weight: .bold))
-            .foregroundStyle(.white)
-            .lineLimit(1).minimumScaleFactor(0.8)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(Capsule().fill(.black.opacity(0.34)))
-            .frame(maxHeight: .infinity, alignment: .bottom)
-            .padding(.bottom, 9)
-    }
-
-    /// The showcase reel: the four PRO-exclusive Skies interleaved with real PRO
-    /// balloon skins, so it alternates Sky · Balloon · Sky · Balloon. Both lists
-    /// come from the canonical models — never a hand-maintained duplicate.
-    private var premiumPreviewItems: [OnboardingPremiumPreview] {
-        let skies = FocusSky.proExclusive
-        let skins = BalloonSkin.all.filter(\.isPremium)
-        guard !skies.isEmpty || !skins.isEmpty else { return [] }
-        var reel: [OnboardingPremiumPreview] = []
-        for index in 0..<max(skies.count, skins.count) {
-            if index < skies.count { reel.append(.sky(skies[index])) }
-            if index < skins.count { reel.append(.skin(skins[index])) }
-        }
-        return reel
-    }
-
-    private var premiumBenefits: some View {
-        VStack(spacing: AppSpacing.xs) {
-            // Fixed order and consistent Title Case; sentiment is kept out of the
-            // product-benefit table.
-            premiumBenefit("moon.stars.fill", "Exclusive Skies")
-            premiumBenefit("circle.circle.fill", "Exclusive Skins & Items")
-            premiumBenefit("square.grid.2x2.fill", "Exclusive Widgets")
-            premiumBenefit("person.2.fill", "Online Mode")
-            premiumBenefit("infinity", "Unlimited Time ∞")
-            premiumBenefit("bolt.fill", "2x Coins on Every Flight")
-            premiumBenefit("hand.thumbsup.fill", "No Ads, Ever")
-        }
-    }
-
-    private func premiumBenefit(_ icon: String, _ text: String) -> some View {
-        HStack(spacing: AppSpacing.sm) {
-            Image(systemName: icon)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(AppColors.gold)
-                .frame(width: 24)
-            Text(text)
-                .font(AppTypography.callout)
-                .foregroundStyle(.white.opacity(0.9))
-            Spacer(minLength: 0)
-            Image(systemName: "checkmark")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(AppColors.gold)
-        }
-        .padding(.horizontal, AppSpacing.md)
-        .frame(height: 40)
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(.white.opacity(0.06)))
-    }
-
-    // MARK: Shared scaffolding
-
-    private func questionScaffold<Content: View, Footer: View>(
-        title: String, subtitle: String,
-        @ViewBuilder content: () -> Content,
-        @ViewBuilder footer: () -> Footer) -> some View {
-        VStack(spacing: 0) {
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: AppSpacing.lg) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(title)
-                            .font(.system(size: Layout.pad(28, 36), weight: .bold, design: .default))
-                            .foregroundStyle(.white)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Text(subtitle)
-                            .font(AppTypography.callout)
-                            .foregroundStyle(.white.opacity(0.66))
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    content()
-                }
-                .padding(.top, AppSpacing.xl)
-            }
-            footer()
-        }
-    }
-
-    private func continueRow(skippable: Bool) -> some View {
-        VStack(spacing: AppSpacing.sm) {
-            AppPrimaryButton(title: "Continue", systemImage: "arrow.right", iconTrailing: true) { advance() }
-            if skippable {
-                Button("Skip") { advance() }
-                    .font(AppTypography.callout)
-                    .foregroundStyle(.white.opacity(0.55))
-            }
-        }
-        .padding(.bottom, AppSpacing.xl)
-    }
-
-    private var skipButton: some View {
-        Button("Skip") { advance() }
-            .font(AppTypography.callout)
-            .foregroundStyle(.white.opacity(0.55))
-            .padding(.bottom, AppSpacing.xl)
-    }
-
-    private func optionList(_ options: [String], selected: String?,
-                            choose: @escaping (String) -> Void) -> some View {
-        VStack(spacing: AppSpacing.xs) {
-            ForEach(options, id: \.self) { option in
-                optionButton(option, isSelected: selected == option) { choose(option) }
-            }
-        }
-    }
-
-    private func optionGrid(_ options: [String], selected: String?,
-                            choose: @escaping (String) -> Void) -> some View {
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: AppSpacing.xs),
-                            GridItem(.flexible(), spacing: AppSpacing.xs)],
-                  spacing: AppSpacing.xs) {
-            ForEach(options, id: \.self) { option in
-                optionButton(option, isSelected: selected == option) { choose(option) }
-            }
-        }
-    }
-
-    private func optionButton(_ title: String, isSelected: Bool,
-                              action: @escaping () -> Void) -> some View {
-        Button {
-            appModel.tapFeedback()
-            action()
-        } label: {
-            Text(title)
-                .font(.system(size: 16, weight: .semibold, design: .default))
-                .foregroundStyle(isSelected ? Color(hex: 0x14120E) : .white)
-                .lineLimit(1).minimumScaleFactor(0.75)
-                .frame(maxWidth: .infinity)
-                .frame(height: 52)
-                .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(isSelected ? Color(hex: 0xF4EFE4) : Color.white.opacity(0.08)))
-                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(.white.opacity(isSelected ? 0 : 0.12), lineWidth: 1))
-        }
-        .buttonStyle(SoftPressStyle(scale: 0.98))
-    }
 }
 
-/// One entry in the onboarding PRO showcase. Skies and balloon skins are two
-/// DIFFERENT kinds of thing and are presented differently: a Sky gets a full
-/// landscape card, a balloon skin floats free as isolated artwork with no forced
-/// scenery behind it. They alternate so the reel reads as "worlds *and* balloons".
-private enum OnboardingPremiumPreview: Identifiable {
-    case sky(FocusSky)
-    case skin(BalloonSkin)
+/// What gets in a pilot's way.
+///
+/// Deliberately NOT persisted: nothing outside this flow reads it, and writing
+/// it to the profile would recreate exactly the dead field this redesign
+/// removed. It exists to be named on screen three and answered on screen six.
+enum FocusFriction: String, CaseIterable, Identifiable {
+    case phone
+    case procrastination
+    case momentum
+    case overwhelm
+    case starting
 
-    var id: String {
-        switch self {
-        case .sky(let s):  return "sky.\(s.id)"
-        case .skin(let k): return "skin.\(k.id)"
-        }
-    }
+    var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .sky(let s):  return s.name
-        case .skin(let k): return k.name
+        case .phone:           return "My phone pulls me in"
+        case .procrastination: return "I put things off"
+        case .momentum:        return "I lose momentum partway"
+        case .overwhelm:       return "It all feels like a lot"
+        case .starting:        return "I struggle to get started"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .phone:           return "iphone.slash"
+        case .procrastination: return "clock.badge.exclamationmark.fill"
+        case .momentum:        return "chart.line.downtrend.xyaxis"
+        case .overwhelm:       return "wind"
+        case .starting:        return "flag.slash.fill"
+        }
+    }
+
+    /// The first line of the reveal, phrased against this friction. A statement
+    /// about the setup that was just made — never a claim about results.
+    var reassurance: String {
+        switch self {
+        case .phone:           return "One place to be, with the rest further away"
+        case .procrastination: return "A first flight small enough to just start"
+        case .momentum:        return "A flight you can finish, then come back to"
+        case .overwhelm:       return "One thing at a time, for as long as you chose"
+        case .starting:        return "Take-off is one tap, already set up"
         }
     }
 }
-
-/// A large soundscape "cover" for the onboarding carousel — the bundled
+/// A large soundscape "cover" for the atmosphere carousel — the bundled
 /// `SoundCover_<Id>` art if present, otherwise a premium procedural gradient
 /// with the soundscape's icon.
 private struct SoundCoverCard: View {
@@ -1114,57 +780,5 @@ private struct EqualizerBars: View {
         }
         .frame(height: 18)
         .onAppear { if !reduceMotion { animate = true } }
-    }
-}
-
-/// A static, illustrative 5-star review card for the onboarding "favour" step —
-/// App Store-style copy, never presented as live data.
-private struct OnboardingReviewCard: View {
-    let name: String
-    let quote: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 3) {
-                ForEach(0..<5, id: \.self) { _ in
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 12))
-                        .foregroundStyle(AppColors.gold)
-                        .shadow(color: AppColors.gold.opacity(0.5), radius: 3)
-                }
-            }
-            Text(quote)
-                .font(.system(size: 13.5, weight: .medium, design: .default))
-                .foregroundStyle(.white.opacity(0.9))
-                .fixedSize(horizontal: false, vertical: true)
-            Text("— \(name)")
-                .font(AppTypography.caption)
-                .foregroundStyle(.white.opacity(0.55))
-        }
-        .padding(AppSpacing.md)
-        .frame(width: 240, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(.white.opacity(0.07))
-                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .strokeBorder(.white.opacity(0.1), lineWidth: 1))
-        )
-    }
-}
-
-/// A quiet, deterministic star sprinkle for the onboarding night sky.
-private struct StarSprinkle: View {
-    var body: some View {
-        Canvas { ctx, size in
-            var rng = SeededRNG(seed: 0x0B0A)
-            for _ in 0..<70 {
-                let x = CGFloat(rng.unit()) * size.width
-                let y = CGFloat(rng.unit()) * size.height * 0.7
-                let r = CGFloat(0.5 + rng.unit() * 1.4)
-                ctx.fill(Path(ellipseIn: CGRect(x: x, y: y, width: r, height: r)),
-                         with: .color(.white.opacity(0.14 + rng.unit() * 0.4)))
-            }
-        }
-        .allowsHitTesting(false)
     }
 }

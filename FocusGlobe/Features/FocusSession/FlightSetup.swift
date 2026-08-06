@@ -161,6 +161,10 @@ struct FlightSetupView: View {
     private enum Step { case mode, duration, pack, ticket }
     @State private var step: Step = .mode
     @State private var minutes = 25
+    /// Whether the dial and the focus token have already been seeded from the
+    /// pilot's onboarding answers. Once only — re-seeding on a later `onAppear`
+    /// would throw away a change they just made inside this ritual.
+    @State private var didSeedFromPreferences = false
     @State private var infinite = false
     @State private var focus: FocusPreset?
     /// The ritual's OWN modal coordinator. The setup ritual is a full-screen
@@ -245,6 +249,21 @@ struct FlightSetupView: View {
             }
         }
         .preferredColorScheme(.dark)   // the ritual is always a night-cinema moment
+        // Open on what the pilot told onboarding, not on a hardcoded default.
+        // This is the reader that turns the first-flight question into a real
+        // setting; without it that screen would be a survey.
+        .onAppear {
+            guard !didSeedFromPreferences else { return }
+            didSeedFromPreferences = true
+            if let preferred = appModel.settings.preferredFlightMinutes {
+                minutes = preferred
+            }
+            // The focus token they named, pre-selected — still fully changeable
+            // here, and left alone entirely if they never answered.
+            if focus == nil, let title = appModel.profile.focusStyle {
+                focus = FocusPreset.all.first { $0.title == title }
+            }
+        }
         // The ritual's OWN presenter remains inside its full-screen boundary.
         // Paywalls are full-screen; sign-in remains a sheet. Both filtered
         // bindings still use one local modal state.
