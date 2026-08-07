@@ -53,7 +53,7 @@ struct OnboardingView: View {
     private static let lastStepIndex = Step.allCases.count - 1
 
     private enum Step: Int, CaseIterable {
-        case welcome, intent, friction, duration, atmosphere, setup, results, offer
+        case welcome, intent, friction, duration, schedule, atmosphere, setup, results, offer
     }
 
     @State private var step: Step = .welcome
@@ -73,6 +73,9 @@ struct OnboardingView: View {
     /// The duration wheel's position, in `DurationScale` index space.
     @State private var durationIndex = 0
     @State private var didSeedDuration = false
+    /// The weekdays the pilot plans to fly. Seeded to Mon · Wed · Fri, which is
+    /// the three-a-week rhythm the results screen has always assumed.
+    @State private var weeklyDays: [FocusWeekday] = FocusWeekday.defaultSchedule
     /// The language shown in the Welcome selector. Seeded from the bundle's own
     /// first localization, so it always starts on something real.
     @State private var languageCode = OnboardingView.availableLanguages.first?.code ?? "en"
@@ -180,6 +183,7 @@ struct OnboardingView: View {
         case .intent:     intentStep
         case .friction:   frictionStep
         case .duration:   durationStep
+        case .schedule:   scheduleStep
         case .atmosphere: atmosphereStep
         case .setup:      setupStep
         case .results:    resultsStep
@@ -498,7 +502,27 @@ struct OnboardingView: View {
         return (shortlist + [current]).sorted()
     }
 
-    // MARK: - 5. Atmosphere
+    // MARK: - 5. Focus days
+
+    /// The one screen that turns "three flights a week" from an assumption into
+    /// an answer. Everything downstream reads it: the Rhythm row names the days
+    /// back, and the chart's target is a count of them.
+    private var scheduleStep: some View {
+        questionScaffold(
+            title: "Which days do you want to focus?",
+            subtitle: "Choose the days you want to make part of your routine."
+        ) {
+            WeekdayPicker(selection: $weeklyDays) { appModel.haptics.tap() }
+        } footer: {
+            AppPrimaryButton(title: "Continue", systemImage: "arrow.right",
+                             isEnabled: !weeklyDays.isEmpty, iconTrailing: true) {
+                advance()
+            }
+            .padding(.bottom, AppSpacing.xl)
+        }
+    }
+
+    // MARK: - 6. Atmosphere
 
     private var atmosphereStep: some View {
         questionScaffold(
@@ -585,7 +609,7 @@ struct OnboardingView: View {
         appModel.previewJourneyAudio(option)
     }
 
-    // MARK: - 6. Setting up
+    // MARK: - 7. Setting up
 
     /// The list names things the app is genuinely configuring, in the order it
     /// configures them — `onApply` commits the pilot's answers to the canonical
@@ -606,7 +630,7 @@ struct OnboardingView: View {
         )
     }
 
-    // MARK: - 7. Results
+    // MARK: - 8. Results
 
     /// The answers go in as BINDINGS, not values.
     ///
@@ -623,6 +647,7 @@ struct OnboardingView: View {
                               intent: $intent,
                               friction: $friction,
                               minutes: $minutes,
+                              weeklyDays: $weeklyDays,
                               onContinue: { advance() })
     }
 
@@ -635,6 +660,7 @@ struct OnboardingView: View {
             frictionTitle: friction?.shortTitle ?? "Distractions",
             minutes: minutes ?? 25,
             atmosphere: appModel.selectedJourneyAudio.displayName,
+            weeklyDays: weeklyDays,
             targetDate: Calendar.current.date(
                 byAdding: .day,
                 value: OnboardingResultPlan.weeks * 7,
@@ -643,7 +669,7 @@ struct OnboardingView: View {
         )
     }
 
-    // MARK: - 8. The offer
+    // MARK: - 9. The offer
 
     /// The SAME paywall the Home PRO button opens — same carousel, same
     /// comparison table, same Annual and Monthly products, same real StoreKit
@@ -736,7 +762,8 @@ struct OnboardingView: View {
     /// twice is safe and why the later one always wins.
     private func applySelections() {
         appModel.applyOnboardingSelections(focusPresetTitle: intent?.title,
-                                           preferredMinutes: minutes)
+                                           preferredMinutes: minutes,
+                                           weeklyFocusDays: weeklyDays)
     }
 
     /// Persist and hand off to Home.

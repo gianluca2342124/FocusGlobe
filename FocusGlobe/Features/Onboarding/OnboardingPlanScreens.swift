@@ -241,10 +241,10 @@ struct OnboardingSetupStep: View {
 /// Step 2 — what the answers add up to.
 ///
 /// Every number here is derived arithmetic from the pilot's own choices under
-/// ONE assumption — three flights a week — which the plan card still names in
-/// its Rhythm row. That is the difference between a plan and a promise: a plan
-/// can be shown a target and a curve, because it is describing a schedule the
-/// pilot could keep, not predicting that they will.
+/// their own schedule — the weekdays they picked, which the plan card names
+/// back in its Rhythm row. That is the difference between a plan and a promise:
+/// a plan can be shown a target and a curve, because it is describing a
+/// schedule the pilot chose, not predicting that they will keep it.
 ///
 /// The answers are also EDITABLE from here. That is not decoration: a pilot who
 /// realises on this screen that they picked the wrong focus length has, until
@@ -260,6 +260,7 @@ struct OnboardingResultsStep: View {
     @Binding var intent: FocusPreset?
     @Binding var friction: FocusFriction?
     @Binding var minutes: Int?
+    @Binding var weeklyDays: [FocusWeekday]
     let onContinue: () -> Void
 
     @EnvironmentObject private var appModel: AppModel
@@ -304,7 +305,8 @@ struct OnboardingResultsStep: View {
             OnboardingAnswerEditor(field: field,
                                    intent: $intent,
                                    friction: $friction,
-                                   minutes: $minutes)
+                                   minutes: $minutes,
+                                   weeklyDays: $weeklyDays)
                 .environmentObject(appModel)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
@@ -426,12 +428,11 @@ struct OnboardingResultsStep: View {
         .background(cardBackground)
     }
 
-    /// A pencil, or nothing — never a pencil that cannot change anything.
-    ///
-    /// The row that has no pencil is Rhythm: three flights a week is the stated
-    /// assumption the whole target rests on, not an answer the pilot gave. Its
-    /// slot is still reserved at the same width so the values stay in one
-    /// column and the rows keep a single height.
+    /// Every row is editable now, Rhythm included — it stopped being an
+    /// assumption the moment the first run started asking for it. The `nil`
+    /// branch is kept because the layout depends on it: a row without a pencil
+    /// still reserves the slot, so values stay in one column and the rows keep
+    /// a single height.
     @ViewBuilder
     private func editControl(for row: OnboardingResultPlan.Detail) -> some View {
         if let field = row.field {
@@ -809,7 +810,7 @@ private struct ResultsPlanChart: View {
 /// rests on is an assumption FocusGlobe states, not an answer it collected, so
 /// it is deliberately absent.
 enum OnboardingResultField: String, Identifiable, CaseIterable {
-    case focus, friction, minutes, atmosphere
+    case focus, friction, minutes, atmosphere, rhythm
 
     var id: String { rawValue }
 
@@ -819,6 +820,7 @@ enum OnboardingResultField: String, Identifiable, CaseIterable {
         case .friction:   return "What usually breaks your focus?"
         case .minutes:    return "How long is your first flight?"
         case .atmosphere: return "Pick your focus atmosphere"
+        case .rhythm:     return "Which days do you want to focus?"
         }
     }
 }
@@ -834,6 +836,7 @@ struct OnboardingAnswerEditor: View {
     @Binding var intent: FocusPreset?
     @Binding var friction: FocusFriction?
     @Binding var minutes: Int?
+    @Binding var weeklyDays: [FocusWeekday]
 
     @EnvironmentObject private var appModel: AppModel
     @Environment(\.focusViewport) private var viewport
@@ -857,6 +860,15 @@ struct OnboardingAnswerEditor: View {
                     }
                     .padding(.horizontal, viewport.pagePadding)
                     .padding(.bottom, AppSpacing.xl)
+                }
+
+                // Rhythm is the one multi-select here, so it cannot commit on
+                // tap the way a single choice does — it needs a way to say
+                // "these ones". Every other field dismisses itself.
+                if field == .rhythm {
+                    AppPrimaryButton(title: "Done") { commit() }
+                        .padding(.horizontal, viewport.pagePadding)
+                        .padding(.bottom, AppSpacing.lg)
                 }
             }
             .frame(maxWidth: viewport.readableContentWidth)
@@ -894,6 +906,11 @@ struct OnboardingAnswerEditor: View {
                     commit()
                 }
             }
+        case .rhythm:
+            // The SAME control the first run uses, so the two can never drift
+            // apart in behaviour — including its "at least one day" rule.
+            WeekdayPicker(selection: $weeklyDays) { appModel.haptics.tap() }
+                .padding(.top, AppSpacing.xs)
         case .atmosphere:
             ForEach(JourneyAudioOption.all) { option in
                 OnboardingEditorRow(title: option.displayName,
@@ -966,19 +983,31 @@ private struct OnboardingEditorRow: View {
 /// Everything the results screen shows, computed from the pilot's answers.
 ///
 /// A value type with no view in it, so the arithmetic is inspectable and the
-/// honesty rules live in one place: the only assumption is `flightsPerWeek`,
-/// and it is surfaced as copy rather than hidden inside a number.
+/// honesty rules live in one place. There is no longer an assumption to
+/// surface: `flightsPerWeek` counts the days the pilot actually picked, and the
+/// Rhythm row names those days back rather than reporting a number FocusGlobe
+/// chose for them.
 struct OnboardingResultPlan: Equatable {
-    /// The one assumption the target rests on. Three is deliberately modest —
-    /// a target a pilot can actually hit is the only kind worth showing.
-    static let flightsPerWeek = 3
+    /// How far ahead the plan looks.
     static let weeks = 4
 
     let focusTitle: String
     let frictionTitle: String
     let minutes: Int
     let atmosphere: String
+    /// The days the pilot chose. This is no longer an assumption FocusGlobe
+    /// makes — it is an answer, so the plan counts it rather than guessing 3.
+    let weeklyDays: [FocusWeekday]
     let targetDate: Date
+
+    /// One flight per chosen day. Floored at 1 so an impossible empty schedule
+    /// could never draw a target of zero.
+    var flightsPerWeek: Int { max(1, weeklyDays.count) }
+
+    /// "Mon · Wed · Fri" — the Rhythm row's value.
+    var rhythmLabel: String {
+        weeklyDays.isEmpty ? "Not set yet" : FocusWeekday.label(weeklyDays)
+    }
 
     /// Total planned sessions over the window — the chart's target.
     ///
@@ -986,7 +1015,7 @@ struct OnboardingResultPlan: Equatable {
     /// meant to focus for twenty-four hours, and a cumulative-hours target is
     /// the wrong unit for a chart about consistency anyway. A count of flights
     /// is the thing the pilot can actually tick off.
-    var targetFlights: Int { Self.flightsPerWeek * Self.weeks }
+    var targetFlights: Int { flightsPerWeek * Self.weeks }
 
     /// e.g. "12 flights" — what the chart's callout shows.
     var targetValueLabel: String {
@@ -1065,8 +1094,7 @@ struct OnboardingResultPlan: Equatable {
             Detail(icon: "timer", label: "First flight",
                    value: Formatters.durationLabel(minutes: minutes), field: .minutes),
             Detail(icon: "waveform", label: "Atmosphere", value: atmosphere, field: .atmosphere),
-            Detail(icon: "repeat", label: "Rhythm",
-                   value: "\(Self.flightsPerWeek) flights a week", field: nil),
+            Detail(icon: "repeat", label: "Rhythm", value: rhythmLabel, field: .rhythm),
         ]
     }
 

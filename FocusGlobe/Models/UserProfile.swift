@@ -113,6 +113,23 @@ struct UserProfile: Codable, Equatable {
     /// `AppModel.recordNewBadgeUnlocks`).
     var badgeUnlockEventDayKey: String? = nil
 
+    /// The weekdays this pilot plans to fly, as ISO numbers (1 = Monday … 7 =
+    /// Sunday). Chosen in the first run, editable from the results screen, and
+    /// the source of the plan's flights-per-week. Optional so profiles saved
+    /// before the question existed keep decoding — an absent value simply means
+    /// "never asked", which is a different fact from "chose no days".
+    var weeklyFocusDays: [Int]? = nil
+
+    /// True once the pilot has typed their own name in Settings.
+    ///
+    /// It cannot be inferred from `name` being non-empty, because every profile
+    /// now carries a generated public alias there from the moment it is created
+    /// — that is what Friends and Online publish. This flag is the whole
+    /// difference between "we made this up so the network had something to show"
+    /// and "this is what they call themselves", and Home's greeting turns on it.
+    /// Optional so older profiles decode; `nil` is resolved once, at load.
+    var hasCustomizedName: Bool? = nil
+
     init() {}
 
     static let empty = UserProfile()
@@ -126,6 +143,7 @@ struct UserProfile: Codable, Equatable {
         case coinSpinEventDayKey, coinBoostExpiresAt, lastBoostGiftAt, onlineDiscoverable
         case onlineAllowsFriendRequests, rewardedFriendSessionIDs, hiddenPilotIDs
         case coinEarningsDayKey, coinsEarnedOnDay, observedBadgeKeys, badgeUnlockEventDayKey
+        case weeklyFocusDays, hasCustomizedName
     }
 
     /// Field-by-field recovery is deliberate: a malformed or absent optional
@@ -167,5 +185,7 @@ struct UserProfile: Codable, Equatable {
         coinsEarnedOnDay = try? c.decode(Int.self, forKey: .coinsEarnedOnDay)
         observedBadgeKeys = try? c.decode(Set<String>.self, forKey: .observedBadgeKeys)
         badgeUnlockEventDayKey = try? c.decode(String.self, forKey: .badgeUnlockEventDayKey)
+        weeklyFocusDays = try? c.decode([Int].self, forKey: .weeklyFocusDays)
+        hasCustomizedName = try? c.decode(Bool.self, forKey: .hasCustomizedName)
     }
 }

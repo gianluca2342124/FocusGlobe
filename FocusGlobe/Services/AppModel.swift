@@ -1041,9 +1041,14 @@ final class AppModel: ObservableObject {
     ///   the flight-setup ritual opens on.
     /// * `preferredMinutes` -> the setup dial's opening value for the first flight.
     ///
+    /// * `weeklyFocusDays` -> the plan's rhythm: the Rhythm row names them back
+    ///   and the results chart's target counts them.
+    ///
     /// The soundscape is not a parameter: the selector commits it to
     /// `settings.selectedJourneyAudioID` as the pilot browses.
-    func applyOnboardingSelections(focusPresetTitle: String?, preferredMinutes: Int?) {
+    func applyOnboardingSelections(focusPresetTitle: String?,
+                                   preferredMinutes: Int?,
+                                   weeklyFocusDays: [FocusWeekday] = []) {
         var p = profile
         // Only a real `FocusPreset` title is stored: this value is published as
         // an Online flight category, so it must stay a known token rather than
@@ -1052,6 +1057,13 @@ final class AppModel: ObservableObject {
             p.focusStyle = title
         }
         p.createdAt = p.createdAt ?? Date()
+        // Stable ISO weekday numbers, never localized strings. An empty
+        // selection is not written: the picker cannot produce one, so an empty
+        // array here means the caller had nothing to say rather than that the
+        // pilot chose no days.
+        if !weeklyFocusDays.isEmpty {
+            p.weeklyFocusDays = FocusWeekday.rawValues(weeklyFocusDays)
+        }
         profile = p
 
         if let preferredMinutes {
