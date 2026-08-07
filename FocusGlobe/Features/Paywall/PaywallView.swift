@@ -541,13 +541,19 @@ struct PaywallView: View {
 
     // MARK: - Shared chrome and actions
 
-    /// Onboarding wants a quieter exit: there the offer is the last step of a
+    /// Onboarding wants quieter chrome: there the offer is the last step of a
     /// flow the pilot is moving through, not a modal they have been dropped
-    /// into, and a full-size X reads as "get out of here" at exactly the wrong
-    /// moment. Every other entry point is unchanged.
-    private var closeControlSize: CGFloat {
+    /// into, and a full-size control reads as "get out of here" at exactly the
+    /// wrong moment. Applies to BOTH header controls — a small X on page one
+    /// beside a full-size chevron on page two would just look like two different
+    /// paywalls. Every other entry point is unchanged.
+    private var chromeControlSize: CGFloat {
         backdrop == .onboarding ? viewport.navigationControlSize * 0.74
                                 : viewport.navigationControlSize
+    }
+
+    private var chromeControlOpacity: Double {
+        backdrop == .onboarding ? 0.62 : 1
     }
 
     private func paywallHeader(
@@ -556,16 +562,22 @@ struct PaywallView: View {
     ) -> some View {
         HStack {
             if let backAction {
-                AppIconButton(systemImage: "chevron.left", size: viewport.navigationControlSize,
-                              tint: .white, accessibilityLabel: "Back", action: backAction)
+                AppIconButton(systemImage: "chevron.left", size: chromeControlSize,
+                              tint: .white.opacity(chromeControlOpacity),
+                              accessibilityLabel: "Back", action: backAction)
+                    // Same rule as the X: the glyph shrinks, the target does
+                    // not. This is the trial page's ONLY exit, so it has to stay
+                    // a full 46–58 pt control however small it looks.
+                    .frame(width: viewport.navigationControlSize,
+                           height: viewport.navigationControlSize)
             } else {
                 Color.clear.frame(width: viewport.navigationControlSize,
                                   height: viewport.navigationControlSize)
             }
             Spacer()
             if showsClose {
-                AppIconButton(systemImage: "xmark", size: closeControlSize,
-                              tint: .white.opacity(backdrop == .onboarding ? 0.62 : 1),
+                AppIconButton(systemImage: "xmark", size: chromeControlSize,
+                              tint: .white.opacity(chromeControlOpacity),
                               accessibilityLabel: "Close") {
                     appModel.tapFeedback()
                     close()
