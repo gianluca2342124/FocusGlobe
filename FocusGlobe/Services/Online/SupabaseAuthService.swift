@@ -9,7 +9,7 @@ import CryptoKit
 ///
 /// Privacy: the Apple identity token goes ONLY to Supabase Auth. Email and the
 /// Apple subject are never written to any public table; the visible identity
-/// is an anonymous alias (SkyPilot####) in `profiles`.
+/// is a generated word-pair alias (see `PublicName.generated`) in `profiles`.
 actor SupabaseAuthService {
     private var client: SupabaseClient? { SupabaseService.client }
 

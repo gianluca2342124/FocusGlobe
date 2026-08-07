@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 #if canImport(RevenueCatUI)
 import RevenueCatUI
 #endif
@@ -8,10 +11,12 @@ struct SettingsView: View {
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var online: FocusOnlineModel
     @State private var restoreMessage: String?
-    /// The Name field's live text. Committed on submit / focus loss, not per
-    /// keystroke — see `commitName()`.
+    /// The Name field's live text. Committed on submit only — never per
+    /// keystroke, which would spend the daily rename on "G". See `commitName()`.
     @State private var nameDraft = ""
-    @State private var nameError: String?
+    @State private var editingName = false
+    @State private var isSavingName = false
+    @State private var nameStatus: NameStatus?
     @FocusState private var nameFieldFocused: Bool
     @State private var showManageOnlineData = false
     /// Account section state (free, always available — never Debug-only).
@@ -101,72 +106,180 @@ struct SettingsView: View {
     /// management. The avatar is a symbol on purpose: it identifies the block
     /// without promising an editing affordance that does not exist.
     ///
-    /// The field commits on submit and on focus loss rather than on every
-    /// keystroke: this value is published to Friends, and pushing a rename per
-    /// character would spend the once-a-day alias change on "G".
+    /// Reading and editing are separate states. At rest the name is a label
+    /// with a small pencil beside it; the field only exists while editing, and
+    /// it opens with the whole name selected so a pilot who was handed
+    /// "QuietComet" can type straight over it.
     private var profileBlock: some View {
         AppGlassCard(padding: AppSpacing.md) {
-            HStack(spacing: AppSpacing.md) {
-                ZStack {
-                    Circle().fill(AppColors.gold.opacity(0.16))
-                    Circle().strokeBorder(AppColors.gold.opacity(0.30), lineWidth: 1)
-                    Image(systemName: "person.fill")
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundStyle(AppColors.gold)
-                }
-                .frame(width: 56, height: 56)
-                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                HStack(spacing: AppSpacing.md) {
+                    ZStack {
+                        Circle().fill(AppColors.gold.opacity(0.16))
+                        Circle().strokeBorder(AppColors.gold.opacity(0.30), lineWidth: 1)
+                        Image(systemName: "person.fill")
+                            .font(.system(size: 24, weight: .semibold))
+                            .foregroundStyle(AppColors.gold)
+                    }
+                    .frame(width: 56, height: 56)
+                    .accessibilityHidden(true)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Name")
-                        .font(AppTypography.caption)
-                        .foregroundStyle(AppColors.textSecondary)
-                    TextField("Name", text: $nameDraft)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(AppColors.textPrimary)
-                        .textInputAutocapitalization(.words)
-                        .autocorrectionDisabled()
-                        .submitLabel(.done)
-                        .focused($nameFieldFocused)
-                        .onSubmit { commitName() }
-                        .onChange(of: nameFieldFocused) { _, focused in
-                            if !focused { commitName() }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Name")
+                            .font(AppTypography.caption)
+                            .foregroundStyle(AppColors.textSecondary)
+                        if editingName {
+                            nameField
+                        } else {
+                            Text(appModel.canonicalName)
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundStyle(AppColors.textPrimary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
                         }
+                    }
+                    // Clamp the (horizontally greedy) field so it can never grow
+                    // the row past the viewport and induce a sideways drift.
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    if !editingName { editNameButton }
                 }
-                // Clamp the (horizontally greedy) TextField so it can never grow
-                // the row past the viewport and induce a sideways drift.
-                .frame(maxWidth: .infinity, alignment: .leading)
+
+                if let nameStatus {
+                    Text(nameStatus.message)
+                        .font(AppTypography.caption)
+                        .foregroundStyle(nameStatus.isError ? AppColors.danger : AppColors.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.leading, 56 + AppSpacing.md)
+                }
             }
         }
-        .onAppear { nameDraft = appModel.canonicalName }
-        .alert("Couldn't update your public name", isPresented: Binding(
-            get: { nameError != nil }, set: { if !$0 { nameError = nil } }
-        )) {
-            Button("OK", role: .cancel) { nameError = nil }
-        } message: {
-            Text(nameError ?? "")
+        .onAppear {
+            // The canonical name always exists, but restating it here means the
+            // block can never render a blank even if something upstream failed.
+            appModel.ensureCanonicalNameExists()
+            nameDraft = appModel.canonicalName
+        }
+        // Carrying a customized name onto an account someone else already owns
+        // is the one conflict the pilot has to resolve themselves.
+        .onChange(of: online.nameConflict) { _, conflict in
+            guard let conflict else { return }
+            nameStatus = .error("\(conflict) is already taken on another account. Your name is \(appModel.canonicalName) — tap the pencil to choose another.")
+            online.nameConflict = nil
         }
     }
 
-    /// Local first, network second.
+    /// Small, subtle, and the same pencil language the results screen uses:
+    /// a 26 pt glyph inside a 44 pt target.
+    private var editNameButton: some View {
+        Button {
+            appModel.tapFeedback()
+            nameDraft = appModel.canonicalName
+            nameStatus = nil
+            editingName = true
+            // Focus on the NEXT runloop: the field does not exist yet on this
+            // one, and focusing a view that has not been installed is a no-op.
+            DispatchQueue.main.async { nameFieldFocused = true }
+        } label: {
+            Image(systemName: "pencil")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(AppColors.textSecondary)
+                .frame(width: 26, height: 26)
+                .background(Circle().fill(AppColors.textPrimary.opacity(0.07)))
+                .overlay(Circle().strokeBorder(AppColors.textPrimary.opacity(0.12), lineWidth: 1))
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Edit name")
+        .accessibilityValue(appModel.canonicalName)
+    }
+
+    private var nameField: some View {
+        TextField("Name", text: $nameDraft)
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundStyle(AppColors.textPrimary)
+            .textInputAutocapitalization(.words)
+            .autocorrectionDisabled()
+            .submitLabel(.done)
+            .disabled(isSavingName)
+            .focused($nameFieldFocused)
+            .onSubmit { Task { await commitName() } }
+            .onChange(of: nameFieldFocused) { _, focused in
+                // Select the whole name the instant the field takes focus, so
+                // typing replaces a generated one instead of appending to it.
+                guard focused else { return }
+                #if canImport(UIKit)
+                DispatchQueue.main.async {
+                    UIApplication.shared.sendAction(#selector(UIResponder.selectAll(_:)),
+                                                    to: nil, from: nil, for: nil)
+                }
+                #endif
+            }
+    }
+
+    /// Server first, local second — the reverse of everywhere else in this app,
+    /// and deliberately so.
     ///
-    /// The canonical write is local and unconditional, so the name is saved
-    /// even offline or signed out. The Online push is a MIRROR of it through
-    /// `updateAlias` — the existing validator and its once-a-day rate limit —
-    /// and a rejection surfaces without rolling the local value back. Nothing
-    /// drifts: `ensureIdentityAndProfile` republishes from the canonical name
-    /// on the next launch, so a failed push heals itself.
-    private func commitName() {
-        let trimmed = nameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
-            nameDraft = appModel.canonicalName   // empty falls back, never clears
+    /// A public name has to be globally unique, and only the database can settle
+    /// that. So nothing becomes canonical until `claim_public_alias` has taken
+    /// it atomically: an unverified name published optimistically is exactly how
+    /// two pilots end up sharing one identity. Offline, the current name simply
+    /// stands.
+    private func commitName() async {
+        let candidate = PublicName.display(nameDraft)
+        guard !candidate.isEmpty else {
+            nameDraft = appModel.canonicalName        // empty falls back, never clears
+            nameStatus = nil
+            editingName = false
             return
         }
-        guard trimmed != appModel.canonicalName else { return }
-        appModel.setCanonicalName(trimmed)
+        if PublicName.isSameName(candidate, appModel.canonicalName),
+           candidate == appModel.canonicalName {
+            editingName = false                       // nothing changed at all
+            nameStatus = nil
+            return
+        }
+        if let message = PublicName.validationMessage(for: candidate) {
+            nameStatus = .error(message)
+            return
+        }
+        guard online.isSignedIn else {
+            nameStatus = .error("Connect to the internet to change your name.")
+            return
+        }
+
+        isSavingName = true
+        nameStatus = .info("Checking…")
+        let failure = await online.updateAlias(candidate)
+        isSavingName = false
+
+        if let failure {
+            nameStatus = .error(failure)              // taken / invalid / offline
+            return
+        }
+        // Only now is it canonical: the row is ours, so the local copy and
+        // `hasCustomizedName` can follow.
+        appModel.setCanonicalName(candidate)
         nameDraft = appModel.canonicalName
-        guard online.isSignedIn else { return }
-        Task { nameError = await online.updateAlias(appModel.canonicalName) }
+        nameStatus = nil
+        editingName = false
+        nameFieldFocused = false
+    }
+
+    /// A one-line status under the field: neutral while working, red when the
+    /// name cannot be taken. Deliberately not an alert — a taken name is an
+    /// ordinary answer, not an error worth a modal.
+    enum NameStatus: Equatable {
+        case info(String)
+        case error(String)
+
+        var message: String {
+            switch self {
+            case .info(let m), .error(let m): return m
+            }
+        }
+        var isError: Bool { if case .error = self { return true }; return false }
     }
 
     private var experienceSection: some View {

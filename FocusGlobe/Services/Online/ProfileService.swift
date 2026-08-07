@@ -49,8 +49,11 @@ actor ProfileService {
     /// Push profile fields (alias/skin/toggles) — own row only per RLS.
     func updateProfile(_ profile: OnlineProfile) async throws {
         guard let client else { throw OnlineError.unavailable(.projectUnavailable) }
+        // `public_alias` is DELIBERATELY absent. It is globally unique now, so a
+        // plain UPDATE on it can raise a constraint violation and would take
+        // this settings push — skin, country, toggles — down with it. Names
+        // change through `claimAlias` and nowhere else.
         struct Update: Encodable {
-            let public_alias: String
             let country_code: String?
             let balloon_skin_id: String
             let is_discoverable: Bool
@@ -58,14 +61,46 @@ actor ProfileService {
             let last_seen_at: String
         }
         try await client.from("profiles")
-            .update(Update(public_alias: profile.displayName,
-                           country_code: profile.countryCode,
+            .update(Update(country_code: profile.countryCode,
                            balloon_skin_id: profile.balloonSkinID,
                            is_discoverable: profile.isDiscoverable,
                            allow_friend_requests: profile.allowsFriendRequests,
                            last_seen_at: PostgresDate.string(Date())))
             .eq("id", value: profile.publicID)
             .execute()
+    }
+
+    /// The outcome of asking the database for a name.
+    enum AliasClaim: Equatable {
+        case claimed(OnlineProfile)
+        /// Another account already owns this name, case-insensitively.
+        case taken
+        /// Failed the server's own length rule.
+        case invalid
+    }
+
+    /// Claim a public name, atomically.
+    ///
+    /// One `UPDATE` inside `claim_public_alias`, guarded by the unique index on
+    /// `lower(btrim(public_alias))`. There is no window between checking and
+    /// writing, so two devices racing for the same name cannot both win — the
+    /// loser gets `.taken` rather than silently overwriting someone.
+    ///
+    /// Re-casing a name you already own is not a conflict: the RPC compares
+    /// normalized keys before it tries to write.
+    func claimAlias(_ alias: String) async throws -> AliasClaim {
+        guard let client else { throw OnlineError.unavailable(.projectUnavailable) }
+        struct Params: Encodable { let p_alias: String }
+        struct Result: Decodable {
+            let ok: Bool
+            let reason: String?
+            let profile: ProfileRow?
+        }
+        let result: Result = try await client
+            .rpc("claim_public_alias", params: Params(p_alias: alias))
+            .execute().value
+        if result.ok, let row = result.profile { return .claimed(Self.profile(from: row)) }
+        return result.reason == "invalid" ? .invalid : .taken
     }
 
     /// Profiles for a set of pilot ids in ONE batched request (RLS restricts to

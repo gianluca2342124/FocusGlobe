@@ -70,6 +70,10 @@ final class FocusOnlineModel: ObservableObject {
     }
     /// Friendly one-line outcome of the last invite-link join attempt.
     @Published private(set) var inviteJoinMessage: String?
+    /// Set when a customized local name could not be carried onto this account
+    /// because another pilot already owns it. Settings reads it once and clears
+    /// it; nothing else acts on it.
+    @Published var nameConflict: String?
     /// One-shot "<alias> joined" toast (set on a genuine new join; view clears).
     @Published private(set) var joinToastAlias: String?
     /// Members seen so far in the active room (by UUID) — the join-toast baseline.
@@ -446,6 +450,11 @@ final class FocusOnlineModel: ObservableObject {
         myUserID = nil
         resetSocialState()
         availability = .signedOut
+        nameConflict = nil
+        // Signing out drops the server profile, never the local name. The
+        // guarantee is "a name always exists", and an anonymous pilot needs one
+        // just as much as an authenticated one.
+        appModel?.ensureCanonicalNameExists()
     }
 
     private func resetSocialState() {
@@ -499,6 +508,9 @@ final class FocusOnlineModel: ObservableObject {
             // A failed settings push must not discard a valid fetched profile —
             // the row exists, which is what the FK needs.
             try? await profileService.updateProfile(current)
+            // The name is settled BEFORE the profile is published, so nothing
+            // downstream ever sees the pre-reconciliation alias.
+            current = await reconcileCanonicalName(with: current)
             profile = current
             OnlineCache.save(profile: current)
             await flightService.configure(userID: myUserID)
@@ -540,33 +552,76 @@ final class FocusOnlineModel: ObservableObject {
         Task { try? await profileService.updateProfile(p) }
     }
 
-    /// Alias validation + rate limit (one change per day).
+    /// Claim a public name. Returns a user-facing message, or nil on success.
+    ///
+    /// Validation is `PublicName`'s — the same rules the server enforces — and
+    /// the write is `claim_public_alias`, one atomic UPDATE behind the unique
+    /// index. A name that is already owned comes back as "taken" rather than
+    /// overwriting whoever has it.
+    ///
+    /// The once-a-day rate limit is stamped only on SUCCESS, so being told a
+    /// name is taken never costs the pilot their daily change. Re-casing a name
+    /// they already own skips the limit entirely — it is not a rename.
     func updateAlias(_ raw: String) async -> String? {
-        let alias = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard alias.count >= 3, alias.count <= 20 else { return "Alias must be 3–20 characters." }
-        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "_ "))
-        guard alias.unicodeScalars.allSatisfy({ allowed.contains($0) }) else {
-            return "Only letters, numbers, spaces and _ are allowed."
+        let alias = PublicName.display(raw)
+        if let message = PublicName.validationMessage(for: alias) { return message }
+
+        let isRecasingOwnName = profile.map { PublicName.isSameName($0.displayName, alias) } ?? false
+        if !isRecasingOwnName,
+           let last = OnlineCache.aliasLastChangedAt,
+           Date().timeIntervalSince(last) < 24 * 3600 {
+            return "You can change your name once a day."
         }
-        guard alias.rangeOfCharacter(from: .alphanumerics) != nil else { return "Add a few letters or numbers." }
-        guard !alias.lowercased().contains("http") else { return "Links aren't allowed." }
-        let banned = ["fuck", "shit", "bitch", "nazi", "cunt"]
-        guard !banned.contains(where: { alias.lowercased().contains($0) }) else { return "Please pick a friendlier alias." }
-        if let last = OnlineCache.aliasLastChangedAt, Date().timeIntervalSince(last) < 24 * 3600 {
-            return "You can change your alias once a day."
-        }
-        guard var p = profile else { return OnlineError.notSignedIn.userMessage }
-        p.displayName = alias
+        guard isSignedIn else { return "Connect to the internet to change your name." }
+
         do {
-            try await profileService.updateProfile(p)
-            profile = p
-            OnlineCache.save(profile: p)
-            OnlineCache.aliasLastChangedAt = Date()
-            return nil
+            switch try await profileService.claimAlias(alias) {
+            case .claimed(let updated):
+                profile = updated
+                OnlineCache.save(profile: updated)
+                if !isRecasingOwnName { OnlineCache.aliasLastChangedAt = Date() }
+                return nil
+            case .taken:
+                return "This name is already taken. Choose another name."
+            case .invalid:
+                return "Name must be \(PublicName.minLength)–\(PublicName.maxLength) characters."
+            }
         } catch {
             applyOperationError(error)
             return OnlineError.requestFailed.userMessage
         }
+    }
+
+    /// Reconcile the local canonical name with the server's on sign-in.
+    ///
+    /// The server row is authoritative for a name that already exists — it is
+    /// the copy other pilots see. So:
+    ///  * a pilot who never customized simply ADOPTS whatever the server holds,
+    ///    including a name assigned on another device, and stays uncustomized
+    ///    so Home keeps quiet about it;
+    ///  * a pilot who DID choose a name gets one attempt to carry it across. If
+    ///    it is free, they keep it. If someone else took it, the server's name
+    ///    stands and `nameConflict` is set so Settings can say so — their name
+    ///    is never silently swapped, and the other account is never overwritten.
+    @discardableResult
+    func reconcileCanonicalName(with serverProfile: OnlineProfile) async -> OnlineProfile {
+        guard let appModel else { return serverProfile }
+        let serverName = PublicName.display(serverProfile.displayName)
+        let localName = PublicName.display(appModel.canonicalName)
+
+        guard appModel.hasCustomizedName, !localName.isEmpty,
+              !PublicName.isSameName(localName, serverName) else {
+            if !serverName.isEmpty { appModel.adoptServerName(serverName) }
+            return serverProfile
+        }
+
+        if let claim = try? await profileService.claimAlias(localName), case .claimed(let p) = claim {
+            OnlineCache.save(profile: p)
+            return p
+        }
+        nameConflict = localName
+        appModel.adoptServerName(serverName)
+        return serverProfile
     }
 
     // MARK: Flight lifecycle (called from AppModel hooks — never blocks Solo)

@@ -187,9 +187,18 @@ final class AppModel: ObservableObject {
             } else {
                 let cachedAlias = OnlineCache.loadProfile()?.displayName
                     .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                loadedProfile.name = cachedAlias.isEmpty ? OnlineProfile.generatedAlias() : cachedAlias
+                loadedProfile.name = cachedAlias.isEmpty ? PublicName.generated() : cachedAlias
                 loadedProfile.hasCustomizedName = false
             }
+            persistence.save(loadedProfile, for: .profile)
+        }
+        // The guarantee, restated unconditionally: a name exists at every stable
+        // state, including profiles resolved by an older build and any that lost
+        // the field in a partial decode. Cheap, idempotent, and it means no
+        // surface downstream needs a placeholder.
+        if PublicName.display(loadedProfile.name ?? "").isEmpty {
+            loadedProfile.name = PublicName.generated()
+            loadedProfile.hasCustomizedName = loadedProfile.hasCustomizedName ?? false
             persistence.save(loadedProfile, for: .profile)
         }
         // Sky-catalog migration: a persisted selection pointing at a removed Sky
@@ -795,6 +804,14 @@ final class AppModel: ObservableObject {
         if let skyID = loadedProfile.selectedSkyID, FocusSky.byID(skyID) == nil {
             loadedProfile.selectedSkyID = FocusSky.defaultFree.id
         }
+        // Switching accounts loads a DIFFERENT profile, which may be empty (a
+        // first sign-in on this device) or predate the canonical name. The
+        // guarantee has to hold for whatever was just loaded, not only for the
+        // one resolved at launch.
+        if PublicName.display(loadedProfile.name ?? "").isEmpty {
+            loadedProfile.name = PublicName.generated()
+            loadedProfile.hasCustomizedName = loadedProfile.hasCustomizedName ?? false
+        }
 
         // Account files may have last been opened by an older catalog. Remove
         // only invalid references; valid ownership and semantic Cabin slots stay
@@ -1075,6 +1092,37 @@ final class AppModel: ObservableObject {
         guard hasCustomizedName else { return nil }
         let trimmed = canonicalName.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+
+    /// Take the server's name as canonical WITHOUT marking it customized.
+    ///
+    /// Used only when signing in: the `profiles` row is authoritative for a name
+    /// that already exists, so a pilot who never chose one adopts whatever the
+    /// account holds — including a name assigned on another device. It stays
+    /// marked generated, which is what keeps Home quiet about it.
+    func adoptServerName(_ name: String) {
+        let resolved = PublicName.display(name)
+        guard !resolved.isEmpty, resolved != profile.name else { return }
+        var p = profile
+        p.name = resolved
+        profile = p
+    }
+
+    /// The name always exists. Called at load and after any identity change.
+    ///
+    /// `hasCustomizedName == nil` is the "never resolved" marker, but a name can
+    /// also go missing later — a decode that dropped the field, a profile reset,
+    /// a build that predates this. This repairs any of those in one place rather
+    /// than leaving a UI fallback like "Pilot" standing in for a real value.
+    /// It never touches a name that already exists.
+    func ensureCanonicalNameExists() {
+        guard PublicName.display(profile.name ?? "").isEmpty else { return }
+        var p = profile
+        p.name = PublicName.generated()
+        // Generated, so Home stays quiet — unless the pilot had already been
+        // marked customized, in which case that fact is theirs and stands.
+        if p.hasCustomizedName == nil { p.hasCustomizedName = false }
+        profile = p
     }
 
     /// Commit a name the pilot typed.
