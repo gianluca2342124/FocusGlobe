@@ -180,18 +180,82 @@ end $$;
 --
 --    Re-casing your own name is not a conflict with yourself: that case is
 --    detected before the update and always succeeds.
+--
+--    VALIDATION IS NOT THE CLIENT'S JOB.
+--    This RPC is `security definer` and reachable by any authenticated session
+--    with an access token — curl included. The Swift `PublicName` rules are a
+--    keyboard convenience, not a boundary, so every security-relevant rule is
+--    restated here and this function is the one that decides. The rules mirror
+--    `PublicName.validationMessage` exactly:
+--
+--      trim (whitespace AND newlines, as Swift's .whitespacesAndNewlines does)
+--      3..20 characters, measured after trimming
+--      characters limited to alphanumerics, underscore and space
+--      at least one letter or digit
+--      no "http" anywhere (case-insensitive)
+--      no profanity from the client's own list (case-insensitive)
+--
+--    Every rejection returns `reason: 'invalid'` — the SAME shape the app
+--    already decodes, so nothing on the client changes. `'taken'` stays
+--    reserved for the uniqueness conflict alone.
+--
+--    ⚠ COLLATION NOTE: `[[:alnum:]]` resolves against the database's ctype. On
+--    a UTF-8 collation (the Supabase default) it covers Unicode letters and
+--    digits, matching Swift's `CharacterSet.alphanumerics`, so "José" is
+--    accepted by both. On a `C`-collation database it narrows to ASCII and
+--    would reject names this app's own client accepts. Verify with:
+--        select datcollate, datctype from pg_database where datname = current_database();
 -- ----------------------------------------------------------------------------
 create or replace function public.claim_public_alias(p_alias text)
 returns jsonb language plpgsql volatile security definer set search_path = public, pg_temp as $$
 declare
+  -- Trimmed of the full whitespace set, not just spaces, because that is what
+  -- the client trims. Having stripped every edge whitespace character, this is
+  -- already `btrim`-stable — so `lower(v_raw)` is exactly what the unique index
+  -- will compute for the value stored, and the two can never disagree.
+  v_raw text := btrim(coalesce(p_alias, ''), E' \t\n\r\f\v');
   uid   uuid := auth.uid();
-  v_raw text := btrim(coalesce(p_alias, ''));
-  v_key text := lower(btrim(coalesce(p_alias, '')));
+  v_key text;
   prof  public.profiles;
 begin
   if uid is null then raise exception 'not_authenticated'; end if;
+  v_key := lower(v_raw);
 
+  -- Length, measured on the trimmed value. Note the client TRUNCATES past 20
+  -- before sending; the server rejects instead, because silently storing a
+  -- different name than the caller asked for is worse than saying no.
   if char_length(v_raw) < 3 or char_length(v_raw) > 20 then
+    return jsonb_build_object('ok', false, 'reason', 'invalid');
+  end if;
+
+  -- Control characters, explicitly and first. The allowed-set test below
+  -- already excludes them, but `[[:cntrl:]]` does not depend on collation —
+  -- so a newline, tab or NUL is refused even on a database whose ctype makes
+  -- `[[:alnum:]]` behave unexpectedly. This is the floor that stops a name
+  -- from breaking a member list, a push payload or a log line.
+  if v_raw ~ '[[:cntrl:]]' then
+    return jsonb_build_object('ok', false, 'reason', 'invalid');
+  end if;
+
+  -- Allowed characters: alphanumerics, underscore, space. Mirrors
+  -- `CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "_ "))`.
+  if v_raw !~ '^[[:alnum:]_ ]+$' then
+    return jsonb_build_object('ok', false, 'reason', 'invalid');
+  end if;
+
+  -- At least one letter or digit, so "___" and "   " are not names.
+  if v_raw !~ '[[:alnum:]]' then
+    return jsonb_build_object('ok', false, 'reason', 'invalid');
+  end if;
+
+  -- No links. `v_key` is already lowercased, so this is case-insensitive.
+  if position('http' in v_key) > 0 then
+    return jsonb_build_object('ok', false, 'reason', 'invalid');
+  end if;
+
+  -- The client's own banned list, kept in step with it deliberately: a name
+  -- that the app refuses to type must not be settable by going around the app.
+  if v_key ~ '(fuck|shit|bitch|nazi|cunt)' then
     return jsonb_build_object('ok', false, 'reason', 'invalid');
   end if;
 
