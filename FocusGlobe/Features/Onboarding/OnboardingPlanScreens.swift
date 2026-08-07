@@ -313,24 +313,37 @@ struct OnboardingResultsStep: View {
 
     // MARK: Goal
 
+    /// The one centred block on the page.
+    ///
+    /// Everything below it stays left-aligned — cards read as cards because
+    /// their content starts at a shared left edge. This is the arrival, so it
+    /// gets the "plan ready" treatment instead: the mark, then the sentence,
+    /// both centred, the sentence held to a narrower column so it breaks into
+    /// two or three balanced lines rather than one full-width run.
     private var goalHeadline: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+        VStack(spacing: AppSpacing.md) {
             ZStack {
                 Circle().fill(.white)
                 Image(systemName: "checkmark")
-                    .font(.system(size: 17, weight: .heavy))
+                    .font(.system(size: 21, weight: .heavy))
                     .foregroundStyle(Color(hex: 0x14120E))
             }
-            .frame(width: 34, height: 34)
-            .shadow(color: .black.opacity(0.28), radius: 8, y: 3)
+            .frame(width: 44, height: 44)
+            .shadow(color: .black.opacity(0.3), radius: 10, y: 4)
             .accessibilityHidden(true)
 
             Text(plan.goalTitle)
-                .font(.system(size: viewport.isShort ? 25 : 30, weight: .bold, design: .default))
+                .font(.system(size: viewport.isShort ? 24 : 28, weight: .bold, design: .default))
+                .multilineTextAlignment(.center)
                 .foregroundStyle(.white)
                 .fixedSize(horizontal: false, vertical: true)
+                // A measure, not an offset: wide enough for two or three lines
+                // on a phone, narrow enough that an iPad does not stretch the
+                // sentence into a single ribbon.
+                .frame(maxWidth: 420)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
+        .padding(.top, AppSpacing.xs)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isHeader)
     }
@@ -863,7 +876,7 @@ struct OnboardingAnswerEditor: View {
                 }
             }
         case .minutes:
-            ForEach(OnboardingView.flightLengths, id: \.self) { value in
+            ForEach(OnboardingView.durationEditorOptions(including: minutes), id: \.self) { value in
                 OnboardingEditorRow(title: Formatters.durationLabel(minutes: value),
                                     systemImage: "timer",
                                     isSelected: minutes == value) {
@@ -957,19 +970,55 @@ struct OnboardingResultPlan: Equatable {
     let atmosphere: String
     let targetDate: Date
 
-    /// Total planned focus over the window, in whole hours (floored, so the
-    /// figure can never overstate the plan).
-    var targetHours: Int {
-        max(1, (minutes * Self.flightsPerWeek * Self.weeks) / 60)
-    }
+    /// Total planned sessions over the window — the chart's target.
+    ///
+    /// Flights, not hours. "24 hours" invited the reading that the pilot was
+    /// meant to focus for twenty-four hours, and a cumulative-hours target is
+    /// the wrong unit for a chart about consistency anyway. A count of flights
+    /// is the thing the pilot can actually tick off.
+    var targetFlights: Int { Self.flightsPerWeek * Self.weeks }
 
-    /// e.g. "18 hours" — what the chart's callout shows.
+    /// e.g. "12 flights" — what the chart's callout shows.
     var targetValueLabel: String {
-        "\(targetHours) \(targetHours == 1 ? "hour" : "hours")"
+        "\(targetFlights) \(targetFlights == 1 ? "flight" : "flights")"
     }
 
+    /// The session length as an adjective: "90-minute", "2-hour", "45-minute".
+    ///
+    /// Whole hours read as hours; everything else stays in minutes, because
+    /// "1-hour 30-minute routine" is not something anyone says and "90-minute"
+    /// is.
+    var durationAdjective: String {
+        if minutes >= 60, minutes % 60 == 0 {
+            let hours = minutes / 60
+            return "\(hours)-hour"
+        }
+        return "\(minutes)-minute"
+    }
+
+    /// The focus answer as the noun a routine is made of: Read -> "reading",
+    /// Meditate -> "meditation". Falls back to the lowercased title, so a new
+    /// `FocusPreset` still produces a grammatical sentence on the day it is
+    /// added rather than waiting for this switch to catch up.
+    var routineNoun: String {
+        switch focusTitle {
+        case "Fly":      return "focus"
+        case "Read":     return "reading"
+        case "Meditate": return "meditation"
+        case "Create":   return "creative"
+        case "Reflect":  return "reflection"
+        default:         return focusTitle.lowercased()
+        }
+    }
+
+    /// A habit, not a quota.
+    ///
+    /// The old headline read "24 hours of focused study by 4 Sep", which sounds
+    /// like a single twenty-four-hour sitting and promises an amount rather
+    /// than a practice. This names the thing FocusGlobe can actually help with:
+    /// showing up for the same length of session, regularly, until a date.
     var goalHeadline: String {
-        "\(targetValueLabel) of focused \(focusTitle.lowercased()) by \(targetDateLabel)"
+        "Build a consistent \(durationAdjective) \(routineNoun) routine by \(targetDateLabel)"
     }
 
     /// The headline as shown: the word that used to be a gold eyebrow label
@@ -977,8 +1026,15 @@ struct OnboardingResultPlan: Equatable {
     /// of a label and a line.
     var goalTitle: String { "Goal: \(goalHeadline)" }
 
+    /// THE date format for this screen — headline, chart axis, callout.
+    ///
+    /// The year is always shown. The plan runs four weeks out, so most of the
+    /// time it lands in the same year and "4 Sep" was unambiguous; near the end
+    /// of December it is not, and a target date that could be either year is
+    /// worse than a slightly longer string. Locale-aware via `.formatted`, and
+    /// the year comes from `targetDate` — nothing is hardcoded.
     var targetDateLabel: String {
-        targetDate.formatted(.dateTime.day().month(.abbreviated))
+        targetDate.formatted(.dateTime.month(.abbreviated).day().year())
     }
 
     /// A row of the plan card. `field` is what makes the pencil real: nil means
@@ -1035,9 +1091,7 @@ struct OnboardingResultPlan: Equatable {
     struct Review: Equatable, Identifiable {
         let name: String
         let quote: String
-        /// The quote, not the name: every card is attributed the same way, so
-        /// the name is not a unique identity and ForEach would collapse them.
-        var id: String { quote }
+        var id: String { name }
     }
 
     /// ⚠️ ILLUSTRATIVE COPY, NOT COLLECTED REVIEWS.
@@ -1048,18 +1102,18 @@ struct OnboardingResultPlan: Equatable {
     /// edit to a single place.
     ///
     /// Before shipping to the App Store, replace these with genuine reviews (or
-    /// remove the section). Every quote is about how the app feels to use, and
-    /// none of them claims a result, a statistic or a number of users — so the
-    /// worst case is puffery rather than a factual claim that is untrue.
+    /// remove the section). Each one talks about how a specific part of the app
+    /// feels to use — the flight framing, the Shield, the Skies and Passport —
+    /// and none claims a result, a statistic or a number of users.
     static let reviews: [Review] = [
-        Review(name: "A FocusGlobe pilot",
-               quote: "The first focus timer I actually want to open."),
-        Review(name: "A FocusGlobe pilot",
-               quote: "Studying finally feels calm instead of stressful."),
-        Review(name: "A FocusGlobe pilot",
-               quote: "Watching the balloon travel is weirdly motivating."),
-        Review(name: "A FocusGlobe pilot",
-               quote: "Beautiful, and it genuinely keeps me off my phone."),
+        Review(name: "Alex M.",
+               quote: "The flight idea completely changes how starting feels. I pick 45 minutes and I'm already in the right headspace before I can overthink it."),
+        Review(name: "Sofia R.",
+               quote: "Focus Shield is the part I didn't know I needed. Once a flight starts, my phone finally stops feeling like the thing I'm fighting against."),
+        Review(name: "Daniel K.",
+               quote: "I've tried a lot of focus timers. This is the first one that feels like a place I actually want to come back to every day."),
+        Review(name: "Mia T.",
+               quote: "The Skies, sounds and Passport make progress feel visible without turning productivity into pressure. It's calm, simple and genuinely motivating."),
     ]
 }
 

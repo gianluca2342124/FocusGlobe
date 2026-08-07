@@ -43,6 +43,7 @@ struct OnboardingView: View {
     /// existing Apple flow rather than owning any auth of its own.
     @EnvironmentObject private var online: FocusOnlineModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.focusViewport) private var viewport
 
     /// The last step's index. The offer is now counted: it is presented as the
     /// final step of the first run rather than as a separate interruption, so
@@ -69,6 +70,9 @@ struct OnboardingView: View {
     @State private var isAdvancing = false
     /// The Welcome screen's Sign In drawer.
     @State private var showSignIn = false
+    /// The duration wheel's position, in `DurationScale` index space.
+    @State private var durationIndex = 0
+    @State private var didSeedDuration = false
     /// The language shown in the Welcome selector. Seeded from the bundle's own
     /// first localization, so it always starts on something real.
     @State private var languageCode = OnboardingView.availableLanguages.first?.code ?? "en"
@@ -394,36 +398,105 @@ struct OnboardingView: View {
 
     // MARK: - 4. First flight length
 
+    /// The real Altitude Dial, not a stand-in.
+    ///
+    /// A six-tile grid could only ever offer six of the scale's forty-two
+    /// stops, and it taught the wrong gesture — the pilot's next encounter with
+    /// this decision is the pre-flight ritual, which is a wheel. This is the
+    /// SAME `DurationGauge` that ritual uses: same arc, same ticks, same drag
+    /// mapping, same snapping, same haptic per stop. Only the surround is
+    /// onboarding's.
     private var durationStep: some View {
         questionScaffold(
             title: "How long can you focus today?",
-            subtitle: "We'll set up your first flight. You can change it before every take-off."
+            subtitle: "Turn the dial. You can change it before every take-off."
         ) {
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: AppSpacing.xs),
-                                GridItem(.flexible(), spacing: AppSpacing.xs)],
-                      spacing: AppSpacing.xs) {
-                ForEach(Self.flightLengths, id: \.self) { value in
-                    choiceTile(Formatters.durationLabel(minutes: value),
-                               systemImage: nil,
-                               isSelected: minutes == value) {
-                        minutes = value
-                        advanceAfterChoice()
-                    }
-                }
+            VStack(spacing: AppSpacing.sm) {
+                DurationGauge(
+                    fraction: Double(durationIndex) / Double(Self.maxDurationIndex),
+                    big: durationBig,
+                    sub: durationSub,
+                    // Onboarding is a single 560 pt column on every device, so
+                    // the gauge keeps its compact proportions throughout.
+                    expanded: false,
+                    accessibilityLabel: "First flight length",
+                    accessibilityValue: Formatters.durationLabel(minutes: selectedMinutes),
+                    onFraction: { f in
+                        setDuration(index: Int((f * Double(Self.maxDurationIndex)).rounded()))
+                    },
+                    onAdjust: { delta in setDuration(index: durationIndex + delta) }
+                )
+                .frame(height: viewport.isShort ? 264 : 310)
             }
+            .frame(maxWidth: .infinity)
+            .onAppear(perform: seedDurationIfNeeded)
+        } footer: {
+            AppPrimaryButton(title: "Continue", systemImage: "arrow.right", iconTrailing: true) {
+                advance()
+            }
+            .padding(.bottom, AppSpacing.xl)
         }
     }
 
-    /// The offered first-flight lengths.
+    /// The wheel's ceiling: 10 hours.
     ///
-    /// Six, because six fills three even rows of a two-column grid — seven would
-    /// leave an orphan tile and a lopsided screen. 90 min is the common
-    /// deep-work block and 120 is the ceiling; 75 was dropped in their favour as
-    /// the rarer choice. Every value is an exact stop on `DurationScale`, so the
-    /// setup dial can open on it precisely rather than snapping to a neighbour,
-    /// and none of them is PRO-gated — only `infinite` is — so a free pilot can
-    /// actually fly whatever they pick here.
-    static let flightLengths = [15, 25, 45, 60, 90, 120]
+    /// `DurationScale.stops` runs to 720 (12 h) and then carries a trailing ∞,
+    /// and ∞ is PRO. Capping the onboarding index space below both means the
+    /// first run cannot reach a paywall boundary or a value outside the brief
+    /// by dragging — not because a gate refuses it, but because the positions
+    /// do not exist here. Derived from the scale rather than hardcoded, so it
+    /// survives any future edit to the stops.
+    static let maxOnboardingMinutes = 600
+    static let maxDurationIndex: Int =
+        DurationScale.stops.lastIndex(where: { $0 <= maxOnboardingMinutes })
+            ?? (DurationScale.stops.count - 1)
+
+    /// The value the wheel is currently on. `minutes` stays optional so an
+    /// untouched answer is still distinguishable from a chosen 25.
+    private var selectedMinutes: Int { DurationScale.value(at: durationIndex).minutes }
+
+    private var durationBig: String {
+        let m = selectedMinutes
+        return m < 60 ? "\(m)" : Formatters.durationLabel(minutes: m)
+    }
+
+    private var durationSub: String {
+        let m = selectedMinutes
+        return m < 60 ? (m == 1 ? "MINUTE" : "MINUTES") : "FLIGHT TIME"
+    }
+
+    /// Open on the pilot's answer if they have one, otherwise on 25 — and
+    /// commit it, so arriving and pressing Continue without dragging still
+    /// records the value the dial is visibly showing.
+    private func seedDurationIfNeeded() {
+        guard !didSeedDuration else { return }
+        didSeedDuration = true
+        durationIndex = min(Self.maxDurationIndex,
+                            DurationScale.index(forMinutes: minutes ?? 25, infinite: false))
+        minutes = selectedMinutes
+    }
+
+    /// One stop per change, one haptic per stop — the ritual's own feel.
+    private func setDuration(index newIndex: Int) {
+        let clamped = max(0, min(Self.maxDurationIndex, newIndex))
+        guard clamped != durationIndex else { return }
+        durationIndex = clamped
+        minutes = selectedMinutes
+        appModel.haptics.tap()
+    }
+
+    /// The shortlist the results screen's First-flight pencil offers.
+    ///
+    /// The wheel can land on any of forty-two stops and a sheet cannot usefully
+    /// list them all, so this is the common set — plus, always, whatever the
+    /// pilot actually chose, so the editor can never open with nothing
+    /// selected. Every entry is a real `DurationScale` stop inside the same
+    /// 5 min … 10 h range the wheel offers.
+    static func durationEditorOptions(including current: Int?) -> [Int] {
+        let shortlist = [15, 25, 30, 45, 60, 90, 120, 180, 240, 360, 600]
+        guard let current, !shortlist.contains(current) else { return shortlist }
+        return (shortlist + [current]).sorted()
+    }
 
     // MARK: - 5. Atmosphere
 

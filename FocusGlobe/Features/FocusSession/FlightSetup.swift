@@ -385,6 +385,158 @@ struct FlightSetupView: View {
 /// your flight time, from 5 minutes up through 12 hours and then ∞. A huge
 /// centre value, ticking haptics at every stop, quick presets and a quiet
 /// symbolic distance preview.
+/// The Altitude Dial's gauge, on its own.
+///
+/// Extracted so the first run can offer the SAME control as the pre-flight
+/// ritual instead of an approximation of it: identical arc, ticks, knob, drag
+/// mapping and snapping. It is deliberately dumb — it renders a 0…1 fill and
+/// reports a 0…1 touch position, and knows nothing about `DurationScale`,
+/// Infinite or entitlements. Every one of those decisions stays with the
+/// caller, which is why moving this out could not change what the ritual does.
+struct DurationGauge: View {
+    /// How much of the arc is filled, 0…1.
+    let fraction: Double
+    /// The big centred value and its caption.
+    let big: String
+    let sub: String
+    /// iPad/Mac sizing.
+    let expanded: Bool
+    let accessibilityLabel: String
+    let accessibilityValue: String
+    /// A touch resolved to this 0…1 position on the arc.
+    let onFraction: (Double) -> Void
+    /// VoiceOver increment (+1) / decrement (-1).
+    let onAdjust: (Int) -> Void
+
+    var body: some View {
+        GeometryReader { geo in
+            let side = min(geo.size.width, geo.size.height)
+            let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
+            let ringSide = side - 30
+            let radius = ringSide / 2
+
+            ZStack {
+                // A soft pool of depth behind the gauge so it floats over the
+                // world without a heavy panel.
+                RadialGradient(colors: [.black.opacity(0.30), .clear],
+                               center: .center, startRadius: 10, endRadius: side * 0.62)
+                    .allowsHitTesting(false)
+
+                // Track
+                Circle().trim(from: 0, to: 0.75)
+                    .stroke(Color.white.opacity(0.08),
+                            style: StrokeStyle(lineWidth: 11, lineCap: .round))
+                    .rotationEffect(.degrees(135))
+                    .frame(width: ringSide, height: ringSide)
+                // Filled arc — cream into gold, quietly luminous.
+                Circle().trim(from: 0, to: 0.75 * fraction)
+                    .stroke(AngularGradient(
+                                gradient: Gradient(colors: [Color(hex: 0xF4EFE4),
+                                                            AppColors.gold,
+                                                            Color(hex: 0xE8C288)]),
+                                center: .center,
+                                startAngle: .degrees(135), endAngle: .degrees(405)),
+                            style: StrokeStyle(lineWidth: 11, lineCap: .round))
+                    .rotationEffect(.degrees(135))
+                    .frame(width: ringSide, height: ringSide)
+                    .shadow(color: AppColors.gold.opacity(0.35), radius: 10)
+                ticks(radius: radius)
+                knob(center: center, radius: radius)
+                centerValue
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+            .contentShape(Circle())
+            .gesture(DragGesture(minimumDistance: 0)
+                .onChanged { v in report(location: v.location, center: center) })
+        }
+        .accessibilityElement()
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityValue(accessibilityValue)
+        .accessibilityAdjustableAction { direction in
+            onAdjust(direction == .increment ? 1 : -1)
+        }
+    }
+
+    private func ticks(radius: CGFloat) -> some View {
+        Canvas { ctx, size in
+            let c = CGPoint(x: size.width / 2, y: size.height / 2)
+            // A fixed rhythm of ticks (decoupled from the 5-minute stop count, so
+            // the ring never looks like a solid band) with a longer major every 5.
+            let count = 31
+            for i in 0..<count {
+                let f = Double(i) / Double(count - 1)
+                let a = (135.0 + f * 270.0) * .pi / 180.0
+                let major = i % 5 == 0
+                let outer = radius - 12
+                let inner = outer - (major ? 10 : 6)
+                let p1 = CGPoint(x: c.x + CGFloat(cos(a)) * outer, y: c.y + CGFloat(sin(a)) * outer)
+                let p2 = CGPoint(x: c.x + CGFloat(cos(a)) * inner, y: c.y + CGFloat(sin(a)) * inner)
+                var path = Path()
+                path.move(to: p1)
+                path.addLine(to: p2)
+                ctx.stroke(path, with: .color(.white.opacity(f <= fraction + 0.001 ? 0.45 : 0.12)),
+                           lineWidth: major ? 2.0 : 1.4)
+            }
+        }
+    }
+
+    private func knob(center: CGPoint, radius: CGFloat) -> some View {
+        let a = (135.0 + fraction * 270.0) * .pi / 180.0
+        return Circle()
+            .fill(Color(hex: 0xF4EFE4))
+            .frame(width: 24, height: 24)
+            .overlay(Circle().strokeBorder(AppColors.gold.opacity(0.8), lineWidth: 2))
+            .shadow(color: AppColors.gold.opacity(0.55), radius: 9)
+            .shadow(color: .black.opacity(0.4), radius: 4, y: 2)
+            .position(x: center.x + CGFloat(cos(a)) * radius,
+                      y: center.y + CGFloat(sin(a)) * radius)
+    }
+
+    private var centerValue: some View {
+        VStack(spacing: 3) {
+            Text(big)
+                .font(.system(size: expanded ? 108 : 78, weight: .bold, design: .default))
+                .foregroundStyle(.white)
+                .monospacedDigit()
+                .contentTransition(.numericText())
+                .animation(.snappy(duration: 0.2), value: big)
+                .minimumScaleFactor(0.45)
+                .lineLimit(1)
+                .shadow(color: AppColors.gold.opacity(0.25), radius: 18)
+            Text(sub)
+                .font(.system(size: expanded ? 13 : 12, weight: .semibold, design: .monospaced))
+                .tracking(3.4)
+                .foregroundStyle(.white.opacity(0.55))
+        }
+        .frame(width: expanded ? 270 : 195)
+    }
+
+    /// Map a touch on the gauge to a 0…1 position on the arc. Which stop that
+    /// becomes — and whether it may be taken at all — is the caller's business.
+    private func report(location: CGPoint, center: CGPoint) {
+        let dx = Double(location.x - center.x)
+        let dy = Double(location.y - center.y)
+        guard dx * dx + dy * dy > 120 else { return }   // ignore the dead centre
+        var deg = atan2(dy, dx) * 180 / .pi
+        if deg < 0 { deg += 360 }
+        var rel = deg - 135
+        if rel < 0 { rel += 360 }
+        let f: Double
+        if rel <= 270 {
+            f = rel / 270
+        } else if rel <= 286 {
+            // Only a deliberate overshoot on the high-duration side reaches
+            // the premium terminal stop. The rest of the inactive lower arc
+            // belongs to the five-minute end and can never open a paywall.
+            f = 1
+        } else {
+            f = 0
+        }
+        onFraction(f)
+    }
+
+}
+
 struct DurationDialView: View {
     @Binding var minutes: Int
     @Binding var infinite: Bool
@@ -435,110 +587,30 @@ struct DurationDialView: View {
         }
     }
 
-    // The gauge itself.
+    // The gauge itself — the shared primitive, wired to this ritual's index
+    // space and its Infinite gate. The mapping from a 0…1 arc position to a
+    // stop index is unchanged; `setIndex` still owns every decision about
+    // whether that stop may be taken.
     private var dial: some View {
-        GeometryReader { geo in
-            let side = min(geo.size.width, geo.size.height)
-            let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
-            let ringSide = side - 30
-            let radius = ringSide / 2
-
-            ZStack {
-                // A soft pool of depth behind the gauge so it floats over the
-                // world without a heavy panel.
-                RadialGradient(colors: [.black.opacity(0.30), .clear],
-                               center: .center, startRadius: 10, endRadius: side * 0.62)
-                    .allowsHitTesting(false)
-
-                // Track
-                Circle().trim(from: 0, to: 0.75)
-                    .stroke(Color.white.opacity(0.08),
-                            style: StrokeStyle(lineWidth: 11, lineCap: .round))
-                    .rotationEffect(.degrees(135))
-                    .frame(width: ringSide, height: ringSide)
-                // Filled arc — cream into gold, quietly luminous.
-                Circle().trim(from: 0, to: 0.75 * fraction)
-                    .stroke(AngularGradient(
-                                gradient: Gradient(colors: [Color(hex: 0xF4EFE4),
-                                                            AppColors.gold,
-                                                            Color(hex: 0xE8C288)]),
-                                center: .center,
-                                startAngle: .degrees(135), endAngle: .degrees(405)),
-                            style: StrokeStyle(lineWidth: 11, lineCap: .round))
-                    .rotationEffect(.degrees(135))
-                    .frame(width: ringSide, height: ringSide)
-                    .shadow(color: AppColors.gold.opacity(0.35), radius: 10)
-                ticks(radius: radius)
-                knob(center: center, radius: radius)
-                centerValue
+        DurationGauge(
+            fraction: fraction,
+            big: centerBig,
+            sub: centerSub,
+            expanded: hSize == .regular,
+            accessibilityLabel: "Flight time",
+            accessibilityValue: isInfinityIndex ? "Endless"
+                                                : Formatters.durationLabel(minutes: minutes),
+            onFraction: { f in
+                setIndex(Int((f * Double(DurationScale.count - 1)).rounded()))
+            },
+            onAdjust: { delta in
+                setIndex(max(0, min(DurationScale.count - 1, index + delta)))
             }
-            .frame(width: geo.size.width, height: geo.size.height)
-            .contentShape(Circle())
-            .gesture(DragGesture(minimumDistance: 0)
-                .onChanged { v in updateIndex(location: v.location, center: center) })
-        }
-        .accessibilityElement()
-        .accessibilityLabel("Flight time")
-        .accessibilityValue(isInfinityIndex ? "Endless" : Formatters.durationLabel(minutes: minutes))
-        .accessibilityAdjustableAction { direction in
-            let next = direction == .increment ? index + 1 : index - 1
-            setIndex(max(0, min(DurationScale.count - 1, next)))
-        }
+        )
     }
 
-    private func ticks(radius: CGFloat) -> some View {
-        Canvas { ctx, size in
-            let c = CGPoint(x: size.width / 2, y: size.height / 2)
-            // A fixed rhythm of ticks (decoupled from the 5-minute stop count, so
-            // the ring never looks like a solid band) with a longer major every 5.
-            let count = 31
-            for i in 0..<count {
-                let f = Double(i) / Double(count - 1)
-                let a = (135.0 + f * 270.0) * .pi / 180.0
-                let major = i % 5 == 0
-                let outer = radius - 12
-                let inner = outer - (major ? 10 : 6)
-                let p1 = CGPoint(x: c.x + CGFloat(cos(a)) * outer, y: c.y + CGFloat(sin(a)) * outer)
-                let p2 = CGPoint(x: c.x + CGFloat(cos(a)) * inner, y: c.y + CGFloat(sin(a)) * inner)
-                var path = Path()
-                path.move(to: p1)
-                path.addLine(to: p2)
-                ctx.stroke(path, with: .color(.white.opacity(f <= fraction + 0.001 ? 0.45 : 0.12)),
-                           lineWidth: major ? 2.0 : 1.4)
-            }
-        }
-    }
 
-    private func knob(center: CGPoint, radius: CGFloat) -> some View {
-        let a = (135.0 + fraction * 270.0) * .pi / 180.0
-        return Circle()
-            .fill(Color(hex: 0xF4EFE4))
-            .frame(width: 24, height: 24)
-            .overlay(Circle().strokeBorder(AppColors.gold.opacity(0.8), lineWidth: 2))
-            .shadow(color: AppColors.gold.opacity(0.55), radius: 9)
-            .shadow(color: .black.opacity(0.4), radius: 4, y: 2)
-            .position(x: center.x + CGFloat(cos(a)) * radius,
-                      y: center.y + CGFloat(sin(a)) * radius)
-    }
 
-    private var centerValue: some View {
-        VStack(spacing: 3) {
-            Text(centerBig)
-                .font(.system(size: hSize == .regular ? 108 : 78, weight: .bold, design: .default))
-                .foregroundStyle(.white)
-                .monospacedDigit()
-                .contentTransition(.numericText())
-                .animation(.snappy(duration: 0.2), value: centerBig)
-                .minimumScaleFactor(0.45)
-                .lineLimit(1)
-                .shadow(color: AppColors.gold.opacity(0.25), radius: 18)
-            Text(centerSub)
-                .font(.system(size: hSize == .regular ? 13 : 12, weight: .semibold, design: .monospaced))
-                .tracking(3.4)
-                .foregroundStyle(.white.opacity(0.55))
-        }
-        .frame(width: hSize == .regular ? 270 : 195)
-    }
 
     private var centerBig: String {
         if isInfinityIndex { return "∞" }
@@ -618,28 +690,6 @@ struct DurationDialView: View {
         .clusterMaxWidth()
     }
 
-    /// Map a touch on the gauge to the nearest stop, ticking haptically on change.
-    private func updateIndex(location: CGPoint, center: CGPoint) {
-        let dx = Double(location.x - center.x)
-        let dy = Double(location.y - center.y)
-        guard dx * dx + dy * dy > 120 else { return }   // ignore the dead centre
-        var deg = atan2(dy, dx) * 180 / .pi
-        if deg < 0 { deg += 360 }
-        var rel = deg - 135
-        if rel < 0 { rel += 360 }
-        let f: Double
-        if rel <= 270 {
-            f = rel / 270
-        } else if rel <= 286 {
-            // Only a deliberate overshoot on the high-duration side reaches
-            // the premium terminal stop. The rest of the inactive lower arc
-            // belongs to the five-minute end and can never open a paywall.
-            f = 1
-        } else {
-            f = 0
-        }
-        setIndex(Int((f * Double(DurationScale.count - 1)).rounded()))
-    }
 
     private func setIndex(_ newIndex: Int) {
         let clampedIndex = max(0, min(DurationScale.count - 1, newIndex))
