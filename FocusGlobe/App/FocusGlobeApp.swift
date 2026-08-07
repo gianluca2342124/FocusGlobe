@@ -71,6 +71,11 @@ struct FocusGlobeApp: App {
                 .preferredColorScheme(.dark)
                 .onAppear {
                     LaunchLog.mark("RootView onAppear")
+                    // Restate the language mirror at launch. The setter writes
+                    // it on every change, but a widget or Shield added before
+                    // the pilot ever touched the selector would otherwise read
+                    // nothing and fall back to the device language.
+                    FocusLocalization.mirror(appModel.preferredLanguage)
                     appModel.attachOnline(online)
                     appModel.analytics.log(.appOpened)
                     // Clear any shields left behind by a previous run (e.g. the app

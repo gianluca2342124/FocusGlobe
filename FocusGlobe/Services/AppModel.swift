@@ -1082,7 +1082,18 @@ final class AppModel: ObservableObject {
             guard let stored = settings.preferredLanguageCode else { return .devicePreferred }
             return FocusLanguage.resolve(stored)
         }
-        set { settings.preferredLanguageCode = newValue.code }
+        set {
+            settings.preferredLanguageCode = newValue.code
+            // Widgets, the Shield extensions and scheduled notifications live
+            // outside this view tree and cannot see `.environment(\.locale)`.
+            // They read this mirror instead.
+            FocusLocalization.mirror(newValue)
+            syncWidgets()
+            // Reminders are composed when SCHEDULED, so anything already queued
+            // is in the old language. Rebuilding the plan re-composes it — the
+            // service replaces by stable identifier, so nothing duplicates.
+            refreshNotifications()
+        }
     }
 
     /// The locale handed to the SwiftUI environment at the app root.

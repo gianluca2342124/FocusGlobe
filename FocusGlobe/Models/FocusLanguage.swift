@@ -21,7 +21,7 @@ enum FocusLanguage: String, CaseIterable, Identifiable, Codable {
     case french         = "fr"
     case german         = "de"
     case russian        = "ru"
-    case portuguese     = "pt"
+    case portuguese     = "pt-BR"
     case italian        = "it"
     case romanian       = "ro"
     case dutch          = "nl"
@@ -97,6 +97,13 @@ enum FocusLanguage: String, CaseIterable, Identifiable, Codable {
     /// Resolve a stored or incoming code. Never fails — the selector always has
     /// a valid selection, and a code this build no longer offers resolves to
     /// English rather than leaving the capsule blank.
+    ///
+    /// This is also the `pt` → `pt-BR` migration. A build before the Portuguese
+    /// localization existed stored the bare `pt`; `match(bcp47:)` maps any
+    /// Portuguese tag onto the one Portuguese FocusGlobe ships, so a pilot who
+    /// chose Português keeps it. Nothing is rewritten on disk — the stored value
+    /// resolves correctly forever, and the canonical `pt-BR` is written the next
+    /// time they touch the selector.
     static func resolve(_ code: String?) -> FocusLanguage {
         guard let code, !code.isEmpty else { return fallback }
         if let exact = FocusLanguage(rawValue: code) { return exact }
@@ -137,6 +144,14 @@ enum FocusLanguage: String, CaseIterable, Identifiable, Codable {
             }
             return .simplifiedChinese
         }
-        return allCases.first { $0.code.lowercased() == language }
+        // Every Portuguese variant lands on Brazilian, because that is the only
+        // Portuguese FocusGlobe ships. `pt-PT` speakers get Brazilian copy,
+        // which is a far better answer than English — and this is also what
+        // migrates a legacy stored bare `pt`.
+        if language == "pt" { return .portuguese }
+        // Match on the language subtag. `zh-Hans` and `pt-BR` are handled above
+        // precisely because their own subtags are `zh` and `pt`, so this loop
+        // would never reach them.
+        return allCases.first { $0.code.lowercased().split(separator: "-").first.map(String.init) == language }
     }
 }
