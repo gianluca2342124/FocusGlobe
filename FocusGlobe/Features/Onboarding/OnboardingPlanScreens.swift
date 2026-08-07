@@ -352,9 +352,14 @@ struct OnboardingResultsStep: View {
 
     private var graphCard: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            Text("Estimated progress")
+            // Name the y-axis. "Estimated progress" left the rising line open
+            // to the worst available reading — that session length grows over
+            // time — which would be a promise the pilot's own fixed choice
+            // contradicts. What actually accumulates is finished flights.
+            Text("Completed focus flights, if you keep this rhythm")
                 .font(AppTypography.caption)
                 .foregroundStyle(.white.opacity(0.6))
+                .fixedSize(horizontal: false, vertical: true)
 
             ResultsPlanChart(reveal: $curveProgress,
                              reduceMotion: reduceMotion,
@@ -376,8 +381,8 @@ struct OnboardingResultsStep: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(cardBackground)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("Planned focused hours from now to \(plan.targetDateLabel)"))
-        .accessibilityValue(Text(plan.goalHeadline))
+        .accessibilityLabel(Text("Completed focus flights from now to \(plan.targetDateLabel)"))
+        .accessibilityValue(Text(plan.targetValueLabel))
     }
 
     // MARK: Your plan
@@ -767,9 +772,14 @@ private struct ResultsPlanChart: View {
         }
     }
 
-    /// A gentle ease rather than a straight line: real weeks are uneven. It is
-    /// presentation, not a different claim — both ends are the honest
-    /// arithmetic the headline states.
+    /// The running total of completed flights, from 0 to the target.
+    ///
+    /// A gentle ease rather than a straight line: a perfectly even three a week
+    /// would draw a ruler, and real weeks are not even. It is presentation, not
+    /// a different claim — both ends are exact, and what climbs is a COUNT of
+    /// finished flights, never the length of one. The pilot fixed that length
+    /// themselves, so a chart implying it grows would contradict their own
+    /// answer two cards further down.
     private func curve(width: CGFloat, height: CGFloat) -> Path {
         Path { p in
             p.move(to: CGPoint(x: 0, y: height))
@@ -1062,15 +1072,17 @@ struct OnboardingResultPlan: Equatable {
 
     struct Step: Equatable { let icon: String; let title: String; let tint: Color }
 
-    /// Four glyphs the app actually uses elsewhere — take-off, the Focus Shield,
-    /// the streak flame and the Passport — each in its own colour so the block
-    /// reads as four distinct moments. The tints are the app's existing accents,
-    /// not new ones: the brand teal, the PRO sky and violet, and coin gold.
+    /// Four real features, named. "Protect the time" and "Watch the distance
+    /// add up" were true but generic — they described a mood rather than
+    /// anything the pilot could go and do. Each line now points at a specific
+    /// part of FocusGlobe, and each glyph is the one that part already wears
+    /// elsewhere in the app: take-off, the Focus Shield, the streak flame, the
+    /// Passport. The tints are existing accents, not new ones.
     static let steps: [Step] = [
-        Step(icon: "paperplane.fill",         title: "Start your first flight",   tint: AppColors.celestialTeal),
-        Step(icon: "shield.lefthalf.filled",  title: "Protect the time",          tint: ProBrand.c3),
-        Step(icon: "flame.fill",              title: "Fly again tomorrow",        tint: AppColors.selectionGold),
-        Step(icon: "book.closed.fill",        title: "Watch the distance add up", tint: ProBrand.c5),
+        Step(icon: "paperplane.fill",        title: "Start your first flight",             tint: AppColors.celestialTeal),
+        Step(icon: "shield.lefthalf.filled", title: "Block distracting apps in Focus Shield", tint: ProBrand.c3),
+        Step(icon: "flame.fill",             title: "Fly again tomorrow and grow your Streak", tint: AppColors.selectionGold),
+        Step(icon: "book.closed.fill",       title: "Get your data and insights in Passport", tint: ProBrand.c5),
     ]
 
     /// Realistic on both sides. The left column is what focusing without a tool
