@@ -219,13 +219,28 @@ struct OnboardingSetupStep: View {
 /// plain sight rather than burying it. That is the difference between a plan
 /// and a promise: a plan can be shown a target and a curve, because it is
 /// describing a schedule the pilot could keep, not predicting that they will.
+///
+/// The answers are also EDITABLE from here. That is not decoration: a pilot who
+/// realises on this screen that they picked the wrong focus length has, until
+/// now, had no way back — the flow is forward-only by design. A pencil per row
+/// is the cheapest possible correction, and because every number on the screen
+/// derives from those same bindings, the goal, the graph and the copy all move
+/// the instant one changes.
 struct OnboardingResultsStep: View {
     let plan: OnboardingResultPlan
+    /// The live onboarding answers. Bound rather than copied so an edit made
+    /// here IS the answer that gets applied — there is no second copy to keep in
+    /// sync and no way for the screen to show one thing and commit another.
+    @Binding var intent: FocusPreset?
+    @Binding var friction: FocusFriction?
+    @Binding var minutes: Int?
     let onContinue: () -> Void
 
+    @EnvironmentObject private var appModel: AppModel
     @Environment(\.focusViewport) private var viewport
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var curveProgress: CGFloat = 0
+    @State private var editing: OnboardingResultField?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -236,7 +251,7 @@ struct OnboardingResultsStep: View {
                     detailsCard
                     howToReach
                     comparison
-                    trustCard
+                    trustCarousel
                 }
                 .padding(.horizontal, viewport.pagePadding)
                 .padding(.top, AppSpacing.md)
@@ -254,6 +269,19 @@ struct OnboardingResultsStep: View {
         .onAppear {
             guard !reduceMotion else { curveProgress = 1; return }
             withAnimation(.easeOut(duration: 1.0).delay(0.15)) { curveProgress = 1 }
+        }
+        // A detented sheet rather than a step backwards: the flow stays
+        // forward-only, and the correction costs two taps. On iPad and Mac the
+        // same sheet presents as a centred panel, which is the native shape for
+        // a short single-choice list.
+        .sheet(item: $editing) { field in
+            OnboardingAnswerEditor(field: field,
+                                   intent: $intent,
+                                   friction: $friction,
+                                   minutes: $minutes)
+                .environmentObject(appModel)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
     }
 
@@ -288,38 +316,9 @@ struct OnboardingResultsStep: View {
                 .font(AppTypography.caption)
                 .foregroundStyle(.white.opacity(0.6))
 
-            GeometryReader { geo in
-                let w = geo.size.width
-                let h = geo.size.height
-                ZStack(alignment: .topLeading) {
-                    // A gentle ease rather than a straight line: real weeks are
-                    // uneven. It is presentation, not a different claim — both
-                    // ends are the honest arithmetic.
-                    let curve = Path { p in
-                        p.move(to: CGPoint(x: 0, y: h))
-                        for i in 0...40 {
-                            let t = CGFloat(i) / 40
-                            let eased = t * t * (3 - 2 * t)
-                            p.addLine(to: CGPoint(x: t * w, y: h - eased * h * 0.86))
-                        }
-                    }
-                    curve.stroke(ProBrand.softGradient,
-                                 style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
-                        .mask(alignment: .leading) {
-                            Rectangle().frame(width: w * curveProgress)
-                        }
-
-                    // The target, marked where the curve ends.
-                    Circle()
-                        .fill(AppColors.selectionGold)
-                        .frame(width: 10, height: 10)
-                        .overlay(Circle().stroke(.white.opacity(0.9), lineWidth: 2))
-                        .position(x: w, y: h - h * 0.86)
-                        .opacity(curveProgress > 0.95 ? 1 : 0)
-                        .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: curveProgress)
-                }
-            }
-            .frame(height: viewport.isShort ? 96 : 118)
+            ResultsPlanChart(reveal: $curveProgress,
+                             reduceMotion: reduceMotion,
+                             height: viewport.isShort ? 100 : 124)
 
             HStack {
                 Text("Now")
@@ -328,6 +327,9 @@ struct OnboardingResultsStep: View {
             }
             .font(.system(size: 12, weight: .semibold))
             .foregroundStyle(.white.opacity(0.5))
+            // The date label sits under the target marker, which is inset from
+            // the right edge so it can be drawn whole.
+            .padding(.trailing, ResultsPlanChart.markerInset)
         }
         .padding(AppSpacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -337,29 +339,37 @@ struct OnboardingResultsStep: View {
         .accessibilityValue(Text(plan.goalHeadline))
     }
 
-    // MARK: Details
+    // MARK: Your plan
 
+    /// Cream glyphs, not gold. Gold is the trust section's language now; using
+    /// it here as well is what made every block on this screen look like the
+    /// same block. These rows are a record of what the pilot said, so they get
+    /// the quietest treatment on the page.
     private var detailsCard: some View {
         VStack(spacing: 0) {
             ForEach(Array(plan.details.enumerated()), id: \.offset) { index, row in
-                HStack(spacing: AppSpacing.sm) {
-                    Image(systemName: row.icon)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(AppColors.gold)
-                        .frame(width: 22)
-                    Text(row.label)
-                        .font(AppTypography.callout)
-                        .foregroundStyle(.white.opacity(0.66))
-                    Spacer(minLength: AppSpacing.xs)
-                    Text(row.value)
-                        .font(.system(size: 15.5, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .multilineTextAlignment(.trailing)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.75)
+                HStack(spacing: 0) {
+                    HStack(spacing: AppSpacing.sm) {
+                        Image(systemName: row.icon)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.52))
+                            .frame(width: 22)
+                        Text(row.label)
+                            .font(AppTypography.callout)
+                            .foregroundStyle(.white.opacity(0.66))
+                        Spacer(minLength: AppSpacing.xs)
+                        Text(row.value)
+                            .font(.system(size: 15.5, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .multilineTextAlignment(.trailing)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.75)
+                    }
+                    .accessibilityElement(children: .combine)
+
+                    editControl(for: row)
                 }
-                .padding(.vertical, 11)
-                .accessibilityElement(children: .combine)
+                .padding(.vertical, 4)
                 if index < plan.details.count - 1 {
                     Rectangle().fill(.white.opacity(0.08)).frame(height: 1)
                 }
@@ -370,8 +380,45 @@ struct OnboardingResultsStep: View {
         .background(cardBackground)
     }
 
+    /// A pencil, or nothing — never a pencil that cannot change anything.
+    ///
+    /// The row that has no pencil is Rhythm: three flights a week is the stated
+    /// assumption the whole target rests on, not an answer the pilot gave. Its
+    /// slot is still reserved at the same width so the values stay in one
+    /// column and the rows keep a single height.
+    @ViewBuilder
+    private func editControl(for row: OnboardingResultPlan.Detail) -> some View {
+        if let field = row.field {
+            Button {
+                appModel.tapFeedback()
+                editing = field
+            } label: {
+                Image(systemName: "pencil")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .frame(width: 26, height: 26)
+                    .background(Circle().fill(.white.opacity(0.08)))
+                    .overlay(Circle().strokeBorder(.white.opacity(0.13), lineWidth: 1))
+                    // Small glyph, full target: the visible control is 26 pt so
+                    // it stays secondary, the tappable one is 44.
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Edit \(row.label.lowercased())")
+            .accessibilityValue(row.value)
+        } else {
+            Color.clear.frame(width: 44, height: 44)
+        }
+    }
+
     // MARK: How to reach it
 
+    /// Four different meaningful glyphs — take-off, the shield, the streak
+    /// flame, the Passport — carried in one restrained PRO-gradient treatment.
+    /// Variation by SYMBOL rather than by colour: four accent colours here
+    /// would compete with the gold above and the red/green below, and the page
+    /// would read as a swatch test.
     private var howToReach: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
             sectionTitle("How you'll get there")
@@ -379,10 +426,12 @@ struct OnboardingResultsStep: View {
                 HStack(alignment: .top, spacing: AppSpacing.sm) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 11, style: .continuous)
-                            .fill(AppColors.gold.opacity(0.14))
+                            .fill(.white.opacity(0.06))
+                        RoundedRectangle(cornerRadius: 11, style: .continuous)
+                            .strokeBorder(.white.opacity(0.10), lineWidth: 1)
                         Image(systemName: step.icon)
                             .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(AppColors.gold)
+                            .foregroundStyle(ProBrand.softGradient)
                     }
                     .frame(width: 34, height: 34)
                     VStack(alignment: .leading, spacing: 2) {
@@ -409,14 +458,18 @@ struct OnboardingResultsStep: View {
 
     // MARK: Without / With
 
+    /// The one place on this screen that uses colour to say something. Red and
+    /// green carry the comparison on their own, which is why no gold appears
+    /// here at all — and why the cards themselves stay neutral: tinting the
+    /// whole panel would drown the marks that are doing the work.
     private var comparison: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
             sectionTitle("Why FocusGlobe")
             HStack(alignment: .top, spacing: AppSpacing.sm) {
                 column(title: "Without", lines: OnboardingResultPlan.without,
-                       icon: "xmark", tint: .white.opacity(0.34), muted: true)
+                       icon: "xmark", tint: AppColors.danger, muted: true)
                 column(title: "With FocusGlobe", lines: OnboardingResultPlan.with,
-                       icon: "checkmark", tint: AppColors.selectionGold, muted: false)
+                       icon: "checkmark", tint: AppColors.success, muted: false)
             }
         }
         .padding(AppSpacing.md)
@@ -426,19 +479,26 @@ struct OnboardingResultsStep: View {
 
     private func column(title: String, lines: [String],
                         icon: String, tint: Color, muted: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 9) {
             Text(title)
                 .font(.system(size: 12, weight: .heavy))
                 .tracking(0.6)
-                .foregroundStyle(muted ? .white.opacity(0.45) : AppColors.selectionGold)
+                .foregroundStyle(tint.opacity(muted ? 0.75 : 1))
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             ForEach(lines, id: \.self) { line in
-                HStack(alignment: .top, spacing: 6) {
-                    Image(systemName: icon)
-                        .font(.system(size: 10, weight: .black))
-                        .foregroundStyle(tint)
-                        .padding(.top, 3)
+                HStack(alignment: .top, spacing: 7) {
+                    // A chip rather than a bare glyph: at 10 pt a loose mark
+                    // reads as a bullet, and the whole point is that these two
+                    // columns are answering each other.
+                    ZStack {
+                        Circle().fill(tint.opacity(0.16))
+                        Image(systemName: icon)
+                            .font(.system(size: 9, weight: .black))
+                            .foregroundStyle(tint)
+                    }
+                    .frame(width: 17, height: 17)
+                    .padding(.top, 1)
                     Text(line)
                         .font(.system(size: 13.5, weight: .medium))
                         .foregroundStyle(.white.opacity(muted ? 0.55 : 0.9))
@@ -453,39 +513,67 @@ struct OnboardingResultsStep: View {
 
     // MARK: Trust
 
-    /// Deliberately NOT a review block.
+    /// The premium carousel, deliberately NOT a review carousel.
     ///
-    /// There are no verified ratings, review quotes or user counts in this
-    /// product, and inventing them is the one thing this screen must not do.
-    /// What is here instead is three statements about FocusGlobe that are
-    /// checkable in the codebase: history is stored locally, an account is
-    /// optional, and a subscription is cancellable in the App Store.
-    private var trustCard: some View {
+    /// The shape is the one the old onboarding had — swipeable cards, gold at
+    /// the top of each, a partial card peeking to say "there is more" — because
+    /// that presentation was good. What it is NOT is the old CONTENT: those
+    /// cards carried four invented names under five gold stars, and the code
+    /// that wrote them called them "illustrative". FocusGlobe has no verified
+    /// ratings, review quotes or user counts, so there is nothing legitimate to
+    /// put under a star row and the star rows are gone with the names.
+    ///
+    /// What each card carries instead is a claim that can be checked in this
+    /// repository: local storage, the optional account, every soundscape being
+    /// ungated, and App Store cancellation. Gold stays as the section's colour
+    /// so the block still reads as the trust block.
+    private var trustCarousel: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
             sectionTitle("Built to be trusted")
-            ForEach(OnboardingResultPlan.trust, id: \.title) { item in
-                HStack(alignment: .top, spacing: AppSpacing.sm) {
-                    Image(systemName: item.icon)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(AppColors.gold)
-                        .frame(width: 22)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(item.title)
-                            .font(.system(size: 14.5, weight: .semibold))
-                            .foregroundStyle(.white)
-                        Text(item.detail)
-                            .font(AppTypography.caption)
-                            .foregroundStyle(.white.opacity(0.58))
-                            .fixedSize(horizontal: false, vertical: true)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: AppSpacing.sm) {
+                    ForEach(OnboardingResultPlan.trust) { item in
+                        trustCard(item)
                     }
-                    Spacer(minLength: 0)
                 }
-                .accessibilityElement(children: .combine)
+                .scrollTargetLayout()
+                .padding(.horizontal, viewport.pagePadding)
             }
+            .scrollTargetBehavior(.viewAligned)
+            // Bleed out of the page margin and re-inset the row, so the next
+            // card peeks all the way to the screen edge instead of stopping
+            // 20 pt short of it and looking like a layout mistake.
+            .padding(.horizontal, -viewport.pagePadding)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func trustCard(_ item: OnboardingResultPlan.Trust) -> some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Image(systemName: item.icon)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(AppColors.gold)
+                .shadow(color: AppColors.gold.opacity(0.35), radius: 6)
+            Text(item.title)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.white)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(item.detail)
+                .font(AppTypography.caption)
+                .foregroundStyle(.white.opacity(0.58))
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
         }
         .padding(AppSpacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(cardBackground)
+        .frame(width: 236, alignment: .leading)
+        .frame(minHeight: 152, alignment: .top)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(.white.opacity(0.07))
+                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(.white.opacity(0.10), lineWidth: 1))
+        )
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: Shared
@@ -502,6 +590,272 @@ struct OnboardingResultsStep: View {
             .fill(.white.opacity(0.06))
             .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardRadius, style: .continuous)
                 .strokeBorder(.white.opacity(0.10), lineWidth: 1))
+    }
+}
+
+// MARK: - The chart
+
+/// The plan, drawn.
+///
+/// A single stroked curve was too little to earn the space it takes. This adds
+/// the two things that make a chart read as considered rather than decorative —
+/// a faded area under the line and a few dashed guides behind it — and nothing
+/// else. Everything is drawn from the same curve function, so the area can
+/// never drift away from the line it belongs to.
+private struct ResultsPlanChart: View {
+    @Binding var reveal: CGFloat
+    let reduceMotion: Bool
+    let height: CGFloat
+
+    /// Room on the right for the target marker to be drawn whole. Without it
+    /// half the dot falls outside the plot, and the chart cannot be clipped
+    /// without cutting it in two.
+    static let markerInset: CGFloat = 7
+
+    /// How high the curve climbs, as a fraction of the plot — headroom so the
+    /// marker's ring never touches the top edge.
+    private static let curveTop: CGFloat = 0.86
+
+    /// Three, placed off the edges. A line ON the top or bottom boundary reads
+    /// as an axis, and an axis makes this look like a trading app.
+    private static let guideFractions: [CGFloat] = [0.28, 0.54, 0.80]
+
+    var body: some View {
+        GeometryReader { geo in
+            let w = max(1, geo.size.width - Self.markerInset)
+            let h = geo.size.height
+            ZStack(alignment: .topLeading) {
+                guides(width: geo.size.width, height: h)
+
+                ZStack {
+                    // The PRO gradient runs left→right as it does everywhere
+                    // else; the mask fades it downward to nothing, so the area
+                    // has no bottom edge to look harsh.
+                    area(width: w, height: h)
+                        .fill(ProBrand.softGradient)
+                        .opacity(0.30)
+                        .mask {
+                            LinearGradient(colors: [.white, .white.opacity(0.28), .clear],
+                                           startPoint: .top, endPoint: .bottom)
+                        }
+                    curve(width: w, height: h)
+                        .stroke(ProBrand.softGradient,
+                                style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+                }
+                .mask(alignment: .leading) {
+                    Rectangle().frame(width: w * reveal)
+                }
+
+                Circle()
+                    .fill(AppColors.selectionGold)
+                    .frame(width: 10, height: 10)
+                    .overlay(Circle().stroke(.white.opacity(0.9), lineWidth: 2))
+                    .position(x: w, y: h - h * Self.curveTop)
+                    .opacity(reveal > 0.95 ? 1 : 0)
+                    .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: reveal)
+            }
+            // Everything is drawn inside the plot rect, marker included, so
+            // clipping costs nothing and guarantees no bleed past the card.
+            .clipped()
+        }
+        .frame(height: height)
+    }
+
+    private func guides(width: CGFloat, height: CGFloat) -> some View {
+        ZStack(alignment: .topLeading) {
+            ForEach(Self.guideFractions, id: \.self) { fraction in
+                Path { path in
+                    let y = height * fraction
+                    path.move(to: CGPoint(x: 0, y: y))
+                    path.addLine(to: CGPoint(x: width, y: y))
+                }
+                .stroke(.white.opacity(0.075),
+                        style: StrokeStyle(lineWidth: 0.6, dash: [3, 4]))
+            }
+        }
+    }
+
+    /// A gentle ease rather than a straight line: real weeks are uneven. It is
+    /// presentation, not a different claim — both ends are the honest
+    /// arithmetic the headline states.
+    private func curve(width: CGFloat, height: CGFloat) -> Path {
+        Path { p in
+            p.move(to: CGPoint(x: 0, y: height))
+            for i in 0...40 {
+                let t = CGFloat(i) / 40
+                let eased = t * t * (3 - 2 * t)
+                p.addLine(to: CGPoint(x: t * width, y: height - eased * height * Self.curveTop))
+            }
+        }
+    }
+
+    /// The same curve, closed along the bottom.
+    private func area(width: CGFloat, height: CGFloat) -> Path {
+        var path = curve(width: width, height: height)
+        path.addLine(to: CGPoint(x: width, y: height))
+        path.addLine(to: CGPoint(x: 0, y: height))
+        path.closeSubpath()
+        return path
+    }
+}
+
+// MARK: - Editing an answer
+
+/// The answers a pilot can correct from the results screen.
+///
+/// Only the four that are genuinely theirs to change. The rhythm the target
+/// rests on is an assumption FocusGlobe states, not an answer it collected, so
+/// it is deliberately absent.
+enum OnboardingResultField: String, Identifiable, CaseIterable {
+    case focus, friction, minutes, atmosphere
+
+    var id: String { rawValue }
+
+    var prompt: String {
+        switch self {
+        case .focus:      return "What do you want to focus on?"
+        case .friction:   return "What usually breaks your focus?"
+        case .minutes:    return "How long is your first flight?"
+        case .atmosphere: return "Pick your focus atmosphere"
+        }
+    }
+}
+
+/// A short single-choice list, in a sheet.
+///
+/// It offers exactly the options the matching onboarding question offered —
+/// read from the same sources, never a second copy — shows which one is live,
+/// and commits on tap. It cannot navigate anywhere, so there is no way to end
+/// up somewhere unexpected in a flow that has no back button.
+struct OnboardingAnswerEditor: View {
+    let field: OnboardingResultField
+    @Binding var intent: FocusPreset?
+    @Binding var friction: FocusFriction?
+    @Binding var minutes: Int?
+
+    @EnvironmentObject private var appModel: AppModel
+    @Environment(\.focusViewport) private var viewport
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack {
+            OnboardingBackdrop()
+            VStack(alignment: .leading, spacing: AppSpacing.md) {
+                Text(field.prompt)
+                    .font(.system(size: 21, weight: .bold, design: .default))
+                    .foregroundStyle(.white)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, viewport.pagePadding)
+                    .padding(.top, AppSpacing.lg)
+                    .accessibilityAddTraits(.isHeader)
+
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: AppSpacing.xs) {
+                        rows
+                    }
+                    .padding(.horizontal, viewport.pagePadding)
+                    .padding(.bottom, AppSpacing.xl)
+                }
+            }
+            .frame(maxWidth: viewport.readableContentWidth)
+            .frame(maxWidth: .infinity, alignment: .top)
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    @ViewBuilder private var rows: some View {
+        switch field {
+        case .focus:
+            ForEach(FocusPreset.all) { preset in
+                OnboardingEditorRow(title: preset.title,
+                                    systemImage: preset.systemImage,
+                                    isSelected: intent?.title == preset.title) {
+                    intent = preset
+                    commit()
+                }
+            }
+        case .friction:
+            ForEach(FocusFriction.allCases) { item in
+                OnboardingEditorRow(title: item.title,
+                                    systemImage: item.systemImage,
+                                    isSelected: friction == item) {
+                    friction = item
+                    commit()
+                }
+            }
+        case .minutes:
+            ForEach(OnboardingView.flightLengths, id: \.self) { value in
+                OnboardingEditorRow(title: Formatters.durationLabel(minutes: value),
+                                    systemImage: "timer",
+                                    isSelected: minutes == value) {
+                    minutes = value
+                    commit()
+                }
+            }
+        case .atmosphere:
+            ForEach(JourneyAudioOption.all) { option in
+                OnboardingEditorRow(title: option.displayName,
+                                    systemImage: option.systemImage,
+                                    isSelected: appModel.selectedJourneyAudio.id == option.id) {
+                    // The same commit the atmosphere question makes. It writes
+                    // `settings.selectedJourneyAudioID` and live-swaps a playing
+                    // journey; it does NOT start a preview, because a loop
+                    // started here would keep playing under the results screen
+                    // until the first run ended.
+                    //
+                    // It plays the tap itself, so this is the one row that must
+                    // not ask for a second one.
+                    appModel.selectJourneyAudio(option)
+                    commit(withFeedback: false)
+                }
+            }
+        }
+    }
+
+    private func commit(withFeedback: Bool = true) {
+        if withFeedback { appModel.tapFeedback() }
+        dismiss()
+    }
+}
+
+private struct OnboardingEditorRow: View {
+    let title: String
+    let systemImage: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: AppSpacing.sm) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(isSelected ? AppColors.selectionGold : .white.opacity(0.55))
+                    .frame(width: 24)
+                Text(title)
+                    .font(.system(size: 16, weight: isSelected ? .semibold : .medium))
+                    .foregroundStyle(.white.opacity(isSelected ? 1 : 0.82))
+                Spacer(minLength: AppSpacing.xs)
+                Image(systemName: "checkmark")
+                    .font(.system(size: 13, weight: .heavy))
+                    .foregroundStyle(AppColors.selectionGold)
+                    .opacity(isSelected ? 1 : 0)
+            }
+            .padding(.horizontal, AppSpacing.md)
+            .frame(minHeight: 52)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: AppSpacing.pillRadius, style: .continuous)
+                    .fill(.white.opacity(isSelected ? 0.12 : 0.06))
+                    .overlay(RoundedRectangle(cornerRadius: AppSpacing.pillRadius, style: .continuous)
+                        .strokeBorder(isSelected ? AppColors.selectionGold.opacity(0.55)
+                                                 : .white.opacity(0.10),
+                                      lineWidth: 1))
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
@@ -542,30 +896,42 @@ struct OnboardingResultPlan: Equatable {
         targetDate.formatted(.dateTime.day().month(.abbreviated))
     }
 
-    struct Detail: Equatable { let icon: String; let label: String; let value: String }
+    /// A row of the plan card. `field` is what makes the pencil real: nil means
+    /// the value is not the pilot's to change, and the row shows no control at
+    /// all rather than one that does nothing.
+    struct Detail: Equatable {
+        let icon: String
+        let label: String
+        let value: String
+        let field: OnboardingResultField?
+    }
 
     var details: [Detail] {
         [
-            Detail(icon: "target", label: "Focus", value: focusTitle),
-            Detail(icon: "exclamationmark.triangle", label: "Main distraction", value: frictionTitle),
+            Detail(icon: "target", label: "Focus", value: focusTitle, field: .focus),
+            Detail(icon: "exclamationmark.triangle", label: "Main distraction",
+                   value: frictionTitle, field: .friction),
             Detail(icon: "timer", label: "First flight",
-                   value: Formatters.durationLabel(minutes: minutes)),
-            Detail(icon: "waveform", label: "Atmosphere", value: atmosphere),
+                   value: Formatters.durationLabel(minutes: minutes), field: .minutes),
+            Detail(icon: "waveform", label: "Atmosphere", value: atmosphere, field: .atmosphere),
             Detail(icon: "repeat", label: "Rhythm",
-                   value: "\(Self.flightsPerWeek) flights a week"),
+                   value: "\(Self.flightsPerWeek) flights a week", field: nil),
         ]
     }
 
     struct Step: Equatable { let icon: String; let title: String; let detail: String }
 
+    /// Four glyphs the app actually uses elsewhere — take-off, the Focus Shield,
+    /// the streak flame and the Passport — so the row art points at real parts
+    /// of FocusGlobe rather than at generic productivity iconography.
     static let steps: [Step] = [
         Step(icon: "paperplane.fill", title: "Start your first flight",
              detail: "Everything is already set — pick a destination and lift off."),
-        Step(icon: "moon.stars.fill", title: "Protect the time",
+        Step(icon: "shield.lefthalf.filled", title: "Protect the time",
              detail: "One screen, one Sky, nothing competing for your attention."),
         Step(icon: "flame.fill", title: "Fly again tomorrow",
              detail: "Short flights you finish beat long ones you abandon."),
-        Step(icon: "map.fill", title: "Watch the distance add up",
+        Step(icon: "book.closed.fill", title: "Watch the distance add up",
              detail: "Every landing is logged in your Passport, city by city."),
     ]
 
@@ -584,13 +950,26 @@ struct OnboardingResultPlan: Equatable {
         "Progress you can see",
     ]
 
-    struct Trust: Equatable { let icon: String; let title: String; let detail: String }
+    struct Trust: Equatable, Identifiable {
+        let icon: String
+        let title: String
+        let detail: String
+        var id: String { title }
+    }
 
+    /// Four statements, every one checkable in this repository — local
+    /// persistence, the optional account, ungated soundscapes, App Store
+    /// cancellation. No ratings, no review quotes, no user counts, no reviewer
+    /// names: FocusGlobe has none of those verified, so it claims none of them.
+    /// The soundscape count is read from the catalogue rather than typed, so it
+    /// cannot go stale.
     static let trust: [Trust] = [
         Trust(icon: "iphone", title: "Your history stays on your device",
-              detail: "Journeys, streaks and stats are stored locally."),
+              detail: "Journeys, streaks and stats are written locally, not to a server."),
         Trust(icon: "person.crop.circle.badge.checkmark", title: "No account needed to fly",
               detail: "Sign in only if you want your progress on another device."),
+        Trust(icon: "waveform", title: "Every soundscape is free",
+              detail: "All \(JourneyAudioOption.all.count) flight atmospheres are unlocked from the start."),
         Trust(icon: "arrow.uturn.backward", title: "Cancel anytime",
               detail: "Subscriptions are managed in the App Store, not here."),
     ]

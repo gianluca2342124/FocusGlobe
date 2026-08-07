@@ -429,12 +429,22 @@ struct OnboardingView: View {
 
     // MARK: - 7. Results
 
+    /// The answers go in as BINDINGS, not values.
+    ///
+    /// The results screen can correct any of them, and because `resultPlan` is
+    /// derived from exactly this state, an edit recomputes the goal, the
+    /// assumption line, the graph's label and the plan card together. There is
+    /// no second copy of an answer anywhere, so the screen cannot show one thing
+    /// and hand `applySelections()` another.
     private var resultsStep: some View {
-        // Wrapped rather than passed as `advance` directly: a bare method
-        // reference does not carry its default argument, so `advance` has type
-        // `(Bool) -> Void` and will not satisfy `() -> Void`. The closure calls
-        // it with the default `withFeedback: true` — the CTA plays its own tap.
-        OnboardingResultsStep(plan: resultPlan, onContinue: { advance() })
+        // `onContinue` is wrapped rather than passed as `advance` directly: a
+        // bare method reference does not carry its default argument, so
+        // `advance` has type `(Bool) -> Void` and will not satisfy `() -> Void`.
+        OnboardingResultsStep(plan: resultPlan,
+                              intent: $intent,
+                              friction: $friction,
+                              minutes: $minutes,
+                              onContinue: { advance() })
     }
 
     /// Built from the pilot's own answers. `targetDate` is derived here rather
@@ -535,11 +545,16 @@ struct OnboardingView: View {
 
     /// Commit the pilot's answers to the canonical settings.
     ///
-    /// Called from the setup screen, not from `finish()`, for two reasons: it
-    /// makes that screen truthful — it says the app is setting things up
+    /// Called from the setup screen, not only from `finish()`, for two reasons:
+    /// it makes that screen truthful — it says the app is setting things up
     /// because at that moment it is — and it means a pilot who closes the app
-    /// on the offer keeps everything they chose instead of losing all six
-    /// answers. Idempotent, so `finish()` can safely call it again.
+    /// on the offer keeps everything they chose instead of losing every answer.
+    ///
+    /// `finish()` calls it a second time, and that call is not merely belt and
+    /// braces: the results screen can now correct any of these answers, so the
+    /// second call is what writes an edit made AFTER the setup screen ran. Each
+    /// call simply overwrites with the current state, which is why running it
+    /// twice is safe and why the later one always wins.
     private func applySelections() {
         appModel.applyOnboardingSelections(focusPresetTitle: intent?.title,
                                            preferredMinutes: minutes)
