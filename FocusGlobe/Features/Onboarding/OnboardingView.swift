@@ -32,13 +32,16 @@ import UIKit
 /// job, and it is the only screen here whose value is entirely about the arrival
 /// at the paywall.
 ///
-/// No review request, no testimonials, no back button, no skip labels, no
-/// permission prompts. Notifications and Screen Time are asked for later, in
-/// context, where they already were — a system dialog before the offer buys
-/// friction at the worst possible moment.
+/// No in-flow review request, no back button, no skip labels, no permission
+/// prompts. Notifications and Screen Time are asked for later, in context,
+/// where they already were — a system dialog before the offer buys friction at
+/// the worst possible moment.
 struct OnboardingView: View {
     @EnvironmentObject private var appModel: AppModel
     @EnvironmentObject private var router: AppRouter
+    /// Only for the Welcome screen's Sign In sheet, which hands off to the
+    /// existing Apple flow rather than owning any auth of its own.
+    @EnvironmentObject private var online: FocusOnlineModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// The last step's index. The offer is now counted: it is presented as the
@@ -64,6 +67,11 @@ struct OnboardingView: View {
     @State private var pendingEntitlementResolution = false
     /// True between a choice tap and the deferred advance it scheduled.
     @State private var isAdvancing = false
+    /// The Welcome screen's Sign In drawer.
+    @State private var showSignIn = false
+    /// The language shown in the Welcome selector. Seeded from the bundle's own
+    /// first localization, so it always starts on something real.
+    @State private var languageCode = OnboardingView.availableLanguages.first?.code ?? "en"
     /// Both the paywall's own exit and this view's entitlement observer can
     /// reach `finish()` in the same instant when a purchase lands. Handing off
     /// twice would set the tab and rewrite the profile twice for no reason.
@@ -181,6 +189,10 @@ struct OnboardingView: View {
 
     private var welcomeStep: some View {
         VStack(spacing: AppSpacing.lg) {
+            HStack {
+                Spacer()
+                languageSelector
+            }
             Spacer(minLength: 0)
             hero.offset(y: introFloat)
             VStack(spacing: AppSpacing.sm) {
@@ -197,18 +209,112 @@ struct OnboardingView: View {
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isHeader)
             Spacer(minLength: 0)
-            AppPrimaryButton(title: "Begin", systemImage: "arrow.right", iconTrailing: true) {
-                advance()
+            VStack(spacing: AppSpacing.sm) {
+                AppPrimaryButton(title: "Begin", systemImage: "arrow.right", iconTrailing: true) {
+                    advance()
+                }
+                // Returning pilots, not new ones: the primary path is still
+                // Begin. This sits under it, at caption weight, so it is found
+                // by someone looking for it and ignored by everyone else.
+                HStack(spacing: 4) {
+                    Text("Already have an account?")
+                        .foregroundStyle(.white.opacity(0.55))
+                    Button("Sign In") {
+                        appModel.tapFeedback()
+                        showSignIn = true
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.white)
+                    .fontWeight(.semibold)
+                    .accessibilityHint("Opens sign in with Apple.")
+                }
+                .font(AppTypography.caption)
+                .padding(.top, 2)
             }
             .padding(.bottom, AppSpacing.xl)
         }
         .padding(.horizontal, AppSpacing.screen)
+        .padding(.top, AppSpacing.xs)
+        .sheet(isPresented: $showSignIn) {
+            OnboardingSignInSheet()
+                .environmentObject(appModel)
+                .environmentObject(online)
+                .presentationDetents([.height(300)])
+                .presentationDragIndicator(.visible)
+        }
         .onAppear {
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 3.2).repeatForever(autoreverses: true)) {
                 introFloat = -14
             }
         }
+    }
+
+    /// A real selector over what the bundle actually ships.
+    ///
+    /// It is built from `Bundle.main.localizations` rather than a hand-written
+    /// list, so it can never offer a language the app cannot switch to — today
+    /// that is English alone, and the menu grows on its own the day a second
+    /// `.lproj` is added. A picker that listed languages nothing could deliver
+    /// would be a decoration, and this screen has no room for one.
+    private var languageSelector: some View {
+        Menu {
+            Picker("Language", selection: $languageCode) {
+                ForEach(Self.availableLanguages, id: \.code) { entry in
+                    Text("\(entry.flag)  \(entry.name)").tag(entry.code)
+                }
+            }
+        } label: {
+            HStack(spacing: 5) {
+                Text(Self.language(for: languageCode).flag)
+                    .font(.system(size: 13))
+                Text(Self.language(for: languageCode).short)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.75))
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.45))
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Capsule().fill(.white.opacity(0.08)))
+            .overlay(Capsule().strokeBorder(.white.opacity(0.13), lineWidth: 1))
+        }
+        .accessibilityLabel("Language")
+        .accessibilityValue(Self.language(for: languageCode).name)
+    }
+
+    struct LanguageEntry {
+        let code: String
+        let flag: String
+        let short: String
+        let name: String
+    }
+
+    /// The display names for codes FocusGlobe knows about. Anything the bundle
+    /// carries that is not listed here still appears, using its own code.
+    private static let languageNames: [String: LanguageEntry] = [
+        "en": LanguageEntry(code: "en", flag: "🇺🇸", short: "EN", name: "English"),
+        "es": LanguageEntry(code: "es", flag: "🇪🇸", short: "ES", name: "Español"),
+        "fr": LanguageEntry(code: "fr", flag: "🇫🇷", short: "FR", name: "Français"),
+        "de": LanguageEntry(code: "de", flag: "🇩🇪", short: "DE", name: "Deutsch"),
+        "it": LanguageEntry(code: "it", flag: "🇮🇹", short: "IT", name: "Italiano"),
+        "pt": LanguageEntry(code: "pt", flag: "🇵🇹", short: "PT", name: "Português"),
+    ]
+
+    static let availableLanguages: [LanguageEntry] = {
+        let codes = Bundle.main.localizations
+            .filter { $0 != "Base" }
+            .sorted()
+        let entries = codes.map { language(for: $0) }
+        return entries.isEmpty ? [language(for: "en")] : entries
+    }()
+
+    private static func language(for code: String) -> LanguageEntry {
+        languageNames[code]
+            ?? LanguageEntry(code: code, flag: "🌐", short: code.uppercased(),
+                             name: Locale.current.localizedString(forLanguageCode: code)
+                                 ?? code.uppercased())
     }
 
     @ViewBuilder private var hero: some View {
@@ -847,5 +953,63 @@ private struct EqualizerBars: View {
         }
         .frame(height: 18)
         .onAppear { if !reduceMotion { animate = true } }
+    }
+}
+
+// MARK: - Welcome sign-in drawer
+
+/// The minimal returning-pilot path: a title, Apple, and the policy link.
+///
+/// It owns no authentication of its own — `FocusAppleSignInButton` is the same
+/// component Friends and Settings use, so there is exactly one Sign in with
+/// Apple flow in the app and this is a second entrance to it, not a second
+/// implementation. Nothing else belongs here: a first run that opens a drawer
+/// full of options has stopped being a first run.
+struct OnboardingSignInSheet: View {
+    @EnvironmentObject private var appModel: AppModel
+    @EnvironmentObject private var online: FocusOnlineModel
+    @Environment(\.openURL) private var openURL
+    @Environment(\.dismiss) private var dismiss
+    @State private var errorMessage: String?
+
+    var body: some View {
+        ZStack {
+            OnboardingBackdrop()
+            VStack(spacing: AppSpacing.md) {
+                Text("Sign In")
+                    .font(.system(size: 24, weight: .bold, design: .default))
+                    .foregroundStyle(.white)
+                    .accessibilityAddTraits(.isHeader)
+                    .padding(.top, AppSpacing.lg)
+
+                FocusAppleSignInButton { error in
+                    if let error {
+                        errorMessage = error
+                    } else {
+                        dismiss()
+                    }
+                }
+                .frame(height: 52)
+
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(AppTypography.caption)
+                        .foregroundStyle(AppColors.danger)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Button("Privacy Policy") { openURL(LegalLinks.privacy) }
+                    .buttonStyle(.plain)
+                    .font(AppTypography.caption)
+                    .foregroundStyle(.white.opacity(0.55))
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, AppSpacing.screen)
+            .frame(maxWidth: 420)
+            .frame(maxWidth: .infinity)
+        }
+        .preferredColorScheme(.dark)
     }
 }
