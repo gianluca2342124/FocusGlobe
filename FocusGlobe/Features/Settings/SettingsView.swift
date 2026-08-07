@@ -8,6 +8,11 @@ struct SettingsView: View {
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var online: FocusOnlineModel
     @State private var restoreMessage: String?
+    /// The Name field's live text. Committed on submit / focus loss, not per
+    /// keystroke — see `commitName()`.
+    @State private var nameDraft = ""
+    @State private var nameError: String?
+    @FocusState private var nameFieldFocused: Bool
     @State private var showManageOnlineData = false
     /// Account section state (free, always available — never Debug-only).
     @State private var showAccountSignOutConfirm = false
@@ -28,6 +33,13 @@ struct SettingsView: View {
             ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
                     ScreenHeader(title: "Settings", showsBack: false)
+
+                    // The profile block leads: one avatar, one Name. That Name
+                    // is the canonical one — it is also the alias Friends and
+                    // Online publish, which is why the old `Your name` row in
+                    // Experience and the old `Public alias` row in Friends are
+                    // both gone. One field, one truth.
+                    profileBlock
 
                     // Account leads. It is the first thing anyone opens Settings
                     // for — signing in, or checking that they are — and it took
@@ -85,6 +97,78 @@ struct SettingsView: View {
     // `AppSettings.appearance` is deliberately kept so previously stored values
     // still decode; nothing reads it any more.
 
+    /// Avatar + Name. Nothing else — no photo picker, no camera, no account
+    /// management. The avatar is a symbol on purpose: it identifies the block
+    /// without promising an editing affordance that does not exist.
+    ///
+    /// The field commits on submit and on focus loss rather than on every
+    /// keystroke: this value is published to Friends, and pushing a rename per
+    /// character would spend the once-a-day alias change on "G".
+    private var profileBlock: some View {
+        AppGlassCard(padding: AppSpacing.md) {
+            HStack(spacing: AppSpacing.md) {
+                ZStack {
+                    Circle().fill(AppColors.gold.opacity(0.16))
+                    Circle().strokeBorder(AppColors.gold.opacity(0.30), lineWidth: 1)
+                    Image(systemName: "person.fill")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(AppColors.gold)
+                }
+                .frame(width: 56, height: 56)
+                .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Name")
+                        .font(AppTypography.caption)
+                        .foregroundStyle(AppColors.textSecondary)
+                    TextField("Name", text: $nameDraft)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(AppColors.textPrimary)
+                        .textInputAutocapitalization(.words)
+                        .autocorrectionDisabled()
+                        .submitLabel(.done)
+                        .focused($nameFieldFocused)
+                        .onSubmit { commitName() }
+                        .onChange(of: nameFieldFocused) { _, focused in
+                            if !focused { commitName() }
+                        }
+                }
+                // Clamp the (horizontally greedy) TextField so it can never grow
+                // the row past the viewport and induce a sideways drift.
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .onAppear { nameDraft = appModel.canonicalName }
+        .alert("Couldn't update your public name", isPresented: Binding(
+            get: { nameError != nil }, set: { if !$0 { nameError = nil } }
+        )) {
+            Button("OK", role: .cancel) { nameError = nil }
+        } message: {
+            Text(nameError ?? "")
+        }
+    }
+
+    /// Local first, network second.
+    ///
+    /// The canonical write is local and unconditional, so the name is saved
+    /// even offline or signed out. The Online push is a MIRROR of it through
+    /// `updateAlias` — the existing validator and its once-a-day rate limit —
+    /// and a rejection surfaces without rolling the local value back. Nothing
+    /// drifts: `ensureIdentityAndProfile` republishes from the canonical name
+    /// on the next launch, so a failed push heals itself.
+    private func commitName() {
+        let trimmed = nameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            nameDraft = appModel.canonicalName   // empty falls back, never clears
+            return
+        }
+        guard trimmed != appModel.canonicalName else { return }
+        appModel.setCanonicalName(trimmed)
+        nameDraft = appModel.canonicalName
+        guard online.isSignedIn else { return }
+        Task { nameError = await online.updateAlias(appModel.canonicalName) }
+    }
+
     private var experienceSection: some View {
         SettingsCard(title: "Experience") {
             VStack(spacing: 0) {
@@ -100,32 +184,6 @@ struct SettingsView: View {
                           subtitle: "Streak, focus & goal nudges",
                           isOn: Binding(get: { appModel.notifications.isEnabled },
                                         set: { appModel.tapFeedback(); appModel.setNotificationsEnabled($0) }))
-                RowDivider()
-                // The pilot's PRIVATE preferred name — personalises the Home
-                // greeting only; it is never published as the Online alias.
-                HStack(spacing: AppSpacing.sm) {
-                    Image(systemName: "person.text.rectangle")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(AppColors.gold)
-                        .frame(width: 30)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Your name")
-                            .font(AppTypography.callout)
-                            .foregroundStyle(AppColors.textPrimary)
-                        TextField("Add your name", text: Binding(
-                            get: { appModel.profile.name ?? "" },
-                            set: { appModel.profile.name = $0.isEmpty ? nil : String($0.prefix(24)) }))
-                            .font(AppTypography.caption)
-                            .foregroundStyle(AppColors.textSecondary)
-                            .textInputAutocapitalization(.words)
-                            .autocorrectionDisabled()
-                    }
-                    // Clamp the (horizontally greedy) TextField so it can never
-                    // grow the row past the viewport and induce a sideways drift.
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .padding(.vertical, 6)
-
             }
         }
     }

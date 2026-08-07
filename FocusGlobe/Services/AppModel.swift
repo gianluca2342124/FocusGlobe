@@ -166,6 +166,32 @@ final class AppModel: ObservableObject {
             loadedProfile.hasCompletedOnboarding = true
             persistence.save(loadedProfile, for: .profile)
         }
+        // Canonical name resolution — exactly once per profile, at first load
+        // under this build. `hasCustomizedName == nil` is the "not yet resolved"
+        // marker; after this it is always a real Bool and never revisited, so a
+        // launch can never regenerate or reclassify a name.
+        //
+        // Three cases, in priority order:
+        //  1. A name is already stored. Only the old Settings "Your name" field
+        //     ever wrote one, and only a human ever typed into it — so it is
+        //     genuinely theirs and is kept AND marked customized.
+        //  2. No name, but this device has a cached Online profile. Adopt that
+        //     alias rather than minting a second identity, and leave it marked
+        //     generated so Home stays quiet about it.
+        //  3. Neither. Generate one, once.
+        if loadedProfile.hasCustomizedName == nil {
+            let stored = loadedProfile.name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if !stored.isEmpty {
+                loadedProfile.name = stored
+                loadedProfile.hasCustomizedName = true
+            } else {
+                let cachedAlias = OnlineCache.loadProfile()?.displayName
+                    .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                loadedProfile.name = cachedAlias.isEmpty ? OnlineProfile.generatedAlias() : cachedAlias
+                loadedProfile.hasCustomizedName = false
+            }
+            persistence.save(loadedProfile, for: .profile)
+        }
         // Sky-catalog migration: a persisted selection pointing at a removed Sky
         // (e.g. the retired Moon Garden / Paris Sunset) is normalised to the free
         // default once, so no invalid identifier is ever left behind. (The
@@ -1023,6 +1049,49 @@ final class AppModel: ObservableObject {
             return false
         }
         return placeCabinItem(item, in: slot)
+    }
+
+    // MARK: - The canonical name
+
+    /// The ONE user-facing name: the Settings Profile field, and the alias
+    /// Friends and Online publish. There is no second name anywhere — the old
+    /// split (a private `Your name` for Home, a separate `Public alias` for the
+    /// network) is what made them drift.
+    var canonicalName: String { profile.name ?? "" }
+
+    /// Whether the pilot typed it themselves. Every profile carries a name from
+    /// its first load, so a non-empty value proves nothing.
+    /// See `UserProfile.hasCustomizedName`.
+    var hasCustomizedName: Bool { profile.hasCustomizedName ?? false }
+
+    /// The name to ADDRESS the pilot by — `nil` until they chose one.
+    ///
+    /// The one rule that keeps this from going wrong: `canonicalName` is what
+    /// FocusGlobe PUBLISHES (Friends, Online, the profile row), `personalName`
+    /// is what it CALLS you. Every surface that speaks to the pilot — the Home
+    /// greeting, the Passport logbook, a shared grid — reads this one, so a
+    /// generated "SkyPilot4823" can never be mistaken for a name someone chose.
+    var personalName: String? {
+        guard hasCustomizedName else { return nil }
+        let trimmed = canonicalName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    /// Commit a name the pilot typed.
+    ///
+    /// Trimmed, and capped at 20 to match the alias rule `updateAlias` already
+    /// enforces, so a value accepted here can never be rejected by the network
+    /// for length. An all-whitespace value is ignored rather than stored: the
+    /// existing name stays, because a profile with no name would leave Friends
+    /// with nothing to show. Persisting happens through `profile`'s own
+    /// didSet — no second write path.
+    func setCanonicalName(_ raw: String) {
+        let trimmed = String(raw.trimmingCharacters(in: .whitespacesAndNewlines).prefix(20))
+        guard !trimmed.isEmpty, trimmed != profile.name else { return }
+        var p = profile
+        p.name = trimmed
+        p.hasCustomizedName = true
+        profile = p
     }
 
     // MARK: - Onboarding completion

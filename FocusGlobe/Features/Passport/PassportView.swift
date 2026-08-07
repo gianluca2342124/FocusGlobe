@@ -143,7 +143,7 @@ struct PassportView: View {
     /// with a haptic if rendering ever fails.
     private func shareGrid() {
         if let image = FocusGridShare.renderImage(history: appModel.history,
-                                                 displayName: appModel.profile.name,
+                                                 displayName: appModel.personalName,
                                                  currentStreak: progress.currentStreak,
                                                  longestStreak: progress.longestStreak) {
             router.present(.share([image]))
@@ -162,9 +162,11 @@ struct PassportView: View {
 
     // MARK: Hero logbook summary (the journal cover)
 
-    /// "Pilot {name}" when the profile has a name; the plain logbook otherwise.
+    /// "Pilot {name}" when the pilot CHOSE a name; the plain logbook otherwise.
+    /// `personalName`, not the canonical one — every profile now carries a
+    /// generated public alias, and "Pilot SkyPilot4823" is not a logbook cover.
     private var pilotLine: String {
-        if let name = appModel.profile.name, !name.isEmpty { return "Pilot \(name)" }
+        if let name = appModel.personalName { return "Pilot \(name)" }
         return "Flight logbook"
     }
 

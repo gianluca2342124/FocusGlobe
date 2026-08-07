@@ -505,13 +505,14 @@ struct HomeView: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// A REAL user-provided name only (set in Settings) — trimmed, and never
-    /// the auto-generated Sky-pilot alias.
-    private var preferredName: String? {
-        guard let raw = appModel.profile.name?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !raw.isEmpty else { return nil }
-        return raw
-    }
+    /// A REAL user-provided name only.
+    ///
+    /// Every profile now carries a name from its first load, because Friends
+    /// and Online need a public alias to exist — so "non-empty" stopped being
+    /// evidence that anyone chose it. `personalName` is nil until the pilot
+    /// types into Settings → Name, which is why greeting someone as
+    /// "SkyPilot4823" is impossible here.
+    private var preferredName: String? { appModel.personalName }
 
     // MARK: Edge arrows (flank the hero at the screen edges)
 

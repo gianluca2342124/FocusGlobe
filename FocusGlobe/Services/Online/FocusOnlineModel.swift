@@ -476,7 +476,11 @@ final class FocusOnlineModel: ObservableObject {
                 userID: myUserID,
                 defaults: OnlineProfile(
                     publicID: myUserID,
-                    displayName: "SkyPilot\(Int.random(in: 1000...9999))",
+                    // The canonical local name IS the public alias. A fresh
+                    // profile always has one (AppModel generates it at first
+                    // load), so the fallback is only reachable if that has not
+                    // run yet.
+                    displayName: appModel?.canonicalName ?? OnlineProfile.generatedAlias(),
                     balloonSkinID: appModel?.equippedSkinIDForOnline ?? "default",
                     countryCode: Locale.current.region?.identifier,
                     isDiscoverable: appModel?.profile.onlineDiscoverable ?? true,

@@ -34,7 +34,7 @@ actor ProfileService {
             .select().eq("id", value: userID).single().execute().value {
             return Self.profile(from: existing)
         }
-        let alias = defaults?.displayName ?? "SkyPilot\(Int.random(in: 1000...9999))"
+        let alias = defaults?.displayName ?? OnlineProfile.generatedAlias()
         let row = ProfileRow(id: userID,
                              publicAlias: alias,
                              countryCode: defaults?.countryCode,

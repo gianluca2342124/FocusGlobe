@@ -13,9 +13,6 @@ struct OnlineFriendsSettingsSection: View {
 
     @State private var showSignIn = false
     @State private var showSignOutConfirm = false
-    @State private var showAliasEditor = false
-    @State private var aliasDraft = ""
-    @State private var aliasError: String?
 
     var body: some View {
         SettingsCard(title: "Online & Friends Settings") {
@@ -36,20 +33,6 @@ struct OnlineFriendsSettingsSection: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Your local flights, coins and streaks stay on this device. Your online profile remains until you delete it in Settings → Manage Online Data.")
-        }
-        .alert("Change alias", isPresented: $showAliasEditor) {
-            TextField("Alias", text: $aliasDraft)
-            Button("Save") { Task { aliasError = await online.updateAlias(aliasDraft) } }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("3–20 characters. Shown to other pilots instead of your name.")
-        }
-        .alert("Couldn't change alias", isPresented: Binding(
-            get: { aliasError != nil }, set: { if !$0 { aliasError = nil } }
-        )) {
-            Button("OK", role: .cancel) { aliasError = nil }
-        } message: {
-            Text(aliasError ?? "")
         }
     }
 
@@ -89,18 +72,10 @@ struct OnlineFriendsSettingsSection: View {
                       subtitle: "Allow pilots you meet to send you a Crew request.",
                       isOn: Binding(get: { appModel.profile.onlineAllowsFriendRequests ?? true },
                                     set: { appModel.tapFeedback(); online.setAllowsFriendRequests($0) }))
-            RowDivider()
-            Button {
-                appModel.tapFeedback()
-                aliasDraft = online.profile?.displayName ?? ""
-                showAliasEditor = true
-            } label: {
-                SettingsRow(systemImage: "textformat", title: "Public alias",
-                            subtitle: online.profile?.displayName ?? "Set after signing in",
-                            tint: AppColors.gold, trailing: chevron)
-            }
-            .buttonStyle(SoftPressStyle())
-            .disabled(online.profile == nil)
+            // The public alias row lived here. It is gone because the name it
+            // edited is no longer separate: Settings → Name is the canonical
+            // value and IS what Friends publishes. Two editors for one string
+            // is exactly how the two used to drift apart.
         }
     }
 
@@ -116,8 +91,6 @@ struct OnlineFriendsSettingsSection: View {
             RowDivider()
             gatedRow("person.crop.circle.badge.plus", "Allow Friend Requests",
                      "Allow pilots you meet to send you a Crew request.")
-            RowDivider()
-            gatedRow("textformat", "Public alias", "Shown to other pilots instead of your name.")
         }
     }
 

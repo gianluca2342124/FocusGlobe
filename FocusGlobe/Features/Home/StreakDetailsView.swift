@@ -71,7 +71,7 @@ struct StreakDetailsView: View {
                 Button {
                     appModel.tapFeedback()
                     if let image = FocusGridShare.renderImage(history: appModel.history,
-                                                              displayName: appModel.profile.name,
+                                                              displayName: appModel.personalName,
                                                               currentStreak: streak,
                                                               longestStreak: appModel.progress.longestStreak) {
                         shareItems = [image]
