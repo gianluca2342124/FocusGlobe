@@ -97,7 +97,18 @@ struct OnboardingView: View {
             } else {
                 OnboardingBackdrop()
                 VStack(spacing: 0) {
-                    progressBar
+                    // The setup screen owns the window. It already HAS a
+                    // progress bar — a PRO-gradient one, under a percentage —
+                    // and a second thin bar 30 pt above it reads as a bug, not
+                    // as chrome. It is removed rather than made transparent so
+                    // no empty strip is reserved: the screen centres in the full
+                    // height, which is the whole point of taking the bar away.
+                    // It returns with the results screen, at the value it would
+                    // have had anyway, so nothing about the progress semantics
+                    // of any other step changes.
+                    if step != .setup {
+                        progressBar.transition(.opacity)
+                    }
                     stepBody
                         .transition(.asymmetric(
                             insertion: .opacity.combined(with: .offset(y: reduceMotion ? 0 : 20)),

@@ -39,9 +39,45 @@ struct OnboardingSetupStep: View {
     @State private var didApply = false
     @State private var didFinish = false
 
-    /// ~2.6 s over six lines. Slower reads as a stall on a screen that has
-    /// nothing for the pilot to do.
-    private var stepInterval: UInt64 { 380_000_000 }
+    /// How long the screen is on display, end to end.
+    ///
+    /// 4.0 s, up from 2.7 s. The old pacing was six fixed 380 ms sleeps plus a
+    /// 420 ms wait AFTER the final tick — and that wait was dead time sitting at
+    /// 100%, which is the one thing that makes a progress screen read as
+    /// theatre. This is a single continuous run instead: the bar and the
+    /// percentage never stop moving, and the screen hands off the instant it
+    /// reaches 100% rather than pausing there first.
+    private static let totalDuration: Double = 4.0
+
+    /// Where the checklist finishes, leaving the rest to "Finalizing results…".
+    private static let checklistCompletesAt: Double = 0.88
+
+    /// ~30 fps. Enough for the bar to read as continuous and for the numeric
+    /// content transition to roll its digits, without re-evaluating this body on
+    /// every display frame for four seconds.
+    private static let tickNanoseconds: UInt64 = 33_000_000
+
+    /// How elapsed time maps onto 0 → 100%.
+    ///
+    /// A gentle ease-out. Lines tick ~0.48 s apart at the start and ~0.67 s
+    /// apart at the end, and the closing 12% of the bar takes ~0.73 s — which is
+    /// what gives "Finalizing results…" room to read as a real step rather than
+    /// a caption on a pause. The exponent is deliberately mild: at 1.6 and above
+    /// the tail decelerates so hard it reads as a stall, which is the opposite
+    /// of the point.
+    private static func eased(_ elapsedFraction: Double) -> Double {
+        let u = min(max(elapsedFraction, 0), 1)
+        return 1 - pow(1 - u, 1.25)
+    }
+
+    /// How many lines are ticked at a given progress. Derived rather than
+    /// counted, so the list, the bar and the percentage can never disagree about
+    /// where the screen is.
+    private static func completedCount(at progress: Double, of count: Int) -> Int {
+        guard count > 0 else { return 0 }
+        let perItem = checklistCompletesAt / Double(count)
+        return min(count, Int((progress / perItem + 1e-9).rounded(.down)))
+    }
 
     private var percent: Int { Int((progress * 100).rounded()) }
 
@@ -71,7 +107,7 @@ struct OnboardingSetupStep: View {
                         Capsule().fill(.white.opacity(0.12))
                         Capsule()
                             .fill(ProBrand.softGradient)
-                            .frame(width: max(6, geo.size.width * progress))
+                            .frame(width: max(6, geo.size.width * CGFloat(progress)))
                     }
                 }
                 .frame(height: 6)
@@ -139,20 +175,30 @@ struct OnboardingSetupStep: View {
             onFinished()
             return
         }
-        for index in items.indices {
-            try? await Task.sleep(nanoseconds: stepInterval)
-            guard !Task.isCancelled else { return }
+        // One clock, sampled — not a queue of fixed sleeps. Reading real elapsed
+        // time each tick means a late wake-up is absorbed by the next frame
+        // instead of stretching the whole screen, so the 4 s is the 4 s.
+        let started = Date()
+        while true {
+            let elapsed = Date().timeIntervalSince(started)
+            let value = Self.eased(elapsed / Self.totalDuration)
+            let ticked = Self.completedCount(at: value, of: items.count)
             // Committed as the list reaches the lines that describe the writes,
             // so the screen never claims to have done something it has not.
-            if index == 2 { apply() }
-            withAnimation(.easeOut(duration: 0.3)) {
-                completed = index + 1
-                progress = Double(index + 1) / Double(items.count)
+            if ticked >= 3 { apply() }
+            withAnimation(.linear(duration: Double(Self.tickNanoseconds) / 1_000_000_000)) {
+                progress = value
             }
+            if ticked != completed {
+                withAnimation(.easeOut(duration: 0.3)) { completed = ticked }
+            }
+            guard elapsed < Self.totalDuration else { break }
+            try? await Task.sleep(nanoseconds: Self.tickNanoseconds)
+            guard !Task.isCancelled else { return }
         }
+
         apply()   // belt and braces if the list is ever shorter than three
-        try? await Task.sleep(nanoseconds: 420_000_000)
-        guard !Task.isCancelled, !didFinish else { return }
+        guard !didFinish else { return }
         didFinish = true
         onFinished()
     }
