@@ -56,6 +56,15 @@ struct FocusGlobeApp: App {
                 .environmentObject(router)
                 .environmentObject(online)
                 .tint(AppColors.selectionGold)
+                // The chosen language, applied at the window root so every
+                // screen, sheet and cover inherits it — this is the ONE place
+                // the locale is set. `Text` and `NSLocalizedString` resolve
+                // through it, and anything without a matching `.lproj` falls
+                // back to the development language (English) rather than
+                // rendering a raw key. Dates, numbers and durations follow it
+                // too, which is most of what a pilot notices before the strings
+                // are translated.
+                .environment(\.locale, appModel.preferredLocale)
                 // FocusGlobe is dark, always. Forced at the window root so no
                 // screen, sheet or system control can inherit Light — and so it
                 // holds regardless of the device setting.

@@ -52,6 +52,13 @@ struct AppSettings: Codable, Equatable {
     /// 25 and an unanswered 25 are different facts.
     var preferredFlightMinutes: Int? = nil
 
+    /// The language chosen in the Welcome selector, as a BCP-47 code (see
+    /// `FocusLanguage`). Optional, and that distinction carries weight: `nil`
+    /// means "never chose", which is what lets the app open in the device's own
+    /// language. A stored value means the pilot picked, and their pick outranks
+    /// the phone from then on.
+    var preferredLanguageCode: String? = nil
+
     init() {}
 
     static let `default` = AppSettings()
@@ -60,7 +67,7 @@ struct AppSettings: Codable, Equatable {
         case appearance, soundEnabled, hapticsEnabled, mapStyle
         case startingCity, virtualOrigin, previousOrigin
         case selectedSkinID, selectedJourneyAudioID, premiumIntroSeen
-        case preferredFlightMinutes
+        case preferredFlightMinutes, preferredLanguageCode
     }
 
     /// Missing or newly-added preference keys must never reset the rest of a
@@ -79,5 +86,6 @@ struct AppSettings: Codable, Equatable {
         selectedJourneyAudioID = try c.decodeIfPresent(String.self, forKey: .selectedJourneyAudioID)
         premiumIntroSeen = try c.decodeIfPresent(Bool.self, forKey: .premiumIntroSeen)
         preferredFlightMinutes = try? c.decodeIfPresent(Int.self, forKey: .preferredFlightMinutes)
+        preferredLanguageCode = try? c.decodeIfPresent(String.self, forKey: .preferredLanguageCode)
     }
 }

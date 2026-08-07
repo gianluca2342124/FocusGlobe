@@ -1068,6 +1068,26 @@ final class AppModel: ObservableObject {
         return placeCabinItem(item, in: slot)
     }
 
+    // MARK: - Language
+
+    /// The active language. Reads the pilot's choice when they made one, the
+    /// device's own preference when they have not.
+    ///
+    /// There is no third state and no separate "has chosen" flag: `nil` in
+    /// settings IS "never chose". That is why selecting the language the device
+    /// already reports still writes — from then on the choice is theirs and
+    /// survives the phone being switched to something else.
+    var preferredLanguage: FocusLanguage {
+        get {
+            guard let stored = settings.preferredLanguageCode else { return .devicePreferred }
+            return FocusLanguage.resolve(stored)
+        }
+        set { settings.preferredLanguageCode = newValue.code }
+    }
+
+    /// The locale handed to the SwiftUI environment at the app root.
+    var preferredLocale: Locale { Locale(identifier: preferredLanguage.code) }
+
     // MARK: - The canonical name
 
     /// The ONE user-facing name: the Settings Profile field, and the alias

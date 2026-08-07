@@ -76,9 +76,6 @@ struct OnboardingView: View {
     /// The weekdays the pilot plans to fly. Seeded to Mon · Wed · Fri, which is
     /// the three-a-week rhythm the results screen has always assumed.
     @State private var weeklyDays: [FocusWeekday] = FocusWeekday.defaultSchedule
-    /// The language shown in the Welcome selector. Seeded from the bundle's own
-    /// first localization, so it always starts on something real.
-    @State private var languageCode = OnboardingView.availableLanguages.first?.code ?? "en"
     /// Both the paywall's own exit and this view's entitlement observer can
     /// reach `finish()` in the same instant when a purchase lands. Handing off
     /// twice would set the tab and rewrite the profile twice for no reason.
@@ -258,27 +255,36 @@ struct OnboardingView: View {
         }
     }
 
-    /// A real selector over what the bundle actually ships.
+    /// The eleven languages FocusGlobe offers, in `FocusLanguage`'s order.
     ///
-    /// It is built from `Bundle.main.localizations` rather than a hand-written
-    /// list, so it can never offer a language the app cannot switch to — today
-    /// that is English alone, and the menu grows on its own the day a second
-    /// `.lproj` is added. A picker that listed languages nothing could deliver
-    /// would be a decoration, and this screen has no room for one.
+    /// It used to read `Bundle.main.localizations`, which is the wrong source
+    /// for a chooser: an option disappeared the moment its `.lproj` was
+    /// missing, so a half-finished translation bundle silently removed
+    /// languages from the menu. What a pilot may choose is a product decision
+    /// and now lives in one place; what the bundle contains only decides
+    /// whether the strings arrive translated or fall back to English.
+    ///
+    /// Same capsule as before — same radius, padding, opacities and chevron.
+    /// Only what it lists changed.
     private var languageSelector: some View {
         Menu {
-            Picker("Language", selection: $languageCode) {
-                ForEach(Self.availableLanguages, id: \.code) { entry in
-                    Text("\(entry.flag)  \(entry.name)").tag(entry.code)
+            Picker("Language", selection: languageBinding) {
+                ForEach(FocusLanguage.allCases) { language in
+                    Text("\(language.flag)  \(language.nativeName)").tag(language)
                 }
             }
         } label: {
             HStack(spacing: 5) {
-                Text(Self.language(for: languageCode).flag)
+                Text(appModel.preferredLanguage.flag)
                     .font(.system(size: 13))
-                Text(Self.language(for: languageCode).short)
+                Text(appModel.preferredLanguage.shortLabel)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.75))
+                    // 中文 and हिन्दी are wider than "EN"; the capsule stays
+                    // compact by letting the label shrink a little rather than
+                    // by letting the control grow.
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                 Image(systemName: "chevron.down")
                     .font(.system(size: 8, weight: .bold))
                     .foregroundStyle(.white.opacity(0.45))
@@ -289,40 +295,19 @@ struct OnboardingView: View {
             .overlay(Capsule().strokeBorder(.white.opacity(0.13), lineWidth: 1))
         }
         .accessibilityLabel("Language")
-        .accessibilityValue(Self.language(for: languageCode).name)
+        .accessibilityValue(appModel.preferredLanguage.nativeName)
     }
 
-    struct LanguageEntry {
-        let code: String
-        let flag: String
-        let short: String
-        let name: String
-    }
-
-    /// The display names for codes FocusGlobe knows about. Anything the bundle
-    /// carries that is not listed here still appears, using its own code.
-    private static let languageNames: [String: LanguageEntry] = [
-        "en": LanguageEntry(code: "en", flag: "🇺🇸", short: "EN", name: "English"),
-        "es": LanguageEntry(code: "es", flag: "🇪🇸", short: "ES", name: "Español"),
-        "fr": LanguageEntry(code: "fr", flag: "🇫🇷", short: "FR", name: "Français"),
-        "de": LanguageEntry(code: "de", flag: "🇩🇪", short: "DE", name: "Deutsch"),
-        "it": LanguageEntry(code: "it", flag: "🇮🇹", short: "IT", name: "Italiano"),
-        "pt": LanguageEntry(code: "pt", flag: "🇵🇹", short: "PT", name: "Português"),
-    ]
-
-    static let availableLanguages: [LanguageEntry] = {
-        let codes = Bundle.main.localizations
-            .filter { $0 != "Base" }
-            .sorted()
-        let entries = codes.map { language(for: $0) }
-        return entries.isEmpty ? [language(for: "en")] : entries
-    }()
-
-    private static func language(for code: String) -> LanguageEntry {
-        languageNames[code]
-            ?? LanguageEntry(code: code, flag: "🌐", short: code.uppercased(),
-                             name: Locale.current.localizedString(forLanguageCode: code)
-                                 ?? code.uppercased())
+    /// Straight through to the canonical setting — no local `@State` mirror,
+    /// which is what would let the capsule and the stored preference drift.
+    /// Writing on every pick, including a pick that matches what is already
+    /// showing, is deliberate: it turns "the device happens to be French" into
+    /// "this pilot chose French", which then survives the phone changing.
+    private var languageBinding: Binding<FocusLanguage> {
+        Binding(
+            get: { appModel.preferredLanguage },
+            set: { appModel.tapFeedback(); appModel.preferredLanguage = $0 }
+        )
     }
 
     @ViewBuilder private var hero: some View {
