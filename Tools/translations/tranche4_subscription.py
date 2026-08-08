@@ -480,7 +480,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Privacy",
     ],
     "Terms": [
-        "条款", "शर्तें", "Términos", "Conditions", "Nutzungsbedingungen",
+        "条款", "शर्तें", "Términos", "Conditions", "AGB",
         "Условия", "Termos", "Termini", "Termeni", "Voorwaarden",
     ],
 

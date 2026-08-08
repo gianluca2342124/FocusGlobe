@@ -61,9 +61,9 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Bloqueado", "Bloccato", "Blocat", "Vergrendeld",
     ],
     "Owned": [
-        "已拥有", "आपके पास", "En tu colección", "Dans ta collection",
-        "Im Besitz", "В коллекции", "Na sua coleção", "Nella collezione",
-        "În colecție", "In bezit",
+        "已拥有", "आपके पास", "Adquirido", "Acquis",
+        "Gekauft", "Куплено", "Adquirido", "Acquistato",
+        "Achiziționat", "Gekocht",
     ],
     "Occupied": [
         "已占用", "जगह भरी है", "Ocupado", "Occupé", "Belegt", "Занято",
@@ -113,8 +113,8 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Infinito", "Infinito", "Infinit", "Oneindig",
     ],
     "Globe": [
-        "地球", "ग्लोब", "Globo terráqueo", "Globe", "Globus", "Глобус",
-        "Globo", "Globo", "Glob", "Wereldbol",
+        "地球", "ग्लोब", "Globo", "Globe", "Globus", "Глобус",
+        "Globo", "Globo", "Glob", "Globe",
     ],
 
     # ---- Boarding-pass / expedition stamps (uppercase by design) ----------

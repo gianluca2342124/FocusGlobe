@@ -29646,7 +29646,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Globo terráqueo"
+            "value": "Globo"
           }
         },
         "fr": {
@@ -29688,7 +29688,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wereldbol"
+            "value": "Globe"
           }
         }
       },
@@ -42737,49 +42737,49 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "En tu colección"
+            "value": "Adquirido"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dans ta collection"
+            "value": "Acquis"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Im Besitz"
+            "value": "Gekauft"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "В коллекции"
+            "value": "Куплено"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Na sua coleção"
+            "value": "Adquirido"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nella collezione"
+            "value": "Acquistato"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "În colecție"
+            "value": "Achiziționat"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "In bezit"
+            "value": "Gekocht"
           }
         }
       },
@@ -56821,7 +56821,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nutzungsbedingungen"
+            "value": "AGB"
           }
         },
         "ru": {
