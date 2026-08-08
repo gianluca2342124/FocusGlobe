@@ -4154,71 +4154,6 @@
         }
       }
     },
-    "1 selected": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已选择 1 个"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 चुना गया"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 seleccionada"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 sélectionnée"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 ausgewählt"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Выбрано: 1"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 selecionado"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 selezionata"
-          }
-        },
-        "ro": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 selectat"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 geselecteerd"
-          }
-        }
-      }
-    },
     "1 visit": {
       "extractionState": "manual",
       "localizations": {
@@ -8703,7 +8638,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Applaudisseer"
+            "value": "Applaus"
           }
         }
       }
@@ -8833,7 +8768,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Geapplaudisseerd"
+            "value": "Applaus gegeven"
           }
         }
       }
@@ -33474,7 +33409,7 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Intră în zborul lui %@"
+            "value": "Intră în zborul cu %@"
           }
         },
         "nl": {
@@ -37528,7 +37463,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "यहाँ ले जाएँ"
+            "value": "कहाँ ले जाएँ"
           }
         },
         "es": {
@@ -37579,7 +37514,8 @@
             "value": "Verplaats naar"
           }
         }
-      }
+      },
+      "comment": "Section header above the list of cabin slots an item can be MOVED to. A question of destination, not an instruction to move it here — that button is 'Move Here'."
     },
     "Mushroom Lamp": {
       "extractionState": "manual",
@@ -37859,7 +37795,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "El móvil me absorbe"
+            "value": "El teléfono me absorbe"
           }
         },
         "fr": {
@@ -43837,7 +43773,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "यहाँ रखें"
+            "value": "कहाँ रखें"
           }
         },
         "es": {
@@ -43888,7 +43824,8 @@
             "value": "Plaats in"
           }
         }
-      }
+      },
+      "comment": "Section header above the list of cabin slots an item can be placed in. See 'Move to'."
     },
     "Place Item": {
       "extractionState": "manual",
@@ -60573,7 +60510,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "हटाएँ"
+            "value": "उतारें"
           }
         },
         "es": {
@@ -60585,7 +60522,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Retirer"
+            "value": "Enlever"
           }
         },
         "de": {
@@ -60609,7 +60546,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rimuovi"
+            "value": "Togli"
           }
         },
         "ro": {
@@ -65855,7 +65792,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "已准备就绪的主页"
+            "value": "已准备就绪的首页"
           }
         },
         "hi": {
@@ -65879,7 +65816,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dein startbereites Zuhause"
+            "value": "Dein abflugbereiter Startbildschirm"
           }
         },
         "ru": {
@@ -65912,7 +65849,8 @@
             "value": "Je startklare beginscherm"
           }
         }
-      }
+      },
+      "comment": "Setup-checklist line. 'Home' is FocusGlobe's Home TAB — use the same word the tab uses, not the word for a residence."
     },
     "Your local flights, coins and streaks stay on this device. Your online profile remains until you delete it in Settings → Manage Online Data.": {
       "extractionState": "manual",
@@ -70573,6 +70511,222 @@
         }
       },
       "comment": "Duration bucket, 6–12 hours — the Grand Expedition. Use a word that sounds like a major undertaking, not merely 'big'."
+    },
+    "%lld selected": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld selected"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld selected"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "已选择 %lld 个"
+                }
+              }
+            }
+          }
+        },
+        "hi": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld चुना गया"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld चुने गए"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld seleccionada"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld seleccionadas"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld sélectionnée"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld sélectionnées"
+                }
+              }
+            }
+          }
+        },
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld ausgewählt"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld ausgewählt"
+                }
+              }
+            }
+          }
+        },
+        "ru": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Выбрано: %lld"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Выбрано: %lld"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Выбрано: %lld"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Выбрано: %lld"
+                }
+              }
+            }
+          }
+        },
+        "pt-BR": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld selecionado"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld selecionados"
+                }
+              }
+            }
+          }
+        },
+        "it": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld selezionata"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld selezionate"
+                }
+              }
+            }
+          }
+        },
+        "ro": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld selectată"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld selectate"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld selectate"
+                }
+              }
+            }
+          }
+        },
+        "nl": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld geselecteerd"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld geselecteerd"
+                }
+              }
+            }
+          }
+        }
+      },
+      "comment": "How many apps Focus Shield is set to block, under the 'Blocked apps' row. The noun is 'apps' — agree with it."
     }
   },
   "version": "1.0"

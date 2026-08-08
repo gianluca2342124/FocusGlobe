@@ -250,12 +250,15 @@ struct FocusShieldPickerView: View {
             .glassBackground(cornerRadius: AppSpacing.cardRadius)
     }
 
+    /// Already resolved, unlike the other `rowLabel` arguments.
+    ///
+    /// The default branch used to be `"\(n) selected"` — an interpolated
+    /// String, so neither a catalog key nor translatable, and a Spanish pilot
+    /// blocking three apps read "3 selected". One plural covers every count and
+    /// agrees with "apps" in the languages that inflect.
     private func countLabel(_ n: Int) -> String {
-        switch n {
-        case 0:  return "None selected yet"
-        case 1:  return "1 selected"
-        default: return "\(n) selected"
-        }
+        n == 0 ? FocusLocalization.string("None selected yet")
+               : FocusLocalization.string("%lld selected", n)
     }
 }
 

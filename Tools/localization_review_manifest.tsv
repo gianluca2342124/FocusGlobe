@@ -6,45 +6,45 @@
 # Passing localization_audit.py is NOT review; see the script's docstring.
 catalog	area	key	english	context	es	pt-BR	fr	it	de	nl	ru	ro	zh-Hans	hi
 app	flight	%.1f km	%.1f km	Formatters.swift:53	R	R	R	R	R	R	R	R	R	R
-app	extracted	%@ balloon preview	%@ balloon preview		-	-	-	-	-	-	-	-	-	-
-app	extracted	%@ balloon skin. %@	%@ balloon skin. %@		-	-	-	-	-	-	-	-	-	-
-app	extracted	%@ collection	%@ collection		-	-	-	-	-	-	-	-	-	-
-app	extracted	%@ focused	%@ focused		-	-	-	-	-	-	-	-	-	-
-app	extracted	%@ packed — taking off	%@ packed — taking off		-	-	-	-	-	-	-	-	-	-
+app	extracted	%@ balloon preview	%@ balloon preview		R	R	R	R	R	R	R	R	R	R
+app	extracted	%@ balloon skin. %@	%@ balloon skin. %@		R	R	R	R	R	R	R	R	R	R
+app	extracted	%@ collection	%@ collection		R	R	R	R	R	R	R	R	R	R
+app	extracted	%@ focused	%@ focused		R	R	R	R	R	R	R	R	R	R
+app	extracted	%@ packed — taking off	%@ packed — taking off		R	R	R	R	R	R	R	R	R	R
 app	misc	%@, %@, %@	%@, %@, %@		R	R	R	R	R	R	R	R	R	R
 app	misc	%@, %@, %@, premium	%@, %@, %@, premium		R	R	R	R	R	R	R	R	R	R
 app	misc	%@, FocusGlobe PRO	%@, FocusGlobe PRO		R	R	R	R	R	R	R	R	R	R
 app	misc	%@, FocusGlobe PRO, locked	%@, FocusGlobe PRO, locked		R	R	R	R	R	R	R	R	R	R
 app	paywall	%@, billed immediately. Cancel anytime.	%@, billed immediately. Cancel anytime.		R	R	R	R	R	R	R	R	R	R
 app	misc	%@, free	%@, free		R	R	R	R	R	R	R	R	R	R
-app	extracted	%@. %@	%@. %@		-	-	-	-	-	-	-	-	-	-
-app	extracted	%@. %@. %@	%@. %@. %@		-	-	-	-	-	-	-	-	-	-
+app	extracted	%@. %@	%@. %@		R	R	R	R	R	R	R	R	R	R
+app	extracted	%@. %@. %@	%@. %@. %@		R	R	R	R	R	R	R	R	R	R
 app	paywall	%@. Free and PRO.	%@. Free and PRO.		R	R	R	R	R	R	R	R	R	R
 app	paywall	%@. PRO only.	%@. PRO only.		R	R	R	R	R	R	R	R	R	R
 app	paywall	%@/month	%@/month		R	R	R	R	R	R	R	R	R	R
 app	paywall	%@/year	%@/year		R	R	R	R	R	R	R	R	R	R
-app	extracted	%lld Coins	%lld Coins | plural: %lld Coins		-	-	-	-	-	-	-	-	-	-
-app	extracted	%lld Focus Coins	%lld Focus Coins | plural: %lld Focus Coins		-	-	-	-	-	-	-	-	-	-
-app	extracted	%lld Focus Coins. Opens the Store.	%lld Focus Coins. Opens the Store.		-	-	-	-	-	-	-	-	-	-
+app	extracted	%lld Coins	%lld Coins | plural: %lld Coins		R	R	R	R	R	R	R	R	R	R
+app	extracted	%lld Focus Coins	%lld Focus Coins | plural: %lld Focus Coins		R	R	R	R	R	R	R	R	R	R
+app	extracted	%lld Focus Coins. Opens the Store.	%lld Focus Coins. Opens the Store.		R	R	R	R	R	R	R	R	R	R
 app	paywall	%lld day	%lld day | plural: %lld days		R	R	R	R	R	R	R	R	R	R
-app	extracted	%lld day streak	%lld day streak | plural: %lld day streak		-	-	-	-	-	-	-	-	-	-
+app	extracted	%lld day streak	%lld day streak | plural: %lld day streak		R	R	R	R	R	R	R	R	R	R
 app	onboarding-runtime	%lld flights	%lld flights | plural: %lld flights	The plan's target: how many focus flights the pilot's own schedule adds up to over four weeks.	R	R	R	R	R	R	R	R	R	R
-app	extracted	%lld focus days	%lld focus days | plural: %lld focus days		-	-	-	-	-	-	-	-	-	-
-app	extracted	%lld focusing now	%lld focusing now | plural: %lld focusing now		-	-	-	-	-	-	-	-	-	-
+app	extracted	%lld focus days	%lld focus days | plural: %lld focus days		R	R	R	R	R	R	R	R	R	R
+app	extracted	%lld focusing now	%lld focusing now | plural: %lld focusing now		R	R	R	R	R	R	R	R	R	R
 app	onboarding-runtime	%lld min	%lld min	Compact session length, e.g. under 60 minutes. Abbreviate the way a clock or timer does in your language.	R	R	R	R	R	R	R	R	R	R
-app	extracted	%lld minutes	%lld minutes | plural: %lld minutes		-	-	-	-	-	-	-	-	-	-
+app	extracted	%lld minutes	%lld minutes | plural: %lld minutes		R	R	R	R	R	R	R	R	R	R
 app	paywall	%lld month	%lld month | plural: %lld months		R	R	R	R	R	R	R	R	R	R
+app	app-chrome	%lld selected	%lld selected | plural: %lld selected	How many apps Focus Shield is set to block, under the 'Blocked apps' row. The noun is 'apps' — agree with it.	R	R	R	R	R	R	R	R	R	R
 app	paywall	%lld week	%lld week | plural: %lld weeks		R	R	R	R	R	R	R	R	R	R
 app	paywall	%lld year	%lld year | plural: %lld years		R	R	R	R	R	R	R	R	R	R
-app	extracted	%lld-day streak	%lld-day streak | plural: %lld-day streak		-	-	-	-	-	-	-	-	-	-
+app	extracted	%lld-day streak	%lld-day streak | plural: %lld-day streak		R	R	R	R	R	R	R	R	R	R
 app	onboarding-runtime	%lldh	%lldh	Compact session length, whole hours.	R	R	R	R	R	R	R	R	R	R
 app	flight	%lldh %02lldm	%lldh %02lldm	Formatters.swift:27	R	R	R	R	R	R	R	R	R	R
 app	onboarding-runtime	%lldh %lldm	%lldh %lldm	Compact session length, hours and minutes.	R	R	R	R	R	R	R	R	R	R
 app	paywall	+ Unlock so much more with PRO	+ Unlock so much more with PRO	PaywallView.swift:180	R	R	R	R	R	R	R	R	R	R
-app	extracted	+%lld Coins	+%lld Coins | plural: +%lld Coins		-	-	-	-	-	-	-	-	-	-
+app	extracted	+%lld Coins	+%lld Coins | plural: +%lld Coins		R	R	R	R	R	R	R	R	R	R
 app	passport	1 Hour Focused	1 Hour Focused	PassportView.swift:476	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	1 selected	1 selected	FocusShieldPickerView.swift:256	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	1 visit	1 visit	VisitedPlaces.swift:58	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	1 visit	1 visit	VisitedPlaces.swift:58	R	R	R	R	R	R	R	R	R	R
 app	passport	1,000 Focus Minutes	1,000 Focus Minutes	PassportView.swift:488	R	R	R	R	R	R	R	R	R	R
 app	passport	10 Flights	10 Flights	PassportView.swift:480	R	R	R	R	R	R	R	R	R	R
 app	passport	100 Focus Minutes	100 Focus Minutes	PassportView.swift:484	R	R	R	R	R	R	R	R	R	R
@@ -70,12 +70,12 @@ app	notifications	A 20-minute expedition is enough to protect your streak.	A 20-
 app	names	A Sky made for deep work	A Sky made for deep work	HomeView.swift:974	R	R	R	R	R	R	R	R	R	R
 app	store-items	A cabin companion	A cabin companion	StoreItem.swift:459	R	R	R	R	R	R	R	R	R	R
 app	content	A calm Japanese evening — lantern glow and quiet temple roofs below.	A calm Japanese evening — lantern glow and quiet temple roofs below.	FocusSky.swift:265	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	A calm atmosphere for focus.	A calm atmosphere for focus.	OnboardingView.swift:921	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	A calm atmosphere for focus.	A calm atmosphere for focus.	OnboardingView.swift:921	R	R	R	R	R	R	R	R	R	R
 app	store-items	A calm co-pilot	A calm co-pilot	StoreItem.swift:454	R	R	R	R	R	R	R	R	R	R
 app	onboarding	A calmer way to focus, one flight at a time.	A calmer way to focus, one flight at a time.	OnboardingView.swift:208	R	R	R	R	R	R	R	R	R	R
 app	store-items	A cool companion for long flights	A cool companion for long flights	StoreItem.swift:421	R	R	R	R	R	R	R	R	R	R
 app	store-items	A cozy pool of light	A cozy pool of light	StoreItem.swift:494	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	A distraction-free session	A distraction-free session	OnboardingView.swift:609	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	A distraction-free session	A distraction-free session	OnboardingView.swift:609	R	R	R	R	R	R	R	R	R	R
 app	onboarding	A finish line every flight	A finish line every flight	OnboardingPlanScreens.swift:1164	R	R	R	R	R	R	R	R	R	R
 app	notifications	A gift is waiting in FocusGlobe	A gift is waiting in FocusGlobe	NotificationService.swift:244	R	R	R	R	R	R	R	R	R	R
 app	store-items	A layered little lift	A layered little lift	StoreItem.swift:470	R	R	R	R	R	R	R	R	R	R
@@ -83,7 +83,7 @@ app	store-items	A little seasonal cheer	A little seasonal cheer	StoreItem.swift:
 app	notifications	A new expedition is waiting	A new expedition is waiting	NotificationService.swift:267	R	R	R	R	R	R	R	R	R	R
 app	notifications	A new expedition is waiting when you are.	A new expedition is waiting when you are.	NotificationService.swift:364	R	R	R	R	R	R	R	R	R	R
 app	misc	A quiet Kyoto evening	A quiet Kyoto evening	HomeView.swift:964	R	R	R	R	R	R	R	R	R	R
-app	extracted	A quiet flight is one tap away.	A quiet flight is one tap away.	WidgetGallery.swift:378	-	-	-	-	-	-	-	-	-	-
+app	extracted	A quiet flight is one tap away.	A quiet flight is one tap away.	WidgetGallery.swift:378	R	R	R	R	R	R	R	R	R	R
 app	online	A quiet sky today — clear air ahead	A quiet sky today — clear air ahead	OnlineJoiningView.swift:84	R	R	R	R	R	R	R	R	R	R
 app	store-items	A restrained glint overhead	A restrained glint overhead	StoreItem.swift:530	R	R	R	R	R	R	R	R	R	R
 app	store-items	A softer place to land	A softer place to land	StoreItem.swift:524	R	R	R	R	R	R	R	R	R	R
@@ -91,7 +91,7 @@ app	misc	A vast night made for depth	A vast night made for depth	HomeView.swift:
 app	content	A vast, silent desert night under a star-heavy sky.	A vast, silent desert night under a star-heavy sky.	FocusSky.swift:242	R	R	R	R	R	R	R	R	R	R
 app	store-items	A view for the wall	A view for the wall	StoreItem.swift:438	R	R	R	R	R	R	R	R	R	R
 app	content	A world of focus	A world of focus	BalloonSkin.swift:123	R	R	R	R	R	R	R	R	R	R
-app	extracted	AD	AD	LandingView.swift:198	-	-	-	-	-	-	-	-	-	-
+app	extracted	AD	AD	LandingView.swift:198	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Accept crew request	Accept crew request	FriendsView.swift:262	R	R	R	R	R	R	R	R	R	R
 app	names	Account	Account	OnlineFriendsSettingsSection.swift:59	R	R	R	R	R	R	R	R	R	R
 app	online	Active Flights	Active Flights	FriendsView.swift:358	R	R	R	R	R	R	R	R	R	R
@@ -102,7 +102,7 @@ app	store-passport-friends-settings	All done	All done	PassportView.swift:319	R	R
 app	store-passport-friends-settings	Allow Friend Requests	Allow Friend Requests	OnlineFriendsSettingsSection.swift:71	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Allow pilots you meet to send you a Crew request.	Allow pilots you meet to send you a Crew request.	OnlineFriendsSettingsSection.swift:72	R	R	R	R	R	R	R	R	R	R
 app	flight	Almost there — keep going	Almost there — keep going	JourneyPhase.swift:47	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Alpha Waves	Alpha Waves	JourneyAudioOption.swift:78	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Alpha Waves	Alpha Waves	JourneyAudioOption.swift:78	R	R	R	R	R	R	R	R	R	R
 app	passport	Alpine Pilot	Alpine Pilot	PassportView.swift:513	R	R	R	R	R	R	R	R	R	R
 app	online	Already applauded	Already applauded	PilotProfileSheet.swift:211	R	R	R	R	R	R	R	R	R	R
 app	onboarding	Already have an account?	Already have an account?	OnboardingView.swift:225	R	R	R	R	R	R	R	R	R	R
@@ -110,10 +110,10 @@ app	store-items	Amber calm without a flame	Amber calm without a flame	StoreItem.
 app	store-passport-friends-settings	Ambient audio during your flights	Ambient audio during your flights	SettingsView.swift:289	R	R	R	R	R	R	R	R	R	R
 app	paywall	Annually	Annually	SubscriptionManager.swift:47	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Appear in Public Skies	Appear in Public Skies	OnlineFriendsSettingsSection.swift:66	R	R	R	R	R	R	R	R	R	R
-app	extracted	Applaud	Applaud	PilotProfileSheet.swift:201	-	-	-	-	-	-	-	-	-	-
+app	extracted	Applaud	Applaud	PilotProfileSheet.swift:201	R	R	R	R	R	R	R	R	R	R
 app	online	Applaud this pilot	Applaud this pilot	PilotProfileSheet.swift:211	R	R	R	R	R	R	R	R	R	R
-app	extracted	Applauded	Applauded	PilotProfileSheet.swift:201	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	Apps aren't blocked right now.	Apps aren't blocked right now.	FocusShieldPickerView.swift:144	-	-	-	-	-	-	-	-	-	-
+app	extracted	Applauded	Applauded	PilotProfileSheet.swift:201	R	R	R	R	R	R	R	R	R	R
+app	app-chrome	Apps aren't blocked right now.	Apps aren't blocked right now.	FocusShieldPickerView.swift:144	R	R	R	R	R	R	R	R	R	R
 app	onboarding	Atmosphere	Atmosphere	OnboardingPlanScreens.swift:1132	R	R	R	R	R	R	R	R	R	R
 app	onboarding-runtime	Aurora	Aurora	Journey character chip — the northern lights.	R	R	R	R	R	R	R	R	R	R
 app	content	Aurora Airship	Aurora Airship	Vehicle.swift:32	R	R	R	R	R	R	R	R	R	R
@@ -129,51 +129,51 @@ app	passport	Become a FocusGlobe PRO member.	Become a FocusGlobe PRO member.	Pas
 app	onboarding	Begin	Begin	OnboardingView.swift:218	R	R	R	R	R	R	R	R	R	R
 app	content	Bench · Center	Bench · Center	StoreItem.swift:49	R	R	R	R	R	R	R	R	R	R
 app	content	Bench · Left	Bench · Left	StoreItem.swift:48	R	R	R	R	R	R	R	R	R	R
-app	extracted	Best %lld days	Best %lld days		-	-	-	-	-	-	-	-	-	-
+app	extracted	Best %lld days	Best %lld days		R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Best focus	Best focus	PassportView.swift:264	R	R	R	R	R	R	R	R	R	R
 app	paywall	Billed immediately. Cancel anytime.	Billed immediately. Cancel anytime.	PaywallView.swift:514	R	R	R	R	R	R	R	R	R	R
 app	paywall	Billed yearly	Billed yearly	PaywallView.swift:503	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Billing, restore & support	Billing, restore & support	SettingsView.swift:316	R	R	R	R	R	R	R	R	R	R
-app	extracted	Block	Block	Block another pilot in Online, not blocking apps.	-	-	-	-	-	-	-	-	-	-
+app	extracted	Block	Block	Block another pilot in Online, not blocking apps.	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Block apps during flights	Block apps during flights	FocusShieldPickerView.swift:112	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Block apps until landing	Block apps until landing	FocusShieldPickerView.swift:77	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Block apps until landing	Block apps until landing	FocusShieldPickerView.swift:77	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Block distracting apps	Block distracting apps	FlightSetup.swift:1241	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Block distracting apps during flights	Block distracting apps during flights	FocusShieldSettingsSection.swift:20	R	R	R	R	R	R	R	R	R	R
 app	onboarding	Block distracting apps in Focus Shield	Block distracting apps in Focus Shield	OnboardingPlanScreens.swift:1148	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Block distractions	Block distractions	FocusShieldBoardingRow.swift:74	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Block distractions	Block distractions	FocusShieldBoardingRow.swift:74	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Block distractions during flights	Block distractions during flights	FocusShieldPickerView.swift:77	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Block this pilot?	Block this pilot?	PilotProfileSheet.swift:124	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Blocked apps	Blocked apps	FocusShieldPickerView.swift:124	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Blocked apps stay locked until you land.	Blocked apps stay locked until you land.	FocusShieldPickerView.swift:113	R	R	R	R	R	R	R	R	R	R
 app	home-flight	Board the balloon	Board the balloon	PreBoardingFocusView.swift:258	R	R	R	R	R	R	R	R	R	R
-app	extracted	Boarding pass. Focus flight to %@, %@. %@	Boarding pass. Focus flight to %@, %@. %@		-	-	-	-	-	-	-	-	-	-
+app	extracted	Boarding pass. Focus flight to %@, %@. %@	Boarding pass. Focus flight to %@, %@. %@		R	R	R	R	R	R	R	R	R	R
 app	content	Bright and bold	Bright and bold	BalloonSkin.swift:108	R	R	R	R	R	R	R	R	R	R
 app	paywall	Bring Your Crew	Bring Your Crew	AppRouter.swift:320	R	R	R	R	R	R	R	R	R	R
 app	home-flight	Bringing aboard	Bringing aboard	BoardingView.swift:331	R	R	R	R	R	R	R	R	R	R
 app	flight	Bringing you down gently	Bringing you down gently	JourneyPhase.swift:48	R	R	R	R	R	R	R	R	R	R
-app	extracted	Buy %@ for %lld Focus Coins	Buy %@ for %lld Focus Coins		-	-	-	-	-	-	-	-	-	-
+app	extracted	Buy %@ for %lld Focus Coins	Buy %@ for %lld Focus Coins		R	R	R	R	R	R	R	R	R	R
 app	paywall	CABIN ITEM	CABIN ITEM	PaywallView.swift:1097	R	R	R	R	R	R	R	R	R	R
 app	flight	CHECK IN	CHECK IN	FlightSetup.swift:1677	R	R	R	R	R	R	R	R	R	R
 app	passport	Cabin Decorator	Cabin Decorator	PassportView.swift:519	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Cabin full — remove one to place this	Cabin full — remove one to place this	StoreView.swift:293	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Cabin full — remove one to place this	Cabin full — remove one to place this	StoreView.swift:293	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Cabin interior preview	Cabin interior preview	StoreView.swift:193	R	R	R	R	R	R	R	R	R	R
 app	flight	Cabin view	Cabin view	FocusSessionView.swift:1219	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Cached online data on this device	Cached online data on this device	SettingsView.swift:568	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Cached online data on this device	Cached online data on this device	SettingsView.swift:568	R	R	R	R	R	R	R	R	R	R
 app	onboarding-runtime	Calm	Calm	Journey character chip — stillness. A noun, not 'stay calm'.	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Calm ambience to settle the mind.	Calm ambience to settle the mind.	OnboardingView.swift:919	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Calm ambience to settle the mind.	Calm ambience to settle the mind.	OnboardingView.swift:919	R	R	R	R	R	R	R	R	R	R
 app	onboarding	Cancel	Cancel	FriendsView.swift:173	R	R	R	R	R	R	R	R	R	R
-app	extracted	Cancelled	Cancelled	HistoryView.swift:107	-	-	-	-	-	-	-	-	-	-
+app	extracted	Cancelled	Cancelled	HistoryView.swift:107	R	R	R	R	R	R	R	R	R	R
 app	store-items	Candle Warmer Lamp	Candle Warmer Lamp	StoreItem.swift:487	R	R	R	R	R	R	R	R	R	R
 app	store-items	Celestial calm above you	Celestial calm above you	StoreItem.swift:536	R	R	R	R	R	R	R	R	R	R
 app	store-items	Ceramic Teapot	Ceramic Teapot	CabinView.swift:790	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Change blocked apps	Change blocked apps	FocusShieldPickerView.swift:126	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	Changes apply immediately.	Changes apply immediately.	FocusShieldPickerView.swift:143	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Change blocked apps	Change blocked apps	FocusShieldPickerView.swift:126	R	R	R	R	R	R	R	R	R	R
+app	app-chrome	Changes apply immediately.	Changes apply immediately.	FocusShieldPickerView.swift:143	R	R	R	R	R	R	R	R	R	R
 app	home-flight	Chart your course	Chart your course	RouteSelectionView.swift:129	R	R	R	R	R	R	R	R	R	R
 app	home-flight	Check in	Check in	FlightSetup.swift:367	R	R	R	R	R	R	R	R	R	R
 app	flight	Checked in.	Checked in.	FlightSetup.swift:1549	R	R	R	R	R	R	R	R	R	R
 app	home-flight	Checking FocusGlobe PRO access	Checking FocusGlobe PRO access	HomeView.swift:853	R	R	R	R	R	R	R	R	R	R
 app	home-flight	Checking PRO access…	Checking PRO access…	HomeView.swift:632	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Checking access…	Checking access…	StoreView.swift:259	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Checking access…	Checking access…	StoreView.swift:259	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Checking your membership…	Checking your membership…	OnlineFriendsSettingsSection.swift:115	R	R	R	R	R	R	R	R	R	R
 app	passport	Choose a size, then tap Add Widget.	Choose a size, then tap Add Widget.	WidgetGallery.swift:423	R	R	R	R	R	R	R	R	R	R
 app	home-flight	Choose a starting city to begin exploring.	Choose a starting city to begin exploring.	RouteSelectionView.swift:243	R	R	R	R	R	R	R	R	R	R
@@ -187,7 +187,7 @@ app	store-passport-friends-settings	Choose your Flight	Choose your Flight	Flight
 app	flight	Choose your time	Choose your time	FlightSetup.swift:365	R	R	R	R	R	R	R	R	R	R
 app	onboarding-runtime	City	City	Journey character chip.	R	R	R	R	R	R	R	R	R	R
 app	content	City Sky	City Sky	FocusSky.swift:264	R	R	R	R	R	R	R	R	R	R
-app	extracted	Claim +%lld Focus Coins	Claim +%lld Focus Coins | plural: Claim +%lld Focus Coins		-	-	-	-	-	-	-	-	-	-
+app	extracted	Claim +%lld Focus Coins	Claim +%lld Focus Coins | plural: Claim +%lld Focus Coins		R	R	R	R	R	R	R	R	R	R
 app	content	Classic Balloon	Classic Balloon	Vehicle.swift:26	R	R	R	R	R	R	R	R	R	R
 app	home-flight	Clean mode	Clean mode	FocusSessionView.swift:1240	R	R	R	R	R	R	R	R	R	R
 app	onboarding	Close	Close	HomeView.swift:807	R	R	R	R	R	R	R	R	R	R
@@ -196,7 +196,7 @@ app	store-items	Cloud Pillow	Cloud Pillow	StoreItem.swift:523	R	R	R	R	R	R	R	R	R	
 app	onboarding-runtime	Clouds	Clouds	Journey character chip.	R	R	R	R	R	R	R	R	R	R
 app	names	Cloudship	Cloudship	Vehicle.swift:35	R	R	R	R	R	R	R	R	R	R
 app	names	Cloudy	Cloudy	BalloonSkin.swift:132	R	R	R	R	R	R	R	R	R	R
-app	extracted	Coins	Coins	Focus Coins — FocusGlobe's in-app currency. Never real money.	-	-	-	-	-	-	-	-	-	-
+app	extracted	Coins	Coins	Focus Coins — FocusGlobe's in-app currency. Never real money.	R	R	R	R	R	R	R	R	R	R
 app	home-flight	Coins Boost Gifted	Coins Boost Gifted	CoinRewardsView.swift:344	R	R	R	R	R	R	R	R	R	R
 app	home-flight	Coins Boost active: double coins on your next flight.	Coins Boost active: double coins on your next flight.	CoinRewardsView.swift:473	R	R	R	R	R	R	R	R	R	R
 app	home-flight	Coins doubled	Coins doubled	LandingView.swift:178	R	R	R	R	R	R	R	R	R	R
@@ -204,7 +204,7 @@ app	flight	Coins ×2	Coins ×2	LandingView.swift:121	R	R	R	R	R	R	R	R	R	R
 app	names	Collect	Collect	StoreView.swift:1053	R	R	R	R	R	R	R	R	R	R
 app	notifications	Come back for one calm focus trip.	Come back for one calm focus trip.	NotificationService.swift:363	R	R	R	R	R	R	R	R	R	R
 app	passport	Comeback Pilot	Comeback Pilot	PassportView.swift:527	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Coming soon ✨	Coming soon ✨	FocusShieldSettingsSection.swift:117	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Coming soon ✨	Coming soon ✨	FocusShieldSettingsSection.swift:117	R	R	R	R	R	R	R	R	R	R
 app	passport	Complete a flight early in the morning (before 8 am).	Complete a flight early in the morning (before 8 am).	PassportView.swift:499	R	R	R	R	R	R	R	R	R	R
 app	passport	Complete a flight late at night (after 10 pm).	Complete a flight late at night (after 10 pm).	PassportView.swift:497	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Complete a flight to earn your first stamp.	Complete a flight to earn your first stamp.	PassportView.swift:437	R	R	R	R	R	R	R	R	R	R
@@ -215,7 +215,7 @@ app	passport	Complete ten focus flights.	Complete ten focus flights.	PassportVie
 app	passport	Complete twenty-five focus flights.	Complete twenty-five focus flights.	PassportView.swift:483	R	R	R	R	R	R	R	R	R	R
 app	home-flight	Complete your first expedition and it will appear here.	Complete your first expedition and it will appear here.	HistoryView.swift:39	R	R	R	R	R	R	R	R	R	R
 app	passport	Complete your very first focus flight.	Complete your very first focus flight.	PassportView.swift:472	R	R	R	R	R	R	R	R	R	R
-app	extracted	Completed focus flights from now to %@	Completed focus flights from now to %@		-	-	-	-	-	-	-	-	-	-
+app	extracted	Completed focus flights from now to %@	Completed focus flights from now to %@		R	R	R	R	R	R	R	R	R	R
 app	onboarding	Completed focus flights, if you keep this rhythm	Completed focus flights, if you keep this rhythm	OnboardingPlanScreens.swift:365	R	R	R	R	R	R	R	R	R	R
 app	online	Connect to the internet to change your name.	Connect to the internet to change your name.	SettingsView.swift:248	R	R	R	R	R	R	R	R	R	R
 app	online	Connection unavailable — try again.	Connection unavailable — try again.	PilotProfileSheet.swift:192	R	R	R	R	R	R	R	R	R	R
@@ -242,16 +242,16 @@ app	online	Creating your link…	Creating your link…	FocusSessionView.swift:13
 app	store-passport-friends-settings	Creating your private room…	Creating your private room…	InvitePeopleView.swift:52	R	R	R	R	R	R	R	R	R	R
 app	flight	Crew flight	Crew flight	FlightSetup.swift:1494	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Crew member	Crew member	FriendsView.swift:328	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Crew requests, responses & connections	Crew requests, responses & connections	SettingsView.swift:566	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Crew requests, responses & connections	Crew requests, responses & connections	SettingsView.swift:566	R	R	R	R	R	R	R	R	R	R
 app	misc	Crisp mountain air for focus	Crisp mountain air for focus	HomeView.swift:967	R	R	R	R	R	R	R	R	R	R
-app	extracted	Current	Current	Marks the Cabin slot an item currently occupies. The noun is the slot/placement, not the streak.	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	Current Location	Current Location	LocationService.swift:128	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	Current position	Current position	StoreView.swift:774	-	-	-	-	-	-	-	-	-	-
+app	extracted	Current	Current	Marks the Cabin slot an item currently occupies. The noun is the slot/placement, not the streak.	R	R	R	R	R	R	R	R	R	R
+app	app-chrome	Current Location	Current Location	LocationService.swift:128	R	R	R	R	R	R	R	R	R	R
+app	app-chrome	Current position	Current position	StoreView.swift:774	R	R	R	R	R	R	R	R	R	R
 app	content	Curtains of green and violet breathing over silent snow.	Curtains of green and violet breathing over silent snow.	FocusSky.swift:272	R	R	R	R	R	R	R	R	R	R
 app	use-site-review	DATE	DATE	FlightSetup.swift:1663	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Daily Gift	Daily Gift	StoreView.swift:1037	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Daily bonus claimed — see you tomorrow.	Daily bonus claimed — see you tomorrow.	PassportView.swift:353	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Dark Earth	Dark Earth	FocusSessionViewModel.swift:19	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Dark Earth	Dark Earth	FocusSessionViewModel.swift:19	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Day streak	Day streak		R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Decline crew request	Decline crew request	FriendsView.swift:250	R	R	R	R	R	R	R	R	R	R
 app	onboarding-runtime	Deep	Deep	Duration bucket, 45–90 minutes.	R	R	R	R	R	R	R	R	R	R
@@ -259,17 +259,17 @@ app	content	Deep Space	Deep Space	PassportView.swift:515	R	R	R	R	R	R	R	R	R	R
 app	passport	Deep Space Pilot	Deep Space Pilot	PassportView.swift:515	R	R	R	R	R	R	R	R	R	R
 app	names	Default	Default	BalloonSkin.swift:69	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Default blocked apps	Default blocked apps	FocusShieldSettingsSection.swift:30	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Delete Online Data	Delete Online Data	SettingsView.swift:609	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Delete Online Data	Delete Online Data	SettingsView.swift:609	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Delete Online Data?	Delete Online Data?	SettingsView.swift:630	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Delete online data	Delete online data	SettingsView.swift:631	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Delete your FocusGlobe Online data	Delete your FocusGlobe Online data	SettingsView.swift:577	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Deletes flights, coins, streaks, unlocks and your profile on this device. The app returns to first launch.	Deletes flights, coins, streaks, unlocks and your profile on this device. The app returns to first launch.	SettingsView.swift:523	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Deleting removes the following from FocusGlobe Online:	Deleting removes the following from FocusGlobe Online:	SettingsView.swift:581	R	R	R	R	R	R	R	R	R	R
-app	extracted	Deleting…	Deleting…	SettingsView.swift:609	-	-	-	-	-	-	-	-	-	-
+app	extracted	Deleting…	Deleting…	SettingsView.swift:609	R	R	R	R	R	R	R	R	R	R
 app	content	Desert Night	Desert Night	PassportView.swift:511	R	R	R	R	R	R	R	R	R	R
 app	passport	Desert Stargazer	Desert Stargazer	PassportView.swift:510	R	R	R	R	R	R	R	R	R	R
-app	extracted	Destination	Destination	The city a focus flight is heading to.	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	Detect where you are	Detect where you are	LocationPickerView.swift:117	-	-	-	-	-	-	-	-	-	-
+app	extracted	Destination	Destination	The city a focus flight is heading to.	R	R	R	R	R	R	R	R	R	R
+app	app-chrome	Detect where you are	Detect where you are	LocationPickerView.swift:117	R	R	R	R	R	R	R	R	R	R
 app	names	Developer	Developer	SettingsView.swift:487	R	R	R	R	R	R	R	R	R	R
 app	store-items	Digital Flip Clock	Digital Flip Clock	StoreItem.swift:505	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Disable for this flight	Disable for this flight	FocusShieldPickerView.swift:13	R	R	R	R	R	R	R	R	R	R
@@ -283,31 +283,31 @@ app	home-flight	Double your Coins for your next study hour once equipped.	Double
 app	home-flight	Double-tap to seal the page and begin the expedition	Double-tap to seal the page and begin the expedition	BoardingView.swift:129	R	R	R	R	R	R	R	R	R	R
 app	misc	Drift through falling starlight	Drift through falling starlight	HomeView.swift:969	R	R	R	R	R	R	R	R	R	R
 app	content	Drifts on mist	Drifts on mist	Vehicle.swift:36	R	R	R	R	R	R	R	R	R	R
-app	extracted	EARNINGS	EARNINGS	CoinRewardsView.swift:415	-	-	-	-	-	-	-	-	-	-
+app	extracted	EARNINGS	EARNINGS	CoinRewardsView.swift:415	R	R	R	R	R	R	R	R	R	R
 app	use-site-review	ENDLESS	ENDLESS	FlightSetup.swift:630	R	R	R	R	R	R	R	R	R	R
 app	paywall	EXCLUSIVE SKY	EXCLUSIVE SKY	PaywallView.swift:1094	R	R	R	R	R	R	R	R	R	R
-app	extracted	EXPEDITION	EXPEDITION	BoardingView.swift:284	-	-	-	-	-	-	-	-	-	-
+app	extracted	EXPEDITION	EXPEDITION	BoardingView.swift:284	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Each link admits one new pilot, then expires — share a fresh one per friend. Copy Link lives inside the share sheet.	Each link admits one new pilot, then expires — share a fresh one per friend. Copy Link lives inside the share sheet.	InvitePeopleView.swift:240	R	R	R	R	R	R	R	R	R	R
 app	passport	Early Bird	Early Bird	PassportView.swift:498	R	R	R	R	R	R	R	R	R	R
 app	flight	Earn 10 Focus Coins	Earn 10 Focus Coins	AppModel.swift:1692	R	R	R	R	R	R	R	R	R	R
 app	passport	Earn 100 Focus Coins from your flights.	Earn 100 Focus Coins from your flights.	PassportView.swift:518	R	R	R	R	R	R	R	R	R	R
 app	paywall	Earn 2× Coins	Earn 2× Coins	AppRouter.swift:297	R	R	R	R	R	R	R	R	R	R
-app	extracted	Earned	Earned	PassportView.swift:668	-	-	-	-	-	-	-	-	-	-
+app	extracted	Earned	Earned	PassportView.swift:668	R	R	R	R	R	R	R	R	R	R
 app	names	Earth	Earth	BalloonSkin.swift:122	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Easy late-night jazz for long flights.	Easy late-night jazz for long flights.	OnboardingView.swift:920	-	-	-	-	-	-	-	-	-	-
-app	extracted	Edit	Edit	FlightSetup.swift:1465	-	-	-	-	-	-	-	-	-	-
-app	extracted	Edit %@	Edit %@	OnboardingPlanScreens.swift:459	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Easy late-night jazz for long flights.	Easy late-night jazz for long flights.	OnboardingView.swift:920	R	R	R	R	R	R	R	R	R	R
+app	extracted	Edit	Edit	FlightSetup.swift:1465	R	R	R	R	R	R	R	R	R	R
+app	extracted	Edit %@	Edit %@	OnboardingPlanScreens.swift:459	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Edit name	Edit name	SettingsView.swift:194	R	R	R	R	R	R	R	R	R	R
 app	names	Emoji	Emoji	BalloonSkin.swift:113	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Enable Focus Shield	Enable Focus Shield	FocusShieldPickerView.swift:165	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Enable in Settings	Enable in Settings	FocusShieldBoardingRow.swift:72	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Enable in Settings	Enable in Settings	FocusShieldBoardingRow.swift:72	R	R	R	R	R	R	R	R	R	R
 app	flight	Endless flight	Endless flight	FlightSetup.swift:637	R	R	R	R	R	R	R	R	R	R
 app	home-flight	Ends this flight now. Its progress and rewards are not kept.	Ends this flight now. Its progress and rewards are not kept.	LeaveFlightConfirmation.swift:136	R	R	R	R	R	R	R	R	R	R
 app	paywall	Enjoy all PRO features and content	Enjoy all PRO features and content	PaywallView.swift:1364	R	R	R	R	R	R	R	R	R	R
 app	use-site-review	Equip	Equip	Button: start using this balloon skin.	R	R	R	R	R	R	R	R	R	R
 app	use-site-review	Equipped	Equipped	State: this balloon skin is the one in use.	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Erase everything	Erase everything	SettingsView.swift:518	R	R	R	R	R	R	R	R	R	R
-app	extracted	Estimated flight · %@	Estimated flight · %@		-	-	-	-	-	-	-	-	-	-
+app	extracted	Estimated flight · %@	Estimated flight · %@		R	R	R	R	R	R	R	R	R	R
 app	home-flight	Every expedition you've taken	Every expedition you've taken	HistoryView.swift:12	R	R	R	R	R	R	R	R	R	R
 app	home-flight	Every gold square is a day you truly focused. Keep the sky lit.	Every gold square is a day you truly focused. Keep the sky lit.	StreakDetailsView.swift:92	R	R	R	R	R	R	R	R	R	R
 app	paywall	Exclusive Skies	Exclusive Skies	AppRouter.swift:417	R	R	R	R	R	R	R	R	R	R
@@ -337,7 +337,7 @@ app	passport	Finish a single focus flight of 25 minutes or more.	Finish a single
 app	online	Finishing your online profile — please try again in a moment.	Finishing your online profile — please try again in a moment.	OnlineError.swift:33	R	R	R	R	R	R	R	R	R	R
 app	passport	First Flight	First Flight	PassportView.swift:471	R	R	R	R	R	R	R	R	R	R
 app	onboarding	First flight	First flight	OnboardingPlanScreens.swift:1130	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	First flight length	First flight length	FlightSetup.swift:404	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	First flight length	First flight length	FlightSetup.swift:404	R	R	R	R	R	R	R	R	R	R
 app	home-flight	Flight Mode	Flight Mode	FlightSetup.swift:177	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Flight Participants	Flight Participants	OnlineLobbyView.swift:60	R	R	R	R	R	R	R	R	R	R
 app	passport	Flight ambience	Flight ambience	PassportView.swift:570	R	R	R	R	R	R	R	R	R	R
@@ -358,7 +358,7 @@ app	store-passport-friends-settings	Fly together — earn 2×	Fly together — e
 app	store-passport-friends-settings	Fly with a friend to earn 2× Focus Coins.	Fly with a friend to earn 2× Focus Coins.	FriendsView.swift:429	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Fly with other pilots — you appear only as an anonymous alias	Fly with other pilots — you appear only as an anonymous alias	OnlineFriendsSettingsSection.swift:49	R	R	R	R	R	R	R	R	R	R
 app	online	Fly with others	Fly with others	OnlineSignInView.swift:30	R	R	R	R	R	R	R	R	R	R
-app	extracted	Flying	Flying	Badge on the balloon skin the pilot has EQUIPPED — 'in use', not 'in flight'. Shown only when equipped.	-	-	-	-	-	-	-	-	-	-
+app	extracted	Flying	Flying	Badge on the balloon skin the pilot has EQUIPPED — 'in use', not 'in flight'. Shown only when equipped.	R	R	R	R	R	R	R	R	R	R
 app	onboarding	Focus	Focus	AppLogo.swift:52	R	R	R	R	R	R	R	R	R	R
 app	names	Focus %lld minutes to unlock %@ — free, just keep flying.	Focus %lld minutes to unlock %@ — free, just keep flying. | plural: Focus %1$lld minutes to unlock %2$@ — free, just keep flying.		R	R	R	R	R	R	R	R	R	R
 app	flight	Focus 30 minutes	Focus 30 minutes	AppModel.swift:1687	R	R	R	R	R	R	R	R	R	R
@@ -368,13 +368,13 @@ app	store-passport-friends-settings	Focus Coins earned	Focus Coins earned	Passpo
 app	passport	Focus Consistency	Focus Consistency	PassportView.swift:94	R	R	R	R	R	R	R	R	R	R
 app	flight	Focus Flight	Focus Flight	FocusSessionRecord.swift:89	R	R	R	R	R	R	R	R	R	R
 app	names	Focus Grid	Focus Grid	WidgetGallery.swift:34	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Focus Music	Focus Music	JourneyAudioOption.swift:75	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Focus Music	Focus Music	JourneyAudioOption.swift:75	R	R	R	R	R	R	R	R	R	R
 app	names	Focus Now	Focus Now	WidgetGallery.swift:29	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Focus Now, medium size preview	Focus Now, medium size preview	WidgetGallery.swift:406	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Focus Shield	Focus Shield	FocusShieldControl.swift:23	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Focus Shield active	Focus Shield active	FocusShieldControl.swift:23	-	-	-	-	-	-	-	-	-	-
-app	store-passport-friends-settings	Focus Shield is available on iPhone and iPad.	Focus Shield is available on iPhone and iPad.	FocusShieldPickerView.swift:271	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Focus Shield is the part I didn't know I needed. Once a flight starts, my phone finally stops feeling like the thing I'm fighting against.	Focus Shield is the part I didn't know I needed. Once a flight starts, my phone finally stops feeling like the thing I'm fighting against.	OnboardingPlanScreens.swift:1189	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Focus Shield active	Focus Shield active	FocusShieldControl.swift:23	R	R	R	R	R	R	R	R	R	R
+app	store-passport-friends-settings	Focus Shield is available on iPhone and iPad.	Focus Shield is available on iPhone and iPad.	FocusShieldPickerView.swift:274	R	R	R	R	R	R	R	R	R	R
+app	app-chrome	Focus Shield is the part I didn't know I needed. Once a flight starts, my phone finally stops feeling like the thing I'm fighting against.	Focus Shield is the part I didn't know I needed. Once a flight starts, my phone finally stops feeling like the thing I'm fighting against.	OnboardingPlanScreens.swift:1189	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Focus Shield needs Screen Time permission to block distracting apps during your FocusGlobe flights.	Focus Shield needs Screen Time permission to block distracting apps during your FocusGlobe flights.	FocusShieldPickerView.swift:163	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Focus Shield uses Screen Time, which isn't available on this device.	Focus Shield uses Screen Time, which isn't available on this device.	FocusShieldPickerView.swift:208	R	R	R	R	R	R	R	R	R	R
 app	paywall	Focus Timer	Focus Timer	PaywallView.swift:1440	R	R	R	R	R	R	R	R	R	R
@@ -388,7 +388,7 @@ app	online	Focus feels better in the sky. Your phone becomes a focus balloon fli
 app	passport	Focus for a full hour in one flight.	Focus for a full hour in one flight.	PassportView.swift:477	R	R	R	R	R	R	R	R	R	R
 app	names	Focus in %@	Focus in %@	HomeView.swift:972	R	R	R	R	R	R	R	R	R	R
 app	passport	Focus mix	Focus mix	PassportView.swift:378	R	R	R	R	R	R	R	R	R	R
-app	extracted	Focus on %@	Focus on %@		-	-	-	-	-	-	-	-	-	-
+app	extracted	Focus on %@	Focus on %@		R	R	R	R	R	R	R	R	R	R
 app	passport	Focus on three days in a row.	Focus on three days in a row.	PassportView.swift:491	R	R	R	R	R	R	R	R	R	R
 app	passport	Focus once above the Swiss Alps.	Focus once above the Swiss Alps.	PassportView.swift:514	R	R	R	R	R	R	R	R	R	R
 app	passport	Focus once in the Deep Space Sky.	Focus once in the Deep Space Sky.	PassportView.swift:516	R	R	R	R	R	R	R	R	R	R
@@ -405,11 +405,11 @@ app	paywall	Focus, Elevated	Focus, Elevated	AppRouter.swift:323	R	R	R	R	R	R	R	R	
 app	store-passport-friends-settings	FocusGlobe Flight	FocusGlobe Flight	InvitePeopleView.swift:101	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	FocusGlobe PRO	FocusGlobe PRO	FocusGlobePROBrand.swift:162	R	R	R	R	R	R	R	R	R	R
 app	paywall	FocusGlobe PRO Annual	FocusGlobe PRO Annual	PaywallView.swift:383	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	FocusGlobe PRO is active	FocusGlobe PRO is active	HomeStatusControls.swift:152	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	FocusGlobe PRO item.	FocusGlobe PRO item.	StoreView.swift:943	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	FocusGlobe PRO is active	FocusGlobe PRO is active	HomeStatusControls.swift:152	R	R	R	R	R	R	R	R	R	R
+app	app-chrome	FocusGlobe PRO item.	FocusGlobe PRO item.	StoreView.swift:943	R	R	R	R	R	R	R	R	R	R
 app	content	FocusGlobe PRO only	FocusGlobe PRO only	FocusSky.swift:147	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	FocusGlobe never sees which apps you choose — your selection stays private on this device.	FocusGlobe never sees which apps you choose — your selection stays private on this device.	FocusShieldPickerView.swift:225	R	R	R	R	R	R	R	R	R	R
-app	extracted	Focusing now · %@	Focusing now · %@		-	-	-	-	-	-	-	-	-	-
+app	extracted	Focusing now · %@	Focusing now · %@		R	R	R	R	R	R	R	R	R	R
 app	content	Folded & light	Folded & light	Vehicle.swift:39	R	R	R	R	R	R	R	R	R	R
 app	store-items	For longer flights	For longer flights	StoreItem.swift:463	R	R	R	R	R	R	R	R	R	R
 app	store-items	For your best ideas	For your best ideas	StoreItem.swift:426	R	R	R	R	R	R	R	R	R	R
@@ -426,18 +426,18 @@ app	store-passport-friends-settings	Friend joins	Friend joins	FriendsView.swift:
 app	names	Friends	Friends	AppShell.swift:49	R	R	R	R	R	R	R	R	R	R
 app	names	Galaxy	Galaxy	BalloonSkin.swift:129	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Gentle feedback on take-off & landing	Gentle feedback on take-off & landing	SettingsView.swift:293	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Gentle tones tuned for concentration.	Gentle tones tuned for concentration.	OnboardingView.swift:916	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Gentle tones tuned for concentration.	Gentle tones tuned for concentration.	OnboardingView.swift:916	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Get Coins	Get Coins	StoreView.swift:114	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Get Focus Coins	Get Focus Coins	StoreView.swift:129	R	R	R	R	R	R	R	R	R	R
 app	paywall	Get twice the Coins from every completed journey with PRO.	Get twice the Coins from every completed journey with PRO.	AppRouter.swift:335	R	R	R	R	R	R	R	R	R	R
 app	onboarding	Get your data and insights in Passport	Get your data and insights in Passport	OnboardingPlanScreens.swift:1150	R	R	R	R	R	R	R	R	R	R
 app	onboarding	Getting started	Getting started	OnboardingView.swift:973	R	R	R	R	R	R	R	R	R	R
 app	online	Getting your flight ready to share — please try again in a moment.	Getting your flight ready to share — please try again in a moment.	OnlineError.swift:34	R	R	R	R	R	R	R	R	R	R
-app	extracted	Gift expires in %@	Gift expires in %@		-	-	-	-	-	-	-	-	-	-
-app	extracted	Globe	Globe	The rotating world on Home, not a lamp.	-	-	-	-	-	-	-	-	-	-
+app	extracted	Gift expires in %@	Gift expires in %@		R	R	R	R	R	R	R	R	R	R
+app	extracted	Globe	Globe	The rotating world on Home, not a lamp.	R	R	R	R	R	R	R	R	R	R
 app	onboarding-runtime	Goal: Build a consistent %1$lld-hour %2$@ routine by %3$@	Goal: Build a consistent %1$lld-hour %2$@ routine by %3$@ | plural: Goal: Build a consistent %1$lld-hour %2$@ routine by %3$@	As the minutes variant, for whole hours.	R	R	R	R	R	R	R	R	R	R
 app	onboarding-runtime	Goal: Build a consistent %1$lld-minute %2$@ routine by %3$@	Goal: Build a consistent %1$lld-minute %2$@ routine by %3$@ | plural: Goal: Build a consistent %1$lld-minute %2$@ routine by %3$@	The whole results screen in one line. %1$lld is the session length, %2$@ the routine word (see 'study', 'reading'…), %3$@ the target date, already formatted for your language. Reorder freely — this is one sentence, not six fragments.	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Golden Hour	Golden Hour	SkyScene.swift:58	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Golden Hour	Golden Hour	SkyScene.swift:58	R	R	R	R	R	R	R	R	R	R
 app	flight	Good afternoon	Good afternoon	Formatters.swift:149	R	R	R	R	R	R	R	R	R	R
 app	flight	Good evening	Good evening	Formatters.swift:150	R	R	R	R	R	R	R	R	R	R
 app	flight	Good morning	Good morning	Formatters.swift:148	R	R	R	R	R	R	R	R	R	R
@@ -466,32 +466,32 @@ app	content	Hook · Left	Hook · Left	StoreItem.swift:52	R	R	R	R	R	R	R	R	R	R
 app	content	Hook · Right	Hook · Right	StoreItem.swift:53	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	How it works	How it works	FriendsView.swift:465	R	R	R	R	R	R	R	R	R	R
 app	onboarding	How long can you focus today?	How long can you focus today?	OnboardingView.swift:400	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	How long is your first flight?	How long is your first flight?	OnboardingPlanScreens.swift:833	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	How long is your first flight?	How long is your first flight?	OnboardingPlanScreens.swift:833	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	How to add this widget	How to add this widget	WidgetGallery.swift:479	R	R	R	R	R	R	R	R	R	R
 app	onboarding	How you'll get there	How you'll get there	OnboardingPlanScreens.swift:478	R	R	R	R	R	R	R	R	R	R
 app	store-items	Hydration for the long route	Hydration for the long route	StoreItem.swift:482	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	I lose momentum partway	I lose momentum partway	OnboardingView.swift:944	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	I put things off	I put things off	OnboardingView.swift:943	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	I struggle to get started	I struggle to get started	OnboardingView.swift:946	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	I've tried a lot of focus timers. This is the first one that feels like a place I actually want to come back to every day.	I've tried a lot of focus timers. This is the first one that feels like a place I actually want to come back to every day.	OnboardingPlanScreens.swift:1191	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	I lose momentum partway	I lose momentum partway	OnboardingView.swift:944	R	R	R	R	R	R	R	R	R	R
+app	app-chrome	I put things off	I put things off	OnboardingView.swift:943	R	R	R	R	R	R	R	R	R	R
+app	app-chrome	I struggle to get started	I struggle to get started	OnboardingView.swift:946	R	R	R	R	R	R	R	R	R	R
+app	app-chrome	I've tried a lot of focus timers. This is the first one that feels like a place I actually want to come back to every day.	I've tried a lot of focus timers. This is the first one that feels like a place I actually want to come back to every day.	OnboardingPlanScreens.swift:1191	R	R	R	R	R	R	R	R	R	R
 app	store-items	Iced Latte	Iced Latte	StoreItem.swift:421	R	R	R	R	R	R	R	R	R	R
 app	flight	In flight	In flight	FocusSessionViewModel.swift:253	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	In your cabin	In your cabin	StoreView.swift:294	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	In your cabin.	In your cabin.	StoreView.swift:941	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	In your cabin	In your cabin	StoreView.swift:294	R	R	R	R	R	R	R	R	R	R
+app	app-chrome	In your cabin.	In your cabin.	StoreView.swift:941	R	R	R	R	R	R	R	R	R	R
 app	online	Inappropriate alias	Inappropriate alias	PilotProfileSheet.swift:17	R	R	R	R	R	R	R	R	R	R
 app	flight	Incredible focus. Protect your streak today.	Incredible focus. Protect your streak today.	StreakDetailsView.swift:203	R	R	R	R	R	R	R	R	R	R
 app	online	Infinite Flight	Infinite Flight	JoinFlightView.swift:28	R	R	R	R	R	R	R	R	R	R
-app	extracted	Infinity	Infinity	An open-ended focus flight with no set duration. FocusGlobe PRO.	-	-	-	-	-	-	-	-	-	-
+app	extracted	Infinity	Infinity	An open-ended focus flight with no set duration. FocusGlobe PRO.	R	R	R	R	R	R	R	R	R	R
 app	flight	Infinity, FocusGlobe PRO	Infinity, FocusGlobe PRO	FlightSetup.swift:693	R	R	R	R	R	R	R	R	R	R
 app	online	Internet connection required for Online flights.	Internet connection required for Online flights.	FocusConnectivity.swift:51	R	R	R	R	R	R	R	R	R	R
-app	extracted	Invite	Invite	LobbySeatGrid.swift:90	-	-	-	-	-	-	-	-	-	-
+app	extracted	Invite	Invite	LobbySeatGrid.swift:90	R	R	R	R	R	R	R	R	R	R
 app	names	Invite %lld friends or upgrade to FocusGlobe PRO to unlock %@.	Invite %lld friends or upgrade to FocusGlobe PRO to unlock %@. | plural: Invite %1$lld friends or upgrade to FocusGlobe PRO to unlock %2$@.		R	R	R	R	R	R	R	R	R	R
 app	home-flight	Invite Friends	Invite Friends	FocusSessionView.swift:1345	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Invite a friend	Invite a friend	FriendsView.swift:440	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Invite a friend and your next flight can feel less lonely.	Invite a friend and your next flight can feel less lonely.	FriendsView.swift:387	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	It all feels like a lot	It all feels like a lot	OnboardingView.swift:945	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	It all feels like a lot	It all feels like a lot	OnboardingView.swift:945	R	R	R	R	R	R	R	R	R	R
 app	onboarding-runtime	Jazz	Jazz	Soundscape name — the music genre.	R	R	R	R	R	R	R	R	R	R
-app	extracted	Join %@'s Flight	Join %@'s Flight		-	-	-	-	-	-	-	-	-	-
+app	extracted	Join %@'s Flight	Join %@'s Flight		R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Join Flight	Join Flight	JoinFlightView.swift:69	R	R	R	R	R	R	R	R	R	R
 app	online	Join my FocusGlobe Flight	Join my FocusGlobe Flight	InviteShareSheet.swift:13	R	R	R	R	R	R	R	R	R	R
 app	online	Join my FocusGlobe flight — we focus together, side by side.	Join my FocusGlobe flight — we focus together, side by side.	RoomInvitation.swift:13	R	R	R	R	R	R	R	R	R	R
@@ -509,7 +509,7 @@ app	content	Kyoto Lantern Night	Kyoto Lantern Night	PassportView.swift:505	R	R	R
 app	flight	Land a flight today to keep the streak alive	Land a flight today to keep the streak alive	StreakDetailsView.swift:233	R	R	R	R	R	R	R	R	R	R
 app	flight	Land a journey today to start your streak.	Land a journey today to start your streak.	StreakDetailsView.swift:200	R	R	R	R	R	R	R	R	R	R
 app	home-flight	Land now	Land now	LiquidGlass.swift:262	R	R	R	R	R	R	R	R	R	R
-app	extracted	Landed	Landed	Status of a finished focus flight in the logbook, paired with 'Cancelled'. Never an action — FocusGlobe has no Land button.	-	-	-	-	-	-	-	-	-	-
+app	extracted	Landed	Landed	Status of a finished focus flight in the logbook, paired with 'Cancelled'. Never an action — FocusGlobe has no Land button.	R	R	R	R	R	R	R	R	R	R
 app	flight	Landed today — your streak is safe	Landed today — your streak is safe	StreakDetailsView.swift:232	R	R	R	R	R	R	R	R	R	R
 app	use-site-review	Landscape	Landscape	Store preview orientation.	R	R	R	R	R	R	R	R	R	R
 app	onboarding	Language	Language	OnboardingView.swift:271	R	R	R	R	R	R	R	R	R	R
@@ -524,13 +524,13 @@ app	store-passport-friends-settings	Let other pilots see your balloon while you 
 app	onboarding	Let's get started!	Let's get started!	OnboardingPlanScreens.swift:293	R	R	R	R	R	R	R	R	R	R
 app	paywall	Lifetime	Lifetime	SubscriptionManager.swift:48	R	R	R	R	R	R	R	R	R	R
 app	online	Links aren't allowed.	Links aren't allowed.	OnlineProfile.swift:52	R	R	R	R	R	R	R	R	R	R
-app	extracted	Live	Live	FlightModeSelectorView.swift:276	-	-	-	-	-	-	-	-	-	-
-app	extracted	Live. %lld focusing now	Live. %lld focusing now		-	-	-	-	-	-	-	-	-	-
-app	app-chrome	Loading ad…	Loading ad…	CoinRewardsView.swift:171	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	Locating…	Locating…	LocationPickerView.swift:115	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	Location access is off	Location access is off	LocationPickerView.swift:116	-	-	-	-	-	-	-	-	-	-
+app	extracted	Live	Live	FlightModeSelectorView.swift:276	R	R	R	R	R	R	R	R	R	R
+app	extracted	Live. %lld focusing now	Live. %lld focusing now		R	R	R	R	R	R	R	R	R	R
+app	app-chrome	Loading ad…	Loading ad…	CoinRewardsView.swift:171	R	R	R	R	R	R	R	R	R	R
+app	app-chrome	Locating…	Locating…	LocationPickerView.swift:115	R	R	R	R	R	R	R	R	R	R
+app	app-chrome	Location access is off	Location access is off	LocationPickerView.swift:116	R	R	R	R	R	R	R	R	R	R
 app	passport	Lock Screen	Lock Screen	WidgetGallery.swift:28	R	R	R	R	R	R	R	R	R	R
-app	extracted	Locked	Locked	PassportView.swift:668	-	-	-	-	-	-	-	-	-	-
+app	extracted	Locked	Locked	PassportView.swift:668	R	R	R	R	R	R	R	R	R	R
 app	onboarding-runtime	Long	Long	Duration bucket, 2–4 hours.	R	R	R	R	R	R	R	R	R	R
 app	flight	Look out at the Sky	Look out at the Sky	FocusSessionView.swift:1220	R	R	R	R	R	R	R	R	R	R
 app	onboarding	Losing momentum	Losing momentum	OnboardingView.swift:971	R	R	R	R	R	R	R	R	R	R
@@ -560,14 +560,14 @@ app	content	Moonlit glow	Moonlit glow	Vehicle.swift:30	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	More options	More options	FriendsView.swift:347	R	R	R	R	R	R	R	R	R	R
 app	onboarding-runtime	Mountains	Mountains	Journey character chip.	R	R	R	R	R	R	R	R	R	R
 app	use-site-review	Move	Move	StoreView.swift:308	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Move Here	Move Here	StoreView.swift:572	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	Move to	Move to	StoreView.swift:711	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Move Here	Move Here	StoreView.swift:572	R	R	R	R	R	R	R	R	R	R
+app	app-chrome	Move to	Move to	Section header above the list of cabin slots an item can be MOVED to. A question of destination, not an instruction to move it here — that button is 'Move Here'.	R	R	R	R	R	R	R	R	R	R
 app	store-items	Mushroom Lamp	Mushroom Lamp	StoreItem.swift:493	R	R	R	R	R	R	R	R	R	R
 app	flight	My Expedition Page	My Expedition Page	BoardingView.swift:211	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	My Focus Journey	My Focus Journey	FocusConsistency.swift:472	R	R	R	R	R	R	R	R	R	R
 app	onboarding	My phone	My phone	OnboardingView.swift:969	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	My phone pulls me in	My phone pulls me in	OnboardingView.swift:942	-	-	-	-	-	-	-	-	-	-
-app	extracted	NEW	NEW	DestinationPostcard.swift:85	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	My phone pulls me in	My phone pulls me in	OnboardingView.swift:942	R	R	R	R	R	R	R	R	R	R
+app	extracted	NEW	NEW	DestinationPostcard.swift:85	R	R	R	R	R	R	R	R	R	R
 app	onboarding	Name	Name	SettingsView.swift:128	R	R	R	R	R	R	R	R	R	R
 app	flight	Names and times are hidden	Names and times are hidden	FocusSessionView.swift:1236	R	R	R	R	R	R	R	R	R	R
 app	flight	Names and times stay visible	Names and times stay visible	FocusSessionView.swift:1235	R	R	R	R	R	R	R	R	R	R
@@ -579,32 +579,32 @@ app	onboarding-runtime	Night	Night	Journey character chip. See 'Sunrise'.	R	R	R	
 app	content	Night Balloon	Night Balloon	Vehicle.swift:29	R	R	R	R	R	R	R	R	R	R
 app	passport	Night Owl	Night Owl	PassportView.swift:496	R	R	R	R	R	R	R	R	R	R
 app	paywall	No Ads	No Ads	AppRouter.swift:422	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	No active purchases found to restore.	No active purchases found to restore.	SubscriptionManager.swift:477	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	No active purchases found to restore.	No active purchases found to restore.	SubscriptionManager.swift:477	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	No ads · Exclusive Skies · online flights	No ads · Exclusive Skies · online flights	SettingsView.swift:330	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	No apps chosen yet	No apps chosen yet	FocusShieldSettingsSection.swift:51	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	No apps chosen yet	No apps chosen yet	FocusShieldSettingsSection.swift:51	R	R	R	R	R	R	R	R	R	R
 app	paywall	No charge today. Then %@. Cancel anytime.	No charge today. Then %@. Cancel anytime.		R	R	R	R	R	R	R	R	R	R
-app	app-chrome	No cities found	No cities found	LocationPickerView.swift:45	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	No cities found	No cities found	LocationPickerView.swift:45	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	No crew yet	No crew yet	FriendsView.swift:384	R	R	R	R	R	R	R	R	R	R
 app	home-flight	No destinations in this range	No destinations in this range	RouteSelectionView.swift:224	R	R	R	R	R	R	R	R	R	R
 app	home-flight	No expeditions yet	No expeditions yet	HistoryView.swift:36	R	R	R	R	R	R	R	R	R	R
 app	online	No internet connection.	No internet connection.	OnlineState.swift:28	R	R	R	R	R	R	R	R	R	R
 app	onboarding	No sense of progress	No sense of progress	OnboardingPlanScreens.swift:1159	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	No spin yet — the video has to finish to earn your coins. If it didn't load, try again shortly.	No spin yet — the video has to finish to earn your coins. If it didn't load, try again shortly.	CoinRewardsView.swift:227	-	-	-	-	-	-	-	-	-	-
-app	extracted	No. %lld	No. %lld		-	-	-	-	-	-	-	-	-	-
-app	app-chrome	None selected yet	None selected yet	FocusShieldPickerView.swift:255	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	No spin yet — the video has to finish to earn your coins. If it didn't load, try again shortly.	No spin yet — the video has to finish to earn your coins. If it didn't load, try again shortly.	CoinRewardsView.swift:227	R	R	R	R	R	R	R	R	R	R
+app	extracted	No. %lld	No. %lld		R	R	R	R	R	R	R	R	R	R
+app	app-chrome	None selected yet	None selected yet	FocusShieldPickerView.swift:260	R	R	R	R	R	R	R	R	R	R
 app	content	Northern Aurora	Northern Aurora	PassportView.swift:508	R	R	R	R	R	R	R	R	R	R
 app	misc	Northern lights for deep work	Northern lights for deep work	HomeView.swift:965	R	R	R	R	R	R	R	R	R	R
 app	flight	Not checked in.	Not checked in.	FlightSetup.swift:1549	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Not now	Not now	JoinFlightView.swift:79	R	R	R	R	R	R	R	R	R	R
 app	online	Not ready	Not ready	LobbySeatGrid.swift:70	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Not set yet	Not set yet	OnboardingPlanScreens.swift:1035	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Not set yet	Not set yet	OnboardingPlanScreens.swift:1035	R	R	R	R	R	R	R	R	R	R
 app	names	Notebook	Notebook	StoreItem.swift:426	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Nothing to restore.	Nothing to restore.	SettingsView.swift:342	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Nothing to restore.	Nothing to restore.	SettingsView.swift:342	R	R	R	R	R	R	R	R	R	R
 app	flight	Notifications and apps stay on	Notifications and apps stay on	FlightSetup.swift:1242	R	R	R	R	R	R	R	R	R	R
 app	onboarding	Now	Now	OnboardingPlanScreens.swift:376	R	R	R	R	R	R	R	R	R	R
 app	onboarding	Now playing	Now playing	OnboardingView.swift:888	R	R	R	R	R	R	R	R	R	R
-app	extracted	Occupied	Occupied	A Cabin placement slot that already holds another item.	-	-	-	-	-	-	-	-	-	-
-app	extracted	Occupied by another item	Occupied by another item		-	-	-	-	-	-	-	-	-	-
+app	extracted	Occupied	Occupied	A Cabin placement slot that already holds another item.	R	R	R	R	R	R	R	R	R	R
+app	extracted	Occupied by another item	Occupied by another item		R	R	R	R	R	R	R	R	R	R
 app	onboarding-runtime	Ocean	Ocean	Soundscape name AND journey character chip: the sea. One word serves both.	R	R	R	R	R	R	R	R	R	R
 app	content	On the bench, in the middle	On the bench, in the middle	StoreItem.swift:69	R	R	R	R	R	R	R	R	R	R
 app	content	On the bench, left side	On the bench, left side	StoreItem.swift:68	R	R	R	R	R	R	R	R	R	R
@@ -635,17 +635,17 @@ app	online	Online profile ready	Online profile ready	OnlineSignInView.swift:30	R
 app	paywall	Only %@	Only %@		R	R	R	R	R	R	R	R	R	R
 app	online	Only letters, numbers, spaces and _ are allowed.	Only letters, numbers, spaces and _ are allowed.	OnlineProfile.swift:47	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Only the host can invite new pilots.	Only the host can invite new pilots.	InvitePeopleView.swift:246	R	R	R	R	R	R	R	R	R	R
-app	extracted	Open	Open	Verb on the button that opens a Focus Room lobby. For the boarding-pass shield field, see 'Unrestricted'.	-	-	-	-	-	-	-	-	-	-
+app	extracted	Open	Open	Verb on the button that opens a Focus Room lobby. For the boarding-pass shield field, see 'Unrestricted'.	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Open Settings	Open Settings	FocusShieldPickerView.swift:190	R	R	R	R	R	R	R	R	R	R
 app	passport	Open focus	Open focus	PassportView.swift:367	R	R	R	R	R	R	R	R	R	R
 app	notifications	Open your daily gift before it flies away.	Open your daily gift before it flies away.	NotificationService.swift:246	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Opens preview and how to add	Opens preview and how to add	WidgetGallery.swift:89	R	R	R	R	R	R	R	R	R	R
 app	onboarding	Opens sign in with Apple.	Opens sign in with Apple.	OnboardingView.swift:234	R	R	R	R	R	R	R	R	R	R
 app	passport	Own at least one cabin decoration from the Store.	Own at least one cabin decoration from the Store.	PassportView.swift:520	R	R	R	R	R	R	R	R	R	R
-app	extracted	Owned	Owned	A Store item the pilot already has in their collection.	-	-	-	-	-	-	-	-	-	-
+app	extracted	Owned	Owned	A Store item the pilot already has in their collection.	R	R	R	R	R	R	R	R	R	R
 app	use-site-review	Owned.	Owned.	StoreView.swift:942	R	R	R	R	R	R	R	R	R	R
-app	extracted	PASSPORT	PASSPORT	WidgetGallery.swift:307	-	-	-	-	-	-	-	-	-	-
-app	extracted	PLAYING	PLAYING	FocusSessionView.swift:969	-	-	-	-	-	-	-	-	-	-
+app	extracted	PASSPORT	PASSPORT	WidgetGallery.swift:307	R	R	R	R	R	R	R	R	R	R
+app	extracted	PLAYING	PLAYING	FocusSessionView.swift:969	R	R	R	R	R	R	R	R	R	R
 app	paywall	PRO FEATURE	PRO FEATURE	PaywallView.swift:1095	R	R	R	R	R	R	R	R	R	R
 app	passport	PRO Pilot	PRO Pilot	PassportView.swift:525	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	PRO is active	PRO is active	SettingsView.swift:308	R	R	R	R	R	R	R	R	R	R
@@ -665,8 +665,8 @@ app	notifications	Pick up the route you started whenever you're ready.	Pick up t
 app	onboarding	Pick your focus atmosphere	Pick your focus atmosphere	OnboardingPlanScreens.swift:834	R	R	R	R	R	R	R	R	R	R
 app	online	Pilot is no longer flying.	Pilot is no longer flying.	PilotProfileSheet.swift:188	R	R	R	R	R	R	R	R	R	R
 app	use-site-review	Place	Place	StoreView.swift:314	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Place Item	Place Item	StoreView.swift:572	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	Place in	Place in	StoreView.swift:711	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Place Item	Place Item	StoreView.swift:572	R	R	R	R	R	R	R	R	R	R
+app	app-chrome	Place in	Place in	Section header above the list of cabin slots an item can be placed in. See 'Move to'.	R	R	R	R	R	R	R	R	R	R
 app	content	Planets, a dense starfield, and complete cosmic silence.	Planets, a dense starfield, and complete cosmic silence.	FocusSky.swift:300	R	R	R	R	R	R	R	R	R	R
 app	paywall	Plans are unavailable right now.	Plans are unavailable right now.	PaywallView.swift:409	R	R	R	R	R	R	R	R	R	R
 app	passport	Playing on flights	Playing on flights	PassportView.swift:913	R	R	R	R	R	R	R	R	R	R
@@ -677,16 +677,16 @@ app	online	Please sign in again	Please sign in again	OnlineUnavailableView.swift
 app	online	Please sign in again.	Please sign in again.	OnlineState.swift:31	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Please try again in a moment.	Please try again in a moment.	InvitePeopleView.swift:154	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Please wait before creating another private flight.	Please wait before creating another private flight.	InvitePeopleView.swift:182	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Popular	Popular	LocationPickerView.swift:17	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Popular	Popular	LocationPickerView.swift:17	R	R	R	R	R	R	R	R	R	R
 app	use-site-review	Portrait	Portrait	Store preview orientation.	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Postcard unlocked	Postcard unlocked	DestinationPostcard.swift:70	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Prepare Expedition	Prepare Expedition	RouteSelectionView.swift:212	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Prepare Expedition	Prepare Expedition	RouteSelectionView.swift:212	R	R	R	R	R	R	R	R	R	R
 app	online	Preparing your invite…	Preparing your invite…	FocusSessionView.swift:251	R	R	R	R	R	R	R	R	R	R
 app	onboarding	Preparing your setup…	Preparing your setup…	OnboardingPlanScreens.swift:194	R	R	R	R	R	R	R	R	R	R
 app	home-flight	Press and hold to open the leave confirmation.	Press and hold to open the leave confirmation.	FocusSessionView.swift:1179	R	R	R	R	R	R	R	R	R	R
-app	extracted	Preview	Preview	Look at a balloon skin or Cabin item before buying it.	-	-	-	-	-	-	-	-	-	-
-app	extracted	Preview %@	Preview %@		-	-	-	-	-	-	-	-	-	-
-app	extracted	Previewing	Previewing	StoreView.swift:298	-	-	-	-	-	-	-	-	-	-
+app	extracted	Preview	Preview	Look at a balloon skin or Cabin item before buying it.	R	R	R	R	R	R	R	R	R	R
+app	extracted	Preview %@	Preview %@		R	R	R	R	R	R	R	R	R	R
+app	extracted	Previewing	Previewing	StoreView.swift:298	R	R	R	R	R	R	R	R	R	R
 app	flight	Previous Sky	Previous Sky	HomeView.swift:584	R	R	R	R	R	R	R	R	R	R
 app	paywall	Privacy	Privacy	PaywallView.swift:479	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Privacy & Data	Privacy & Data	SettingsView.swift:434	R	R	R	R	R	R	R	R	R	R
@@ -695,17 +695,17 @@ app	names	Private	Private	FlightModeSelectorView.swift:49	R	R	R	R	R	R	R	R	R	R
 app	online	Private invitation link — only pilots with this link can join, and it expires on its own.	Private invitation link — only pilots with this link can join, and it expires on its own.	InvitePeopleView.swift:135	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Private room unavailable	Private room unavailable	InvitePeopleView.swift:205	R	R	R	R	R	R	R	R	R	R
 app	paywall	Products unavailable	Products unavailable	PaywallView.swift:691	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Products unavailable. Please try again later.	Products unavailable. Please try again later.	SubscriptionManager.swift:447	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Products unavailable. Please try again later.	Products unavailable. Please try again later.	SubscriptionManager.swift:447	R	R	R	R	R	R	R	R	R	R
 app	onboarding	Progress you can see	Progress you can see	OnboardingPlanScreens.swift:1165	R	R	R	R	R	R	R	R	R	R
 app	paywall	Protect the calm from take-off through landing.	Protect the calm from take-off through landing.	AppRouter.swift:336	R	R	R	R	R	R	R	R	R	R
 app	use-site-review	Protected	Protected	Boarding-pass field: apps are blocked by Focus Shield.	R	R	R	R	R	R	R	R	R	R
 app	home-flight	Protected flights ground your chosen apps for the whole journey, so the sky stays yours.	Protected flights ground your chosen apps for the whole journey, so the sky stays yours.	FlightSetup.swift:1198	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Purchase couldn't be completed. Please try again.	Purchase couldn't be completed. Please try again.	SubscriptionManager.swift:459	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	Purchases restored.	Purchases restored.	SettingsView.swift:342	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Purchase couldn't be completed. Please try again.	Purchase couldn't be completed. Please try again.	SubscriptionManager.swift:459	R	R	R	R	R	R	R	R	R	R
+app	app-chrome	Purchases restored.	Purchases restored.	SettingsView.swift:342	R	R	R	R	R	R	R	R	R	R
 app	content	Purple-blue nebula mist and distant stars, drifting slowly.	Purple-blue nebula mist and distant stars, drifting slowly.	FocusSky.swift:293	R	R	R	R	R	R	R	R	R	R
 app	onboarding	Putting it off	Putting it off	OnboardingView.swift:970	R	R	R	R	R	R	R	R	R	R
-app	extracted	READY	READY	FlightSetup.swift:1677	-	-	-	-	-	-	-	-	-	-
-app	extracted	RETURN	RETURN	The return leg printed on a boarding pass. Not a Back button.	-	-	-	-	-	-	-	-	-	-
+app	extracted	READY	READY	FlightSetup.swift:1677	R	R	R	R	R	R	R	R	R	R
+app	extracted	RETURN	RETURN	The return leg printed on a boarding pass. Not a Back button.	R	R	R	R	R	R	R	R	R	R
 app	onboarding-runtime	Rain	Rain	Soundscape name — rain against the cabin window.	R	R	R	R	R	R	R	R	R	R
 app	content	Rainy Tokyo	Rainy Tokyo	PassportView.swift:500	R	R	R	R	R	R	R	R	R	R
 app	passport	Reach 1,000 total focused minutes.	Reach 1,000 total focused minutes.	PassportView.swift:489	R	R	R	R	R	R	R	R	R	R
@@ -713,7 +713,7 @@ app	passport	Reach 100 total focused minutes.	Reach 100 total focused minutes.	P
 app	passport	Reach 500 total focused minutes.	Reach 500 total focused minutes.	PassportView.swift:487	R	R	R	R	R	R	R	R	R	R
 app	names	Reach a %lld-day streak or upgrade to FocusGlobe PRO to unlock %@.	Reach a %lld-day streak or upgrade to FocusGlobe PRO to unlock %@. | plural: Reach a %1$lld-day streak or upgrade to FocusGlobe PRO to unlock %2$@.		R	R	R	R	R	R	R	R	R	R
 app	names	Read	Read	FocusPreset.swift:35	R	R	R	R	R	R	R	R	R	R
-app	extracted	Ready	Ready	FlightSetup.swift:1363	-	-	-	-	-	-	-	-	-	-
+app	extracted	Ready	Ready	FlightSetup.swift:1363	R	R	R	R	R	R	R	R	R	R
 app	notifications	Ready for another quiet flight?	Ready for another quiet flight?	NotificationService.swift:264	R	R	R	R	R	R	R	R	R	R
 app	notifications	Ready for one focused expedition?	Ready for one focused expedition?	NotificationService.swift:339	R	R	R	R	R	R	R	R	R	R
 app	passport	Ready for takeoff	Ready for takeoff	PassportView.swift:192	R	R	R	R	R	R	R	R	R	R
@@ -726,12 +726,12 @@ app	home-flight	Reconnecting…	Reconnecting…	FocusSessionView.swift:618	R	R	R
 app	names	Reflect	Reflect	FocusPreset.swift:37	R	R	R	R	R	R	R	R	R	R
 app	onboarding-runtime	Relaxing	Relaxing	Soundscape name — calm, unspecific ambience.	R	R	R	R	R	R	R	R	R	R
 app	names	Reminders	Reminders	SettingsView.swift:296	R	R	R	R	R	R	R	R	R	R
-app	extracted	Remove	Remove	Remove a friend from the crew list.	-	-	-	-	-	-	-	-	-	-
+app	extracted	Remove	Remove	Remove a friend from the crew list.	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Remove from Crew	Remove from Crew	FriendsView.swift:338	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Remove from Crew?	Remove from Crew?	FriendsView.swift:164	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Replace one item	Replace one item	StoreView.swift:676	R	R	R	R	R	R	R	R	R	R
 app	use-site-review	Replace…	Replace…	StoreView.swift:314	R	R	R	R	R	R	R	R	R	R
-app	extracted	Report	Report	AmbientPilotsLayer.swift:500	-	-	-	-	-	-	-	-	-	-
+app	extracted	Report	Report	AmbientPilotsLayer.swift:500	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Report this pilot?	Report this pilot?	PilotProfileSheet.swift:141	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Reports are anonymous and reviewed by our team. Only this pilot's anonymous ID and your chosen reason are sent — never any personal details.	Reports are anonymous and reviewed by our team. Only this pilot's anonymous ID and your chosen reason are sent — never any personal details.	PilotProfileSheet.swift:153	R	R	R	R	R	R	R	R	R	R
 app	online	Request already sent.	Request already sent.	FocusOnlineModel.swift:1741	R	R	R	R	R	R	R	R	R	R
@@ -741,22 +741,22 @@ app	store-passport-friends-settings	Reserved to keep your Sky visible	Reserved t
 app	store-passport-friends-settings	Reset all data	Reset all data	SettingsView.swift:507	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Reset all data?	Reset all data?	SettingsView.swift:515	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Restore Purchases	Restore Purchases	PaywallView.swift:477	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Restore couldn't be completed. Please try again.	Restore couldn't be completed. Please try again.	SubscriptionManager.swift:480	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Restore couldn't be completed. Please try again.	Restore couldn't be completed. Please try again.	SubscriptionManager.swift:480	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Restore your account, progress and PRO access.	Restore your account, progress and PRO access.	SettingsView.swift:392	R	R	R	R	R	R	R	R	R	R
-app	extracted	Resume	Resume	FocusSessionView.swift:863	-	-	-	-	-	-	-	-	-	-
+app	extracted	Resume	Resume	FocusSessionView.swift:863	R	R	R	R	R	R	R	R	R	R
 app	home-flight	Resume your flight	Resume your flight	HomeView.swift:669	R	R	R	R	R	R	R	R	R	R
 app	home-flight	Resume your flight?	Resume your flight?	HomeView.swift:1021	R	R	R	R	R	R	R	R	R	R
 app	home-flight	Resume your unfinished flight	Resume your unfinished flight	HomeView.swift:689	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Review or delete your FocusGlobe Online data	Review or delete your FocusGlobe Online data	SettingsView.swift:451	R	R	R	R	R	R	R	R	R	R
 app	onboarding	Rhythm	Rhythm	OnboardingPlanScreens.swift:1134	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Rooms you own or have joined	Rooms you own or have joined	SettingsView.swift:567	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Rooms you own or have joined	Rooms you own or have joined	SettingsView.swift:567	R	R	R	R	R	R	R	R	R	R
 app	content	Rule the skies	Rule the skies	BalloonSkin.swift:136	R	R	R	R	R	R	R	R	R	R
-app	extracted	SOUNDSCAPE	SOUNDSCAPE	FlightSetup.swift:1286	-	-	-	-	-	-	-	-	-	-
+app	extracted	SOUNDSCAPE	SOUNDSCAPE	FlightSetup.swift:1286	R	R	R	R	R	R	R	R	R	R
 app	onboarding-runtime	Sat	Sat	Weekday button, Saturday. See 'Mon'.	R	R	R	R	R	R	R	R	R	R
 app	content	Say hello	Say hello	BalloonSkin.swift:114	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Screen Time access is off	Screen Time access is off	FocusShieldPickerView.swift:185	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Screen Time access needed	Screen Time access needed	FocusShieldSettingsSection.swift:54	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	Search city, country, or code	Search city, country, or code	LocationPickerView.swift:59	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Screen Time access needed	Screen Time access needed	FocusShieldSettingsSection.swift:54	R	R	R	R	R	R	R	R	R	R
+app	app-chrome	Search city, country, or code	Search city, country, or code	LocationPickerView.swift:59	R	R	R	R	R	R	R	R	R	R
 app	passport	Search for “FocusGlobe”.	Search for “FocusGlobe”.	WidgetGallery.swift:422	R	R	R	R	R	R	R	R	R	R
 app	paywall	See PRO Plans	See PRO Plans	PaywallView.swift:102	R	R	R	R	R	R	R	R	R	R
 app	home-flight	See who's flying with you	See who's flying with you	FocusSessionView.swift:1252	R	R	R	R	R	R	R	R	R	R
@@ -770,7 +770,7 @@ app	notifications	Set off on one short session and keep your streak alive.	Set o
 app	names	Settings	Settings	AppShell.swift:50	R	R	R	R	R	R	R	R	R	R
 app	flight	Settle in and breathe	Settle in and breathe	JourneyPhase.swift:44	R	R	R	R	R	R	R	R	R	R
 app	onboarding	Setup progress	Setup progress	OnboardingView.swift:169	R	R	R	R	R	R	R	R	R	R
-app	extracted	Share	Share	Share a result or an invite link.	-	-	-	-	-	-	-	-	-	-
+app	extracted	Share	Share	Share a result or an invite link.	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Share FocusGlobe	Share FocusGlobe	InvitePeopleView.swift:274	R	R	R	R	R	R	R	R	R	R
 app	online	Share FocusGlobe with someone who needs calmer focus.	Share FocusGlobe with someone who needs calmer focus.	InvitePeopleView.swift:134	R	R	R	R	R	R	R	R	R	R
 app	paywall	Share a living Sky with pilots focusing alongside you.	Share a living Sky with pilots focusing alongside you.	AppRouter.swift:337	R	R	R	R	R	R	R	R	R	R
@@ -778,8 +778,8 @@ app	store-passport-friends-settings	Share a one-time link — one tap to join	Sh
 app	home-flight	Share your focus grid	Share your focus grid	StreakDetailsView.swift:87	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Share your invite	Share your invite	FriendsView.swift:469	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Shared flights of 5+ minutes earn double Focus Coins.	Shared flights of 5+ minutes earn double Focus Coins.	FriendsView.swift:474	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Shield is active	Shield is active	FocusShieldPickerView.swift:141	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	Shield is off for this flight	Shield is off for this flight	FocusShieldPickerView.swift:141	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Shield is active	Shield is active	FocusShieldPickerView.swift:141	R	R	R	R	R	R	R	R	R	R
+app	app-chrome	Shield is off for this flight	Shield is off for this flight	FocusShieldPickerView.swift:141	R	R	R	R	R	R	R	R	R	R
 app	content	Shimmering hull	Shimmering hull	Vehicle.swift:33	R	R	R	R	R	R	R	R	R	R
 app	names	Shop	Shop	AppShell.swift:45	R	R	R	R	R	R	R	R	R	R
 app	onboarding-runtime	Short	Short	Duration bucket for a journey, roughly 30 minutes. An adjective describing the flight.	R	R	R	R	R	R	R	R	R	R
@@ -803,7 +803,7 @@ app	store-passport-friends-settings	Sign out of FocusGlobe Online?	Sign out of F
 app	store-passport-friends-settings	Sign out of FocusGlobe?	Sign out of FocusGlobe?	SettingsView.swift:376	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Signed in with Apple	Signed in with Apple	SettingsView.swift:415	R	R	R	R	R	R	R	R	R	R
 app	online	Signing in…	Signing in…	OnlineState.swift:25	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Silent Dawn	Silent Dawn	SkyScene.swift:43	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Silent Dawn	Silent Dawn	SkyScene.swift:43	R	R	R	R	R	R	R	R	R	R
 app	store-items	Sink into deep focus	Sink into deep focus	StoreItem.swift:432	R	R	R	R	R	R	R	R	R	R
 app	passport	Skin Collector	Skin Collector	PassportView.swift:521	R	R	R	R	R	R	R	R	R	R
 app	content	Sky Balloon	Sky Balloon	Vehicle.swift:17	R	R	R	R	R	R	R	R	R	R
@@ -812,7 +812,7 @@ app	online	Sky invitation	Sky invitation	OnlineDTOs.swift:231	R	R	R	R	R	R	R	R	R	
 app	store-items	Sleeping Cat	Sleeping Cat	StoreItem.swift:454	R	R	R	R	R	R	R	R	R	R
 app	store-items	Sleepy Capybara Plush	Sleepy Capybara Plush	StoreItem.swift:517	R	R	R	R	R	R	R	R	R	R
 app	store-items	Slow grooves for deep focus	Slow grooves for deep focus	StoreItem.swift:512	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Slow waves rolling far below.	Slow waves rolling far below.	OnboardingView.swift:918	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Slow waves rolling far below.	Slow waves rolling far below.	OnboardingView.swift:918	R	R	R	R	R	R	R	R	R	R
 app	onboarding	So FocusGlobe can meet you where you are.	So FocusGlobe can meet you where you are.	OnboardingView.swift:373	R	R	R	R	R	R	R	R	R	R
 app	content	Soft and sweet	Soft and sweet	BalloonSkin.swift:111	R	R	R	R	R	R	R	R	R	R
 app	content	Soft cream • the calm default	Soft cream • the calm default	Vehicle.swift:18	R	R	R	R	R	R	R	R	R	R
@@ -820,7 +820,7 @@ app	content	Soft rain over a muted neon skyline — cozy, blue, and quiet.	Soft 
 app	names	Solo	Solo	FlightSetup.swift:1492	R	R	R	R	R	R	R	R	R	R
 app	online	Something didn't reach the sky. Please try again.	Something didn't reach the sky. Please try again.	OnlineError.swift:35	R	R	R	R	R	R	R	R	R	R
 app	online	Something else	Something else	PilotProfileSheet.swift:18	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Soon… keep social, video and games out of your focus flights	Soon… keep social, video and games out of your focus flights	FocusShieldSettingsSection.swift:118	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Soon… keep social, video and games out of your focus flights	Soon… keep social, video and games out of your focus flights	FocusShieldSettingsSection.swift:118	R	R	R	R	R	R	R	R	R	R
 app	names	Sound	Sound	SettingsView.swift:288	R	R	R	R	R	R	R	R	R	R
 app	flight	Sound on	Sound on	FocusSessionView.swift:1224	R	R	R	R	R	R	R	R	R	R
 app	flight	Spin the Free Coin Spin	Spin the Free Coin Spin	AppModel.swift:1689	R	R	R	R	R	R	R	R	R	R
@@ -832,11 +832,11 @@ app	passport	Start a flight in a tap when idle, or watch the live time remaining
 app	home-flight	Start a new Focus	Start a new Focus	HomeView.swift:1035	R	R	R	R	R	R	R	R	R	R
 app	passport	Start a new streak after a longer one ended.	Start a new streak after a longer one ended.	PassportView.swift:530	R	R	R	R	R	R	R	R	R	R
 app	onboarding	Start your first flight	Start your first flight	OnboardingPlanScreens.swift:1147	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Starting city	Starting city	LocationPickerView.swift:60	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Starting city	Starting city	LocationPickerView.swift:60	R	R	R	R	R	R	R	R	R	R
 app	paywall	Stay in the Sky for as long as the work needs.	Stay in the Sky for as long as the work needs.	AppRouter.swift:339	R	R	R	R	R	R	R	R	R	R
 app	flight	Stay with your focus	Stay with your focus	JourneyPhase.swift:46	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Steady rain against the cabin window.	Steady rain against the cabin window.	OnboardingView.swift:917	-	-	-	-	-	-	-	-	-	-
-app	extracted	Store	Store	FocusGlobe's in-app shop for Cabin items and balloon skins.	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Steady rain against the cabin window.	Steady rain against the cabin window.	OnboardingView.swift:917	R	R	R	R	R	R	R	R	R	R
+app	extracted	Store	Store	FocusGlobe's in-app shop for Cabin items and balloon skins.	R	R	R	R	R	R	R	R	R	R
 app	store-items	Strawberry Matcha Latte	Strawberry Matcha Latte	StoreItem.swift:469	R	R	R	R	R	R	R	R	R	R
 app	names	Streak Companion	Streak Companion	WidgetGallery.swift:25	R	R	R	R	R	R	R	R	R	R
 app	flight	Streak progress	Streak progress	LeaveFlightConfirmation.swift:66	R	R	R	R	R	R	R	R	R	R
@@ -866,9 +866,9 @@ app	store-passport-friends-settings	Tap an item to preview it	Tap an item to pre
 app	passport	Tap the + (Add Widget) button in the top corner.	Tap the + (Add Widget) button in the top corner.	WidgetGallery.swift:421	R	R	R	R	R	R	R	R	R	R
 app	flight	Tap to choose apps	Tap to choose apps	FlightSetup.swift:1281	R	R	R	R	R	R	R	R	R	R
 app	passport	Tap to select	Tap to select	PassportView.swift:913	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Tap to set up	Tap to set up	FocusShieldSettingsSection.swift:56	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Tap to set up	Tap to set up	FocusShieldSettingsSection.swift:56	R	R	R	R	R	R	R	R	R	R
 app	onboarding	Target	Target	OnboardingPlanScreens.swift:752	R	R	R	R	R	R	R	R	R	R
-app	extracted	Target %@	Target %@		-	-	-	-	-	-	-	-	-	-
+app	extracted	Target %@	Target %@		R	R	R	R	R	R	R	R	R	R
 app	home-flight	Tear the barcode across to board	Tear the barcode across to board	FlightSetup.swift:1502	R	R	R	R	R	R	R	R	R	R
 app	paywall	Terms	Terms	PaywallView.swift:481	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Terms of Use	Terms of Use	SettingsView.swift:465	R	R	R	R	R	R	R	R	R	R
@@ -876,12 +876,12 @@ app	store-passport-friends-settings	Thank you for your support	Thank you for you
 app	online	Thanks — our team will review this pilot.	Thanks — our team will review this pilot.	PilotProfileSheet.swift:147	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	That's you	That's you	PilotProfileSheet.swift:68	R	R	R	R	R	R	R	R	R	R
 app	passport	The FocusGlobe fire balloon carrying your live streak count.	The FocusGlobe fire balloon carrying your live streak count.	WidgetGallery.swift:26	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	The Skies, sounds and Passport make progress feel visible without turning productivity into pressure. It's calm, simple and genuinely motivating.	The Skies, sounds and Passport make progress feel visible without turning productivity into pressure. It's calm, simple and genuinely motivating.	OnboardingPlanScreens.swift:1193	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	The Skies, sounds and Passport make progress feel visible without turning productivity into pressure. It's calm, simple and genuinely motivating.	The Skies, sounds and Passport make progress feel visible without turning productivity into pressure. It's calm, simple and genuinely motivating.	OnboardingPlanScreens.swift:1193	R	R	R	R	R	R	R	R	R	R
 app	content	The calm default	The calm default	BalloonSkin.swift:105	R	R	R	R	R	R	R	R	R	R
 app	store-items	The calmest co-pilot	The calmest co-pilot	StoreItem.swift:518	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	The classic — a soft breeze at altitude.	The classic — a soft breeze at altitude.	OnboardingView.swift:914	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	The classic — a soft breeze at altitude.	The classic — a soft breeze at altitude.	OnboardingView.swift:914	R	R	R	R	R	R	R	R	R	R
 app	paywall	The exclusive Skies, skins and features.	The exclusive Skies, skins and features.	AppRouter.swift:341	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	The flight idea completely changes how starting feels. I pick 45 minutes and I'm already in the right headspace before I can overthink it.	The flight idea completely changes how starting feels. I pick 45 minutes and I'm already in the right headspace before I can overthink it.	OnboardingPlanScreens.swift:1187	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	The flight idea completely changes how starting feels. I pick 45 minutes and I'm already in the right headspace before I can overthink it.	The flight idea completely changes how starting feels. I pick 45 minutes and I'm already in the right headspace before I can overthink it.	OnboardingPlanScreens.swift:1187	R	R	R	R	R	R	R	R	R	R
 app	notifications	The globe is ready when you are.	The globe is ready when you are.	NotificationService.swift:361	R	R	R	R	R	R	R	R	R	R
 app	onboarding	The phone wins by default	The phone wins by default	OnboardingPlanScreens.swift:1157	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	The sky is busy	The sky is busy	InvitePeopleView.swift:178	R	R	R	R	R	R	R	R	R	R
@@ -917,7 +917,7 @@ app	passport	Touch and hold an empty area of your Home Screen until the apps jig
 app	paywall	Trial end date	Trial end date	PaywallView.swift:1372	R	R	R	R	R	R	R	R	R	R
 app	paywall	Try PRO for FREE	Try PRO for FREE	PaywallView.swift:697	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Try again	Try again	InvitePeopleView.swift:158	R	R	R	R	R	R	R	R	R	R
-app	extracted	Try again in %@	Try again in %@		-	-	-	-	-	-	-	-	-	-
+app	extracted	Try again in %@	Try again in %@		R	R	R	R	R	R	R	R	R	R
 app	online	Try again in a moment.	Try again in a moment.	PilotProfileSheet.swift:190	R	R	R	R	R	R	R	R	R	R
 app	home-flight	Try another category — nearby places appear under Short.	Try another category — nearby places appear under Short.	RouteSelectionView.swift:226	R	R	R	R	R	R	R	R	R	R
 app	paywall	Try for %@	Try for %@		R	R	R	R	R	R	R	R	R	R
@@ -928,7 +928,7 @@ app	notifications	Turn your next destination into a deep-work block.	Turn your n
 app	content	Turquoise air over a quiet lagoon, soft islands drifting far below.	Turquoise air over a quiet lagoon, soft islands drifting far below.	FocusSky.swift:258	R	R	R	R	R	R	R	R	R	R
 app	misc	Turquoise calm for deep work	Turquoise calm for deep work	HomeView.swift:963	R	R	R	R	R	R	R	R	R	R
 app	paywall	Unavailable	Unavailable	PaywallView.swift:498	R	R	R	R	R	R	R	R	R	R
-app	extracted	Unequip	Unequip	Take an equipped balloon skin off.	-	-	-	-	-	-	-	-	-	-
+app	extracted	Unequip	Unequip	Take an equipped balloon skin off.	R	R	R	R	R	R	R	R	R	R
 app	paywall	Unlimited Time  ∞	Unlimited Time  ∞	AppRouter.swift:416	R	R	R	R	R	R	R	R	R	R
 app	paywall	Unlock\nFocusGlobe PRO	Unlock\nFocusGlobe PRO		R	R	R	R	R	R	R	R	R	R
 app	paywall	Unlock FocusGlobe	Unlock FocusGlobe	AppRouter.swift:311	R	R	R	R	R	R	R	R	R	R
@@ -937,14 +937,14 @@ app	store-passport-friends-settings	Unlock Widgets with FocusGlobe PRO	Unlock Wi
 app	paywall	Unlock the complete sound collection for deeper sessions.	Unlock the complete sound collection for deeper sessions.	AppRouter.swift:333	R	R	R	R	R	R	R	R	R	R
 app	flight	Unlock this Sky to fly here	Unlock this Sky to fly here	HomeView.swift:963	R	R	R	R	R	R	R	R	R	R
 app	passport	Unlock three or more balloon skins.	Unlock three or more balloon skins.	PassportView.swift:522	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Unlock with FocusGlobe PRO	Unlock with FocusGlobe PRO	StoreView.swift:273	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	Unlock with Pro	Unlock with Pro	RouteSelectionView.swift:212	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Unlock with FocusGlobe PRO	Unlock with FocusGlobe PRO	StoreView.swift:273	R	R	R	R	R	R	R	R	R	R
+app	app-chrome	Unlock with Pro	Unlock with Pro	RouteSelectionView.swift:212	R	R	R	R	R	R	R	R	R	R
 app	use-site-review	Unrestricted	Unrestricted	Boarding-pass field: apps are NOT blocked this flight.	R	R	R	R	R	R	R	R	R	R
 app	names	Upgrade to FocusGlobe PRO to unlock %@.	Upgrade to FocusGlobe PRO to unlock %@.	HomeView.swift:987	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Use my current location	Use my current location	LocationPickerView.swift:3	-	-	-	-	-	-	-	-	-	-
-app	extracted	Version %@	Version %@		-	-	-	-	-	-	-	-	-	-
-app	extracted	View all %lld on the map	View all %lld on the map		-	-	-	-	-	-	-	-	-	-
-app	extracted	View on the map	View on the map		-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Use my current location	Use my current location	LocationPickerView.swift:3	R	R	R	R	R	R	R	R	R	R
+app	extracted	Version %@	Version %@		R	R	R	R	R	R	R	R	R	R
+app	extracted	View all %lld on the map	View all %lld on the map		R	R	R	R	R	R	R	R	R	R
+app	extracted	View on the map	View on the map		R	R	R	R	R	R	R	R	R	R
 app	home-flight	View profile	View profile	AmbientPilotsLayer.swift:50	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Visited places	Visited places	VisitedPlaces.swift:72	R	R	R	R	R	R	R	R	R	R
 app	home-flight	WIN UP TO 25 COINS!	WIN UP TO 25 COINS!	CoinRewardsView.swift:151	R	R	R	R	R	R	R	R	R	R
@@ -953,8 +953,8 @@ app	content	Wall · Left	Wall · Left	StoreItem.swift:50	R	R	R	R	R	R	R	R	R	R
 app	content	Wall · Right	Wall · Right	StoreItem.swift:51	R	R	R	R	R	R	R	R	R	R
 app	store-items	Warm atmosphere on demand	Warm atmosphere on demand	StoreItem.swift:500	R	R	R	R	R	R	R	R	R	R
 app	content	Warm stripes	Warm stripes	Vehicle.swift:27	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Warm, wordless music for deep work.	Warm, wordless music for deep work.	OnboardingView.swift:915	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	Watch & Spin	Watch & Spin	CoinRewardsView.swift:171	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Warm, wordless music for deep work.	Warm, wordless music for deep work.	OnboardingView.swift:915	R	R	R	R	R	R	R	R	R	R
+app	app-chrome	Watch & Spin	Watch & Spin	CoinRewardsView.swift:171	R	R	R	R	R	R	R	R	R	R
 app	home-flight	Wax seal — set off	Wax seal — set off	BoardingView.swift:128	R	R	R	R	R	R	R	R	R	R
 app	paywall	We notify you about your trial end	We notify you about your trial end	PaywallView.swift:1370	R	R	R	R	R	R	R	R	R	R
 app	onboarding	We'll shape your first flight around it.	We'll shape your first flight around it.	OnboardingView.swift:351	R	R	R	R	R	R	R	R	R	R
@@ -965,7 +965,7 @@ app	onboarding	Welcome to FocusGlobe	Welcome to FocusGlobe	OnboardingView.swift:
 app	paywall	We’ll remind you 2 days\nbefore your trial ends	We’ll remind you 2 days\nbefore your trial ends		R	R	R	R	R	R	R	R	R	R
 app	home-flight	What are you bringing aboard?	What are you bringing aboard?	PreBoardingFocusView.swift:116	R	R	R	R	R	R	R	R	R	R
 app	onboarding	What do you want FocusGlobe to help with most?	What do you want FocusGlobe to help with most?	OnboardingView.swift:350	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	What do you want to focus on?	What do you want to focus on?	OnboardingPlanScreens.swift:831	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	What do you want to focus on?	What do you want to focus on?	OnboardingPlanScreens.swift:831	R	R	R	R	R	R	R	R	R	R
 app	onboarding	What pilots say	What pilots say	OnboardingPlanScreens.swift:580	R	R	R	R	R	R	R	R	R	R
 app	onboarding	What usually breaks your focus?	What usually breaks your focus?	OnboardingPlanScreens.swift:832	R	R	R	R	R	R	R	R	R	R
 app	flight	What's grounded	What's grounded	FlightSetup.swift:1261	R	R	R	R	R	R	R	R	R	R
@@ -977,7 +977,7 @@ app	onboarding	With FocusGlobe	With FocusGlobe	OnboardingPlanScreens.swift:522	R
 app	onboarding	Without	Without	OnboardingPlanScreens.swift:520	R	R	R	R	R	R	R	R	R	R
 app	names	Work	Work	FocusPreset.swift:31	R	R	R	R	R	R	R	R	R	R
 app	store-items	Work set aside for the climb	Work set aside for the climb	StoreItem.swift:448	R	R	R	R	R	R	R	R	R	R
-app	extracted	YOU	YOU	Marks the pilot's own balloon among other pilots'.	-	-	-	-	-	-	-	-	-	-
+app	extracted	YOU	YOU	Marks the pilot's own balloon among other pilots'.	R	R	R	R	R	R	R	R	R	R
 app	home-flight	YOUR FOCUS JOURNEY	YOUR FOCUS JOURNEY	StreakDetailsView.swift:66	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	You can always reconnect later with a new request.	You can always reconnect later with a new request.	FriendsView.swift:175	R	R	R	R	R	R	R	R	R	R
 app	online	You can change your name once a day.	You can change your name once a day.	FocusOnlineModel.swift:573	R	R	R	R	R	R	R	R	R	R
@@ -999,24 +999,24 @@ app	notifications	Your balloon hasn't taken off yet today.	Your balloon hasn't t
 app	notifications	Your balloon is ready whenever you are.	Your balloon is ready whenever you are.	NotificationService.swift:362	R	R	R	R	R	R	R	R	R	R
 app	notifications	Your balloon is still waiting	Your balloon is still waiting	NotificationService.swift:234	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Your cabin	Your cabin	StoreView.swift:354	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Your current live presence	Your current live presence	SettingsView.swift:565	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	Your first focus route	Your first focus route	OnboardingView.swift:606	-	-	-	-	-	-	-	-	-	-
-app	extracted	Your flight is ready to continue.	Your flight is ready to continue.	WidgetGallery.swift:377	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Your current live presence	Your current live presence	SettingsView.swift:565	R	R	R	R	R	R	R	R	R	R
+app	app-chrome	Your first focus route	Your first focus route	OnboardingView.swift:606	R	R	R	R	R	R	R	R	R	R
+app	extracted	Your flight is ready to continue.	Your flight is ready to continue.	WidgetGallery.swift:377	R	R	R	R	R	R	R	R	R	R
 app	online	Your flight is still connecting — try again in a moment.	Your flight is still connecting — try again in a moment.	FocusOnlineModel.swift:1171	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Your focus atmosphere	Your focus atmosphere	OnboardingView.swift:608	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Your focus atmosphere	Your focus atmosphere	OnboardingView.swift:608	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Your focus history stays on this device. No account, no tracking.	Your focus history stays on this device. No account, no tracking.	SettingsView.swift:440	R	R	R	R	R	R	R	R	R	R
 app	notifications	Your journal is missing today's stamp.	Your journal is missing today's stamp.	NotificationService.swift:353	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Your journal is waiting for its first stamps. Complete an expedition to start your map.	Your journal is waiting for its first stamps. Complete an expedition to start your map.	VisitedPlaces.swift:136	R	R	R	R	R	R	R	R	R	R
 app	passport	Your last six months of real focus days as a living contribution grid — tap to open your Passport.	Your last six months of real focus days as a living contribution grid — tap to open your Passport.	WidgetGallery.swift:35	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Your launch-ready Home	Your launch-ready Home	OnboardingView.swift:611	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Your launch-ready Home	Your launch-ready Home	Setup-checklist line. 'Home' is FocusGlobe's Home TAB — use the same word the tab uses, not the word for a residence.	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Your local flights, coins and streaks stay on this device. Your online profile remains until you delete it in Settings → Manage Online Data.	Your local flights, coins and streaks stay on this device. Your online profile remains until you delete it in Settings → Manage Online Data.	OnlineFriendsSettingsSection.swift:35	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	Your local flights, coins, streak, Store items and purchases stay on this device.	Your local flights, coins, streak, Store items and purchases stay on this device.	SettingsView.swift:599	R	R	R	R	R	R	R	R	R	R
 app	notifications	Your next deep-work block awaits	Your next deep-work block awaits	NotificationService.swift:341	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Your next free spin is warming up. Try again in a moment.	Your next free spin is warming up. Try again in a moment.	CoinRewardsView.swift:226	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Your next free spin is warming up. Try again in a moment.	Your next free spin is warming up. Try again in a moment.	CoinRewardsView.swift:226	R	R	R	R	R	R	R	R	R	R
 app	flight	Your place in the Sky	Your place in the Sky	LeaveFlightConfirmation.swift:68	R	R	R	R	R	R	R	R	R	R
-app	app-chrome	Your preferred flight length	Your preferred flight length	OnboardingView.swift:607	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	Your progress path	Your progress path	OnboardingView.swift:610	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	Your public profile & anonymous alias	Your public profile & anonymous alias	SettingsView.swift:564	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Your preferred flight length	Your preferred flight length	OnboardingView.swift:607	R	R	R	R	R	R	R	R	R	R
+app	app-chrome	Your progress path	Your progress path	OnboardingView.swift:610	R	R	R	R	R	R	R	R	R	R
+app	app-chrome	Your public profile & anonymous alias	Your public profile & anonymous alias	SettingsView.swift:564	R	R	R	R	R	R	R	R	R	R
 app	notifications	Your streak is too good to lose now.	Your streak is too good to lose now.	NotificationService.swift:345	R	R	R	R	R	R	R	R	R	R
 app	flight	You’ll leave the room	You’ll leave the room	LeaveFlightConfirmation.swift:68	R	R	R	R	R	R	R	R	R	R
 app	online	a pilot	a pilot	RoomService.swift:145	R	R	R	R	R	R	R	R	R	R
@@ -1029,19 +1029,19 @@ app	online	e.g. Study sprint	e.g. Study sprint	CreateRoomView.swift:22	R	R	R	R	R
 app	onboarding-runtime	exercise	exercise	Goal-sentence slot (%2$@): physical exercise.	R	R	R	R	R	R	R	R	R	R
 app	onboarding-runtime	focus	focus	Slots into the goal sentence in place of %2$@. Use whatever part of speech YOUR sentence needs. Generic focus, the answer of someone who picked 'Fly'.	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	focus days	focus days		R	R	R	R	R	R	R	R	R	R
-app	extracted	from %@	from %@		-	-	-	-	-	-	-	-	-	-
+app	extracted	from %@	from %@		R	R	R	R	R	R	R	R	R	R
 app	home-flight	hold to seal	hold to seal	BoardingView.swift:134	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	iOS doesn't let apps add widgets automatically — this is Apple's standard way to add any widget.	iOS doesn't let apps add widgets automatically — this is Apple's standard way to add any widget.	WidgetGallery.swift:495	R	R	R	R	R	R	R	R	R	R
 app	online	in flight	in flight	FocusSessionViewModel.swift:427	R	R	R	R	R	R	R	R	R	R
 app	onboarding-runtime	meditation	meditation	Goal-sentence slot (%2$@): meditating.	R	R	R	R	R	R	R	R	R	R
-app	extracted	or	or	Separator between two sign-in options.	-	-	-	-	-	-	-	-	-	-
+app	extracted	or	or	Separator between two sign-in options.	R	R	R	R	R	R	R	R	R	R
 app	onboarding-runtime	reading	reading	Goal-sentence slot (%2$@): reading.	R	R	R	R	R	R	R	R	R	R
 app	onboarding-runtime	reflection	reflection	Goal-sentence slot (%2$@): thinking things over.	R	R	R	R	R	R	R	R	R	R
 app	onboarding-runtime	study	study	Goal-sentence slot (%2$@): studying.	R	R	R	R	R	R	R	R	R	R
 app	store-passport-friends-settings	wants to join your Crew	wants to join your Crew	FriendsView.swift:234	R	R	R	R	R	R	R	R	R	R
 app	onboarding-runtime	work	work	Goal-sentence slot (%2$@): work.	R	R	R	R	R	R	R	R	R	R
 app	online	your room	your room	RoomDetailsView.swift:24	R	R	R	R	R	R	R	R	R	R
-app	extracted	“%@”	“%@”		-	-	-	-	-	-	-	-	-	-
+app	extracted	“%@”	“%@”		R	R	R	R	R	R	R	R	R	R
 shield	shield	A distraction is a poor exchange rate.	A distraction is a poor exchange rate.	ShieldConfigurationExtension.swift:139	R	R	R	R	R	R	R	R	R	R
 shield	shield	Close	Close	HomeView.swift:807	R	R	R	R	R	R	R	R	R	R
 shield	shield	Don’t trade your goal	Don’t trade your goal	ShieldConfigurationExtension.swift:138	R	R	R	R	R	R	R	R	R	R

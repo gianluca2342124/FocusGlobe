@@ -145,12 +145,12 @@ TRANSLATIONS: dict[str, list[str]] = {
     # ---- Actions ----------------------------------------------------------
     "Applaud": [
         "鼓掌", "सराहें", "Aplaudir", "Applaudir", "Applaudieren",
-        "Поаплодировать", "Aplaudir", "Applaudi", "Aplaudă", "Applaudisseer",
+        "Поаплодировать", "Aplaudir", "Applaudi", "Aplaudă", "Applaus",
     ],
     "Applauded": [
         "已鼓掌", "सराहा गया", "Aplaudido", "Applaudi", "Applaudiert",
         "Вы поаплодировали", "Aplaudido", "Applaudito", "Aplaudat",
-        "Geapplaudisseerd",
+        "Applaus gegeven",
     ],
     "Block": [
         "屏蔽", "ब्लॉक करें", "Bloquear", "Bloquer", "Blockieren",
@@ -186,8 +186,8 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Voorbeeld",
     ],
     "Unequip": [
-        "取消装备", "हटाएँ", "Quitar", "Retirer", "Ablegen", "Снять",
-        "Tirar", "Rimuovi", "Scoate", "Afleggen",
+        "取消装备", "उतारें", "Quitar", "Enlever", "Ablegen", "Снять",
+        "Tirar", "Togli", "Scoate", "Afleggen",
     ],
     "View on the map": [
         "在地图上查看", "मानचित्र पर देखें", "Ver en el mapa",
@@ -315,7 +315,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Únete al vuelo de %@", "Rejoindre le vol de %@",
         "Dem Flug von %@ beitreten", "Присоединиться к полёту %@",
         "Entrar no voo de %@", "Unisciti al volo di %@",
-        "Intră în zborul lui %@", "Doe mee met de vlucht van %@",
+        "Intră în zborul cu %@", "Doe mee met de vlucht van %@",
     ],
     "Buy %@ for %lld Focus Coins": [
         "用 %2$lld 枚专注金币购买%1$@",

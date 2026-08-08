@@ -85,9 +85,9 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Je voortgangspad",
     ],
     "Your launch-ready Home": [
-        "已准备就绪的主页", "उड़ान के लिए तैयार आपका होम",
+        "已准备就绪的首页", "उड़ान के लिए तैयार आपका होम",
         "Tu inicio listo para despegar", "Votre accueil prêt au décollage",
-        "Dein startbereites Zuhause", "Ваш главный экран готов к запуску",
+        "Dein abflugbereiter Startbildschirm", "Ваш главный экран готов к запуску",
         "Sua tela inicial pronta para decolar",
         "La tua Home pronta al decollo", "Ecranul tău principal, gata de decolare",
         "Je startklare beginscherm",
@@ -197,7 +197,7 @@ TRANSLATIONS: dict[str, list[str]] = {
     # ---- Onboarding: struggle options ------------------------------------
     "My phone pulls me in": [
         "手机总把我吸进去", "मेरा फ़ोन मुझे खींच लेता है",
-        "El móvil me absorbe", "Mon téléphone m’aspire",
+        "El teléfono me absorbe", "Mon téléphone m’aspire",
         "Mein Handy zieht mich rein", "Телефон меня затягивает",
         "Meu celular me puxa", "Il telefono mi risucchia",
         "Telefonul mă absoarbe", "Mijn telefoon zuigt me op",
@@ -335,12 +335,12 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Posiziona oggetto", "Așază obiectul", "Plaats item",
     ],
     "Move to": [
-        "移动到", "यहाँ ले जाएँ", "Mover a", "Déplacer vers",
+        "移动到", "कहाँ ले जाएँ", "Mover a", "Déplacer vers",
         "Verschieben nach", "Переместить в", "Mover para", "Sposta in",
         "Mută la", "Verplaats naar",
     ],
     "Place in": [
-        "放置于", "यहाँ रखें", "Colocar en", "Placer dans",
+        "放置于", "कहाँ रखें", "Colocar en", "Placer dans",
         "Platzieren in", "Разместить в", "Colocar em", "Posiziona in",
         "Așază în", "Plaats in",
     ],
@@ -467,11 +467,6 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Aucune sélection", "Noch nichts ausgewählt", "Пока ничего не выбрано",
         "Nada selecionado ainda", "Nessuna selezione", "Nimic selectat încă",
         "Nog niets geselecteerd",
-    ],
-    "1 selected": [
-        "已选择 1 个", "1 चुना गया", "1 seleccionada", "1 sélectionnée",
-        "1 ausgewählt", "Выбрано: 1", "1 selecionado", "1 selezionata",
-        "1 selectat", "1 geselecteerd",
     ],
     "No apps chosen yet": [
         "尚未选择任何 App", "अभी कोई ऐप नहीं चुना", "Aún no has elegido apps",
@@ -717,4 +712,46 @@ TRANSLATIONS: dict[str, list[str]] = {
         "1 次到访", "1 विज़िट", "1 visita", "1 visite", "1 Besuch",
         "1 посещение", "1 visita", "1 visita", "1 vizită", "1 bezoek",
     ],
+}
+
+
+# The Focus Shield card's app count. It used to be a three-way switch in Swift —
+# "None selected yet", the hardcoded "1 selected", and `"\(n) selected"` for
+# everything else. That last branch is an interpolated String, so it was neither
+# a key nor translatable, and a Spanish pilot who blocked three apps read
+# "3 selected". One plural replaces all three.
+PLURALS: dict[str, dict[str, dict[str, str]]] = {
+    "%lld selected": {
+        "en":      {"one": "%lld selected", "other": "%lld selected"},
+        "zh-Hans": {"other": "已选择 %lld 个"},
+        "hi":      {"one": "%lld चुना गया", "other": "%lld चुने गए"},
+        # Feminine throughout the Romance languages: the noun is the app —
+        # aplicación, application, app, aplicație — and Romanian was agreeing
+        # with nothing at all.
+        "es":      {"one": "%lld seleccionada", "other": "%lld seleccionadas"},
+        "fr":      {"one": "%lld sélectionnée", "other": "%lld sélectionnées"},
+        "de":      {"one": "%lld ausgewählt", "other": "%lld ausgewählt"},
+        "ru":      {"one": "Выбрано: %lld", "few": "Выбрано: %lld",
+                    "many": "Выбрано: %lld", "other": "Выбрано: %lld"},
+        # Brazilian Portuguese says "o app", masculine.
+        "pt-BR":   {"one": "%lld selecionado", "other": "%lld selecionados"},
+        "it":      {"one": "%lld selezionata", "other": "%lld selezionate"},
+        "ro":      {"one": "%lld selectată", "few": "%lld selectate",
+                    "other": "%lld selectate"},
+        "nl":      {"one": "%lld geselecteerd", "other": "%lld geselecteerd"},
+    },
+}
+
+
+COMMENTS: dict[str, str] = {
+    "%lld selected": "How many apps Focus Shield is set to block, under the "
+                     "'Blocked apps' row. The noun is 'apps' — agree with it.",
+    "Move to": "Section header above the list of cabin slots an item can be "
+               "MOVED to. A question of destination, not an instruction to "
+               "move it here — that button is 'Move Here'.",
+    "Place in": "Section header above the list of cabin slots an item can be "
+                "placed in. See 'Move to'.",
+    "Your launch-ready Home": "Setup-checklist line. 'Home' is FocusGlobe's "
+                              "Home TAB — use the same word the tab uses, not "
+                              "the word for a residence.",
 }
