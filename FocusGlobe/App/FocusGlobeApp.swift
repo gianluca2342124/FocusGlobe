@@ -31,6 +31,13 @@ struct FocusGlobeApp: App {
         if let dailyGiftFailure = AppModel._dailyGiftSelfCheck() {
             assertionFailure(dailyGiftFailure)
         }
+        // A green catalog audit proves the translations EXIST. This proves the
+        // running app can REACH them: it asks the resolver for a key that
+        // certainly has Spanish, German, Chinese and Brazilian Portuguese
+        // values and fails if any of them comes back English.
+        if let localizationFailure = FocusLocalization._selfCheck() {
+            assertionFailure(localizationFailure)
+        }
         // The general PRO reel alternates categories, including across the loop
         // seam. It is a property of the CATALOG, so adding a cabin item or
         // retiring a Sky is exactly what would silently reintroduce a run of
@@ -56,14 +63,17 @@ struct FocusGlobeApp: App {
                 .environmentObject(router)
                 .environmentObject(online)
                 .tint(AppColors.selectionGold)
-                // The chosen language, applied at the window root so every
-                // screen, sheet and cover inherits it — this is the ONE place
-                // the locale is set. `Text` and `NSLocalizedString` resolve
-                // through it, and anything without a matching `.lproj` falls
-                // back to the development language (English) rather than
-                // rendering a raw key. Dates, numbers and durations follow it
-                // too, which is most of what a pilot notices before the strings
-                // are translated.
+                // FORMATTING, and only formatting: date order, decimal and
+                // grouping separators, and which CLDR plural category a number
+                // falls into. It does NOT choose the localization table — that
+                // is `FocusLocalization.activate(_:)`, and believing otherwise
+                // is what shipped a build with complete catalogs that rendered
+                // entirely in English.
+                //
+                // It earns its place at the root twice over: it is the correct
+                // locale for every formatter below it, and because `Text` reads
+                // it, changing it is what invalidates the view tree so a
+                // language switch redraws immediately.
                 .environment(\.locale, appModel.preferredLocale)
                 // FocusGlobe is dark, always. Forced at the window root so no
                 // screen, sheet or system control can inherit Light — and so it
@@ -71,11 +81,12 @@ struct FocusGlobeApp: App {
                 .preferredColorScheme(.dark)
                 .onAppear {
                     LaunchLog.mark("RootView onAppear")
-                    // Restate the language mirror at launch. The setter writes
-                    // it on every change, but a widget or Shield added before
-                    // the pilot ever touched the selector would otherwise read
-                    // nothing and fall back to the device language.
-                    FocusLocalization.mirror(appModel.preferredLanguage)
+                    // Restate the selection at launch. `AppModel.init` already
+                    // activated it before the first frame; this re-asserts the
+                    // App Group mirror so a widget or Shield added before the
+                    // pilot ever touched the selector reads the app's language
+                    // rather than the device's.
+                    FocusLocalization.activate(appModel.preferredLanguage)
                     appModel.attachOnline(online)
                     appModel.analytics.log(.appOpened)
                     // Clear any shields left behind by a previous run (e.g. the app
