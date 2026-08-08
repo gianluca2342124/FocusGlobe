@@ -166,7 +166,7 @@ struct OnboardingView: View {
         .padding(.horizontal, AppSpacing.screen)
         .padding(.top, AppSpacing.md)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Setup progress")
+        .accessibilityLabel(Text("Setup progress"))
         .accessibilityValue("\(Int((progress * 100).rounded()))%")
     }
 
@@ -231,7 +231,7 @@ struct OnboardingView: View {
                     .buttonStyle(.plain)
                     .foregroundStyle(.white)
                     .fontWeight(.semibold)
-                    .accessibilityHint("Opens sign in with Apple.")
+                    .accessibilityHint(Text("Opens sign in with Apple."))
                 }
                 .font(AppTypography.caption)
                 .padding(.top, 2)
@@ -294,7 +294,7 @@ struct OnboardingView: View {
             .background(Capsule().fill(.white.opacity(0.08)))
             .overlay(Capsule().strokeBorder(.white.opacity(0.13), lineWidth: 1))
         }
-        .accessibilityLabel("Language")
+        .accessibilityLabel(Text("Language"))
         .accessibilityValue(appModel.preferredLanguage.nativeName)
     }
 
@@ -538,9 +538,9 @@ struct OnboardingView: View {
                     // One element that names the soundscape AND its state, so
                     // VoiceOver never reads decorative artwork.
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(option.displayName)
-                    .accessibilityValue("Selected, playing")
-                    .accessibilityHint("Swipe up or down to hear another soundscape.")
+                    .accessibilityLabel(option.localizedName)
+                    .accessibilityValue(Text("Selected, playing"))
+                    .accessibilityHint(Text("Swipe up or down to hear another soundscape."))
                     .accessibilityAdjustableAction { direction in
                         switch direction {
                         case .increment: selectSound(at: soundIndex + 1)
@@ -845,7 +845,7 @@ struct OnboardingView: View {
         }
         .buttonStyle(SoftPressStyle(scale: 0.985))
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(title)
+        .accessibilityLabel(Text(LocalizedStringKey(title)))
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 
@@ -878,7 +878,7 @@ struct OnboardingView: View {
         }
         .buttonStyle(SoftPressStyle(scale: 0.98))
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(title)
+        .accessibilityLabel(Text(LocalizedStringKey(title)))
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 
@@ -973,6 +973,14 @@ enum FocusFriction: String, CaseIterable, Identifiable {
         case .starting:        return "Getting started"
         }
     }
+
+    /// `title` and `shortTitle` above are catalog KEYS — English, fixed, and
+    /// the identity this enum compares on. These two are what gets SHOWN, for
+    /// the places that need a String rather than a view: the results row and
+    /// the goal sentence. Inside a view body, prefer
+    /// `Text(LocalizedStringKey(title))`.
+    var localizedTitle: String { FocusLocalization.string(title) }
+    var localizedShortTitle: String { FocusLocalization.string(shortTitle) }
 }
 /// A large soundscape "cover" for the atmosphere carousel — the bundled
 /// `SoundCover_<Id>` art if present, otherwise a premium procedural gradient

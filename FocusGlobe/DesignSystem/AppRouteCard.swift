@@ -126,10 +126,14 @@ struct AppRouteCard: View {
         .padding(AppSpacing.md)
     }
 
+    /// One chip carries a catalog key (the journey's mood) and one a formatted
+    /// value (its distance). Looking both up is safe — a value that is not a key
+    /// comes back as itself — and it is what stops "Sunrise" printing in
+    /// English on a Spanish card.
     private func infoChip(systemImage: String, text: String) -> some View {
         HStack(spacing: 4) {
             Image(systemName: systemImage).font(.system(size: 10.5, weight: .semibold))
-            Text(text).font(AppTypography.caption)
+            Text(LocalizedStringKey(text)).font(AppTypography.caption)
         }
         .foregroundStyle(AppColors.textSecondary)
         .padding(.horizontal, AppSpacing.xs)

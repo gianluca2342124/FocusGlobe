@@ -187,7 +187,13 @@ struct PassportView: View {
                 Text("Total focus in the air")
                     .font(AppTypography.caption)
                     .foregroundStyle(AppColors.textSecondary)
-                Text(focus > 0 ? Formatters.durationLabel(minutes: focus) : "Ready for takeoff")
+                // One branch is a formatted value, so the ternary types the
+                // whole expression as String and takes `Text`'s verbatim
+                // initialiser — which left "Ready for takeoff" in English under
+                // a translated heading. Resolving both sides fixes it without
+                // splitting the view.
+                Text(focus > 0 ? Formatters.durationLabel(minutes: focus)
+                               : FocusLocalization.string("Ready for takeoff"))
                     .font(.system(size: Layout.pad(40, 48), weight: .bold, design: .serif))
                     .foregroundStyle(AppColors.textPrimary)
                     .minimumScaleFactor(0.55)

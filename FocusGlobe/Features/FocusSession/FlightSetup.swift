@@ -401,7 +401,10 @@ struct DurationGauge: View {
     let sub: String
     /// iPad/Mac sizing.
     let expanded: Bool
+    /// A catalog KEY — "Flight time", "First flight length".
     let accessibilityLabel: String
+    /// Already-resolved copy: a formatted duration, or a key both call sites
+    /// have resolved. Announced as given.
     let accessibilityValue: String
     /// A touch resolved to this 0…1 position on the arc.
     let onFraction: (Double) -> Void
@@ -450,7 +453,7 @@ struct DurationGauge: View {
                 .onChanged { v in report(location: v.location, center: center) })
         }
         .accessibilityElement()
-        .accessibilityLabel(accessibilityLabel)
+        .accessibilityLabel(Text(LocalizedStringKey(accessibilityLabel)))
         .accessibilityValue(accessibilityValue)
         .accessibilityAdjustableAction { direction in
             onAdjust(direction == .increment ? 1 : -1)
@@ -503,7 +506,12 @@ struct DurationGauge: View {
                 .minimumScaleFactor(0.45)
                 .lineLimit(1)
                 .shadow(color: AppColors.gold.opacity(0.25), radius: 18)
-            Text(sub)
+            // A KEY, not text. `sub` is one of a handful of fixed captions —
+            // MINUTES, MINUTE, FLIGHT TIME — and all of them have been in the
+            // catalog since the first tranche. `Text(sub)` renders a String
+            // VERBATIM, which is why a Spanish dial still read MINUTES under a
+            // Spanish heading: the translation existed and was never asked for.
+            Text(LocalizedStringKey(sub))
                 .font(.system(size: expanded ? 13 : 12, weight: .semibold, design: .monospaced))
                 .tracking(3.4)
                 .foregroundStyle(.white.opacity(0.55))
@@ -598,7 +606,7 @@ struct DurationDialView: View {
             sub: centerSub,
             expanded: hSize == .regular,
             accessibilityLabel: "Flight time",
-            accessibilityValue: isInfinityIndex ? "Endless"
+            accessibilityValue: isInfinityIndex ? FocusLocalization.string("Endless")
                                                 : Formatters.durationLabel(minutes: minutes),
             onFraction: { f in
                 setIndex(Int((f * Double(DurationScale.count - 1)).rounded()))
@@ -1640,7 +1648,11 @@ struct CheckInTicketView: View {
 
             VStack(alignment: .leading, spacing: 1) {
                 fieldLabel("FOCUS")
-                Text((focus?.title ?? "Focus").uppercased())
+                // `.uppercased()` returns a String, which picks `Text`'s
+                // VERBATIM initialiser — so the boarding pass printed STUDY
+                // while the results screen two steps earlier said Estudio. The
+                // key is resolved first, then cased.
+                Text(FocusLocalization.string(focus?.title ?? "Focus").uppercased())
                     .font(.system(size: 30, weight: .bold, design: .default))
                     .foregroundStyle(skyAccent)
                     .lineLimit(1)

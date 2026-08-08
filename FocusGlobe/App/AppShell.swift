@@ -109,7 +109,9 @@ struct AppTabBar: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(SoftPressStyle(scale: 0.92))
-        .accessibilityLabel(item.title)
+        // The tab bar is icon-only, so this label is the ONLY name VoiceOver
+        // has for it — and `item.title` is a catalog key, not copy.
+        .accessibilityLabel(Text(LocalizedStringKey(item.title)))
         .accessibilityAddTraits(active ? [.isSelected] : [])
     }
 }

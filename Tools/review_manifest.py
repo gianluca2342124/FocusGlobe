@@ -111,6 +111,7 @@ AREAS = {
     "tranche7_widgets_extracted": "widgets",
     "tranche8_review": "use-site-review",
     "tranche9_geography": "geography",
+    "tranche9_onboarding_runtime": "onboarding-runtime",
 }
 
 SWIFT_ROOTS = [

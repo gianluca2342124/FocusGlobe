@@ -27,6 +27,10 @@ import SwiftUI
 /// short enough that nobody waits it out — and paced unevenly, because work
 /// that proceeds at a constant rate reads as a countdown.
 struct OnboardingSetupStep: View {
+    /// Catalog KEYS, not copy. Every one of the six has had translations since
+    /// the first tranche; the list rendered them through `Text(item)`, which is
+    /// verbatim, so a Spanish first run ticked off six English lines under a
+    /// Spanish heading.
     let items: [String]
     /// Runs once, as the list reaches the item that describes it. Kept as a
     /// callback rather than done in `finish()` so the screen is truthful: it
@@ -161,7 +165,7 @@ struct OnboardingSetupStep: View {
                         }
                         .frame(width: 22, height: 22)
 
-                        Text(item)
+                        Text(LocalizedStringKey(item))
                             .font(AppTypography.callout)
                             .foregroundStyle(.white.opacity(done ? 0.92 : 0.38))
                             .fixedSize(horizontal: false, vertical: true)
@@ -452,7 +456,11 @@ struct OnboardingResultsStep: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Edit \(row.label.lowercased())")
+            // `Text(_:)` with interpolation IS a localized key — "Edit %@" —
+            // where a plain String would have been read out verbatim. The row
+            // label has to be resolved first, or VoiceOver announces
+            // "Editar main distraction".
+            .accessibilityLabel(Text("Edit \(FocusLocalization.string(row.label).lowercased())"))
             .accessibilityValue(row.value)
         } else {
             Color.clear.frame(width: 44, height: 44)
@@ -599,7 +607,7 @@ struct OnboardingResultsStep: View {
                 }
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("5 out of 5 stars")
+            .accessibilityLabel(Text("5 out of 5 stars"))
 
             Text(LocalizedStringKey(item.quote))
                 .font(.system(size: 14, weight: .medium))
@@ -625,8 +633,12 @@ struct OnboardingResultsStep: View {
 
     // MARK: Shared
 
-    private func sectionTitle(_ text: String) -> some View {
-        Text(text)
+    /// Every caller passes a catalog key, so this looks one up. It used to be
+    /// `Text(text)` — verbatim — which is why "How you'll get there", "Why
+    /// FocusGlobe" and "What pilots say" stayed English on a Spanish screen
+    /// whose every other line had translated.
+    private func sectionTitle(_ key: String) -> some View {
+        Text(LocalizedStringKey(key))
             .font(.system(size: 12, weight: .heavy))
             .tracking(1.1)
             .foregroundStyle(.white.opacity(0.5))
@@ -756,7 +768,7 @@ private struct ResultsPlanChart: View {
         )
         .fixedSize()
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Target \(targetValue)")
+        .accessibilityLabel(Text("Target \(targetValue)"))
     }
 
     private func guides(width: CGFloat, height: CGFloat) -> some View {
@@ -877,11 +889,17 @@ struct OnboardingAnswerEditor: View {
         .preferredColorScheme(.dark)
     }
 
+    /// Every row is handed an ALREADY-RESOLVED title.
+    ///
+    /// Four of the five sources are catalog keys and one — the duration — is a
+    /// formatted value, and a row that has to guess which it received is how
+    /// `Text(someString)` ends up rendering a key. Resolving at the call site
+    /// makes the rule one line long: this control shows text.
     @ViewBuilder private var rows: some View {
         switch field {
         case .focus:
             ForEach(FocusPreset.all) { preset in
-                OnboardingEditorRow(title: preset.title,
+                OnboardingEditorRow(title: preset.localizedTitle,
                                     systemImage: preset.systemImage,
                                     isSelected: intent?.title == preset.title) {
                     intent = preset
@@ -890,7 +908,7 @@ struct OnboardingAnswerEditor: View {
             }
         case .friction:
             ForEach(FocusFriction.allCases) { item in
-                OnboardingEditorRow(title: item.title,
+                OnboardingEditorRow(title: item.localizedTitle,
                                     systemImage: item.systemImage,
                                     isSelected: friction == item) {
                     friction = item
@@ -913,7 +931,7 @@ struct OnboardingAnswerEditor: View {
                 .padding(.top, AppSpacing.xs)
         case .atmosphere:
             ForEach(JourneyAudioOption.all) { option in
-                OnboardingEditorRow(title: option.displayName,
+                OnboardingEditorRow(title: option.localizedName,
                                     systemImage: option.systemImage,
                                     isSelected: appModel.selectedJourneyAudio.id == option.id) {
                     // The same commit the atmosphere question makes. It writes
@@ -938,6 +956,7 @@ struct OnboardingAnswerEditor: View {
 }
 
 private struct OnboardingEditorRow: View {
+    /// Resolved display text, never a key — see `rows` above.
     let title: String
     let systemImage: String
     let isSelected: Bool
@@ -950,7 +969,7 @@ private struct OnboardingEditorRow: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(isSelected ? AppColors.selectionGold : .white.opacity(0.55))
                     .frame(width: 24)
-                Text(LocalizedStringKey(title))
+                Text(title)
                     .font(.system(size: 16, weight: isSelected ? .semibold : .medium))
                     .foregroundStyle(.white.opacity(isSelected ? 1 : 0.82))
                 Spacer(minLength: AppSpacing.xs)
@@ -991,6 +1010,13 @@ struct OnboardingResultPlan: Equatable {
     /// How far ahead the plan looks.
     static let weeks = 4
 
+    // The three answers arrive as their ENGLISH catalog keys, which are also
+    // their identities: `focusTitle` is what `applyOnboardingSelections`
+    // persists, `atmosphere` is a soundscape's display key, `frictionTitle` is
+    // never stored at all. None of them is ever shown as-is — every `Detail`
+    // below resolves through `FocusLocalization` first. Keeping the key on the
+    // struct rather than the translation is what stops a Spanish run from
+    // persisting "Estudio" as a preset name.
     let focusTitle: String
     let frictionTitle: String
     let minutes: Int
@@ -1004,9 +1030,10 @@ struct OnboardingResultPlan: Equatable {
     /// could never draw a target of zero.
     var flightsPerWeek: Int { max(1, weeklyDays.count) }
 
-    /// "Mon · Wed · Fri" — the Rhythm row's value.
+    /// "L · X · V" — the Rhythm row's value, in the selected language.
     var rhythmLabel: String {
-        weeklyDays.isEmpty ? "Not set yet" : FocusWeekday.label(weeklyDays)
+        weeklyDays.isEmpty ? FocusLocalization.string("Not set yet")
+                           : FocusWeekday.label(weeklyDays)
     }
 
     /// Total planned sessions over the window — the chart's target.
@@ -1017,63 +1044,66 @@ struct OnboardingResultPlan: Equatable {
     /// is the thing the pilot can actually tick off.
     var targetFlights: Int { flightsPerWeek * Self.weeks }
 
-    /// e.g. "12 flights" — what the chart's callout shows.
+    /// e.g. "12 vuelos" — what the chart's callout shows.
+    ///
+    /// A real plural, not `n == 1 ? "flight" : "flights"`. That ternary is
+    /// English grammar written in Swift: Russian needs four forms, Romanian
+    /// three (and "de zboruri" above nineteen), Chinese one.
     var targetValueLabel: String {
-        "\(targetFlights) \(targetFlights == 1 ? "flight" : "flights")"
+        FocusLocalization.string("%lld flights", targetFlights)
     }
 
-    /// The session length as an adjective: "90-minute", "2-hour", "45-minute".
+    /// The focus answer as the word a routine is made of, resolved for the
+    /// selected language — Read → "reading" / "lire" / "zum Lesen".
     ///
-    /// Whole hours read as hours; everything else stays in minutes, because
-    /// "1-hour 30-minute routine" is not something anyone says and "90-minute"
-    /// is.
-    var durationAdjective: String {
+    /// Which part of speech that is belongs to each language, not to this
+    /// property: it hands over an English key and the catalog decides. See
+    /// `FocusPreset.routineNounKey`.
+    var routineWord: String {
+        let key = FocusPreset.all.first { $0.title == focusTitle }?.routineNounKey
+            ?? focusTitle.lowercased()
+        return FocusLocalization.string(key)
+    }
+
+    /// A habit, not a quota — as ONE sentence per language.
+    ///
+    /// This used to be six English fragments concatenated in Swift:
+    /// `"Goal: " + "Build a consistent " + duration + noun + " routine by " +
+    /// date`. It produced correct English and nothing else. German wants the
+    /// date first, Russian an infinitive, Chinese the whole clause before the
+    /// noun, and French cannot put "de" in front of "étudier" without eliding
+    /// it — none of which a fragment can express.
+    ///
+    /// So it is one format with three placeholders and each language writes its
+    /// own sentence around them. Two keys rather than one because whole hours
+    /// and minutes inflect differently, and the count carries a plural so
+    /// Romanian can say "de minute" past nineteen.
+    var goalTitle: String {
         if minutes >= 60, minutes % 60 == 0 {
-            let hours = minutes / 60
-            return "\(hours)-hour"
+            return FocusLocalization.string(
+                "Goal: Build a consistent %1$lld-hour %2$@ routine by %3$@",
+                minutes / 60, routineWord, targetDateLabel)
         }
-        return "\(minutes)-minute"
+        return FocusLocalization.string(
+            "Goal: Build a consistent %1$lld-minute %2$@ routine by %3$@",
+            minutes, routineWord, targetDateLabel)
     }
-
-    /// The focus answer as the noun a routine is made of: Read -> "reading",
-    /// Meditate -> "meditation". Falls back to the lowercased title, so a new
-    /// `FocusPreset` still produces a grammatical sentence on the day it is
-    /// added rather than waiting for this switch to catch up.
-    var routineNoun: String {
-        switch focusTitle {
-        case "Fly":      return "focus"
-        case "Read":     return "reading"
-        case "Meditate": return "meditation"
-        case "Create":   return "creative"
-        case "Reflect":  return "reflection"
-        default:         return focusTitle.lowercased()
-        }
-    }
-
-    /// A habit, not a quota.
-    ///
-    /// The old headline read "24 hours of focused study by 4 Sep", which sounds
-    /// like a single twenty-four-hour sitting and promises an amount rather
-    /// than a practice. This names the thing FocusGlobe can actually help with:
-    /// showing up for the same length of session, regularly, until a date.
-    var goalHeadline: String {
-        "Build a consistent \(durationAdjective) \(routineNoun) routine by \(targetDateLabel)"
-    }
-
-    /// The headline as shown: the word that used to be a gold eyebrow label
-    /// above it now leads the sentence, so the screen opens on one line instead
-    /// of a label and a line.
-    var goalTitle: String { "Goal: \(goalHeadline)" }
 
     /// THE date format for this screen — headline, chart axis, callout.
     ///
     /// The year is always shown. The plan runs four weeks out, so most of the
     /// time it lands in the same year and "4 Sep" was unambiguous; near the end
     /// of December it is not, and a target date that could be either year is
-    /// worse than a slightly longer string. Locale-aware via `.formatted`, and
-    /// the year comes from `targetDate` — nothing is hardcoded.
+    /// worse than a slightly longer string.
+    ///
+    /// The locale is FocusGlobe's, explicitly. `.formatted` defaults to the
+    /// DEVICE's, which is how a Spanish results screen came to promise a target
+    /// of "6 Sep 2026" — the month name is Foundation's to translate, and it
+    /// was being asked in the wrong language.
     var targetDateLabel: String {
-        targetDate.formatted(.dateTime.month(.abbreviated).day().year())
+        targetDate.formatted(
+            .dateTime.month(.abbreviated).day().year()
+                .locale(FocusLocalization.currentLocale))
     }
 
     /// A row of the plan card. `field` is what makes the pencil real: nil means
@@ -1086,14 +1116,21 @@ struct OnboardingResultPlan: Equatable {
         let field: OnboardingResultField?
     }
 
+    /// `label` is a catalog KEY — the row renders it through
+    /// `LocalizedStringKey`. `value` is already RESOLVED, because three of the
+    /// five are composed (a duration, a list of weekdays, a plural count) and
+    /// a key could not describe them. Every one of them is localized here, at
+    /// the single place they are built, rather than at five call sites.
     var details: [Detail] {
         [
-            Detail(icon: "target", label: "Focus", value: focusTitle, field: .focus),
+            Detail(icon: "target", label: "Focus",
+                   value: FocusLocalization.string(focusTitle), field: .focus),
             Detail(icon: "exclamationmark.triangle", label: "Main distraction",
-                   value: frictionTitle, field: .friction),
+                   value: FocusLocalization.string(frictionTitle), field: .friction),
             Detail(icon: "timer", label: "First flight",
                    value: Formatters.durationLabel(minutes: minutes), field: .minutes),
-            Detail(icon: "waveform", label: "Atmosphere", value: atmosphere, field: .atmosphere),
+            Detail(icon: "waveform", label: "Atmosphere",
+                   value: FocusLocalization.string(atmosphere), field: .atmosphere),
             Detail(icon: "repeat", label: "Rhythm", value: rhythmLabel, field: .rhythm),
         ]
     }

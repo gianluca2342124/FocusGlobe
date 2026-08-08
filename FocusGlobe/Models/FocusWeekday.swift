@@ -20,23 +20,37 @@ enum FocusWeekday: Int, CaseIterable, Identifiable, Codable, Comparable {
     /// 1 → 1, Saturday 6 → 6, Sunday 7 → 0.
     private var calendarSymbolIndex: Int { rawValue % 7 }
 
-    /// "Mon", "Tue" … from the current locale's own short symbols, never typed
-    /// in English.
-    var shortLabel: String {
-        let symbols = Calendar.current.shortWeekdaySymbols
-        guard symbols.count == 7 else { return fallbackLabel }
-        return symbols[calendarSymbolIndex]
-    }
-
-    var fullLabel: String {
-        let symbols = Calendar.current.weekdaySymbols
-        guard symbols.count == 7 else { return fallbackLabel }
-        return symbols[calendarSymbolIndex]
-    }
-
-    /// Only reachable if a calendar returns a malformed symbol table.
-    private var fallbackLabel: String {
+    /// The catalog key for the narrow-button label. English, fixed, and never
+    /// persisted — `rawValue` is the identity.
+    var shortLabelKey: String {
         ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][rawValue - 1]
+    }
+
+    /// The narrow-button label, in the language FocusGlobe is set to.
+    ///
+    /// TRANSLATED, NOT DERIVED. This used to read
+    /// `Calendar.current.shortWeekdaySymbols`, which is wrong twice over: it
+    /// answers in the DEVICE language, so a Spanish app on an English phone
+    /// printed Mon Tue Wed; and even asked in the right language it returns
+    /// CLDR's abbreviated forms, which are not what belongs on seven buttons
+    /// 46 points wide. Portuguese abbreviates to D S T Q Q S S — three
+    /// ambiguous pairs — and Spanish to lun/mar/mié where L M X J V S D is what
+    /// a Spanish speaker expects to tap.
+    ///
+    /// So the compact set is DESIGNED per language and lives in the catalog,
+    /// where it can be read and argued with, next to the comment that says what
+    /// it is for.
+    var shortLabel: String { FocusLocalization.string(shortLabelKey) }
+
+    /// The spoken name, for VoiceOver. `Calendar` is exactly right here — it
+    /// has all eleven languages' weekday names and there is nothing to design —
+    /// as long as it is asked in the SELECTED language rather than the phone's.
+    var fullLabel: String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = FocusLocalization.currentLocale
+        let symbols = calendar.weekdaySymbols
+        guard symbols.count == 7 else { return shortLabel }
+        return symbols[calendarSymbolIndex]
     }
 
     /// The schedule onboarding opens on.
@@ -57,7 +71,9 @@ enum FocusWeekday: Int, CaseIterable, Identifiable, Codable, Comparable {
         days.sorted().map(\.rawValue)
     }
 
-    /// "Mon · Wed · Fri" — the results screen's Rhythm value.
+    /// "L · X · V" — the results screen's Rhythm value, in the selected
+    /// language. A composed String rather than a view, which is why it resolves
+    /// through `FocusLocalization` instead of `LocalizedStringKey`.
     static func label(_ days: [FocusWeekday], separator: String = " · ") -> String {
         days.sorted().map(\.shortLabel).joined(separator: separator)
     }
@@ -84,7 +100,11 @@ struct WeekdayPicker: View {
                 Button {
                     toggle(day)
                 } label: {
-                    Text(day.shortLabel)
+                    // The KEY, not the resolved string: a view redraws when the
+                    // environment locale changes, and the language capsule on
+                    // the Welcome screen can change it while this control is
+                    // already on screen in the results editor.
+                    Text(LocalizedStringKey(day.shortLabelKey))
                         .font(.system(size: 13.5, weight: isOn ? .bold : .semibold))
                         .foregroundStyle(isOn ? Color(hex: 0x14120E) : .white.opacity(0.75))
                         .lineLimit(1)

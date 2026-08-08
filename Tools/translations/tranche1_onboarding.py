@@ -3,10 +3,23 @@
 TRANSLATIONS: dict[str, list[str]] = {
 
     # ---- Welcome ---------------------------------------------------------
+    # The first four words a pilot reads, so they are held to the shortest
+    # natural welcome each language has — not to the shape of the English.
+    #
+    # Two were rewritten after seeing them on a device. Spanish said "Te damos
+    # la bienvenida a FocusGlobe", which is correct, gender-free and reads like
+    # a hotel; Italian said "Ti diamo il benvenuto in FocusGlobe" for the same
+    # reason. Both now use the direct form with the feminine ending offered,
+    # which is what these two languages actually put on a welcome screen.
+    #
+    # That construction is NOT copied into the others. Portuguese "Boas-vindas"
+    # and Romanian "Bine ai venit" are already gender-free and already short;
+    # German, Dutch, French, Russian, Chinese and Hindi do not inflect a welcome
+    # for the reader at all. Each one is the plain native greeting.
     "Welcome to FocusGlobe": [
-        "欢迎使用 FocusGlobe", "FocusGlobe में आपका स्वागत है", "Te damos la bienvenida a FocusGlobe",
+        "欢迎使用 FocusGlobe", "FocusGlobe में आपका स्वागत है", "Bienvenido/a a FocusGlobe",
         "Bienvenue dans FocusGlobe", "Willkommen bei FocusGlobe", "Добро пожаловать в FocusGlobe",
-        "Boas-vindas ao FocusGlobe", "Ti diamo il benvenuto in FocusGlobe",
+        "Boas-vindas ao FocusGlobe", "Benvenuto/a in FocusGlobe",
         "Bine ai venit în FocusGlobe", "Welkom bij FocusGlobe"],
     "A calmer way to focus, one flight at a time.": [
         "更平静的专注方式，一次一段飞行。", "शांत तरीके से फ़ोकस करें — एक बार में एक फ़्लाइट।",

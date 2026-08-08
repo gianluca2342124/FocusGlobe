@@ -198,7 +198,7 @@ struct RouteSelectionView: View {
                     Text("·")
                     Label(Formatters.distance(km: journey.distanceKm), systemImage: "ruler")
                     Text("·")
-                    Label(journey.mood.displayName, systemImage: journey.mood.systemImage)
+                    Label(FocusLocalization.string(journey.mood.displayName), systemImage: journey.mood.systemImage)
                 }
                 .font(AppTypography.caption)
                 .foregroundStyle(.white.opacity(0.85))
@@ -329,7 +329,7 @@ private struct DestinationCard: View {
                     .foregroundStyle(ink)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
-                Text("\(Formatters.durationLabel(minutes: journey.durationMinutes)) · \(journey.mood.displayName)")
+                Text("\(Formatters.durationLabel(minutes: journey.durationMinutes)) · \(FocusLocalization.string(journey.mood.displayName))")
                     .font(.system(size: 11.5, weight: .regular, design: .serif))
                     .foregroundStyle(sepia)
                     .lineLimit(1)

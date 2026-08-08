@@ -56,11 +56,22 @@ enum Formatters {
     }
 
     /// A friendly duration label, e.g. "5 min", "1h", "1h 30m", "12h".
+    ///
+    /// THE compact session length for the whole app — the results screen's
+    /// First flight row, the pre-flight dial, route cards, the answer editor.
+    /// "min" is an abbreviation in the Latin-script languages and a word in
+    /// none of the others, so 30 min sat in a Chinese interface exactly as
+    /// wrongly as MINUTES sat in a Spanish one. Each language now abbreviates
+    /// the way its own clocks do.
+    ///
+    /// Abbreviations, so no plural: 1 min and 30 min take the same form
+    /// everywhere this is shown.
     static func durationLabel(minutes: Int) -> String {
-        guard minutes >= 60 else { return "\(minutes) min" }
+        guard minutes >= 60 else { return FocusLocalization.string("%lld min", minutes) }
         let h = minutes / 60
         let m = minutes % 60
-        return m == 0 ? "\(h)h" : "\(h)h \(m)m"
+        return m == 0 ? FocusLocalization.string("%lldh", h)
+                      : FocusLocalization.string("%lldh %lldm", h, m)
     }
 
     /// Longer, spoken-style duration used on passes & summaries.

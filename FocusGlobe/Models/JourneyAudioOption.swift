@@ -8,8 +8,22 @@ import SwiftUI
 /// file is missing the audio engine falls back to a procedural wind loop, so the
 /// feature works before any audio is added and never crashes.
 struct JourneyAudioOption: Identifiable, Hashable {
+    /// The identity. Persisted in `settings.selectedJourneyAudioID`, sent to
+    /// Supabase, matched against `loopFileName` — it is never shown and never
+    /// translated.
     let id: String
+    /// The English display copy, which doubles as the catalog key. Kept as
+    /// plain text so it can be handed to `Text(LocalizedStringKey(_:))` inside a
+    /// view or resolved through `localizedName` outside one.
     let displayName: String
+
+    /// The name to SHOW, in the language FocusGlobe is set to.
+    ///
+    /// Use this anywhere the soundscape's name is composed into a String — a
+    /// results row, an accessibility label, a summary line. Inside a view body
+    /// `Text(LocalizedStringKey(displayName))` is equivalent and preferred,
+    /// because it redraws when the language changes.
+    var localizedName: String { FocusLocalization.string(displayName) }
     /// Bundled audio file name (without extension). The player searches common
     /// extensions (.mp3, .m4a, .wav, .caf) in `Bundle.main`.
     let assetName: String
