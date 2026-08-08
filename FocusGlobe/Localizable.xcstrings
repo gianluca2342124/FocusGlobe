@@ -16678,13 +16678,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Crear"
+            "value": "Creación"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Créer"
+            "value": "Création"
           }
         },
         "de": {
@@ -16702,13 +16702,13 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Criar"
+            "value": "Criação"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Creare"
+            "value": "Creazione"
           }
         },
         "ro": {
@@ -21768,7 +21768,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Впечатления"
+            "value": "Ощущения"
           }
         },
         "pt-BR": {
@@ -23570,13 +23570,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Volar"
+            "value": "Vuelo"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Voler"
+            "value": "Vol"
           }
         },
         "de": {
@@ -23594,13 +23594,13 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Voar"
+            "value": "Voo"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Volare"
+            "value": "Volo"
           }
         },
         "ro": {
@@ -23623,7 +23623,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "随时可飞%@。"
+            "value": "随时在%@中飞行。"
           }
         },
         "hi": {
@@ -23635,7 +23635,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vuela %@ cuando quieras."
+            "value": "Vuela en %@ cuando quieras."
           }
         },
         "fr": {
@@ -23647,7 +23647,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flieg %@ jederzeit."
+            "value": "Flieg jederzeit in %@."
           }
         },
         "ru": {
@@ -23677,7 +23677,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vlieg %@ wanneer je wilt."
+            "value": "Vlieg in %@ wanneer je wilt."
           }
         }
       }
@@ -25399,7 +25399,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "专注格图"
+            "value": "专注格子"
           }
         },
         "hi": {
@@ -25742,7 +25742,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Focus maintenant"
+            "value": "Concentration immédiate"
           }
         },
         "de": {
@@ -36754,13 +36754,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Meditar"
+            "value": "Meditación"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Méditer"
+            "value": "Méditation"
           }
         },
         "de": {
@@ -36778,13 +36778,13 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Meditar"
+            "value": "Meditação"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Meditare"
+            "value": "Meditazione"
           }
         },
         "ro": {
@@ -43199,7 +43199,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tableau du Passeport"
+            "value": "Tableau de bord Passeport"
           }
         },
         "de": {
@@ -46848,7 +46848,7 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Erreiche eine %1$lld-Tage-Serie oder hol dir FocusGlobe PRO, um %2$@ freizuschalten."
+                  "value": "Erreiche eine %1$lld-Tag-Serie oder hol dir FocusGlobe PRO, um %2$@ freizuschalten."
                 }
               },
               "other": {
@@ -47869,7 +47869,7 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mementouri"
+            "value": "Memento-uri"
           }
         },
         "nl": {
@@ -55084,7 +55084,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Compagno di serie"
+            "value": "Compagno della serie"
           }
         },
         "ro": {
