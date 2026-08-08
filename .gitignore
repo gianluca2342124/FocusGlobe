@@ -35,3 +35,7 @@ Carthage/Build/
 
 # Secrets (rotate before shipping; key is in MapConfiguration.swift for MVP convenience)
 # Secrets.xcconfig
+
+# Python tooling
+__pycache__/
+*.pyc
