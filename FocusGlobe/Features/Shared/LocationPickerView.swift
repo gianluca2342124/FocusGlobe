@@ -16,13 +16,21 @@ struct LocationPickerView: View {
                     Section { currentLocationRow }
                     Section("Popular") {
                         ForEach(OriginPresets.all, id: \.self) { o in
-                            cityRow(name: o.city, country: o.country, code: o.code, origin: o)
+                            cityRow(name: o.city, country: localized(o.country),
+                                    code: o.code, origin: o)
                         }
                     }
-                    ForEach(WorldCityCatalog.countries) { country in
-                        Section(country.country) {
+                    // Sections are ordered by the name actually printed, not by
+                    // the catalog's English one — otherwise a Spanish list
+                    // reads Francia, Alemania, Grecia and looks unsorted.
+                    ForEach(WorldCityCatalog.countriesOrdered(for: appModel.preferredLanguage)) { country in
+                        let label = countryName(country)
+                        Section(label) {
                             ForEach(country.cities) { city in
-                                cityRow(name: city.name, country: country.country, code: city.code,
+                                // The ORIGIN keeps the catalog's English country:
+                                // it is persisted, and re-rendering it in the
+                                // current language is the display layer's job.
+                                cityRow(name: city.name, country: label, code: city.code,
                                         origin: JourneyOrigin(city: city.name, country: country.country,
                                                               coordinate: city.coordinate, code: city.code))
                             }
@@ -34,7 +42,8 @@ struct LocationPickerView: View {
                         Text("No cities found").foregroundStyle(AppColors.textTertiary)
                     } else {
                         ForEach(results) { entry in
-                            cityRow(name: entry.city.name, country: entry.country,
+                            cityRow(name: entry.city.name,
+                                    country: localized(entry.country),
                                     code: entry.city.code, origin: entry.origin)
                         }
                     }
@@ -72,9 +81,28 @@ struct LocationPickerView: View {
         .buttonStyle(SoftPressStyle(scale: 0.99))
     }
 
+    private func localized(_ country: String) -> String {
+        RegionDisplayNames.localized(country: country,
+                                     language: appModel.preferredLanguage)
+    }
+
+    /// The catalog stores English; the label shows the selected language.
+    private func countryName(_ country: WorldCountry) -> String {
+        // The ISO code is the reliable input where the data carries one; the
+        // name lookup is only for the rows that do not.
+        if let code = country.countryCode,
+           let name = RegionDisplayNames.name(forRegionCode: code,
+                                              language: appModel.preferredLanguage) {
+            return name
+        }
+        return localized(country.country)
+    }
+
     private var currentLocationSubtitle: String {
         switch appModel.locationState {
-        case .resolved(let o): return "\(o.city)\(o.country.isEmpty ? "" : ", \(o.country)")"
+        case .resolved(let o):
+            let country = localized(o.country)
+            return "\(o.city)\(country.isEmpty ? "" : ", \(country)")"
         case .resolving:       return "Locating…"
         case .denied:          return "Location access is off"
         case .unavailable, .idle: return "Detect where you are"

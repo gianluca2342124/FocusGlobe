@@ -237,7 +237,7 @@ app	store-passport-friends-settings	Crew member	Crew member	FriendsView.swift:32
 app	app-chrome	Crew requests, responses & connections	Crew requests, responses & connections	SettingsView.swift:566	-	-	-	-	-	-	-	-	-	-
 app	misc	Crisp mountain air for focus	Crisp mountain air for focus	HomeView.swift:967	-	-	-	-	-	-	-	-	-	-
 app	extracted	Current	Current	Marks the Cabin slot an item currently occupies. The noun is the slot/placement, not the streak.	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	Current Location	Current Location	LocationService.swift:111	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Current Location	Current Location	LocationService.swift:122	-	-	-	-	-	-	-	-	-	-
 app	app-chrome	Current position	Current position	StoreView.swift:774	-	-	-	-	-	-	-	-	-	-
 app	content	Curtains of green and violet breathing over silent snow.	Curtains of green and violet breathing over silent snow.	FocusSky.swift:272	-	-	-	-	-	-	-	-	-	-
 app	use-site-review	DATE	DATE	FlightSetup.swift:1651	-	-	-	-	-	-	-	-	-	-
@@ -260,7 +260,7 @@ app	extracted	Deleting…	Deleting…	SettingsView.swift:609	-	-	-	-	-	-	-	-	-	-
 app	content	Desert Night	Desert Night	PassportView.swift:505	-	-	-	-	-	-	-	-	-	-
 app	passport	Desert Stargazer	Desert Stargazer	PassportView.swift:504	-	-	-	-	-	-	-	-	-	-
 app	extracted	Destination	Destination	The city a focus flight is heading to.	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	Detect where you are	Detect where you are	LocationPickerView.swift:80	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Detect where you are	Detect where you are	LocationPickerView.swift:108	-	-	-	-	-	-	-	-	-	-
 app	names	Developer	Developer	SettingsView.swift:487	-	-	-	-	-	-	-	-	-	-
 app	store-items	Digital Flip Clock	Digital Flip Clock	StoreItem.swift:505	-	-	-	-	-	-	-	-	-	-
 app	store-passport-friends-settings	Disable for this flight	Disable for this flight	FocusShieldPickerView.swift:13	-	-	-	-	-	-	-	-	-	-
@@ -512,8 +512,8 @@ app	online	Links aren't allowed.	Links aren't allowed.	OnlineProfile.swift:52	-	
 app	extracted	Live	Live	FlightModeSelectorView.swift:276	-	-	-	-	-	-	-	-	-	-
 app	extracted	Live. %lld focusing now	Live. %lld focusing now		-	-	-	-	-	-	-	-	-	-
 app	app-chrome	Loading ad…	Loading ad…	CoinRewardsView.swift:171	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	Locating…	Locating…	LocationPickerView.swift:78	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	Location access is off	Location access is off	LocationPickerView.swift:79	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Locating…	Locating…	LocationPickerView.swift:106	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Location access is off	Location access is off	LocationPickerView.swift:107	-	-	-	-	-	-	-	-	-	-
 app	passport	Lock Screen	Lock Screen	WidgetGallery.swift:28	-	-	-	-	-	-	-	-	-	-
 app	extracted	Locked	Locked	PassportView.swift:662	-	-	-	-	-	-	-	-	-	-
 app	flight	Look out at the Sky	Look out at the Sky	FocusSessionView.swift:1220	-	-	-	-	-	-	-	-	-	-
@@ -564,7 +564,7 @@ app	app-chrome	No active purchases found to restore.	No active purchases found t
 app	store-passport-friends-settings	No ads · Exclusive Skies · online flights	No ads · Exclusive Skies · online flights	SettingsView.swift:330	-	-	-	-	-	-	-	-	-	-
 app	app-chrome	No apps chosen yet	No apps chosen yet	FocusShieldSettingsSection.swift:51	-	-	-	-	-	-	-	-	-	-
 app	paywall	No charge today. Then %@. Cancel anytime.	No charge today. Then %@. Cancel anytime.		-	-	-	-	-	-	-	-	-	-
-app	app-chrome	No cities found	No cities found	LocationPickerView.swift:34	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	No cities found	No cities found	LocationPickerView.swift:42	-	-	-	-	-	-	-	-	-	-
 app	store-passport-friends-settings	No crew yet	No crew yet	FriendsView.swift:384	-	-	-	-	-	-	-	-	-	-
 app	home-flight	No destinations in this range	No destinations in this range	RouteSelectionView.swift:224	-	-	-	-	-	-	-	-	-	-
 app	home-flight	No expeditions yet	No expeditions yet	HistoryView.swift:36	-	-	-	-	-	-	-	-	-	-
@@ -733,7 +733,7 @@ app	extracted	SOUNDSCAPE	SOUNDSCAPE	FlightSetup.swift:1278	-	-	-	-	-	-	-	-	-	-
 app	content	Say hello	Say hello	BalloonSkin.swift:114	-	-	-	-	-	-	-	-	-	-
 app	store-passport-friends-settings	Screen Time access is off	Screen Time access is off	FocusShieldPickerView.swift:185	-	-	-	-	-	-	-	-	-	-
 app	app-chrome	Screen Time access needed	Screen Time access needed	FocusShieldSettingsSection.swift:54	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	Search city, country, or code	Search city, country, or code	LocationPickerView.swift:47	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Search city, country, or code	Search city, country, or code	LocationPickerView.swift:56	-	-	-	-	-	-	-	-	-	-
 app	passport	Search for “FocusGlobe”.	Search for “FocusGlobe”.	WidgetGallery.swift:422	-	-	-	-	-	-	-	-	-	-
 app	paywall	See PRO Plans	See PRO Plans	PaywallView.swift:102	-	-	-	-	-	-	-	-	-	-
 app	home-flight	See who's flying with you	See who's flying with you	FocusSessionView.swift:1252	-	-	-	-	-	-	-	-	-	-
@@ -808,7 +808,7 @@ app	passport	Start a flight in a tap when idle, or watch the live time remaining
 app	home-flight	Start a new Focus	Start a new Focus	HomeView.swift:1035	-	-	-	-	-	-	-	-	-	-
 app	passport	Start a new streak after a longer one ended.	Start a new streak after a longer one ended.	PassportView.swift:524	-	-	-	-	-	-	-	-	-	-
 app	onboarding	Start your first flight	Start your first flight	OnboardingPlanScreens.swift:1110	-	-	-	-	-	-	-	-	-	-
-app	app-chrome	Starting city	Starting city	LocationPickerView.swift:48	-	-	-	-	-	-	-	-	-	-
+app	app-chrome	Starting city	Starting city	LocationPickerView.swift:57	-	-	-	-	-	-	-	-	-	-
 app	paywall	Stay in the Sky for as long as the work needs.	Stay in the Sky for as long as the work needs.	AppRouter.swift:339	-	-	-	-	-	-	-	-	-	-
 app	flight	Stay with your focus	Stay with your focus	JourneyPhase.swift:46	-	-	-	-	-	-	-	-	-	-
 app	app-chrome	Steady rain against the cabin window.	Steady rain against the cabin window.	OnboardingView.swift:917	-	-	-	-	-	-	-	-	-	-

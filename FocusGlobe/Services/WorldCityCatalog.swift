@@ -17,15 +17,34 @@ enum WorldCityCatalog {
         }
     }
 
+    /// The same countries, ordered by the name the picker will actually print.
+    ///
+    /// `countries` is sorted by the catalog's English name because that is what
+    /// the JSON is keyed on. A Spanish picker printing Alemania under a list
+    /// ordered by "Germany" is sorted by text the pilot cannot see.
+    static func countriesOrdered(for language: FocusLanguage) -> [WorldCountry] {
+        RegionDisplayNames.sortedByLocalizedName(countries, language: language) {
+            $0.countryCode.flatMap {
+                RegionDisplayNames.name(forRegionCode: $0, language: language)
+            } ?? $0.country
+        }
+    }
+
     // MARK: - Search
 
     /// Search by city name, country name, or city code (case-insensitive).
+    ///
+    /// The country is matched in the SELECTED language as well as in the
+    /// catalog's English, so a pilot reading a list of Spanish country names
+    /// can type one of them and find something.
     static func search(_ query: String, limit: Int = 80) -> [CityEntry] {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !q.isEmpty else { return [] }
         let matches = allCities.filter {
             $0.city.name.lowercased().contains(q)
                 || $0.country.lowercased().contains(q)
+                || RegionDisplayNames.localized(country: $0.country)
+                    .lowercased().contains(q)
                 || $0.city.code.lowercased().contains(q)
         }
         let prefix = matches.filter { $0.city.name.lowercased().hasPrefix(q) }
