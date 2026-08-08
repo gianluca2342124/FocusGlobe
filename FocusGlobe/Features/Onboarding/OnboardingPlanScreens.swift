@@ -138,7 +138,7 @@ struct OnboardingSetupStep: View {
                 }
                 .frame(height: 6)
 
-                Text(statusLine)
+                Text(LocalizedStringKey(statusLine))
                     .font(AppTypography.caption)
                     .foregroundStyle(.white.opacity(0.55))
                     .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: statusLine)
@@ -523,7 +523,7 @@ struct OnboardingResultsStep: View {
     private func column(title: String, lines: [String],
                         icon: String, tint: Color, muted: Bool) -> some View {
         VStack(alignment: .leading, spacing: 9) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.system(size: 12, weight: .heavy))
                 .tracking(0.6)
                 .foregroundStyle(tint.opacity(muted ? 0.75 : 1))
@@ -542,7 +542,7 @@ struct OnboardingResultsStep: View {
                     }
                     .frame(width: 17, height: 17)
                     .padding(.top, 1)
-                    Text(line)
+                    Text(LocalizedStringKey(line))
                         .font(.system(size: 13.5, weight: .medium))
                         .foregroundStyle(.white.opacity(muted ? 0.55 : 0.9))
                         .fixedSize(horizontal: false, vertical: true)
@@ -601,7 +601,7 @@ struct OnboardingResultsStep: View {
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("5 out of 5 stars")
 
-            Text(item.quote)
+            Text(LocalizedStringKey(item.quote))
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(.white.opacity(0.92))
                 .fixedSize(horizontal: false, vertical: true)
@@ -846,7 +846,7 @@ struct OnboardingAnswerEditor: View {
         ZStack {
             OnboardingBackdrop()
             VStack(alignment: .leading, spacing: AppSpacing.md) {
-                Text(field.prompt)
+                Text(LocalizedStringKey(field.prompt))
                     .font(.system(size: 21, weight: .bold, design: .default))
                     .foregroundStyle(.white)
                     .fixedSize(horizontal: false, vertical: true)
@@ -950,7 +950,7 @@ private struct OnboardingEditorRow: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(isSelected ? AppColors.selectionGold : .white.opacity(0.55))
                     .frame(width: 24)
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.system(size: 16, weight: isSelected ? .semibold : .medium))
                     .foregroundStyle(.white.opacity(isSelected ? 1 : 0.82))
                 Spacer(minLength: AppSpacing.xs)

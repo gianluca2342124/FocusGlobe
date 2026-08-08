@@ -133,7 +133,7 @@ struct PassportView: View {
                 .font(.system(size: 17, weight: .heavy, design: .default))
                 .foregroundStyle(AppColors.gold)
                 .monospacedDigit()
-            Text(label)
+            Text(LocalizedStringKey(label))
                 .font(AppTypography.micro)
                 .foregroundStyle(AppColors.textTertiary)
         }
@@ -228,7 +228,7 @@ struct PassportView: View {
                     .font(.system(size: 15, weight: .heavy, design: .default))
                     .foregroundStyle(AppColors.textPrimary)
                     .lineLimit(1).minimumScaleFactor(0.7)
-                Text(label)
+                Text(LocalizedStringKey(label))
                     .font(AppTypography.micro)
                     .foregroundStyle(AppColors.textTertiary)
             }
@@ -744,7 +744,7 @@ private struct CategoryBar: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(AppTypography.callout)
                     .foregroundStyle(AppColors.textPrimary)
                 Spacer()
@@ -859,11 +859,11 @@ private struct JourneySoundCard: View {
                     statusBadge
                 }
                 Spacer(minLength: AppSpacing.sm)
-                Text(option.displayName)
+                Text(LocalizedStringKey(option.displayName))
                     .font(.system(size: 16, weight: .bold, design: .default))
                     .foregroundStyle(.white)
                     .lineLimit(1)
-                Text(statusText)
+                Text(LocalizedStringKey(statusText))
                     .font(AppTypography.micro)
                     .foregroundStyle(.white.opacity(0.85))
             }

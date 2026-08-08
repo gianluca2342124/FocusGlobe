@@ -40,7 +40,7 @@ struct GlassSection<Content: View>: View {
     @ViewBuilder var content: () -> Content
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xs) {
-            Text(title.uppercased())
+            Text(LocalizedStringKey(title)).textCase(.uppercase)
                 .font(.system(size: 12, weight: .bold, design: .default)).tracking(0.6)
                 .foregroundStyle(AppColors.textSecondary)
                 .padding(.leading, 4)
@@ -218,7 +218,7 @@ struct GlassButton: View {
         Button(action: action) {
             HStack(spacing: AppSpacing.xs) {
                 if let systemImage { Image(systemName: systemImage).font(.system(size: 16, weight: .semibold)) }
-                Text(title).font(AppTypography.callout)
+                Text(LocalizedStringKey(title)).font(AppTypography.callout)
             }
             .foregroundStyle(AppColors.textPrimary)
             .frame(maxWidth: .infinity).frame(height: 50)
@@ -282,7 +282,7 @@ struct GlassCapsuleButton: View {
                 if let systemImage {
                     Image(systemName: systemImage).font(.system(size: 15, weight: .bold))
                 }
-                Text(title).font(.system(size: 15, weight: .semibold, design: .default))
+                Text(LocalizedStringKey(title)).font(.system(size: 15, weight: .semibold, design: .default))
             }
             .foregroundStyle(AppColors.textPrimary.opacity(enabled ? 0.92 : 0.45))
             .padding(.horizontal, horizontalPadding)
@@ -312,7 +312,7 @@ struct GlassTextButton: View {
             guard enabled else { return }
             action()
         } label: {
-            Text(text)
+            Text(LocalizedStringKey(text))
                 .font(.system(size: 15, weight: .heavy, design: .default))
                 .foregroundStyle(AppColors.textPrimary.opacity(enabled ? 1 : 0.45))
                 .frame(width: max(44, size), height: max(44, size))

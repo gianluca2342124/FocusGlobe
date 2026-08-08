@@ -16,7 +16,7 @@ struct StatTile: View {
                 Text(value)
                     .font(AppTypography.title2)
                     .foregroundStyle(AppColors.textPrimary)
-                Text(label)
+                Text(LocalizedStringKey(label))
                     .font(AppTypography.caption)
                     .foregroundStyle(AppColors.textSecondary)
             }

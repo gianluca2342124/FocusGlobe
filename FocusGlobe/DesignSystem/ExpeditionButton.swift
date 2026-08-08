@@ -32,7 +32,7 @@ struct ExpeditionButton: View {
                         Image(systemName: systemImage)
                             .font(.system(size: Layout.pad(16, 19), weight: .semibold))
                     }
-                    Text(title)
+                    Text(LocalizedStringKey(title))
                         .font(.system(size: Layout.pad(18, 21), weight: .semibold, design: .serif))
                     if showSeal {
                         Circle().fill(wax)

@@ -393,7 +393,7 @@ struct SettingsView: View {
                         tint: AppColors.gold,
                         trailing: AnyView(EmptyView()))
             if let accountError {
-                Text(accountError)
+                Text(LocalizedStringKey(accountError))
                     .font(AppTypography.caption)
                     .foregroundStyle(AppColors.danger.opacity(0.9))
                     .fixedSize(horizontal: false, vertical: true)
@@ -669,9 +669,9 @@ struct ToggleRow: View {
             HStack(spacing: AppSpacing.sm) {
                 iconBadge(systemImage, tint: AppColors.gold)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(title).font(AppTypography.callout).foregroundStyle(AppColors.textPrimary)
+                    Text(LocalizedStringKey(title)).font(AppTypography.callout).foregroundStyle(AppColors.textPrimary)
                     if let subtitle {
-                        Text(subtitle).font(AppTypography.caption).foregroundStyle(AppColors.textTertiary)
+                        Text(LocalizedStringKey(subtitle)).font(AppTypography.caption).foregroundStyle(AppColors.textTertiary)
                     }
                 }
             }
@@ -692,9 +692,9 @@ struct SettingsRow: View {
         HStack(spacing: AppSpacing.sm) {
             iconBadge(systemImage, tint: tint)
             VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(AppTypography.callout).foregroundStyle(AppColors.textPrimary)
+                Text(LocalizedStringKey(title)).font(AppTypography.callout).foregroundStyle(AppColors.textPrimary)
                 if let subtitle {
-                    Text(subtitle).font(AppTypography.caption).foregroundStyle(AppColors.textTertiary)
+                    Text(LocalizedStringKey(subtitle)).font(AppTypography.caption).foregroundStyle(AppColors.textTertiary)
                 }
             }
             Spacer()

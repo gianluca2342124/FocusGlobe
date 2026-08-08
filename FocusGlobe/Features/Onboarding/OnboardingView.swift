@@ -557,10 +557,10 @@ struct OnboardingView: View {
                 }
             }
             VStack(spacing: 3) {
-                Text(option.displayName)
+                Text(LocalizedStringKey(option.displayName))
                     .font(.system(size: Layout.pad(23, 28), weight: .bold, design: .default))
                     .foregroundStyle(.white)
-                Text(soundBlurb(option))
+                Text(LocalizedStringKey(soundBlurb(option)))
                     .font(AppTypography.caption)
                     .foregroundStyle(.white.opacity(0.6))
                     .multilineTextAlignment(.center)
@@ -791,11 +791,11 @@ struct OnboardingView: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(title)
+                        Text(LocalizedStringKey(title))
                             .font(.system(size: Layout.pad(28, 36), weight: .bold, design: .default))
                             .foregroundStyle(.white)
                             .fixedSize(horizontal: false, vertical: true)
-                        Text(subtitle)
+                        Text(LocalizedStringKey(subtitle))
                             .font(AppTypography.callout)
                             .foregroundStyle(.white.opacity(0.66))
                             .fixedSize(horizontal: false, vertical: true)
@@ -825,7 +825,7 @@ struct OnboardingView: View {
                         .foregroundStyle(isSelected ? Color(hex: 0x14120E) : AppColors.gold)
                         .frame(width: 26)
                 }
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.system(size: 16, weight: .semibold, design: .default))
                     .foregroundStyle(isSelected ? Color(hex: 0x14120E) : .white)
                     .multilineTextAlignment(.leading)
@@ -861,7 +861,7 @@ struct OnboardingView: View {
                         .font(.system(size: 19, weight: .semibold))
                         .foregroundStyle(isSelected ? Color(hex: 0x14120E) : AppColors.gold)
                 }
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.system(size: 16.5, weight: .semibold, design: .default))
                     .foregroundStyle(isSelected ? Color(hex: 0x14120E) : .white)
                     .lineLimit(1)
@@ -1077,7 +1077,7 @@ struct OnboardingSignInSheet: View {
                 .frame(height: 52)
 
                 if let errorMessage {
-                    Text(errorMessage)
+                    Text(LocalizedStringKey(errorMessage))
                         .font(AppTypography.caption)
                         .foregroundStyle(AppColors.danger)
                         .multilineTextAlignment(.center)

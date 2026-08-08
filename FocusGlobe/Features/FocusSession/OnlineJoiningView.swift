@@ -47,11 +47,11 @@ struct OnlineJoiningView: View {
                 BalloonView(height: 96, showBurner: false, showGlow: false,
                             skin: BalloonSkin.skin(id: nil))
                 VStack(spacing: 6) {
-                    Text(headline)
+                    Text(LocalizedStringKey(headline))
                         .font(.system(size: 24, weight: .bold, design: .serif))
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
-                    Text(subline)
+                    Text(LocalizedStringKey(subline))
                         .font(.system(size: 14, weight: .semibold, design: .default))
                         .foregroundStyle(.white.opacity(0.72))
                         .contentTransition(.numericText())

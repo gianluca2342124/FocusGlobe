@@ -72,7 +72,7 @@ struct DestinationPostcard: View {
                         .foregroundStyle(fg.opacity(0.8))
                 }
                 Spacer()
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(compact ? AppTypography.callout : AppTypography.title2)
                     .foregroundStyle(fg).lineLimit(1)
                 Text(place)

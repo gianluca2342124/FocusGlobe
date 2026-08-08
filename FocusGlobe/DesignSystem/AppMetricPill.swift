@@ -20,7 +20,7 @@ struct AppMetricPill: View {
                     .font(monospacedValue ? AppTypography.timerPill : AppTypography.headline)
                     .foregroundStyle(AppColors.textPrimary)
                 if let label {
-                    Text(label)
+                    Text(LocalizedStringKey(label))
                         .font(AppTypography.micro)
                         .foregroundStyle(AppColors.textTertiary)
                 }

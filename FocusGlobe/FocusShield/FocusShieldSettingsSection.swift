@@ -69,8 +69,8 @@ struct FocusShieldSettingsSection: View {
                 .frame(width: 32, height: 32)
                 .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(tint.opacity(0.14)))
             VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(AppTypography.callout).foregroundStyle(AppColors.textPrimary)
-                Text(subtitle).font(AppTypography.caption).foregroundStyle(AppColors.textTertiary)
+                Text(LocalizedStringKey(title)).font(AppTypography.callout).foregroundStyle(AppColors.textPrimary)
+                Text(LocalizedStringKey(subtitle)).font(AppTypography.caption).foregroundStyle(AppColors.textTertiary)
             }
             Spacer(minLength: 0)
             if showChevron {

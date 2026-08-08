@@ -368,7 +368,7 @@ struct StoreView: View {
     /// since gold now belongs to owned/coin actions, not subscription branding.
     private func goldAction(_ title: String, pro: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.system(size: 13.5, weight: .bold, design: .default))
                 .lineLimit(1).minimumScaleFactor(0.75)
                 .foregroundStyle(pro ? .white : Color(hex: 0x2B2510))
@@ -442,7 +442,7 @@ struct StoreView: View {
                     appModel.tapFeedback()
                     withAnimation(.snappy(duration: 0.28)) { mode = m; previewItemID = nil }
                 } label: {
-                    Text(m.rawValue)
+                    Text(LocalizedStringKey(m.rawValue))
                         .font(.system(size: 14, weight: .bold, design: .default))
                         .foregroundStyle(isOn ? Color(hex: 0x14120E) : AppColors.textSecondary)
                         .frame(maxWidth: .infinity)
@@ -742,7 +742,7 @@ private struct CabinPlacementSheet: View {
                     .frame(width: 26)
                     .foregroundStyle(open ? AppColors.selectionGold : AppColors.textTertiary)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(slot.displayName)
+                    Text(LocalizedStringKey(slot.displayName))
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(AppColors.textPrimary)
                     Text(LocalizedStringKey(slot.placementHint))
@@ -986,7 +986,7 @@ private struct SkinCard: View {
                         .font(.system(size: 14.5, weight: .bold, design: .default))
                         .foregroundStyle(AppColors.textPrimary)
                         .lineLimit(1).minimumScaleFactor(0.8)
-                    Text(statusText)
+                    Text(LocalizedStringKey(statusText))
                         .font(.system(size: 11.5, weight: .semibold, design: .default))
                         .foregroundStyle(equipped ? AppColors.success : AppColors.textTertiary)
                         .monospacedDigit()

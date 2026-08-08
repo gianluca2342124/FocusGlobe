@@ -139,6 +139,14 @@ final class AppModel: ObservableObject {
 
         let loadedSettings = persistence.load(AppSettings.self, for: .settings) ?? .default
         self.settings = loadedSettings
+        // BEFORE anything can render. `activate` points Bundle.main's string
+        // lookup at the chosen language's .lproj; without it every
+        // LocalizedStringKey in the app resolves against the DEVICE language,
+        // which is why a build with complete catalogs still showed English.
+        // Mirrors `preferredLanguage`'s getter exactly: nil IS "never chose".
+        FocusLocalization.activate(loadedSettings.preferredLanguageCode == nil
+            ? .devicePreferred
+            : FocusLanguage.resolve(loadedSettings.preferredLanguageCode))
         let loadedProgress = persistence.load(UserProgress.self, for: .progress) ?? .empty
         let loadedHistory = persistence.load([FocusSessionRecord].self, for: .history) ?? []
         self.progress = loadedProgress
@@ -1084,10 +1092,17 @@ final class AppModel: ObservableObject {
         }
         set {
             settings.preferredLanguageCode = newValue.code
-            // Widgets, the Shield extensions and scheduled notifications live
-            // outside this view tree and cannot see `.environment(\.locale)`.
-            // They read this mirror instead.
-            FocusLocalization.mirror(newValue)
+            // Repoint every string lookup in THIS process, and mirror the code
+            // for the ones that live outside it — widgets, the Shield
+            // extensions and scheduled notifications, none of which can see
+            // `.environment(\.locale)`. `activate` does both.
+            //
+            // `settings` is @Published, so this setter also publishes: the
+            // root's `.environment(\.locale, appModel.preferredLocale)` changes
+            // in the same update, which is what invalidates the view tree and
+            // redraws the visible screen in the new language without a
+            // relaunch and without resetting any @State.
+            FocusLocalization.activate(newValue)
             syncWidgets()
             // Reminders are composed when SCHEDULED, so anything already queued
             // is in the old language. Rebuilding the plan re-composes it — the

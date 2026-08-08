@@ -116,7 +116,7 @@ private struct HistoryRow: View {
     private func metric(systemImage: String, text: String) -> some View {
         HStack(spacing: 4) {
             Image(systemName: systemImage).font(.system(size: 11, weight: .semibold))
-            Text(text).font(AppTypography.caption)
+            Text(LocalizedStringKey(text)).font(AppTypography.caption)
         }
         .foregroundStyle(AppColors.textSecondary)
     }

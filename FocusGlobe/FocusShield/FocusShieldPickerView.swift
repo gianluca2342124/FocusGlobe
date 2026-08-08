@@ -236,8 +236,8 @@ struct FocusShieldPickerView: View {
                 .frame(width: 34, height: 34)
                 .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(tint.opacity(0.14)))
             VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(AppTypography.callout).foregroundStyle(AppColors.textPrimary)
-                Text(subtitle).font(AppTypography.caption).foregroundStyle(AppColors.textTertiary)
+                Text(LocalizedStringKey(title)).font(AppTypography.callout).foregroundStyle(AppColors.textPrimary)
+                Text(LocalizedStringKey(subtitle)).font(AppTypography.caption).foregroundStyle(AppColors.textTertiary)
             }
             Spacer(minLength: 0)
         }

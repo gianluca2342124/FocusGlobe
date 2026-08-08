@@ -462,7 +462,7 @@ struct PaywallView: View {
             .disabled(effectiveKind == nil || subs.isPurchasing)
 
             if let message = subs.errorMessage {
-                Text(message)
+                Text(LocalizedStringKey(message))
                     .font(.system(size: 12.5, weight: .medium))
                     .foregroundStyle(AppColors.danger)
                     .multilineTextAlignment(.center)

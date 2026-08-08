@@ -920,7 +920,7 @@ private struct SkyPreviewFlightView: View {
 
     private func softSecondary(title: String, action: @escaping () -> Void) -> some View {
         Button { appModel.tapFeedback(); action() } label: {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.system(size: 15, weight: .semibold, design: .default))
                 .foregroundStyle(.white.opacity(0.85))
                 .frame(maxWidth: .infinity).frame(height: 50)
@@ -936,7 +936,7 @@ private struct SkyPreviewFlightView: View {
         VStack(spacing: 7) {
             HStack(spacing: 8) {
                 Image(systemName: icon).font(.system(size: 15, weight: .bold))
-                Text(title).font(.system(size: 15, weight: .bold, design: .default))
+                Text(LocalizedStringKey(title)).font(.system(size: 15, weight: .bold, design: .default))
                 Spacer(minLength: 0)
             }
             .foregroundStyle(.white)

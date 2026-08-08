@@ -191,7 +191,7 @@ struct FlightModeSelectorView: View {
                     }
                 }
                 .frame(height: 40)
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.system(size: 23, weight: .bold, design: .default))
                     .foregroundStyle(.white)
                     .lineLimit(1).minimumScaleFactor(0.7)
@@ -263,7 +263,7 @@ struct FlightModeSelectorView: View {
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Live. \(SkyActivity.count(for: appModel.selectedSky)) focusing now")
         } else {
-            Text(fallback)
+            Text(LocalizedStringKey(fallback))
                 .font(.system(size: 12.5, weight: .semibold, design: .default))
                 .foregroundStyle(selected ? AppColors.textSecondary : AppColors.textTertiary)
                 .lineLimit(1).minimumScaleFactor(0.8)

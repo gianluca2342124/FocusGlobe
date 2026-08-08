@@ -14,7 +14,7 @@ struct AppChip: View {
                 Image(systemName: systemImage)
                     .font(.system(size: Layout.pad(11.5, 14), weight: .semibold))
             }
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(AppTypography.caption)
         }
         // `selectionInk`, not white: the selected fill is warm gold, and white
@@ -45,7 +45,7 @@ struct AppTagChip: View {
                 Image(systemName: systemImage)
                     .font(.system(size: 10.5, weight: .semibold))
             }
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(AppTypography.micro)
         }
         .foregroundStyle(foreground)

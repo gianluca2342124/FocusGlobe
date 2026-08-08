@@ -934,7 +934,7 @@ struct FocusSessionView: View {
         // ONLY the ticking numerals — the control lives in `heroControl`, outside
         // this half-second timeline.
         return VStack(spacing: 4) {
-            Text(label.uppercased())
+            Text(LocalizedStringKey(label)).textCase(.uppercase)
                 .font(.system(size: Layout.pad(12, 15), weight: .semibold, design: .default))
                 .tracking(2.5)
                 .foregroundStyle(.white.opacity(0.55))
@@ -970,7 +970,7 @@ struct FocusSessionView: View {
                             .font(.system(size: 9.5, weight: .heavy, design: .default))
                             .tracking(1.6)
                             .foregroundStyle(.white.opacity(0.6))
-                        Text(appModel.selectedJourneyAudio.displayName)
+                        Text(LocalizedStringKey(appModel.selectedJourneyAudio.displayName))
                             .font(.system(size: 17, weight: .bold, design: .default))
                             .foregroundStyle(.white)
                     }
@@ -1000,7 +1000,7 @@ struct FocusSessionView: View {
         Button(action: action) {
             HStack(spacing: 8) {
                 Image(systemName: icon).font(.system(size: Layout.pad(14, 17), weight: .bold))
-                Text(title).font(.system(size: Layout.pad(15, 18), weight: .semibold, design: .default))
+                Text(LocalizedStringKey(title)).font(.system(size: Layout.pad(15, 18), weight: .semibold, design: .default))
             }
             .foregroundStyle(.white.opacity(0.9))
             .padding(.horizontal, Layout.pad(22, 28))
@@ -1275,13 +1275,13 @@ private struct FlightControlsPanel: View {
                     .foregroundStyle(AppColors.gold)
                     .frame(width: 24)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(title)
+                    Text(LocalizedStringKey(title))
                         .font(.system(size: 14.5, weight: .semibold, design: .default))
                         .foregroundStyle(.white)
                         // The panel has a fixed width, so a long title must shrink
                         // rather than wrap and break the shared row height.
                         .lineLimit(1).minimumScaleFactor(0.85)
-                    Text(subtitle)
+                    Text(LocalizedStringKey(subtitle))
                         .font(.system(size: 11.5, weight: .regular, design: .default))
                         .foregroundStyle(.white.opacity(0.6))
                         .lineLimit(1).minimumScaleFactor(0.8)
@@ -1306,7 +1306,7 @@ private struct FlightControlsPanel: View {
                     } label: {
                         HStack(spacing: 5) {
                             Image(systemName: option.systemImage).font(.system(size: 11, weight: .bold))
-                            Text(option.displayName).font(.system(size: 12, weight: .bold, design: .default))
+                            Text(LocalizedStringKey(option.displayName)).font(.system(size: 12, weight: .bold, design: .default))
                         }
                         .foregroundStyle(selected ? Color(hex: 0x14120E) : .white)
                         .padding(.horizontal, 10).frame(height: 32)

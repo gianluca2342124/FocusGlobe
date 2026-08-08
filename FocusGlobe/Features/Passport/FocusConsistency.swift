@@ -398,6 +398,7 @@ struct FocusConsistencyGrid: View {
                                calendar: Calendar,
                                minGap: Int = 3, maxLabels: Int = 6) -> [(index: Int, text: String)] {
         let formatter = DateFormatter()
+        formatter.locale = FocusLocalization.currentLocale
         formatter.setLocalizedDateFormatFromTemplate("MMM")
         // Candidate boundaries: the first column of each new month (left → right).
         var lastMonth = -1
@@ -472,7 +473,7 @@ struct FocusGridShareCard: View {
                     .font(.system(size: 34, weight: .bold, design: .serif))
                     .foregroundStyle(Color(hex: 0xF7F1E7))
                 if let displayName, !displayName.isEmpty {
-                    Text(displayName)
+                    Text(LocalizedStringKey(displayName))
                         .font(.system(size: 17, weight: .semibold, design: .default))
                         .foregroundStyle(Color(hex: 0xD8B56D))
                 }
@@ -506,7 +507,7 @@ struct FocusGridShareCard: View {
             Text(value)
                 .font(.system(size: 26, weight: .heavy, design: .default))
                 .foregroundStyle(Color(hex: 0xE8A54B))
-            Text(label)
+            Text(LocalizedStringKey(label))
                 .font(.system(size: 12, weight: .semibold, design: .default))
                 .foregroundStyle(Color(hex: 0xA89D8C))
         }

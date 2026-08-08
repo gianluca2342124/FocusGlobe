@@ -347,7 +347,7 @@ struct FlightSetupView: View {
                 }
             }
             Spacer()
-            Text(stepTitle)
+            Text(LocalizedStringKey(stepTitle))
                 .font(.system(size: 17, weight: .semibold, design: .serif))
                 .foregroundStyle(.white)
                 .id(stepTitle)
@@ -1298,7 +1298,7 @@ struct FlightModeSheet: View {
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: option.systemImage).font(.system(size: 13, weight: .bold))
-                Text(option.displayName).font(.system(size: 13.5, weight: .bold, design: .default))
+                Text(LocalizedStringKey(option.displayName)).font(.system(size: 13.5, weight: .bold, design: .default))
             }
             .foregroundStyle(selected ? Color(hex: 0x14120E) : .white)
             .padding(.horizontal, AppSpacing.sm)
@@ -1325,10 +1325,10 @@ struct FlightModeSheet: View {
 
     private func rowText(_ title: String, _ subtitle: String) -> some View {
         VStack(alignment: .leading, spacing: 1) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.system(size: 16, weight: .semibold, design: .default))
                 .foregroundStyle(.white)
-            Text(subtitle)
+            Text(LocalizedStringKey(subtitle))
                 .font(.system(size: 12.5, weight: .regular, design: .default))
                 .foregroundStyle(.white.opacity(0.6))
                 .lineLimit(1).minimumScaleFactor(0.8)
@@ -1448,7 +1448,7 @@ struct CheckInTicketView: View {
                     Text("Flight Mode")
                         .font(.system(size: 13, weight: .bold, design: .default))
                         .foregroundStyle(.white)
-                    Text(flightModeSummary)
+                    Text(LocalizedStringKey(flightModeSummary))
                         .font(.system(size: 11.5, weight: .medium, design: .default))
                         .foregroundStyle(.white.opacity(0.62))
                         .lineLimit(1)
@@ -1760,7 +1760,7 @@ struct CheckInTicketView: View {
     private var barcodeSeed: String { "\(minutes)-\(focus?.title ?? "focus")-\(skyName)" }
 
     private func fieldLabel(_ label: String) -> some View {
-        Text(label)
+        Text(LocalizedStringKey(label))
             .font(.system(size: 9, weight: .semibold, design: .monospaced))
             .tracking(1.4)
             .foregroundStyle(inkSoft)
