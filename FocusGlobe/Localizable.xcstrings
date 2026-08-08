@@ -4107,7 +4107,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "1 hora concentrado"
+            "value": "1 hora de concentración"
           }
         },
         "fr": {
@@ -4131,7 +4131,7 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "1 hora focado"
+            "value": "1 hora de foco"
           }
         },
         "it": {
@@ -12881,7 +12881,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "आकार चुनें, फिर «विजेट जोड़ें» दबाएँ।"
+            "value": "आकार चुनें, फिर “विजेट जोड़ें” दबाएँ।"
           }
         },
         "es": {
@@ -18080,7 +18080,7 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Spațiul adânc"
+            "value": "Spațiul cosmic"
           }
         },
         "nl": {
@@ -19930,7 +19930,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Madrugador"
+            "value": "Ave madrugadora"
           }
         },
         "fr": {
@@ -19954,7 +19954,7 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Madrugador"
+            "value": "Ave madrugadora"
           }
         },
         "it": {
@@ -19966,7 +19966,7 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Matinal"
+            "value": "Pasăre matinală"
           }
         },
         "nl": {
@@ -26162,7 +26162,7 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Concentrează-te o dată pe cerul Spațiul adânc."
+            "value": "Concentrează-te o dată pe cerul Spațiul cosmic."
           }
         },
         "nl": {
@@ -42275,7 +42275,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "ओपन फ़ोकस"
+            "value": "खुला फ़ोकस"
           }
         },
         "es": {
@@ -42714,7 +42714,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bezit minstens één cabinedecoratie uit de Store."
+            "value": "Bezit minstens één cabinedecoratie uit de Winkel."
           }
         }
       }
@@ -47313,13 +47313,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Listo para despegar"
+            "value": "Todo listo para despegar"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prêt au décollage"
+            "value": "Tout est prêt pour décoller"
           }
         },
         "de": {
@@ -47331,19 +47331,19 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Готов к взлёту"
+            "value": "Готовы к взлёту"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pronto para decolar"
+            "value": "Tudo pronto para decolar"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pronto al decollo"
+            "value": "Tutto pronto al decollo"
           }
         },
         "ro": {
@@ -49780,7 +49780,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "«FocusGlobe» खोजें।"
+            "value": "“FocusGlobe” खोजें।"
           }
         },
         "es": {
@@ -54468,7 +54468,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Empieza una racha nueva después de que acabara una más larga."
+            "value": "Empieza una racha nueva después de que termine una más larga."
           }
         },
         "fr": {
@@ -56283,13 +56283,13 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "«हो गया» दबाएँ — आपका विजेट होम स्क्रीन पर है।"
+            "value": "“हो गया” दबाएँ — आपका विजेट होम स्क्रीन पर है।"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Toca Aceptar: tu widget ya está en la pantalla de inicio."
+            "value": "Toca Listo: tu widget ya está en la pantalla de inicio."
           }
         },
         "fr": {

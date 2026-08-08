@@ -65,7 +65,7 @@ TRANSLATIONS: dict[str, list[str]] = {
     "Deep Space": [
         "深空", "गहरा अंतरिक्ष", "Espacio profundo", "Espace lointain",
         "Tiefer Weltraum", "Глубокий космос", "Espaço profundo",
-        "Spazio profondo", "Spațiul adânc", "Diepe ruimte",
+        "Spazio profondo", "Spațiul cosmic", "Diepe ruimte",
     ],
 
     # ---- Sky category labels ---------------------------------------------

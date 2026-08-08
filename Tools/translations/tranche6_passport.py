@@ -31,9 +31,9 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Jurnal de zbor", "Vluchtlogboek",
     ],
     "Ready for takeoff": [
-        "准备起飞", "उड़ान के लिए तैयार", "Listo para despegar",
-        "Prêt au décollage", "Bereit zum Start", "Готов к взлёту",
-        "Pronto para decolar", "Pronto al decollo", "Gata de decolare",
+        "准备起飞", "उड़ान के लिए तैयार", "Todo listo para despegar",
+        "Tout est prêt pour décoller", "Bereit zum Start", "Готовы к взлёту",
+        "Tudo pronto para decolar", "Tutto pronto al decollo", "Gata de decolare",
         "Klaar voor vertrek",
     ],
     "Recent landings": [
@@ -48,7 +48,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Obiettivi di oggi", "Obiectivele de azi", "Doelen van vandaag",
     ],
     "Open focus": [
-        "开放专注", "ओपन फ़ोकस", "Concentración abierta", "Concentration libre",
+        "开放专注", "खुला फ़ोकस", "Concentración abierta", "Concentration libre",
         "Offener Fokus", "Свободный фокус", "Foco aberto",
         "Concentrazione libera", "Concentrare liberă", "Vrije focus",
     ],
@@ -94,8 +94,8 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Pilota da 25 min", "Pilot de 25 min", "25-minutenpiloot",
     ],
     "1 Hour Focused": [
-        "专注 1 小时", "1 घंटा फ़ोकस", "1 hora concentrado", "1 heure de concentration",
-        "1 Stunde fokussiert", "1 час в фокусе", "1 hora focado",
+        "专注 1 小时", "1 घंटा फ़ोकस", "1 hora de concentración", "1 heure de concentration",
+        "1 Stunde fokussiert", "1 час в фокусе", "1 hora de foco",
         "1 ora di concentrazione", "1 oră de concentrare", "1 uur gefocust",
     ],
     "5 Flights": [
@@ -149,9 +149,9 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Pasăre de noapte", "Nachtbraker",
     ],
     "Early Bird": [
-        "早起的鸟", "सुबह का पंछी", "Madrugador", "Lève-tôt",
-        "Frühaufsteher", "Ранняя пташка", "Madrugador", "Mattiniero",
-        "Matinal", "Vroege vogel",
+        "早起的鸟", "सुबह का पंछी", "Ave madrugadora", "Lève-tôt",
+        "Frühaufsteher", "Ранняя пташка", "Ave madrugadora", "Mattiniero",
+        "Pasăre matinală", "Vroege vogel",
     ],
     "Tokyo Pilot": [
         "东京飞行员", "तोक्यो पायलट", "Piloto de Tokio", "Pilote de Tokyo",
@@ -454,7 +454,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Сосредоточьтесь один раз в небе «Глубокий космос».",
         "Foque uma vez no céu Espaço profundo.",
         "Concentrati una volta nel cielo Spazio profondo.",
-        "Concentrează-te o dată pe cerul Spațiul adânc.",
+        "Concentrează-te o dată pe cerul Spațiul cosmic.",
         "Focus één keer in de lucht Diepe ruimte.",
     ],
     "Earn 100 Focus Coins from your flights.": [
@@ -479,7 +479,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Tenha ao menos uma decoração de cabine da Loja.",
         "Possiedi almeno una decorazione della cabina dal Negozio.",
         "Deține cel puțin o decorațiune de cabină din Magazin.",
-        "Bezit minstens één cabinedecoratie uit de Store.",
+        "Bezit minstens één cabinedecoratie uit de Winkel.",
     ],
     "Unlock three or more balloon skins.": [
         "解锁三种或更多热气球皮肤。",
@@ -515,7 +515,7 @@ TRANSLATIONS: dict[str, list[str]] = {
     "Start a new streak after a longer one ended.": [
         "在一段较长的连续记录结束后重新开始。",
         "लंबी स्ट्रीक ख़त्म होने के बाद नई स्ट्रीक शुरू करें।",
-        "Empieza una racha nueva después de que acabara una más larga.",
+        "Empieza una racha nueva después de que termine una más larga.",
         "Lancez une nouvelle série après la fin d’une plus longue.",
         "Beginne eine neue Serie, nachdem eine längere geendet hat.",
         "Начните новую серию после того, как закончилась более длинная.",
@@ -604,14 +604,14 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Tik op de knop + (Voeg widget toe) in de bovenhoek.",
     ],
     "Search for “FocusGlobe”.": [
-        "搜索「FocusGlobe」。", "«FocusGlobe» खोजें।", "Busca «FocusGlobe».",
+        "搜索「FocusGlobe」。", "“FocusGlobe” खोजें।", "Busca «FocusGlobe».",
         "Recherchez « FocusGlobe ».", "Suche nach „FocusGlobe“.",
         "Найдите «FocusGlobe».", "Busque por “FocusGlobe”.",
         "Cerca «FocusGlobe».", "Caută „FocusGlobe”.", "Zoek naar ‘FocusGlobe’.",
     ],
     "Choose a size, then tap Add Widget.": [
         "选择尺寸，然后点按「添加小组件」。",
-        "आकार चुनें, फिर «विजेट जोड़ें» दबाएँ।",
+        "आकार चुनें, फिर “विजेट जोड़ें” दबाएँ।",
         "Elige un tamaño y toca Añadir widget.",
         "Choisissez une taille, puis touchez Ajouter un widget.",
         "Wähle eine Größe und tippe auf Widget hinzufügen.",
@@ -623,8 +623,8 @@ TRANSLATIONS: dict[str, list[str]] = {
     ],
     "Tap Done — your widget is on the Home Screen.": [
         "点按「完成」——小组件已在主屏幕上。",
-        "«हो गया» दबाएँ — आपका विजेट होम स्क्रीन पर है।",
-        "Toca Aceptar: tu widget ya está en la pantalla de inicio.",
+        "“हो गया” दबाएँ — आपका विजेट होम स्क्रीन पर है।",
+        "Toca Listo: tu widget ya está en la pantalla de inicio.",
         "Touchez OK — votre widget est sur l’écran d’accueil.",
         "Tippe auf Fertig — dein Widget ist auf dem Home-Bildschirm.",
         "Нажмите «Готово» — виджет уже на главном экране.",
