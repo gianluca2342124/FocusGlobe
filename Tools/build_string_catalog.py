@@ -66,7 +66,7 @@ CATALOGS = {
 sys.path.insert(0, str(ROOT / "Tools"))
 
 
-def load_tranches() -> dict[str, tuple[dict, dict]]:
+def load_tranches():
     """Merge every tranche module, in name order, grouped by catalog.
 
     Returns {catalog: (simple strings, plural strings)}. A key defined twice
@@ -78,6 +78,8 @@ def load_tranches() -> dict[str, tuple[dict, dict]]:
     import translations
 
     tables: dict[str, tuple[dict, dict]] = {name: ({}, {}) for name in CATALOGS}
+    comments: dict[str, dict[str, str]] = {name: {} for name in CATALOGS}
+    verbatim: dict[str, set[str]] = {name: set() for name in CATALOGS}
     owner: dict[tuple[str, str], str] = {}
     for mod in sorted(m.name for m in pkgutil.iter_modules(translations.__path__)):
         module = importlib.import_module(f"translations.{mod}")
@@ -93,6 +95,10 @@ def load_tranches() -> dict[str, tuple[dict, dict]]:
                     f"translation")
             merged[key] = values
             owner.setdefault((catalog, key), mod)
+        for key, comment in getattr(module, "COMMENTS", {}).items():
+            comments[catalog][key] = comment
+        for key in getattr(module, "DO_NOT_TRANSLATE", ()):
+            verbatim[catalog].add(key)
         for key, forms in getattr(module, "PLURALS", {}).items():
             if key in plurals and plurals[key] != forms:
                 raise SystemExit(
@@ -105,7 +111,7 @@ def load_tranches() -> dict[str, tuple[dict, dict]]:
         if overlap:
             raise SystemExit(f"{catalog}: key(s) both simple and plural: "
                              f"{sorted(overlap)}")
-    return tables
+    return tables, comments, verbatim
 
 
 def simple_entry(key: str, values: list[str]) -> dict:
@@ -152,20 +158,70 @@ def plural_entry(key: str, forms: dict[str, dict[str, str]]) -> dict:
 
 
 def build(path: pathlib.Path, keys: dict[str, list[str]],
-          plurals: dict[str, dict[str, dict[str, str]]]) -> None:
-    strings = {key: simple_entry(key, values) for key, values in keys.items()}
+          plurals: dict[str, dict[str, dict[str, str]]],
+          comments: dict[str, str], verbatim: set[str]) -> None:
+    """Write the catalog, MERGING over whatever is already there.
+
+    Xcode extracts keys from the real SwiftUI source on every build, and it
+    finds patterns a regex sweep does not — interpolated literals, `Button(_:)`,
+    `accessibilityLabel(_:)`. Those keys, their `extractionState` and the
+    comments Xcode auto-generates are build output that belongs in the file.
+
+    An earlier version of this rewrote the file wholesale, which would have
+    silently deleted all of it the next time it ran. So: keys defined here win
+    on TRANSLATIONS, the existing file wins on everything else, and a key the
+    tables have never heard of is preserved untouched rather than dropped.
+    """
+    existing: dict[str, dict] = {}
+    if path.exists():
+        try:
+            existing = json.loads(path.read_text()).get("strings", {})
+        except json.JSONDecodeError:
+            existing = {}
+
+    strings = dict(existing)
+    for key, values in keys.items():
+        entry = dict(existing.get(key, {}))
+        entry.update(simple_entry(key, values))
+        strings[key] = entry
     for key, forms in plurals.items():
-        strings[key] = plural_entry(key, forms)
+        entry = dict(existing.get(key, {}))
+        entry.update(plural_entry(key, forms))
+        strings[key] = entry
+
+    # Translator context for keys whose English is too short to be unambiguous.
+    # "Land" is a FocusGlobe completion action, not a noun; "Sky" is a product
+    # surface, not weather. Written here so a future translator inherits the
+    # decision instead of re-deriving it.
+    for key, comment in comments.items():
+        if key in strings:
+            strings[key]["comment"] = comment
+
+    # Keys with nothing to translate: pure punctuation, bare format specifiers,
+    # and the product name itself. `shouldTranslate: false` is Xcode's own way
+    # of saying so — the key still ships, the editor stops asking for eleven
+    # copies of "·", and the audit stops counting them as gaps. Inventing ten
+    # identical translations instead would be noise a reviewer has to read.
+    for key in verbatim:
+        entry = dict(strings.get(key, {}))
+        entry.pop("localizations", None)
+        entry["shouldTranslate"] = False
+        entry.setdefault("extractionState", "manual")
+        strings[key] = entry
+
+    owned = len(keys) + len(plurals)
+    carried = len(strings) - owned
     catalog = {"sourceLanguage": "en", "strings": strings, "version": "1.0"}
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(catalog, ensure_ascii=False, indent=2) + "\n")
-    print(f"  wrote {path.relative_to(ROOT)}  ({len(keys)} keys + {len(plurals)} "
-          f"pluralised x {len(LOCALES)} locales = "
-          f"{len(strings) * len(LOCALES)} translations)")
+    print(f"  wrote {path.relative_to(ROOT)}  ({owned} keys from tranches "
+          f"+ {carried} carried through, {len(plurals)} pluralised "
+          f"x {len(LOCALES)} locales)")
 
 
 if __name__ == "__main__":
-    for name, (keys, plurals) in load_tranches().items():
+    tables, comments, verbatim = load_tranches()
+    for name, (keys, plurals) in tables.items():
         if not keys and not plurals:
             continue
-        build(CATALOGS[name], keys, plurals)
+        build(CATALOGS[name], keys, plurals, comments[name], verbatim[name])

@@ -1,497 +1,283 @@
 {
-  "sourceLanguage" : "en",
-  "strings" : {
-    "%@. %@." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@. %@."
+  "sourceLanguage": "en",
+  "strings": {
+    "%@. %@.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@。%@。"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@. %@."
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@। %@।"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@. %@."
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@. %@."
           }
         },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@। %@।"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@. %@."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@. %@."
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@. %@."
           }
         },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@. %@."
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@. %@."
           }
         },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@. %@."
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@. %@."
           }
         },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@. %@."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@. %@."
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@. %@."
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@. %@."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@。%@。"
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@. %@."
           }
         }
       }
     },
-    "%lld" : {
-
+    "%lld": {
+      "shouldTranslate": false,
+      "extractionState": "manual"
     },
-    "%lld focus days" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld Fokus-Tag"
+    "%lld focus days": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld focus day"
                 }
               },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld Fokus-Tage"
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld focus days"
                 }
               }
             }
           }
         },
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld focus day"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld focus days"
+        "zh-Hans": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld 个专注日"
                 }
               }
             }
           }
         },
-        "es" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld día de concentración"
+        "hi": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld फ़ोकस दिन"
                 }
               },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld días de concentración"
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld फ़ोकस दिन"
                 }
               }
             }
           }
         },
-        "fr" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld jour de concentration"
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld día de concentración"
                 }
               },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld jours de concentration"
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld días de concentración"
                 }
               }
             }
           }
         },
-        "hi" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld फ़ोकस दिन"
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld jour de concentration"
                 }
               },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld फ़ोकस दिन"
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld jours de concentration"
                 }
               }
             }
           }
         },
-        "it" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld giorno di concentrazione"
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Fokus-Tag"
                 }
               },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld giorni di concentrazione"
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Fokus-Tage"
                 }
               }
             }
           }
         },
-        "nl" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld focusdag"
+        "ru": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld день фокуса"
                 }
               },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld focusdagen"
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld дня фокуса"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld дней фокуса"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld дня фокуса"
                 }
               }
             }
           }
         },
-        "pt-BR" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld dia de foco"
+        "pt-BR": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld dia de foco"
                 }
               },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld dias de foco"
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld dias de foco"
                 }
               }
             }
           }
         },
-        "ro" : {
-          "variations" : {
-            "plural" : {
-              "few" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld zile de concentrare"
+        "it": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld giorno di concentrazione"
                 }
               },
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld zi de concentrare"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld de zile de concentrare"
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld giorni di concentrazione"
                 }
               }
             }
           }
         },
-        "ru" : {
-          "variations" : {
-            "plural" : {
-              "few" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld дня фокуса"
+        "ro": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld zi de concentrare"
                 }
               },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld дней фокуса"
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld zile de concentrare"
                 }
               },
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld день фокуса"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld дня фокуса"
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld de zile de concentrare"
                 }
               }
             }
           }
         },
-        "zh-Hans" : {
-          "variations" : {
-            "plural" : {
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld 个专注日"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "%lld-day streak" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld-Tage-Serie"
+        "nl": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld focusdag"
                 }
               },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld-Tage-Serie"
-                }
-              }
-            }
-          }
-        },
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld-day streak"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld-day streak"
-                }
-              }
-            }
-          }
-        },
-        "es" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "racha de %lld día"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "racha de %lld días"
-                }
-              }
-            }
-          }
-        },
-        "fr" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "série de %lld jour"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "série de %lld jours"
-                }
-              }
-            }
-          }
-        },
-        "hi" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld दिन की स्ट्रीक"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld दिन की स्ट्रीक"
-                }
-              }
-            }
-          }
-        },
-        "it" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "serie di %lld giorno"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "serie di %lld giorni"
-                }
-              }
-            }
-          }
-        },
-        "nl" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "reeks van %lld dag"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "reeks van %lld dagen"
-                }
-              }
-            }
-          }
-        },
-        "pt-BR" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "sequência de %lld dia"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "sequência de %lld dias"
-                }
-              }
-            }
-          }
-        },
-        "ro" : {
-          "variations" : {
-            "plural" : {
-              "few" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "serie de %lld zile"
-                }
-              },
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "serie de %lld zi"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "serie de %lld de zile"
-                }
-              }
-            }
-          }
-        },
-        "ru" : {
-          "variations" : {
-            "plural" : {
-              "few" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "серия %lld дня"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "серия %lld дней"
-                }
-              },
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "серия %lld день"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "серия %lld дня"
-                }
-              }
-            }
-          }
-        },
-        "zh-Hans" : {
-          "variations" : {
-            "plural" : {
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "连续 %lld 天"
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld focusdagen"
                 }
               }
             }
@@ -499,2359 +285,2569 @@
         }
       }
     },
-    "%lld/%lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld/%2$lld"
+    "%lld-day streak": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld-day streak"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld-day streak"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "连续 %lld 天"
+                }
+              }
+            }
+          }
+        },
+        "hi": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld दिन की स्ट्रीक"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld दिन की स्ट्रीक"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "racha de %lld día"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "racha de %lld días"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "série de %lld jour"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "série de %lld jours"
+                }
+              }
+            }
+          }
+        },
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld-Tage-Serie"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld-Tage-Serie"
+                }
+              }
+            }
+          }
+        },
+        "ru": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "серия %lld день"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "серия %lld дня"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "серия %lld дней"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "серия %lld дня"
+                }
+              }
+            }
+          }
+        },
+        "pt-BR": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "sequência de %lld dia"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "sequência de %lld dias"
+                }
+              }
+            }
+          }
+        },
+        "it": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "serie di %lld giorno"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "serie di %lld giorni"
+                }
+              }
+            }
+          }
+        },
+        "ro": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "serie de %lld zi"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "serie de %lld zile"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "serie de %lld de zile"
+                }
+              }
+            }
+          }
+        },
+        "nl": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "reeks van %lld dag"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "reeks van %lld dagen"
+                }
+              }
+            }
           }
         }
       }
     },
-    "%lldh %@m" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld Std %@ Min"
+    "%lld/%lld": {
+      "shouldTranslate": false,
+      "extractionState": "manual"
+    },
+    "%lldh %@m": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 时 %@ 分"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld h %@ min"
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld घं %@ मि"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld h %@ min"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld h %@ min"
           }
         },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld घं %@ मि"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld h %@ min"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld h %@ min"
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Std %@ Min"
           }
         },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld u %@ min"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld ч %@ мин"
           }
         },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld h %@ min"
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld h %@ min"
           }
         },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld h %@ min"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld h %@ min"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld ч %@ мин"
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld h %@ min"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld 时 %@ 分"
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld u %@ min"
           }
         }
       }
     },
-    "%lldm" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld Min"
+    "%lldm": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 分"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld min"
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld मि"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld min"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min"
           }
         },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld मि"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld min"
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Min"
           }
         },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld min"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld мин"
           }
         },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld min"
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min"
           }
         },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld min"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld мин"
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld 分"
-          }
-        }
-      }
-    },
-    "∞" : {
-
-    },
-    "A quiet flight is one tap away." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ein ruhiger Flug ist einen Tipp entfernt."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Un vuelo tranquilo a un toque."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Un vol paisible à un geste près."
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "एक टैप में शांत फ़्लाइट।"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Un volo tranquillo a un tocco."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Een rustige vlucht is één tik weg."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Um voo tranquilo a um toque."
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Un zbor liniștit la o atingere."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Тихий полёт — в одно касание."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "一次轻点，开启宁静飞行。"
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min"
           }
         }
       }
     },
-    "Badges" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Abzeichen"
+    "∞": {
+      "shouldTranslate": false,
+      "extractionState": "manual"
+    },
+    "A quiet flight is one tap away.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一次轻点，开启宁静飞行。"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Insignias"
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "एक टैप में शांत फ़्लाइट।"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Badges"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un vuelo tranquilo a un toque."
           }
         },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "बैज"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un vol paisible à un geste près."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Badge"
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein ruhiger Flug ist einen Tipp entfernt."
           }
         },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Badges"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Тихий полёт — в одно касание."
           }
         },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Medalhas"
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um voo tranquilo a um toque."
           }
         },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Insigne"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un volo tranquillo a un tocco."
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Значки"
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un zbor liniștit la o atingere."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "徽章"
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Een rustige vlucht is één tik weg."
           }
         }
       }
     },
-    "best streak" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Beste Serie"
+    "Badges": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "徽章"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "mejor racha"
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "बैज"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "meilleure série"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Insignias"
           }
         },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "सर्वश्रेष्ठ"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Badges"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "record"
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abzeichen"
           }
         },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "beste reeks"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Значки"
           }
         },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "melhor"
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Medalhas"
           }
         },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "record"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Badge"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "рекорд"
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Insigne"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最佳连续"
-          }
-        }
-      }
-    },
-    "day streak" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Serie"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "racha"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "série"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "दिन स्ट्रीक"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "serie"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "reeks"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "sequência"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "serie"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "серия"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "连续天数"
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Badges"
           }
         }
       }
     },
-    "Focus" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fokus"
+    "best streak": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最佳连续"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Concentración"
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सर्वश्रेष्ठ"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Concentration"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "mejor racha"
           }
         },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "फ़ोकस"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "meilleure série"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Concentrazione"
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beste Serie"
           }
         },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Focus"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "рекорд"
           }
         },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Foco"
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "melhor"
           }
         },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Concentrare"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "record"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Фокус"
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "record"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "专注"
-          }
-        }
-      }
-    },
-    "Focus · 6 months" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fokus · 6 Monate"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Concentración · 6 meses"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Concentration · 6 mois"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "फ़ोकस · 6 महीने"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Concentrazione · 6 mesi"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Focus · 6 maanden"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Foco · 6 meses"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Concentrare · 6 luni"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Фокус · 6 месяцев"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "专注 · 6 个月"
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "beste reeks"
           }
         }
       }
     },
-    "focus days" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tage"
+    "day streak": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连续天数"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "días"
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "दिन स्ट्रीक"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "jours"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "racha"
           }
         },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "फ़ोकस दिन"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "série"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "giorni"
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serie"
           }
         },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "dagen"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "серия"
           }
         },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "dias"
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sequência"
           }
         },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "zile"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "serie"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "дни"
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "serie"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "专注日"
-          }
-        }
-      }
-    },
-    "Focus Grid" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fokus-Raster"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cuadrícula de concentración"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Grille de concentration"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "फ़ोकस ग्रिड"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Griglia di concentrazione"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Focusraster"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Grade de foco"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Grilă de concentrare"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Сетка фокуса"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "专注格图"
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "reeks"
           }
         }
       }
     },
-    "Focus Now" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jetzt fokussieren"
+    "Focus": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "专注"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Concéntrate ya"
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "फ़ोकस"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Focus maintenant"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concentración"
           }
         },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "अभी फ़ोकस"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concentration"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Concentrati ora"
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fokus"
           }
         },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nu focussen"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Фокус"
           }
         },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Foco agora"
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foco"
           }
         },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Concentrare acum"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concentrazione"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Фокус сейчас"
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concentrare"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "立即专注"
-          }
-        }
-      }
-    },
-    "FOCUS NOW" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "JETZT FOKUS"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "CONCÉNTRATE"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "CONCENTREZ-VOUS"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "अभी फ़ोकस"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "CONCENTRATI"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "NU FOCUSSEN"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "FOQUE AGORA"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "CONCENTREAZĂ-TE"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ФОКУС"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "立即专注"
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Focus"
           }
         }
       }
     },
-    "Focus to keep it" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fokussiere, um sie zu halten"
+    "Focus · 6 months": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "专注 · 6 个月"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Concéntrate para mantenerla"
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "फ़ोकस · 6 महीने"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Concentrez-vous pour la garder"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concentración · 6 meses"
           }
         },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "बनाए रखने के लिए फ़ोकस करें"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concentration · 6 mois"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Concentrati per mantenerla"
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fokus · 6 Monate"
           }
         },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Focus om hem te behouden"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Фокус · 6 месяцев"
           }
         },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Foque para mantê-la"
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foco · 6 meses"
           }
         },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Concentrează-te ca s-o păstrezi"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concentrazione · 6 mesi"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Сфокусируйтесь, чтобы сохранить"
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concentrare · 6 luni"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "专注以保持"
-          }
-        }
-      }
-    },
-    "focused" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "fokussiert"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "concentrado"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "concentré"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "फ़ोकस"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "concentrato"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "gefocust"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "focado"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "concentrat"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "фокус"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "专注时长"
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Focus · 6 maanden"
           }
         }
       }
     },
-    "Focused today" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Heute fokussiert"
+    "focus days": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "专注日"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hoy concentrado"
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "फ़ोकस दिन"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Concentré aujourd’hui"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "días"
           }
         },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "आज फ़ोकस किया"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "jours"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Concentrato oggi"
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tage"
           }
         },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vandaag gefocust"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "дни"
           }
         },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Focado hoje"
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dias"
           }
         },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Concentrat azi"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "giorni"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Сегодня в фокусе"
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "zile"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "今天已专注"
-          }
-        }
-      }
-    },
-    "FocusGlobe Passport" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "FocusGlobe Reisepass"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pasaporte FocusGlobe"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Passeport FocusGlobe"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "FocusGlobe पासपोर्ट"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Passaporto FocusGlobe"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "FocusGlobe Paspoort"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Passaporte FocusGlobe"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pașaport FocusGlobe"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Паспорт FocusGlobe"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "FocusGlobe 护照"
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dagen"
           }
         }
       }
     },
-    "IN FLIGHT" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "IM FLUG"
+    "Focus Grid": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "专注格图"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "EN VUELO"
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "फ़ोकस ग्रिड"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "EN VOL"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuadrícula de concentración"
           }
         },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "उड़ान में"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grille de concentration"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "IN VOLO"
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fokus-Raster"
           }
         },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ONDERWEG"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сетка фокуса"
           }
         },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "EM VOO"
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grade de foco"
           }
         },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ÎN ZBOR"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Griglia di concentrazione"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "В ПОЛЁТЕ"
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grilă de concentrare"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "飞行中"
-          }
-        }
-      }
-    },
-    "journeys" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reisen"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "viajes"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "voyages"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "यात्राएँ"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "viaggi"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "reizen"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "viagens"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "călătorii"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "поездки"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "旅程"
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Focusraster"
           }
         }
       }
     },
-    "Keep your focus streak alive with your balloon companion." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Halte deine Fokus-Serie mit deinem Ballon-Begleiter am Leben."
+    "Focus Now": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "立即专注"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mantén viva tu racha de concentración con tu globo compañero."
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अभी फ़ोकस"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gardez votre série de concentration en vie avec votre montgolfière."
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concéntrate ya"
           }
         },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "अपने ग़ुब्बारा साथी के साथ फ़ोकस स्ट्रीक बनाए रखें।"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Focus maintenant"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tieni viva la tua serie di concentrazione con la tua mongolfiera."
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jetzt fokussieren"
           }
         },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Houd je focusreeks levend met je ballonmaatje."
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Фокус сейчас"
           }
         },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mantenha sua sequência de foco viva com seu balão companheiro."
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foco agora"
           }
         },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ține-ți vie seria de concentrare cu balonul tău însoțitor."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concentrati ora"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Поддерживайте серию фокуса вместе со своим шаром-спутником."
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concentrare acum"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "和你的热气球伙伴一起延续专注连续天数。"
-          }
-        }
-      }
-    },
-    "longest" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "längste"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "más largo"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "plus long"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "सबसे लंबा"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "più lungo"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "langste"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "mais longo"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "cel mai lung"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "дольше всего"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最长"
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nu focussen"
           }
         }
       }
     },
-    "Milestone! 🎉" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Meilenstein! 🎉"
+    "FOCUS NOW": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "立即专注"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "¡Hito! 🎉"
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अभी फ़ोकस"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cap franchi ! 🎉"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CONCÉNTRATE"
           }
         },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "मील का पत्थर! 🎉"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CONCENTREZ-VOUS"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Traguardo! 🎉"
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "JETZT FOKUS"
           }
         },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mijlpaal! 🎉"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ФОКУС"
           }
         },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Marco! 🎉"
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FOQUE AGORA"
           }
         },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bornă atinsă! 🎉"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CONCENTRATI"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Рубеж! 🎉"
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CONCENTREAZĂ-TE"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "里程碑！🎉"
-          }
-        }
-      }
-    },
-    "Passport" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reisepass"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pasaporte"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Passeport"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "पासपोर्ट"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Passaporto"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Paspoort"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Passaporte"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pașaport"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Паспорт"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "护照"
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NU FOCUSSEN"
           }
         }
       }
     },
-    "Passport Dashboard" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reisepass-Übersicht"
+    "Focus to keep it": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "专注以保持"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Panel del Pasaporte"
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "बनाए रखने के लिए फ़ोकस करें"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tableau du Passeport"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concéntrate para mantenerla"
           }
         },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "पासपोर्ट डैशबोर्ड"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concentrez-vous pour la garder"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pannello Passaporto"
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fokussiere, um sie zu halten"
           }
         },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Paspoortoverzicht"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сфокусируйтесь, чтобы сохранить"
           }
         },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Painel do Passaporte"
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foque para mantê-la"
           }
         },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Panoul Pașaportului"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concentrati per mantenerla"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Панель Паспорта"
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concentrează-te ca s-o păstrezi"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "护照总览"
-          }
-        }
-      }
-    },
-    "Passport Stats" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reisepass-Statistik"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Datos del Pasaporte"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Statistiques du Passeport"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "पासपोर्ट आँकड़े"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Statistiche Passaporto"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Paspoortcijfers"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dados do Passaporte"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Statistici Pașaport"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Статистика Паспорта"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "护照统计"
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Focus om hem te behouden"
           }
         }
       }
     },
-    "Ready to focus" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bereit für den Fokus"
+    "focused": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "专注时长"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Listo para concentrarte"
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "फ़ोकस"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Prêt à vous concentrer"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "concentrado"
           }
         },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "फ़ोकस के लिए तैयार"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "concentré"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pronto a concentrarti"
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "fokussiert"
           }
         },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Klaar om te focussen"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "фокус"
           }
         },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pronto para focar"
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "focado"
           }
         },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gata de concentrare"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "concentrato"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Готовы к фокусу"
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "concentrat"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "准备专注"
-          }
-        }
-      }
-    },
-    "Resume" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fortsetzen"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reanudar"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reprendre"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "जारी रखें"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Riprendi"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hervatten"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Retomar"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reia"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Продолжить"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "继续"
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "gefocust"
           }
         }
       }
     },
-    "Start" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start"
+    "Focused today": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今天已专注"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Empezar"
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आज फ़ोकस किया"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Démarrer"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hoy concentrado"
           }
         },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "शुरू"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concentré aujourd’hui"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Inizia"
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heute fokussiert"
           }
         },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сегодня в фокусе"
           }
         },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Começar"
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Focado hoje"
           }
         },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Începe"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concentrato oggi"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Начать"
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concentrat azi"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "开始"
-          }
-        }
-      }
-    },
-    "Start a focus flight, or watch the one you're on." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Starte einen Fokus-Flug oder verfolge den laufenden."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Empieza un vuelo de concentración o mira el que ya tienes en curso."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lancez un vol de concentration, ou suivez celui en cours."
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "एक फ़ोकस फ़्लाइट शुरू करें, या चल रही फ़्लाइट देखें।"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Avvia un volo di concentrazione o segui quello in corso."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start een focusvlucht of volg de vlucht waarin je zit."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Comece um voo de foco ou acompanhe o que está em andamento."
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Începe un zbor de concentrare sau urmărește-l pe cel curent."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Начните полёт фокуса или следите за текущим."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "开始一次专注飞行，或查看进行中的飞行。"
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vandaag gefocust"
           }
         }
       }
     },
-    "Start Focus" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fokus starten"
+    "FocusGlobe Passport": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FocusGlobe 护照"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Empezar"
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FocusGlobe पासपोर्ट"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Démarrer"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pasaporte FocusGlobe"
           }
         },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "फ़ोकस शुरू करें"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passeport FocusGlobe"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Inizia"
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FocusGlobe Reisepass"
           }
         },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start focus"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Паспорт FocusGlobe"
           }
         },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Começar foco"
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passaporte FocusGlobe"
           }
         },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Începe"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passaporto FocusGlobe"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Начать фокус"
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pașaport FocusGlobe"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "开始专注"
-          }
-        }
-      }
-    },
-    "Start your streak" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Starte deine Serie"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Empieza tu racha"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lancez votre série"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "अपनी स्ट्रीक शुरू करें"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Inizia la tua serie"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Begin je reeks"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Comece sua sequência"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Începe-ți seria"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Начните серию"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "开启连续天数"
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FocusGlobe Paspoort"
           }
         }
       }
     },
-    "streak" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Serie"
+    "IN FLIGHT": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "飞行中"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "racha"
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "उड़ान में"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "série"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "EN VUELO"
           }
         },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "स्ट्रीक"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "EN VOL"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "serie"
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IM FLUG"
           }
         },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "reeks"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "В ПОЛЁТЕ"
           }
         },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "sequência"
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "EM VOO"
           }
         },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "serie"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IN VOLO"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "серия"
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ÎN ZBOR"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "连续"
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ONDERWEG"
           }
         }
       }
     },
-    "Streak Companion" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Serien-Begleiter"
+    "journeys": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旅程"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Compañero de racha"
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "यात्राएँ"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Compagnon de série"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "viajes"
           }
         },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "स्ट्रीक साथी"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "voyages"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Compagno di serie"
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reisen"
           }
         },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reeksmaatje"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "поездки"
           }
         },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Companheiro de sequência"
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "viagens"
           }
         },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Însoțitorul seriei"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "viaggi"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Спутник серии"
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "călătorii"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "连续天数伙伴"
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "reizen"
           }
         }
       }
     },
-    "Unlock with FocusGlobe Pro" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mit FocusGlobe Pro freischalten"
+    "Keep your focus streak alive with your balloon companion.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "和你的热气球伙伴一起延续专注连续天数。"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Desbloquea con FocusGlobe Pro"
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अपने ग़ुब्बारा साथी के साथ फ़ोकस स्ट्रीक बनाए रखें।"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Débloquez avec FocusGlobe Pro"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantén viva tu racha de concentración con tu globo compañero."
           }
         },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "FocusGlobe Pro से अनलॉक करें"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gardez votre série de concentration en vie avec votre montgolfière."
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sblocca con FocusGlobe Pro"
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Halte deine Fokus-Serie mit deinem Ballon-Begleiter am Leben."
           }
         },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ontgrendel met FocusGlobe Pro"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Поддерживайте серию фокуса вместе со своим шаром-спутником."
           }
         },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Desbloqueie com o FocusGlobe Pro"
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantenha sua sequência de foco viva com seu balão companheiro."
           }
         },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deblochează cu FocusGlobe Pro"
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tieni viva la tua serie di concentrazione con la tua mongolfiera."
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Откройте с FocusGlobe Pro"
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ține-ți vie seria de concentrare cu balonul tău însoțitor."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "使用 FocusGlobe Pro 解锁"
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Houd je focusreeks levend met je ballonmaatje."
           }
         }
       }
     },
-    "Your flight is ready to continue." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dein Flug kann fortgesetzt werden."
+    "longest": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最长"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tu vuelo está listo para continuar."
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सबसे लंबा"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Votre vol est prêt à reprendre."
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "más largo"
           }
         },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "आपकी फ़्लाइट जारी रखने के लिए तैयार है।"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "plus long"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Il tuo volo è pronto a riprendere."
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "längste"
           }
         },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Je vlucht kan verder."
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "дольше всего"
           }
         },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Seu voo está pronto para continuar."
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "mais longo"
           }
         },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zborul tău e gata să continue."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "più lungo"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ваш полёт готов продолжиться."
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cel mai lung"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你的飞行可以继续了。"
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "langste"
           }
         }
       }
     },
-    "Your journeys, focused time, streaks and badges. FocusGlobe PRO." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deine Reisen, Fokuszeit, Serien und Abzeichen. FocusGlobe PRO."
+    "Milestone! 🎉": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "里程碑！🎉"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tus viajes, tiempo concentrado, rachas e insignias. FocusGlobe PRO."
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मील का पत्थर! 🎉"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vos voyages, votre temps de concentration, vos séries et vos badges. FocusGlobe PRO."
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¡Hito! 🎉"
           }
         },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "आपकी यात्राएँ, फ़ोकस समय, स्ट्रीक और बैज। FocusGlobe PRO।"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cap franchi ! 🎉"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "I tuoi viaggi, il tempo di concentrazione, le serie e i badge. FocusGlobe PRO."
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meilenstein! 🎉"
           }
         },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Je reizen, focustijd, reeksen en badges. FocusGlobe PRO."
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Рубеж! 🎉"
           }
         },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Suas viagens, tempo de foco, sequências e medalhas. FocusGlobe PRO."
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Marco! 🎉"
           }
         },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Călătoriile, timpul de concentrare, seriile și insignele tale. FocusGlobe PRO."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traguardo! 🎉"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ваши путешествия, время фокуса, серии и значки. FocusGlobe PRO."
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bornă atinsă! 🎉"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你的旅程、专注时间、连续天数与徽章。FocusGlobe PRO。"
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mijlpaal! 🎉"
           }
         }
       }
     },
-    "Your last six months of focus days. FocusGlobe PRO." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deine letzten sechs Monate an Fokus-Tagen. FocusGlobe PRO."
+    "Passport": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "护照"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tus últimos seis meses de días de concentración. FocusGlobe PRO."
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "पासपोर्ट"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vos six derniers mois de jours de concentration. FocusGlobe PRO."
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pasaporte"
           }
         },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "आपके पिछले छह महीनों के फ़ोकस दिन। FocusGlobe PRO।"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passeport"
           }
         },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "I tuoi ultimi sei mesi di giornate di concentrazione. FocusGlobe PRO."
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reisepass"
           }
         },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Je laatste zes maanden aan focusdagen. FocusGlobe PRO."
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Паспорт"
           }
         },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Seus últimos seis meses de dias de foco. FocusGlobe PRO."
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passaporte"
           }
         },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ultimele tale șase luni de zile de concentrare. FocusGlobe PRO."
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passaporto"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ваши последние шесть месяцев дней фокуса. FocusGlobe PRO."
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pașaport"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你最近六个月的专注日。FocusGlobe PRO。"
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paspoort"
+          }
+        }
+      }
+    },
+    "Passport Dashboard": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "护照总览"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "पासपोर्ट डैशबोर्ड"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Panel del Pasaporte"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tableau du Passeport"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reisepass-Übersicht"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Панель Паспорта"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Painel do Passaporte"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pannello Passaporto"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Panoul Pașaportului"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paspoortoverzicht"
+          }
+        }
+      }
+    },
+    "Passport Stats": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "护照统计"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "पासपोर्ट आँकड़े"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datos del Pasaporte"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Statistiques du Passeport"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reisepass-Statistik"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Статистика Паспорта"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dados do Passaporte"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Statistiche Passaporto"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Statistici Pașaport"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paspoortcijfers"
+          }
+        }
+      }
+    },
+    "Ready to focus": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "准备专注"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "फ़ोकस के लिए तैयार"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listo para concentrarte"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prêt à vous concentrer"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bereit für den Fokus"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Готовы к фокусу"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pronto para focar"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pronto a concentrarti"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gata de concentrare"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klaar om te focussen"
+          }
+        }
+      }
+    },
+    "Resume": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "继续"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "जारी रखें"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reanudar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reprendre"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fortsetzen"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Продолжить"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retomar"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riprendi"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reia"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hervatten"
+          }
+        }
+      }
+    },
+    "Start": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开始"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "शुरू"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empezar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Démarrer"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Начать"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Começar"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inizia"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Începe"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start"
+          }
+        }
+      }
+    },
+    "Start a focus flight, or watch the one you're on.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开始一次专注飞行，或查看进行中的飞行。"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "एक फ़ोकस फ़्लाइट शुरू करें, या चल रही फ़्लाइट देखें।"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empieza un vuelo de concentración o mira el que ya tienes en curso."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lancez un vol de concentration, ou suivez celui en cours."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starte einen Fokus-Flug oder verfolge den laufenden."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Начните полёт фокуса или следите за текущим."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comece um voo de foco ou acompanhe o que está em andamento."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvia un volo di concentrazione o segui quello in corso."
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Începe un zbor de concentrare sau urmărește-l pe cel curent."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start een focusvlucht of volg de vlucht waarin je zit."
+          }
+        }
+      }
+    },
+    "Start Focus": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开始专注"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "फ़ोकस शुरू करें"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empezar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Démarrer"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fokus starten"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Начать фокус"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Começar foco"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inizia"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Începe"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start focus"
+          }
+        }
+      }
+    },
+    "Start your streak": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开启连续天数"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अपनी स्ट्रीक शुरू करें"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empieza tu racha"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lancez votre série"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starte deine Serie"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Начните серию"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comece sua sequência"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inizia la tua serie"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Începe-ți seria"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Begin je reeks"
+          }
+        }
+      }
+    },
+    "streak": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连续"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "स्ट्रीक"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "racha"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "série"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serie"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "серия"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sequência"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "serie"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "serie"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "reeks"
+          }
+        }
+      }
+    },
+    "Streak Companion": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连续天数伙伴"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "स्ट्रीक साथी"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compañero de racha"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compagnon de série"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serien-Begleiter"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Спутник серии"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Companheiro de sequência"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compagno di serie"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Însoțitorul seriei"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reeksmaatje"
+          }
+        }
+      }
+    },
+    "Unlock with FocusGlobe Pro": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用 FocusGlobe Pro 解锁"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FocusGlobe Pro से अनलॉक करें"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desbloquea con FocusGlobe Pro"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Débloquez avec FocusGlobe Pro"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit FocusGlobe Pro freischalten"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Откройте с FocusGlobe Pro"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desbloqueie com o FocusGlobe Pro"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sblocca con FocusGlobe Pro"
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deblochează cu FocusGlobe Pro"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ontgrendel met FocusGlobe Pro"
+          }
+        }
+      }
+    },
+    "Your flight is ready to continue.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的飞行可以继续了。"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपकी फ़्लाइट जारी रखने के लिए तैयार है।"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu vuelo está listo para continuar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre vol est prêt à reprendre."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Flug kann fortgesetzt werden."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ваш полёт готов продолжиться."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seu voo está pronto para continuar."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il tuo volo è pronto a riprendere."
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zborul tău e gata să continue."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Je vlucht kan verder."
+          }
+        }
+      }
+    },
+    "Your journeys, focused time, streaks and badges. FocusGlobe PRO.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的旅程、专注时间、连续天数与徽章。FocusGlobe PRO。"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपकी यात्राएँ, फ़ोकस समय, स्ट्रीक और बैज। FocusGlobe PRO।"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tus viajes, tiempo concentrado, rachas e insignias. FocusGlobe PRO."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vos voyages, votre temps de concentration, vos séries et vos badges. FocusGlobe PRO."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Reisen, Fokuszeit, Serien und Abzeichen. FocusGlobe PRO."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ваши путешествия, время фокуса, серии и значки. FocusGlobe PRO."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suas viagens, tempo de foco, sequências e medalhas. FocusGlobe PRO."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I tuoi viaggi, il tempo di concentrazione, le serie e i badge. FocusGlobe PRO."
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Călătoriile, timpul de concentrare, seriile și insignele tale. FocusGlobe PRO."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Je reizen, focustijd, reeksen en badges. FocusGlobe PRO."
+          }
+        }
+      }
+    },
+    "Your last six months of focus days. FocusGlobe PRO.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你最近六个月的专注日。FocusGlobe PRO。"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपके पिछले छह महीनों के फ़ोकस दिन। FocusGlobe PRO।"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tus últimos seis meses de días de concentración. FocusGlobe PRO."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vos six derniers mois de jours de concentration. FocusGlobe PRO."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine letzten sechs Monate an Fokus-Tagen. FocusGlobe PRO."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ваши последние шесть месяцев дней фокуса. FocusGlobe PRO."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seus últimos seis meses de dias de foco. FocusGlobe PRO."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I tuoi ultimi sei mesi di giornate di concentrazione. FocusGlobe PRO."
+          }
+        },
+        "ro": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ultimele tale șase luni de zile de concentrare. FocusGlobe PRO."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Je laatste zes maanden aan focusdagen. FocusGlobe PRO."
           }
         }
       }
     }
   },
-  "version" : "1.0"
+  "version": "1.0"
 }

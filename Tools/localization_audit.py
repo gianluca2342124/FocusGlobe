@@ -31,12 +31,69 @@ LOCALES = ["en", "zh-Hans", "hi", "es", "fr", "de", "ru", "pt-BR", "it", "ro", "
 SOURCE_LOCALE = "en"
 
 # Literals appearing inside these are user-facing by construction.
-DISPLAY_CALL = re.compile(
-    r'(?:\bText|\bButton|\bLabel|AppPrimaryButton|SettingsRow|ToggleRow|SectionLabel|'
-    r'ScreenHeader|accessibilityLabel|accessibilityHint|accessibilityValue|'
-    r'navigationTitle|confirmationDialog|\.alert|localized:)\s*\(?\s*"([^"\\]{2,})"'
+#
+# This list is deliberately as wide as Xcode's own extraction. A previous
+# version knew only Text/Button/Label and therefore missed `Toggle(_:)`,
+# `Picker(_:)`, `TextField(_:)`, `Link(_:)` and the toolbar/menu family — Xcode
+# extracted 87 real keys the regex had never seen. Anything here takes a
+# LocalizedStringKey as its first argument.
+DISPLAY_CALL_NAMES = (
+    r'Text|Button|Label|Link|Toggle|Picker|Menu|Section|NavigationLink|'
+    r'TextField|SecureField|TextEditor|Stepper|Slider|DatePicker|ProgressView|'
+    r'ContentUnavailableView|ShareLink|Tab|GroupBox|DisclosureGroup|'
+    r'AppPrimaryButton|AppSecondaryButton|AppChip|AppTagChip|ExpeditionButton|'
+    r'GlassButton|GlassCapsuleButton|GlassTextButton|GlassSection|InkStamp|'
+    r'SettingsRow|ToggleRow|SectionLabel|ScreenHeader|StatTile|WStat|WHeader|'
+    r'LockedTeaser|LocalizedStringKey'
 )
+# These only count when written as MODIFIERS. Without the leading dot,
+# `description` matches inside a debug `print("… description …")`.
+MODIFIER_NAMES = (
+    r'accessibilityLabel|accessibilityHint|accessibilityValue|navigationTitle|'
+    r'navigationBarTitle|confirmationDialog|alert|help|prompt|'
+    r'configurationDisplayName|description|localized'
+)
+DISPLAY_CALL = re.compile(
+    r'(?:\b(?:' + DISPLAY_CALL_NAMES + r')|\.(?:' + MODIFIER_NAMES + r'))'
+    r'\s*\(?\s*(?:\w+:\s*)?"([^"\\]{2,})"')
+
+# The same call sites, but with INTERPOLATION. `Text("\(n) focusing now")` has
+# the catalog key `%lld focusing now`, a string that appears nowhere in the
+# source — which is exactly why the old sweep could not see it.
+DISPLAY_INTERPOLATED = re.compile(
+    r'(?:\b(?:' + DISPLAY_CALL_NAMES + r')|\.(?:' + MODIFIER_NAMES + r'))'
+    r'\s*\(?\s*(?:\w+:\s*)?"((?:[^"\\\n]|\\\()[^"\n]*)"')
+# One level of nesting is enough for real call sites — `\(a.b(c))` balances,
+# and stopping at the first ")" produced keys like "Edit %@)".
+INTERPOLATION = re.compile(r'\\\((?:[^()]|\([^()]*\))*\)')
+
 ANY_LITERAL = re.compile(r'"([^"\\\n]{2,})"')
+
+
+def interpolated_keys(literal):
+    """Candidate catalog keys for an interpolated literal.
+
+    Swift decides `%@` vs `%lld` from the interpolated expression's TYPE, which
+    a regex cannot know, so every combination is offered and a match on any one
+    counts as covered. That is enough to answer the only question being asked:
+    is this string in the catalog at all?
+    """
+    parts = INTERPOLATION.split(literal)
+    slots = len(parts) - 1
+    if slots == 0 or slots > 4:
+        return []
+    # A leftover "\\(" means an interpolation this regex could not close —
+    # a ternary with quoted branches, typically. The key cannot be derived, and
+    # guessing produces a phantom gap.
+    if any("\\(" in part for part in parts):
+        return []
+    keys = []
+    for mask in range(2 ** slots):
+        out = parts[0]
+        for i in range(slots):
+            out += ("%lld" if (mask >> i) & 1 else "%@") + parts[i + 1]
+        keys.append(out)
+    return keys
 
 # Category A — internal, must stay English.
 INTERNAL_PATTERNS = [
@@ -65,6 +122,18 @@ def is_internal(s: str) -> bool:
     if " " not in s and not any(c.isupper() for c in s) and len(s) < 12:
         return True
     return False
+
+
+DEBUG_BLOCK = re.compile(r'#if DEBUG\b.*?#endif', re.S)
+
+
+def strip_debug(text):
+    """Remove `#if DEBUG` blocks.
+
+    A developer inspector overlay is real `Text(…)`, but it never ships, so
+    reporting its strings as untranslated buries the ones that do.
+    """
+    return DEBUG_BLOCK.sub("", text)
 
 
 def swift_files():
@@ -99,10 +168,20 @@ def audit_coverage(catalog_keys):
     where = defaultdict(set)
     for path in swift_files():
         text = path.read_text(errors="ignore")
-        stripped = re.sub(r"//.*", "", text)
+        stripped = re.sub(r"//.*", "", strip_debug(text))
         for m in DISPLAY_CALL.findall(stripped):
             display[m] += 1
             where[m].add(str(path.relative_to(ROOT)))
+        for raw in DISPLAY_INTERPOLATED.findall(stripped):
+            if not INTERPOLATION.search(raw):
+                continue
+            keys = interpolated_keys(raw)
+            if not keys:
+                continue
+            # Covered if ANY type-shape of the key is in a catalog.
+            hit = next((k for k in keys if k in catalog_keys), None)
+            display[hit or keys[0]] += 1
+            where[hit or keys[0]].add(str(path.relative_to(ROOT)))
         for m in ANY_LITERAL.findall(stripped):
             if m not in display:
                 other[m] += 1
@@ -185,6 +264,12 @@ def audit_catalogs():
         strings = data.get("strings", {})
         total_keys += len(strings)
         for key, entry in strings.items():
+            # Xcode's "Don't Translate" marker. A key of pure punctuation, a
+            # bare format specifier or the product name has nothing to
+            # translate, and demanding eleven copies of "·" would bury real
+            # gaps in noise.
+            if entry.get("shouldTranslate") is False:
+                continue
             loc = entry.get("localizations", {})
             source = key
             src_ph = specifiers(source)
