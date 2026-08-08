@@ -24,14 +24,14 @@ TRANSLATIONS: dict[str, list[str]] = {
     # ---- Onboarding: step headers ----------------------------------------
     "What do you want to focus on?": [
         "你想专注于什么？", "आप किस पर फ़ोकस करना चाहते हैं?",
-        "¿En qué quieres concentrarte?", "Sur quoi voulez-vous vous concentrer ?",
+        "¿En qué quieres concentrarte?", "Sur quoi voulez-vous vous concentrer ?",
         "Worauf willst du dich fokussieren?", "На чём вы хотите сосредоточиться?",
         "No que você quer focar?", "Su cosa vuoi concentrarti?",
         "Pe ce vrei să te concentrezi?", "Waarop wil je focussen?",
     ],
     "How long is your first flight?": [
         "你的第一次飞行有多久？", "आपकी पहली फ़्लाइट कितनी लंबी है?",
-        "¿Cuánto dura tu primer vuelo?", "Combien de temps dure votre premier vol ?",
+        "¿Cuánto dura tu primer vuelo?", "Combien de temps dure votre premier vol ?",
         "Wie lang ist dein erster Flug?", "Сколько длится ваш первый полёт?",
         "Quanto dura seu primeiro voo?", "Quanto dura il tuo primo volo?",
         "Cât durează primul tău zbor?", "Hoe lang is je eerste vlucht?",

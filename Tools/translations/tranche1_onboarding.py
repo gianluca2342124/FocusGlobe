@@ -21,7 +21,7 @@ TRANSLATIONS: dict[str, list[str]] = {
     "Begin": ["开始", "शुरू करें", "Empezar", "Commencer", "Starten", "Начать",
               "Começar", "Inizia", "Începe", "Beginnen"],
     "Already have an account?": [
-        "已有账号？", "पहले से खाता है?", "¿Ya tienes una cuenta?", "Vous avez déjà un compte ?",
+        "已有账号？", "पहले से खाता है?", "¿Ya tienes una cuenta?", "Vous avez déjà un compte ?",
         "Schon ein Konto?", "Уже есть аккаунт?", "Já tem uma conta?", "Hai già un account?",
         "Ai deja un cont?", "Heb je al een account?"],
     "Sign In": ["登录", "साइन इन", "Iniciar sesión", "Se connecter", "Anmelden", "Войти",
@@ -30,7 +30,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "打开“通过 Apple 登录”。", "Apple से साइन इन खोलता है।",
         "Abre el inicio de sesión con Apple.", "Ouvre la connexion avec Apple.",
         "Öffnet die Anmeldung mit Apple.", "Открывает вход через Apple.",
-        "Abre o login com a Apple.", "Apre l'accesso con Apple.",
+        "Abre o login com a Apple.", "Apre l’accesso con Apple.",
         "Deschide autentificarea cu Apple.", "Opent inloggen met Apple."],
     "Privacy Policy": [
         "隐私政策", "गोपनीयता नीति", "Política de privacidad", "Politique de confidentialité",
@@ -43,7 +43,7 @@ TRANSLATIONS: dict[str, list[str]] = {
     "What do you want FocusGlobe to help with most?": [
         "你最希望 FocusGlobe 帮你做什么？", "FocusGlobe से आप सबसे ज़्यादा किसमें मदद चाहते हैं?",
         "¿En qué quieres que FocusGlobe te ayude más?",
-        "Sur quoi voulez-vous que FocusGlobe vous aide le plus ?",
+        "Sur quoi voulez-vous que FocusGlobe vous aide le plus ?",
         "Wobei soll FocusGlobe dir am meisten helfen?",
         "С чем FocusGlobe должен помочь больше всего?",
         "Com o que você mais quer a ajuda do FocusGlobe?",
@@ -61,7 +61,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "We stemmen je eerste vlucht daarop af."],
     "What usually breaks your focus?": [
         "通常是什么打断了你的专注？", "आपका फ़ोकस आमतौर पर किससे टूटता है?",
-        "¿Qué suele romper tu concentración?", "Qu'est-ce qui casse le plus souvent votre concentration ?",
+        "¿Qué suele romper tu concentración?", "Qu’est-ce qui casse le plus souvent votre concentration ?",
         "Was unterbricht deinen Fokus meistens?", "Что обычно сбивает вашу концентрацию?",
         "O que costuma quebrar seu foco?", "Cosa interrompe di solito la tua concentrazione?",
         "Ce îți întrerupe de obicei concentrarea?", "Wat verstoort meestal je focus?"],
@@ -77,7 +77,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Zodat FocusGlobe aansluit bij waar jij staat."],
     "How long can you focus today?": [
         "今天你能专注多久？", "आज आप कितनी देर फ़ोकस कर सकते हैं?",
-        "¿Cuánto puedes concentrarte hoy?", "Combien de temps pouvez-vous vous concentrer aujourd'hui ?",
+        "¿Cuánto puedes concentrarte hoy?", "Combien de temps pouvez-vous vous concentrer aujourd’hui ?",
         "Wie lange kannst du dich heute konzentrieren?", "Сколько вы можете сосредоточиться сегодня?",
         "Por quanto tempo você consegue focar hoje?", "Quanto riesci a concentrarti oggi?",
         "Cât te poți concentra azi?", "Hoelang kun je je vandaag focussen?"],
@@ -93,7 +93,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Draai aan de knop. Je kunt dit voor elke start aanpassen."],
     "Which days do you want to focus?": [
         "你想在哪几天专注？", "आप किन दिनों फ़ोकस करना चाहते हैं?",
-        "¿Qué días quieres concentrarte?", "Quels jours voulez-vous vous concentrer ?",
+        "¿Qué días quieres concentrarte?", "Quels jours voulez-vous vous concentrer ?",
         "An welchen Tagen möchtest du dich konzentrieren?", "В какие дни вы хотите фокусироваться?",
         "Em quais dias você quer focar?", "In quali giorni vuoi concentrarti?",
         "În ce zile vrei să te concentrezi?", "Op welke dagen wil je focussen?"],
@@ -144,8 +144,8 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Finalizzazione dei risultati…", "Finalizăm rezultatele…",
         "Resultaten worden afgerond…"],
     "Let's get started!": [
-        "开始吧！", "चलिए शुरू करें!", "¡Vamos a empezar!", "C'est parti !",
-        "Los geht's!", "Начнём!", "Vamos começar!", "Iniziamo!",
+        "开始吧！", "चलिए शुरू करें!", "¡Vamos a empezar!", "C’est parti !",
+        "Los geht’s!", "Начнём!", "Vamos começar!", "Iniziamo!",
         "Să începem!", "Aan de slag!"],
     "Completed focus flights, if you keep this rhythm": [
         "若保持这个节奏，已完成的专注飞行", "इस लय को बनाए रखने पर पूरी हुई फ़ोकस फ़्लाइट्स",
@@ -247,7 +247,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Één plek gemaakt voor focus"],
     "A finish line every flight": [
         "每次飞行都有终点", "हर फ़्लाइट में एक फ़िनिश लाइन", "Una meta en cada vuelo",
-        "Une ligne d'arrivée à chaque vol", "Eine Ziellinie bei jedem Flug",
+        "Une ligne d’arrivée à chaque vol", "Eine Ziellinie bei jedem Flug",
         "Финишная черта в каждом полёте", "Uma linha de chegada em cada voo",
         "Un traguardo a ogni volo", "O linie de sosire la fiecare zbor",
         "Een finish bij elke vlucht"],
@@ -322,7 +322,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "拖延", "टालना", "Posponerlo", "La procrastination", "Aufschieben",
         "Откладывание", "Adiar", "Rimandare", "Amânarea", "Uitstellen"],
     "Losing momentum": [
-        "势头中断", "गति खोना", "Perder el impulso", "Perdre l'élan",
+        "势头中断", "गति खोना", "Perder el impulso", "Perdre l’élan",
         "Schwung verlieren", "Потеря темпа", "Perder o ritmo",
         "Perdere lo slancio", "Pierderea avântului", "Momentum verliezen"],
     "Feeling overwhelmed": [

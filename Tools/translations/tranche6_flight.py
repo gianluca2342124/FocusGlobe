@@ -367,7 +367,7 @@ TRANSLATIONS: dict[str, list[str]] = {
     ],
     "Ready to drift?": [
         "准备好漂流了吗？", "बहने के लिए तैयार?", "¿Listo para dejarte llevar?",
-        "Prêt à vous laisser porter ?", "Bereit zum Dahingleiten?",
+        "Prêt à vous laisser porter ?", "Bereit zum Dahingleiten?",
         "Готовы отправиться в дрейф?", "Pronto para flutuar?",
         "Pronto a lasciarti andare?", "Gata să plutești?", "Klaar om te zweven?",
     ],
@@ -481,10 +481,10 @@ TRANSLATIONS: dict[str, list[str]] = {
     ],
     "Spin the Free Coin Spin": [
         "转动免费金币轮盘", "फ़्री कॉइन स्पिन घुमाएँ",
-        "Gira la Ruleta de monedas gratis", "Lancez le Tour de pièces gratuit",
+        "Gira la ruleta de monedas gratis", "Lancez le tour de pièces gratuit",
         "Dreh am kostenlosen Münzen-Rad", "Крутите бесплатное колесо монет",
-        "Gire o Giro de Moedas Grátis", "Gira la Ruota delle monete gratis",
-        "Învârte Roata gratuită de monede", "Draai aan de Gratis Muntenspin",
+        "Gire o giro de moedas grátis", "Gira la ruota delle monete gratis",
+        "Învârte roata gratuită de monede", "Draai aan de gratis muntenspin",
     ],
     "Earn 10 Focus Coins": [
         "赚取 10 枚专注金币", "10 फ़ोकस सिक्के कमाएँ",

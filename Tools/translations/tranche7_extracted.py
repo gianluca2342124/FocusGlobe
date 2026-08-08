@@ -286,7 +286,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Probeer het over %@ opnieuw",
     ],
     "Target %@": [
-        "目标 %@", "लक्ष्य %@", "Objetivo: %@", "Objectif : %@",
+        "目标 %@", "लक्ष्य %@", "Objetivo: %@", "Objectif : %@",
         "Ziel: %@", "Цель: %@", "Meta: %@", "Obiettivo: %@",
         "Obiectiv: %@", "Doel: %@",
     ],
@@ -381,7 +381,7 @@ TRANSLATIONS: dict[str, list[str]] = {
     ],
     "Best %lld days": [
         "最佳 %lld 天", "सर्वश्रेष्ठ %lld दिन", "Récord: %lld días",
-        "Record : %lld jours", "Rekord: %lld Tage", "Рекорд: %lld дн.",
+        "Record : %lld jours", "Rekord: %lld Tage", "Рекорд: %lld дн.",
         "Recorde: %lld dias", "Record: %lld giorni", "Record: %lld zile",
         "Record: %lld dagen",
     ],
@@ -571,7 +571,7 @@ TRANSLATIONS.update({
         "%@. %@. %@", "%@. %@. %@", "%@. %@. %@", "%@. %@. %@", "%@. %@. %@",
     ],
     "“%@”": [
-        "「%@」", "“%@”", "«%@»", "« %@ »", "„%@“", "«%@»",
+        "「%@」", "“%@”", "«%@»", "« %@ »", "„%@“", "«%@»",
         "“%@”", "«%@»", "„%@”", "‘%@’",
     ],
     # Present in the widget catalog too; the app renders them as well.

@@ -232,7 +232,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Focus om hem te behouden",
     ],
     "Milestone! 🎉": [
-        "里程碑！🎉", "मील का पत्थर! 🎉", "¡Hito! 🎉", "Cap franchi ! 🎉",
+        "里程碑！🎉", "मील का पत्थर! 🎉", "¡Hito! 🎉", "Cap franchi ! 🎉",
         "Meilenstein! 🎉", "Рубеж! 🎉", "Marco! 🎉", "Traguardo! 🎉",
         "Bornă atinsă! 🎉", "Mijlpaal! 🎉",
     ],

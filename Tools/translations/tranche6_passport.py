@@ -605,7 +605,7 @@ TRANSLATIONS: dict[str, list[str]] = {
     ],
     "Search for “FocusGlobe”.": [
         "搜索「FocusGlobe」。", "«FocusGlobe» खोजें।", "Busca «FocusGlobe».",
-        "Recherchez « FocusGlobe ».", "Suche nach „FocusGlobe“.",
+        "Recherchez « FocusGlobe ».", "Suche nach „FocusGlobe“.",
         "Найдите «FocusGlobe».", "Busque por “FocusGlobe”.",
         "Cerca «FocusGlobe».", "Caută „FocusGlobe”.", "Zoek naar ‘FocusGlobe’.",
     ],

@@ -45,7 +45,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "« %@ »"
+            "value": "« %@ »"
           }
         },
         "de": {
@@ -6262,7 +6262,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Une ligne d'arrivée à chaque vol"
+            "value": "Une ligne d’arrivée à chaque vol"
           }
         },
         "de": {
@@ -7367,7 +7367,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Accepter la demande d'équipage"
+            "value": "Accepter la demande d’équipage"
           }
         },
         "de": {
@@ -7952,7 +7952,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Autoriser les demandes d'amis"
+            "value": "Autoriser les demandes d’amis"
           }
         },
         "de": {
@@ -8017,7 +8017,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Autorisez les pilotes rencontrés à vous envoyer une demande d'équipage."
+            "value": "Autorisez les pilotes rencontrés à vous envoyer une demande d’équipage."
           }
         },
         "de": {
@@ -8342,7 +8342,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vous avez déjà un compte ?"
+            "value": "Vous avez déjà un compte ?"
           }
         },
         "de": {
@@ -9636,13 +9636,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Banco · Centro"
+            "value": "Banco · centro"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Banc · Centre"
+            "value": "Banc · centre"
           }
         },
         "de": {
@@ -9660,25 +9660,25 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Banco · Centro"
+            "value": "Banco · centro"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Panca · Centro"
+            "value": "Panca · centro"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bancă · Centru"
+            "value": "Bancă · centru"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bank · Midden"
+            "value": "Bank · midden"
           }
         }
       }
@@ -9701,19 +9701,19 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Banco · Izquierda"
+            "value": "Banco · izquierda"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Banc · Gauche"
+            "value": "Banc · gauche"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bank · Links"
+            "value": "Bank · links"
           }
         },
         "ru": {
@@ -9725,19 +9725,19 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Banco · Esquerda"
+            "value": "Banco · esquerda"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Panca · Sinistra"
+            "value": "Panca · sinistra"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bancă · Stânga"
+            "value": "Bancă · stânga"
           }
         },
         "nl": {
@@ -9772,7 +9772,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Record : %lld jours"
+            "value": "Record : %lld jours"
           }
         },
         "de": {
@@ -10748,7 +10748,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bloquer ce pilote ?"
+            "value": "Bloquer ce pilote ?"
           }
         },
         "de": {
@@ -10878,7 +10878,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les applis bloquées le restent jusqu'à l'atterrissage."
+            "value": "Les applis bloquées le restent jusqu’à l’atterrissage."
           }
         },
         "de": {
@@ -11008,7 +11008,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "CARTE D'EMBARQUEMENT"
+            "value": "CARTE D’EMBARQUEMENT"
           }
         },
         "de": {
@@ -11032,7 +11032,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "CARTA D'IMBARCO"
+            "value": "CARTA D’IMBARCO"
           }
         },
         "ro": {
@@ -11593,7 +11593,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aperçu de l'intérieur de la cabine"
+            "value": "Aperçu de l’intérieur de la cabine"
           }
         },
         "de": {
@@ -11617,7 +11617,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Anteprima dell'interno della cabina"
+            "value": "Anteprima dell’interno della cabina"
           }
         },
         "ro": {
@@ -12698,7 +12698,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vérification de l'accès à FocusGlobe PRO"
+            "value": "Vérification de l’accès à FocusGlobe PRO"
           }
         },
         "de": {
@@ -12722,7 +12722,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verifica dell'accesso a FocusGlobe PRO"
+            "value": "Verifica dell’accesso a FocusGlobe PRO"
           }
         },
         "ro": {
@@ -12763,7 +12763,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vérification de l'accès PRO…"
+            "value": "Vérification de l’accès PRO…"
           }
         },
         "de": {
@@ -12787,7 +12787,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verifica dell'accesso PRO…"
+            "value": "Verifica dell’accesso PRO…"
           }
         },
         "ro": {
@@ -14409,7 +14409,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bonus de pièces actif : pièces doublées sur votre prochain vol."
+            "value": "Bonus de pièces actif : pièces doublées sur votre prochain vol."
           }
         },
         "de": {
@@ -17204,7 +17204,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Membre d'équipage"
+            "value": "Membre d’équipage"
           }
         },
         "de": {
@@ -17228,7 +17228,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Membro dell'equipaggio"
+            "value": "Membro dell’equipaggio"
           }
         },
         "ro": {
@@ -17985,7 +17985,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Refuser la demande d'équipage"
+            "value": "Refuser la demande d’équipage"
           }
         },
         "de": {
@@ -18440,7 +18440,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Supprimer les données Online ?"
+            "value": "Supprimer les données Online ?"
           }
         },
         "de": {
@@ -18570,7 +18570,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Supprime vols, pièces, séries, déblocages et votre profil sur cet appareil. L'app revient au premier lancement."
+            "value": "Supprime vols, pièces, séries, déblocages et votre profil sur cet appareil. L’app revient au premier lancement."
           }
         },
         "de": {
@@ -18594,7 +18594,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Elimina voli, monete, serie, sblocchi e il tuo profilo su questo dispositivo. L'app torna al primo avvio."
+            "value": "Elimina voli, monete, serie, sblocchi e il tuo profilo su questo dispositivo. L’app torna al primo avvio."
           }
         },
         "ro": {
@@ -18635,7 +18635,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "La suppression retire les éléments suivants de FocusGlobe Online :"
+            "value": "La suppression retire les éléments suivants de FocusGlobe Online :"
           }
         },
         "de": {
@@ -18659,7 +18659,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "L'eliminazione rimuove quanto segue da FocusGlobe Online:"
+            "value": "L’eliminazione rimuove quanto segue da FocusGlobe Online:"
           }
         },
         "ro": {
@@ -19546,7 +19546,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Doublez vos pièces sur votre prochaine heure d'étude une fois équipé."
+            "value": "Doublez vos pièces sur votre prochaine heure d’étude une fois équipé."
           }
         },
         "de": {
@@ -19611,7 +19611,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Touchez deux fois pour sceller la page et commencer l'expédition"
+            "value": "Touchez deux fois pour sceller la page et commencer l’expédition"
           }
         },
         "de": {
@@ -23505,13 +23505,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Suelo · Derecha"
+            "value": "Suelo · derecha"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sol · Droite"
+            "value": "Sol · droite"
           }
         },
         "de": {
@@ -23529,25 +23529,25 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Chão · Direita"
+            "value": "Chão · direita"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pavimento · Destra"
+            "value": "Pavimento · destra"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Podea · Dreapta"
+            "value": "Podea · dreapta"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vloer · Rechts"
+            "value": "Vloer · rechts"
           }
         }
       }
@@ -24161,7 +24161,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Volez avec d'autres pilotes — vous n'apparaissez que sous un pseudo anonyme"
+            "value": "Volez avec d’autres pilotes — vous n’apparaissez que sous un pseudo anonyme"
           }
         },
         "de": {
@@ -26847,7 +26847,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le Bouclier de Concentration a besoin de l'autorisation Temps d'écran pour bloquer les applis distrayantes pendant vos vols FocusGlobe."
+            "value": "Le Bouclier de Concentration a besoin de l’autorisation Temps d’écran pour bloquer les applis distrayantes pendant vos vols FocusGlobe."
           }
         },
         "de": {
@@ -26871,7 +26871,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lo Scudo Focus richiede l'autorizzazione Tempo di utilizzo per bloccare le app che distraggono durante i voli FocusGlobe."
+            "value": "Lo Scudo Focus richiede l’autorizzazione Tempo di utilizzo per bloccare le app che distraggono durante i voli FocusGlobe."
           }
         },
         "ro": {
@@ -26912,7 +26912,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le Bouclier de Concentration utilise Temps d'écran, indisponible sur cet appareil."
+            "value": "Le Bouclier de Concentration utilise Temps d’écran, indisponible sur cet appareil."
           }
         },
         "de": {
@@ -28285,7 +28285,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quatre widgets pour votre écran d'accueil et de verrouillage"
+            "value": "Quatre widgets pour votre écran d’accueil et de verrouillage"
           }
         },
         "de": {
@@ -28740,7 +28740,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "L'ami rejoint"
+            "value": "L’ami rejoint"
           }
         },
         "de": {
@@ -28764,7 +28764,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "L'amico si unisce"
+            "value": "L’amico si unisce"
           }
         },
         "ro": {
@@ -29067,7 +29067,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Retour discret au décollage et à l'atterrissage"
+            "value": "Retour discret au décollage et à l’atterrissage"
           }
         },
         "de": {
@@ -29091,7 +29091,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Feedback delicato al decollo e all'atterraggio"
+            "value": "Feedback delicato al decollo e all’atterraggio"
           }
         },
         "ro": {
@@ -30167,13 +30167,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Colgado · Izquierda"
+            "value": "Colgado · izquierda"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Suspendu · Gauche"
+            "value": "Suspendu · gauche"
           }
         },
         "de": {
@@ -30191,25 +30191,25 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pendurado · Esquerda"
+            "value": "Pendurado · esquerda"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Appeso · Sinistra"
+            "value": "Appeso · sinistra"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Suspendat · Stânga"
+            "value": "Suspendat · stânga"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hangend · Links"
+            "value": "Hangend · links"
           }
         }
       }
@@ -30232,13 +30232,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Colgado · Derecha"
+            "value": "Colgado · derecha"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Suspendu · Droite"
+            "value": "Suspendu · droite"
           }
         },
         "de": {
@@ -30256,25 +30256,25 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pendurado · Direita"
+            "value": "Pendurado · direita"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Appeso · Destra"
+            "value": "Appeso · destra"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Suspendat · Dreapta"
+            "value": "Suspendat · dreapta"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hangend · Rechts"
+            "value": "Hangend · rechts"
           }
         }
       }
@@ -31337,13 +31337,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gancho · Izquierda"
+            "value": "Gancho · izquierda"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Crochet · Gauche"
+            "value": "Crochet · gauche"
           }
         },
         "de": {
@@ -31361,25 +31361,25 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gancho · Esquerda"
+            "value": "Gancho · esquerda"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gancio · Sinistra"
+            "value": "Gancio · sinistra"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cârlig · Stânga"
+            "value": "Cârlig · stânga"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haak · Links"
+            "value": "Haak · links"
           }
         }
       }
@@ -31402,13 +31402,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gancho · Derecha"
+            "value": "Gancho · derecha"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Crochet · Droite"
+            "value": "Crochet · droite"
           }
         },
         "de": {
@@ -31426,25 +31426,25 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gancho · Direita"
+            "value": "Gancho · direita"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gancio · Destra"
+            "value": "Gancio · destra"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cârlig · Dreapta"
+            "value": "Cârlig · dreapta"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haak · Rechts"
+            "value": "Haak · rechts"
           }
         }
       }
@@ -31479,7 +31479,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "So funktioniert's"
+            "value": "So funktioniert’s"
           }
         },
         "ru": {
@@ -31538,7 +31538,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Combien de temps pouvez-vous vous concentrer aujourd'hui ?"
+            "value": "Combien de temps pouvez-vous vous concentrer aujourd’hui ?"
           }
         },
         "de": {
@@ -31603,7 +31603,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Combien de temps dure votre premier vol ?"
+            "value": "Combien de temps dure votre premier vol ?"
           }
         },
         "de": {
@@ -33314,7 +33314,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "iOS ne permet pas aux apps d'ajouter des widgets automatiquement — c'est la méthode standard d'Apple pour tout widget."
+            "value": "iOS ne permet pas aux apps d’ajouter des widgets automatiquement — c’est la méthode standard d’Apple pour tout widget."
           }
         },
         "de": {
@@ -34881,7 +34881,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "So geht's"
+            "value": "So geht’s"
           }
         },
         "ru": {
@@ -35135,7 +35135,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quitter ce vol ?"
+            "value": "Quitter ce vol ?"
           }
         },
         "de": {
@@ -35330,13 +35330,13 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "C'est parti !"
+            "value": "C’est parti !"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Los geht's!"
+            "value": "Los geht’s!"
           }
         },
         "ru": {
@@ -36045,7 +36045,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Perdre l'élan"
+            "value": "Perdre l’élan"
           }
         },
         "de": {
@@ -36565,7 +36565,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gérer l'abonnement"
+            "value": "Gérer l’abonnement"
           }
         },
         "de": {
@@ -37410,7 +37410,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Plus d'options"
+            "value": "Plus d’options"
           }
         },
         "de": {
@@ -38190,7 +38190,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Besoin de réviser ? Commencez par une expédition paisible."
+            "value": "Besoin de réviser ? Commencez par une expédition paisible."
           }
         },
         "de": {
@@ -38970,7 +38970,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pas encore d'équipage"
+            "value": "Pas encore d’équipage"
           }
         },
         "de": {
@@ -39100,7 +39100,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aucune expédition pour l'instant"
+            "value": "Aucune expédition pour l’instant"
           }
         },
         "de": {
@@ -41051,7 +41051,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Une dérive concentrée avant la fin de la journée ?"
+            "value": "Une dérive concentrée avant la fin de la journée ?"
           }
         },
         "de": {
@@ -42156,7 +42156,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Seul l'hôte peut inviter de nouveaux pilotes."
+            "value": "Seul l’hôte peut inviter de nouveaux pilotes."
           }
         },
         "de": {
@@ -42180,7 +42180,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Solo l'host può invitare nuovi piloti."
+            "value": "Solo l’host può invitare nuovi piloti."
           }
         },
         "ro": {
@@ -42482,7 +42482,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ouvre l'aperçu et la marche à suivre"
+            "value": "Ouvre l’aperçu et la marche à suivre"
           }
         },
         "de": {
@@ -42506,7 +42506,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Apre l'anteprima e come aggiungerlo"
+            "value": "Apre l’anteprima e come aggiungerlo"
           }
         },
         "ro": {
@@ -42571,7 +42571,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Apre l'accesso con Apple."
+            "value": "Apre l’accesso con Apple."
           }
         },
         "ro": {
@@ -47189,7 +47189,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prêt pour un autre vol paisible ?"
+            "value": "Prêt pour un autre vol paisible ?"
           }
         },
         "de": {
@@ -47254,7 +47254,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prêt pour une expédition concentrée ?"
+            "value": "Prêt pour une expédition concentrée ?"
           }
         },
         "de": {
@@ -47449,7 +47449,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prêt à vous laisser porter ?"
+            "value": "Prêt à vous laisser porter ?"
           }
         },
         "de": {
@@ -47971,7 +47971,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Retirer de l'équipage"
+            "value": "Retirer de l’équipage"
           }
         },
         "de": {
@@ -47995,7 +47995,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rimuovi dall'equipaggio"
+            "value": "Rimuovi dall’equipaggio"
           }
         },
         "ro": {
@@ -48036,7 +48036,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Retirer de l'équipage ?"
+            "value": "Retirer de l’équipage ?"
           }
         },
         "de": {
@@ -48060,7 +48060,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rimuovere dall'equipaggio?"
+            "value": "Rimuovere dall’equipaggio?"
           }
         },
         "ro": {
@@ -48231,7 +48231,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Signaler ce pilote ?"
+            "value": "Signaler ce pilote ?"
           }
         },
         "de": {
@@ -48296,7 +48296,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les signalements sont anonymes et examinés par notre équipe. Seuls l'identifiant anonyme du pilote et le motif choisi sont envoyés — jamais de données personnelles."
+            "value": "Les signalements sont anonymes et examinés par notre équipe. Seuls l’identifiant anonyme du pilote et le motif choisi sont envoyés — jamais de données personnelles."
           }
         },
         "de": {
@@ -48320,7 +48320,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le segnalazioni sono anonime e riviste dal nostro team. Vengono inviati solo l'ID anonimo di questo pilota e il motivo scelto, mai dati personali."
+            "value": "Le segnalazioni sono anonime e riviste dal nostro team. Vengono inviati solo l’ID anonimo di questo pilota e il motivo scelto, mai dati personali."
           }
         },
         "ro": {
@@ -48686,7 +48686,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Réinitialiser toutes les données ?"
+            "value": "Réinitialiser toutes les données ?"
           }
         },
         "de": {
@@ -48881,7 +48881,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Retrouvez votre compte, votre progression et l'accès PRO."
+            "value": "Retrouvez votre compte, votre progression et l’accès PRO."
           }
         },
         "de": {
@@ -49076,7 +49076,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reprendre votre vol ?"
+            "value": "Reprendre votre vol ?"
           }
         },
         "de": {
@@ -49597,7 +49597,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "L'accès à Temps d'écran est désactivé"
+            "value": "L’accès à Temps d’écran est désactivé"
           }
         },
         "de": {
@@ -49621,7 +49621,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "L'accesso a Tempo di utilizzo è disattivato"
+            "value": "L’accesso a Tempo di utilizzo è disattivato"
           }
         },
         "ro": {
@@ -49792,7 +49792,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Recherchez « FocusGlobe »."
+            "value": "Recherchez « FocusGlobe »."
           }
         },
         "de": {
@@ -52459,7 +52459,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Se déconnecter de FocusGlobe Online ?"
+            "value": "Se déconnecter de FocusGlobe Online ?"
           }
         },
         "de": {
@@ -52524,7 +52524,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Se déconnecter de FocusGlobe ?"
+            "value": "Se déconnecter de FocusGlobe ?"
           }
         },
         "de": {
@@ -54078,13 +54078,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gira la Ruleta de monedas gratis"
+            "value": "Gira la ruleta de monedas gratis"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lancez le Tour de pièces gratuit"
+            "value": "Lancez le tour de pièces gratuit"
           }
         },
         "de": {
@@ -54102,25 +54102,25 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gire o Giro de Moedas Grátis"
+            "value": "Gire o giro de moedas grátis"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gira la Ruota delle monete gratis"
+            "value": "Gira la ruota delle monete gratis"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Învârte Roata gratuită de monede"
+            "value": "Învârte roata gratuită de monede"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Draai aan de Gratis Muntenspin"
+            "value": "Draai aan de gratis muntenspin"
           }
         }
       }
@@ -55190,7 +55190,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rappels de série, de concentration et d'objectifs"
+            "value": "Rappels de série, de concentration et d’objectifs"
           }
         },
         "de": {
@@ -55645,7 +55645,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Réussi !"
+            "value": "Réussi !"
           }
         },
         "de": {
@@ -55964,13 +55964,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mesa · Centro"
+            "value": "Mesa · centro"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Table · Centre"
+            "value": "Table · centre"
           }
         },
         "de": {
@@ -55988,25 +55988,25 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mesa · Centro"
+            "value": "Mesa · centro"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tavolo · Centro"
+            "value": "Tavolo · centro"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Masă · Centru"
+            "value": "Masă · centru"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tafel · Midden"
+            "value": "Tafel · midden"
           }
         }
       }
@@ -56029,13 +56029,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mesa · Izquierda"
+            "value": "Mesa · izquierda"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Table · Gauche"
+            "value": "Table · gauche"
           }
         },
         "de": {
@@ -56053,25 +56053,25 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mesa · Esquerda"
+            "value": "Mesa · esquerda"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tavolo · Sinistra"
+            "value": "Tavolo · sinistra"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Masă · Stânga"
+            "value": "Masă · stânga"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tafel · Links"
+            "value": "Tafel · links"
           }
         }
       }
@@ -56094,13 +56094,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mesa · Derecha"
+            "value": "Mesa · derecha"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Table · Droite"
+            "value": "Table · droite"
           }
         },
         "de": {
@@ -56118,25 +56118,25 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mesa · Direita"
+            "value": "Mesa · direita"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tavolo · Destra"
+            "value": "Tavolo · destra"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Masă · Dreapta"
+            "value": "Masă · dreapta"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tafel · Rechts"
+            "value": "Tafel · rechts"
           }
         }
       }
@@ -56230,7 +56230,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Touchez un objet pour l'aperçu"
+            "value": "Touchez un objet pour l’aperçu"
           }
         },
         "de": {
@@ -56254,7 +56254,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tocca un oggetto per l'anteprima"
+            "value": "Tocca un oggetto per l’anteprima"
           }
         },
         "ro": {
@@ -56685,7 +56685,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Objectif : %@"
+            "value": "Objectif : %@"
           }
         },
         "de": {
@@ -56880,7 +56880,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Conditions d'utilisation"
+            "value": "Conditions d’utilisation"
           }
         },
         "de": {
@@ -56904,7 +56904,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Termini d'uso"
+            "value": "Termini d’uso"
           }
         },
         "ro": {
@@ -57075,7 +57075,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "C'est vous"
+            "value": "C’est vous"
           }
         },
         "de": {
@@ -59155,7 +59155,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pour bloquer les applis pendant les vols, activez l'accès Temps d'écran pour FocusGlobe dans Réglages."
+            "value": "Pour bloquer les applis pendant les vols, activez l’accès Temps d’écran pour FocusGlobe dans Réglages."
           }
         },
         "de": {
@@ -59179,7 +59179,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Per bloccare le app durante i voli, attiva l'accesso a Tempo di utilizzo per FocusGlobe in Impostazioni."
+            "value": "Per bloccare le app durante i voli, attiva l’accesso a Tempo di utilizzo per FocusGlobe in Impostazioni."
           }
         },
         "ro": {
@@ -60024,7 +60024,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prova un'altra categoria: i luoghi vicini sono sotto Breve."
+            "value": "Prova un’altra categoria: i luoghi vicini sono sotto Breve."
           }
         },
         "ro": {
@@ -60124,49 +60124,49 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prueba PRO GRATIS"
+            "value": "Prueba PRO gratis"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Essayez PRO GRATUITEMENT"
+            "value": "Essayer PRO gratuitement"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "PRO GRATIS testen"
+            "value": "PRO gratis testen"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Попробовать PRO БЕСПЛАТНО"
+            "value": "Попробовать PRO бесплатно"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Experimente o PRO GRÁTIS"
+            "value": "Experimente o PRO grátis"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prova PRO GRATIS"
+            "value": "Prova PRO gratis"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Încearcă PRO GRATUIT"
+            "value": "Încearcă PRO gratuit"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Probeer PRO GRATIS"
+            "value": "Probeer PRO gratis"
           }
         }
       }
@@ -61756,7 +61756,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "En attente de l'acceptation du pilote"
+            "value": "En attente de l’acceptation du pilote"
           }
         },
         "de": {
@@ -61815,19 +61815,19 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pared · Izquierda"
+            "value": "Pared · izquierda"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mur · Gauche"
+            "value": "Mur · gauche"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wand · Links"
+            "value": "Wand · links"
           }
         },
         "ru": {
@@ -61839,19 +61839,19 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Parede · Esquerda"
+            "value": "Parede · esquerda"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Parete · Sinistra"
+            "value": "Parete · sinistra"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Perete · Stânga"
+            "value": "Perete · stânga"
           }
         },
         "nl": {
@@ -61880,19 +61880,19 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pared · Derecha"
+            "value": "Pared · derecha"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mur · Droite"
+            "value": "Mur · droite"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wand · Rechts"
+            "value": "Wand · rechts"
           }
         },
         "ru": {
@@ -61904,19 +61904,19 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Parede · Direita"
+            "value": "Parede · direita"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Parete · Destra"
+            "value": "Parete · destra"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Perete · Dreapta"
+            "value": "Perete · dreapta"
           }
         },
         "nl": {
@@ -62731,7 +62731,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Qu'emportez-vous à bord ?"
+            "value": "Qu’emportez-vous à bord ?"
           }
         },
         "de": {
@@ -62796,7 +62796,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sur quoi voulez-vous que FocusGlobe vous aide le plus ?"
+            "value": "Sur quoi voulez-vous que FocusGlobe vous aide le plus ?"
           }
         },
         "de": {
@@ -62861,7 +62861,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sur quoi voulez-vous vous concentrer ?"
+            "value": "Sur quoi voulez-vous vous concentrer ?"
           }
         },
         "de": {
@@ -62991,7 +62991,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Qu'est-ce qui casse le plus souvent votre concentration ?"
+            "value": "Qu’est-ce qui casse le plus souvent votre concentration ?"
           }
         },
         "de": {
@@ -63121,7 +63121,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quels jours voulez-vous vous concentrer ?"
+            "value": "Quels jours voulez-vous vous concentrer ?"
           }
         },
         "de": {
@@ -63251,7 +63251,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "GAGNEZ JUSQU'À 25 PIÈCES !"
+            "value": "GAGNEZ JUSQU’À 25 PIÈCES !"
           }
         },
         "de": {
@@ -63316,7 +63316,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tout effacer et rejouer l'intro"
+            "value": "Tout effacer et rejouer l’intro"
           }
         },
         "de": {
@@ -63340,7 +63340,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cancella tutto e ripeti l'onboarding"
+            "value": "Cancella tutto e ripeti l’onboarding"
           }
         },
         "ro": {
@@ -63838,7 +63838,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vous pouvez vous reconnecter à tout moment pour retrouver votre compte et l'accès PRO."
+            "value": "Vous pouvez vous reconnecter à tout moment pour retrouver votre compte et l’accès PRO."
           }
         },
         "de": {
@@ -65938,7 +65938,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vos vols, pièces et séries locaux restent sur cet appareil. Votre profil en ligne demeure jusqu'à sa suppression dans Réglages → Gérer les données Online."
+            "value": "Vos vols, pièces et séries locaux restent sur cet appareil. Votre profil en ligne demeure jusqu’à sa suppression dans Réglages → Gérer les données Online."
           }
         },
         "de": {

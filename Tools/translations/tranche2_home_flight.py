@@ -26,7 +26,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Gratis muntendraai. Bekijk een video om te draaien voor focusmunten."],
     "WIN UP TO 25 COINS!": [
         "最高可赢 25 金币！", "25 सिक्के तक जीतें!", "¡GANA HASTA 25 MONEDAS!",
-        "GAGNEZ JUSQU'À 25 PIÈCES !", "GEWINNE BIS ZU 25 MÜNZEN!",
+        "GAGNEZ JUSQU’À 25 PIÈCES !", "GEWINNE BIS ZU 25 MÜNZEN!",
         "ВЫИГРАЙТЕ ДО 25 МОНЕТ!", "GANHE ATÉ 25 MOEDAS!", "VINCI FINO A 25 MONETE!",
         "CÂȘTIGĂ PÂNĂ LA 25 DE MONEDE!", "WIN TOT 25 MUNTEN!"],
     "Spinning…": ["转动中…", "घूम रहा है…", "Girando…", "Rotation…", "Dreht…",
@@ -42,7 +42,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "装备后，下一小时学习的金币翻倍。",
         "लैस करने पर आपके अगले अध्ययन घंटे के सिक्के दोगुने।",
         "Duplica tus monedas en tu próxima hora de estudio al equiparlo.",
-        "Doublez vos pièces sur votre prochaine heure d'étude une fois équipé.",
+        "Doublez vos pièces sur votre prochaine heure d’étude une fois équipé.",
         "Verdopple deine Münzen in der nächsten Lernstunde, sobald es ausgerüstet ist.",
         "Удвойте монеты за следующий час занятий после экипировки.",
         "Dobre suas moedas na próxima hora de estudo depois de equipar.",
@@ -61,7 +61,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "金币加成已激活：下次飞行金币翻倍。",
         "कॉइन बूस्ट सक्रिय: आपकी अगली फ़्लाइट पर दोगुने सिक्के।",
         "Impulso de monedas activo: monedas dobles en tu próximo vuelo.",
-        "Bonus de pièces actif : pièces doublées sur votre prochain vol.",
+        "Bonus de pièces actif : pièces doublées sur votre prochain vol.",
         "Münzen-Boost aktiv: doppelte Münzen beim nächsten Flug.",
         "Бустер монет активен: двойные монеты в следующем полёте.",
         "Impulso de moedas ativo: moedas em dobro no próximo voo.",
@@ -111,14 +111,14 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Începe concentrarea", "Start focus"],
     "Checking PRO access…": [
         "正在检查 PRO 权限…", "PRO एक्सेस जाँच रहे हैं…", "Comprobando el acceso PRO…",
-        "Vérification de l'accès PRO…", "PRO-Zugriff wird geprüft…",
+        "Vérification de l’accès PRO…", "PRO-Zugriff wird geprüft…",
         "Проверяем доступ PRO…", "Verificando o acesso PRO…",
-        "Verifica dell'accesso PRO…", "Verificăm accesul PRO…", "PRO-toegang controleren…"],
+        "Verifica dell’accesso PRO…", "Verificăm accesul PRO…", "PRO-toegang controleren…"],
     "Checking FocusGlobe PRO access": [
         "正在检查 FocusGlobe PRO 权限", "FocusGlobe PRO एक्सेस जाँच रहे हैं",
-        "Comprobando el acceso a FocusGlobe PRO", "Vérification de l'accès à FocusGlobe PRO",
+        "Comprobando el acceso a FocusGlobe PRO", "Vérification de l’accès à FocusGlobe PRO",
         "FocusGlobe PRO-Zugriff wird geprüft", "Проверяем доступ к FocusGlobe PRO",
-        "Verificando o acesso ao FocusGlobe PRO", "Verifica dell'accesso a FocusGlobe PRO",
+        "Verificando o acesso ao FocusGlobe PRO", "Verifica dell’accesso a FocusGlobe PRO",
         "Verificăm accesul la FocusGlobe PRO", "FocusGlobe PRO-toegang controleren"],
     "Resume your flight": [
         "继续你的飞行", "अपनी फ़्लाइट फिर से शुरू करें", "Reanuda tu vuelo",
@@ -132,7 +132,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Reia zborul neterminat", "Hervat je onafgemaakte vlucht"],
     "Resume your flight?": [
         "继续你的飞行？", "अपनी फ़्लाइट फिर से शुरू करें?", "¿Reanudar tu vuelo?",
-        "Reprendre votre vol ?", "Flug fortsetzen?", "Продолжить полёт?",
+        "Reprendre votre vol ?", "Flug fortsetzen?", "Продолжить полёт?",
         "Retomar seu voo?", "Riprendere il volo?", "Reiei zborul?", "Vlucht hervatten?"],
     "Continue flight": [
         "继续飞行", "फ़्लाइट जारी रखें", "Continuar el vuelo", "Continuer le vol",
@@ -190,7 +190,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Părăsește zborul", "Vlucht verlaten"],
     "Leave this flight?": [
         "离开这次飞行？", "यह फ़्लाइट छोड़ें?", "¿Salir de este vuelo?",
-        "Quitter ce vol ?", "Diesen Flug verlassen?", "Покинуть этот полёт?",
+        "Quitter ce vol ?", "Diesen Flug verlassen?", "Покинуть этот полёт?",
         "Sair deste voo?", "Uscire da questo volo?", "Părăsești acest zbor?",
         "Deze vlucht verlaten?"],
     "Keep Focusing": [
@@ -284,8 +284,8 @@ TRANSLATIONS: dict[str, list[str]] = {
 
     # ---- Boarding ritual -------------------------------------------------
     "BOARDING PASS": [
-        "登机牌", "बोर्डिंग पास", "TARJETA DE EMBARQUE", "CARTE D'EMBARQUEMENT",
-        "BORDKARTE", "ПОСАДОЧНЫЙ ТАЛОН", "CARTÃO DE EMBARQUE", "CARTA D'IMBARCO",
+        "登机牌", "बोर्डिंग पास", "TARJETA DE EMBARQUE", "CARTE D’EMBARQUEMENT",
+        "BORDKARTE", "ПОСАДОЧНЫЙ ТАЛОН", "CARTÃO DE EMBARQUE", "CARTA D’IMBARCO",
         "TICHET DE ÎMBARCARE", "INSTAPKAART"],
     "Tear the barcode across to board": [
         "横向撕开条码即可登机", "बोर्ड करने के लिए बारकोड को आर-पार फाड़ें",
@@ -305,7 +305,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Gata de zbor", "Klaar om te vliegen"],
     "What are you bringing aboard?": [
         "你要带什么上机？", "आप क्या साथ ले जा रहे हैं?", "¿Qué llevas a bordo?",
-        "Qu'emportez-vous à bord ?", "Was nimmst du an Bord?",
+        "Qu’emportez-vous à bord ?", "Was nimmst du an Bord?",
         "Что вы берёте на борт?", "O que você está levando a bordo?",
         "Cosa porti a bordo?", "Ce iei la bord?", "Wat neem je mee aan boord?"],
     "Bringing aboard": [
@@ -326,7 +326,7 @@ TRANSLATIONS: dict[str, list[str]] = {
     "Double-tap to seal the page and begin the expedition": [
         "双击封印此页并开始远征。", "पेज पर मुहर लगाकर अभियान शुरू करने के लिए डबल-टैप करें",
         "Toca dos veces para sellar la página y empezar la expedición",
-        "Touchez deux fois pour sceller la page et commencer l'expédition",
+        "Touchez deux fois pour sceller la page et commencer l’expédition",
         "Doppeltippen, um die Seite zu siegeln und die Expedition zu starten",
         "Дважды коснитесь, чтобы запечатать страницу и начать экспедицию",
         "Toque duas vezes para selar a página e iniciar a expedição",
@@ -340,7 +340,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "houd vast om te verzegelen"],
 
     # ---- Landing ---------------------------------------------------------
-    "Success!": ["成功！", "सफलता!", "¡Conseguido!", "Réussi !", "Geschafft!",
+    "Success!": ["成功！", "सफलता!", "¡Conseguido!", "Réussi !", "Geschafft!",
                  "Готово!", "Conseguiu!", "Riuscito!", "Reușit!", "Gelukt!"],
     "Focus Type": [
         "专注类型", "फ़ोकस प्रकार", "Tipo de concentración", "Type de concentration",
@@ -378,7 +378,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Probier eine andere Kategorie – Orte in der Nähe stehen unter Kurz.",
         "Попробуйте другую категорию — близкие места находятся в «Короткие».",
         "Tente outra categoria — lugares próximos aparecem em Curto.",
-        "Prova un'altra categoria: i luoghi vicini sono sotto Breve.",
+        "Prova un’altra categoria: i luoghi vicini sono sotto Breve.",
         "Încearcă altă categorie — locurile apropiate apar la Scurt.",
         "Probeer een andere categorie — plekken dichtbij staan onder Kort."],
     "Expeditions are being charted for your region": [
@@ -414,7 +414,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Toate expedițiile pe care le-ai făcut", "Elke expeditie die je hebt gemaakt"],
     "No expeditions yet": [
         "还没有远征", "अभी कोई यात्रा नहीं", "Aún no hay expediciones",
-        "Aucune expédition pour l'instant", "Noch keine Expeditionen",
+        "Aucune expédition pour l’instant", "Noch keine Expeditionen",
         "Пока нет экспедиций", "Ainda não há expedições",
         "Nessuna spedizione ancora", "Încă nicio expediție", "Nog geen expedities"],
     "Complete your first expedition and it will appear here.": [

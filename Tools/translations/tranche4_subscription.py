@@ -426,10 +426,10 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Produse indisponibile", "Producten niet beschikbaar",
     ],
     "Try PRO for FREE": [
-        "免费试用 PRO", "PRO मुफ़्त आज़माएँ", "Prueba PRO GRATIS",
-        "Essayez PRO GRATUITEMENT", "PRO GRATIS testen", "Попробовать PRO БЕСПЛАТНО",
-        "Experimente o PRO GRÁTIS", "Prova PRO GRATIS", "Încearcă PRO GRATUIT",
-        "Probeer PRO GRATIS",
+        "免费试用 PRO", "PRO मुफ़्त आज़माएँ", "Prueba PRO gratis",
+        "Essayer PRO gratuitement", "PRO gratis testen", "Попробовать PRO бесплатно",
+        "Experimente o PRO grátis", "Prova PRO gratis", "Încearcă PRO gratuit",
+        "Probeer PRO gratis",
     ],
     "Continue with Annual": [
         "继续使用年度方案", "वार्षिक प्लान के साथ जारी रखें", "Continuar con el plan anual",
