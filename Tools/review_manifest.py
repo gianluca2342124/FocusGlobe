@@ -35,6 +35,29 @@ USAGE
     python3 Tools/review_manifest.py mark es --area onboarding
     python3 Tools/review_manifest.py mark es --keys-from /tmp/done.txt
 
+HOW THE REVIEW HAS BEEN RUN, AND HOW TO CONTINUE IT
+    One AREA at a time, all ten locales together, because the translation
+    tables are written as one row per key with the ten values side by side —
+    reading the English once and judging ten renderings against each other is
+    both cheaper and better than ten separate passes, and it is what catches
+    the defects that are the SAME defect in six languages (a masculine
+    participle agreeing with the reader; a genitive pile-up; a shared word for
+    two opposite senses).
+
+    An area maps 1:1 to a `Tools/translations/tranche*.py` module — see AREAS
+    below. To continue:
+
+        python3 Tools/review_manifest.py report --by-area   # what is left
+        $EDITOR Tools/translations/<the module for that area>
+        python3 Tools/build_string_catalog.py
+        python3 Tools/localization_audit.py --strict
+        python3 Tools/review_manifest.py mark es pt-BR fr it de nl ru ro \
+            zh-Hans hi --area <area>
+
+    Mark the area ONLY after reading every key in the module. Marking is per
+    (key, locale), so a partial pass is representable — use `--keys-from` with
+    the keys actually judged rather than marking the whole area early.
+
 `sync` is safe to re-run: it adds keys the tranches have gained, drops rows for
 keys that no longer exist, refreshes the English and context columns, and
 leaves every existing mark alone. A key whose ENGLISH SOURCE CHANGED loses its
