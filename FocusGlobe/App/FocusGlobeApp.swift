@@ -3,6 +3,31 @@ import SwiftUI
 import GoogleMaps
 #endif
 
+/// The one place `\.locale` is injected — and the reason it is a VIEW rather
+/// than a modifier written straight onto the `WindowGroup` content.
+///
+/// `preferredLocale` is a computed property. SwiftUI cannot observe a computed
+/// property; it observes the OBJECT. A regular `View` holding
+/// `@EnvironmentObject` is re-evaluated whenever `AppModel` publishes, and the
+/// `preferredLanguage` setter publishes (it mutates `@Published var settings`).
+/// So the chain that has to hold is: selector → setter → `settings` publishes →
+/// this body re-runs → `preferredLocale` is recomputed → a new `\.locale`
+/// reaches the tree → every `LocalizedStringKey` below re-resolves.
+///
+/// `RootView()` keeps its structural identity across that re-evaluation, so no
+/// `@State` is lost: onboarding progress, navigation and open sheets survive a
+/// language change. That is why this is a wrapper and not `.id(language)`.
+private struct LocalizedRoot: View {
+    @EnvironmentObject private var appModel: AppModel
+
+    var body: some View {
+        RootView()
+            // Selects BOTH the localization SwiftUI reads and the locale it
+            // formats dates, numbers and plural categories with.
+            .environment(\.locale, appModel.preferredLocale)
+    }
+}
+
 @main
 struct FocusGlobeApp: App {
     @StateObject private var appModel = AppModel()
@@ -57,24 +82,12 @@ struct FocusGlobeApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
+            LocalizedRoot()
                 .focusResponsiveLayout()
                 .environmentObject(appModel)
                 .environmentObject(router)
                 .environmentObject(online)
                 .tint(AppColors.selectionGold)
-                // FORMATTING, and only formatting: date order, decimal and
-                // grouping separators, and which CLDR plural category a number
-                // falls into. It does NOT choose the localization table — that
-                // is `FocusLocalization.activate(_:)`, and believing otherwise
-                // is what shipped a build with complete catalogs that rendered
-                // entirely in English.
-                //
-                // It earns its place at the root twice over: it is the correct
-                // locale for every formatter below it, and because `Text` reads
-                // it, changing it is what invalidates the view tree so a
-                // language switch redraws immediately.
-                .environment(\.locale, appModel.preferredLocale)
                 // FocusGlobe is dark, always. Forced at the window root so no
                 // screen, sheet or system control can inherit Light — and so it
                 // holds regardless of the device setting.
@@ -86,7 +99,7 @@ struct FocusGlobeApp: App {
                     // App Group mirror so a widget or Shield added before the
                     // pilot ever touched the selector reads the app's language
                     // rather than the device's.
-                    FocusLocalization.activate(appModel.preferredLanguage)
+                    FocusLocalization.select(appModel.preferredLanguage)
                     appModel.attachOnline(online)
                     appModel.analytics.log(.appOpened)
                     // Clear any shields left behind by a previous run (e.g. the app

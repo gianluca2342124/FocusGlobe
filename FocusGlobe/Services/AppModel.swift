@@ -139,12 +139,12 @@ final class AppModel: ObservableObject {
 
         let loadedSettings = persistence.load(AppSettings.self, for: .settings) ?? .default
         self.settings = loadedSettings
-        // BEFORE anything can render. `activate` points Bundle.main's string
-        // lookup at the chosen language's .lproj; without it every
-        // LocalizedStringKey in the app resolves against the DEVICE language,
-        // which is why a build with complete catalogs still showed English.
+        // Record the selection before anything can ask for a `String`.
+        // SwiftUI content does not come through here — it follows
+        // `.environment(\.locale, …)` — but notification copy, Shield lines and
+        // the model helpers that compose a sentence do.
         // Mirrors `preferredLanguage`'s getter exactly: nil IS "never chose".
-        FocusLocalization.activate(loadedSettings.preferredLanguageCode == nil
+        FocusLocalization.select(loadedSettings.preferredLanguageCode == nil
             ? .devicePreferred
             : FocusLanguage.resolve(loadedSettings.preferredLanguageCode))
         let loadedProgress = persistence.load(UserProgress.self, for: .progress) ?? .empty
@@ -1092,17 +1092,17 @@ final class AppModel: ObservableObject {
         }
         set {
             settings.preferredLanguageCode = newValue.code
-            // Repoint every string lookup in THIS process, and mirror the code
-            // for the ones that live outside it — widgets, the Shield
+            // Record it for this process's `String` resolution, and mirror
+            // the code for the ones that live outside it — widgets, the Shield
             // extensions and scheduled notifications, none of which can see
-            // `.environment(\.locale)`. `activate` does both.
+            // `.environment(\.locale)`. `select` does both.
             //
-            // `settings` is @Published, so this setter also publishes: the
-            // root's `.environment(\.locale, appModel.preferredLocale)` changes
-            // in the same update, which is what invalidates the view tree and
-            // redraws the visible screen in the new language without a
-            // relaunch and without resetting any @State.
-            FocusLocalization.activate(newValue)
+            // SwiftUI needs nothing from that call: `settings` is @Published,
+            // so this setter publishes, `LocalizedRoot` re-evaluates, and the
+            // new `\.locale` reaches the tree in the same update. That is what
+            // redraws the visible screen in the new language with no relaunch
+            // and without resetting any @State.
+            FocusLocalization.select(newValue)
             syncWidgets()
             // Reminders are composed when SCHEDULED, so anything already queued
             // is in the old language. Rebuilding the plan re-composes it — the

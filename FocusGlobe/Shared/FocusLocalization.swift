@@ -1,58 +1,33 @@
 import Foundation
-import ObjectiveC.runtime
 
-/// The ONE thing that decides which language FocusGlobe renders in.
+/// FocusGlobe's chosen language, for the code that cannot read the SwiftUI
+/// environment.
 ///
-/// WHY THIS EXISTS AT ALL — AND WHY `.environment(\.locale)` IS NOT ENOUGH
+/// THE DIVISION OF LABOUR — deliberately only two halves, not three:
 ///
-/// It is easy to believe that
+///   A. SWIFTUI CONTENT resolves through the environment. `Text("Continue")`,
+///      `Button("Continue")`, `Label(…)`, `navigationTitle`, `alert` and
+///      `Text(LocalizedStringKey(key))` all take a `LocalizedStringKey`, and
+///      `.environment(\.locale, appModel.preferredLocale)` at the root is what
+///      selects the language for them. Nothing in this type participates in
+///      that path, and nothing here modifies `Bundle.main`.
 ///
-///     .environment(\.locale, Locale(identifier: "es"))
+///   B. EVERYTHING THAT MUST BE A `String` BEFORE IT REACHES A VIEW resolves
+///      here, explicitly, against the requested language: notification titles
+///      and bodies composed at scheduling time, Shield copy, widget copy, and
+///      the handful of model helpers that compose a sentence around a runtime
+///      value.
 ///
-/// at the window root makes `Text("Welcome")` Spanish. It does not, and this
-/// app shipped a build that proved it on a real device: every screen stayed
-/// English while the selector correctly showed Español.
-///
-/// The reason is that the two things are answered by different systems:
-///
-///   * `\.locale` answers "how do I FORMAT a value?" — date order, decimal
-///     separator, grouping, and which CLDR plural category a number falls into.
-///   * The BUNDLE answers "which localization table do I READ?" — and every
-///     SwiftUI API that takes a `LocalizedStringKey` (`Text`, `Button`, `Label`,
-///     `Link`, `navigationTitle`, `alert`, `confirmationDialog`,
-///     `accessibilityLabel`, …) resolves through
-///     `Bundle.main.localizedString(forKey:value:table:)`.
-///
-/// `Bundle.main` picks its table from the app's PREFERRED LOCALIZATIONS, which
-/// come from the device's language settings. Nothing in the SwiftUI environment
-/// changes that. On an English iPhone the answer is always English, whatever
-/// the environment locale says.
-///
-/// So FocusGlobe has to change the answer at the bundle. `activate(_:)` does
-/// exactly one thing: it points `Bundle.main`'s string lookup at the `.lproj`
-/// of the chosen language. Every existing call site is then correct with no
-/// edit — including the ones that could not be fixed individually, because
-/// `Button(_:)`, `Label(_:)`, `Link(_:)` and the `navigationTitle` /
-/// `alert` / `accessibilityLabel` modifiers take a `LocalizedStringKey` and
-/// offer no `bundle:` parameter to steer.
-///
-/// THE THREE CONTEXTS, kept deliberately separate:
-///
-///   A. STATIC SWIFTUI COPY — `Text("…")` and friends. Resolves through the
-///      swapped `Bundle.main`, so it follows the FocusGlobe selection and
-///      re-renders when `\.locale` changes at the root.
-///   B. COPY THAT MUST BE A `String` — model titles, notification bodies,
-///      anything composed before it reaches a view. Uses `string(_:)` /
-///      `localized(_:)` below, which read the SAME selection.
-///   C. SEPARATE PROCESSES — widgets and the Shield extensions compile none of
-///      this. They carry their own read-only copy of the resolver and read the
-///      language code from the App Group mirror `activate(_:)` writes.
+/// Separate PROCESSES — widgets and the two Shield extensions — see neither the
+/// environment nor this type. They carry their own read-only copy of the same
+/// idea and read the language code from the App Group mirror written below.
 ///
 /// Nothing here consults `Locale.current`. When FocusGlobe has an explicit
-/// language, the device language is not consulted at all.
+/// language, the device language is not consulted at all — that is the whole
+/// point of offering the setting.
 enum FocusLocalization {
 
-    // MARK: - Selection
+    // MARK: - The selection
 
     /// The App Group key the app writes and the extensions read. Shared with
     /// `FocusGlobeShared.appGroupID`, so this adds no new storage mechanism.
@@ -63,48 +38,22 @@ enum FocusLocalization {
     }
 
     private static let lock = NSLock()
-    /// The `.lproj` every string lookup is answered from. `nil` means "use the
-    /// bundle's own development language", which is the correct answer for
-    /// English and the only safe answer when a localization is genuinely absent.
-    private static var activeLproj: Bundle?
     /// The in-process selection. Authoritative over the App Group mirror, which
     /// exists for the OTHER processes.
-    private static var activeLanguage: FocusLanguage?
-    private static var didInstallBundleOverride = false
+    private static var selected: FocusLanguage?
     private static var lprojCache: [String: Bundle?] = [:]
 
-    /// Make `language` the language FocusGlobe renders in, for this process.
+    /// Record the language this process should resolve `String`s in, and mirror
+    /// the code for the processes that cannot see it.
     ///
-    /// Call it once at launch — before the first view is built — and again on
-    /// every change. It is idempotent and cheap after the first call.
-    ///
-    /// The class swap is installed on the FIRST call regardless of which
-    /// language it is, because English needs the override in place too: it is
-    /// what lets a later switch to Spanish take effect without a relaunch.
-    static func activate(_ language: FocusLanguage) {
-        let resolved = lproj(for: language)
-
+    /// This changes FocusGlobe's own state and nothing else. It installs
+    /// nothing, replaces no class and patches no framework: SwiftUI content is
+    /// not routed through here at all, it follows `.environment(\.locale, …)`.
+    static func select(_ language: FocusLanguage) {
         lock.lock()
-        activeLanguage = language
-        activeLproj = resolved
-        let needsInstall = !didInstallBundleOverride
-        didInstallBundleOverride = true
+        selected = language
         lock.unlock()
-
-        if needsInstall {
-            // `object_setClass` is public Objective-C runtime API and this
-            // replaces no system behaviour: the subclass overrides ONE method
-            // and forwards to `super` whenever there is no active override.
-            object_setClass(Bundle.main, FocusLocalizedMainBundle.self)
-        }
         mirror(language)
-    }
-
-    /// Read by the bundle subclass on every lookup, so it stays cheap.
-    fileprivate static var currentLproj: Bundle? {
-        lock.lock()
-        defer { lock.unlock() }
-        return activeLproj
     }
 
     /// The app writes here whenever the selection changes. Extensions only ever
@@ -114,14 +63,14 @@ enum FocusLocalization {
         defaults.set(language.code, forKey: languageDefaultsKey)
     }
 
-    /// The language every surface should use.
+    /// The language every non-SwiftUI surface should use.
     ///
     /// The in-process selection wins; the App Group mirror is the fallback for
-    /// the moment before `activate(_:)` has run. Falls back to the device
+    /// the moment before `select(_:)` has run. Falls back to the device
     /// preference only when FocusGlobe has never been told anything.
     static var current: FocusLanguage {
         lock.lock()
-        let inProcess = activeLanguage
+        let inProcess = selected
         lock.unlock()
         if let inProcess { return inProcess }
         guard let code = defaults.string(forKey: languageDefaultsKey) else {
@@ -130,6 +79,10 @@ enum FocusLocalization {
         return FocusLanguage.resolve(code)
     }
 
+    /// The locale for non-SwiftUI FORMATTING — dates, numbers, percentages,
+    /// month and weekday names. `Locale.current` would be the device's, which
+    /// is exactly what a pilot running FocusGlobe in German on an English phone
+    /// does not want.
     static var currentLocale: Locale { Locale(identifier: current.code) }
 
     // MARK: - Finding the localization the BUILD actually emitted
@@ -137,19 +90,17 @@ enum FocusLocalization {
     /// The `.lproj` bundle for a language, or `nil` when this target ships no
     /// localization for it.
     ///
-    /// `nil` — never `Bundle.main` — is load-bearing twice over. It is what
-    /// stops `FocusLocalizedMainBundle` recursing into itself, and it is what
-    /// distinguishes "fall back to English because the translation is genuinely
-    /// absent" from "silently show English even though Spanish shipped".
-    ///
     /// Directory names are AUDITED rather than guessed. `Bundle.main
     /// .localizations` is what the build actually produced, and
     /// `preferredLocalizations(from:forPreferences:)` is the system's own
-    /// matcher — it is what correctly maps a request for `pt-BR` onto whichever
-    /// of `pt-BR` / `pt` shipped, and `zh-Hans` onto `zh-Hans`. Its result is
-    /// then checked against the requested language, because left alone that API
-    /// answers "en" for a language it cannot match, which is precisely the
-    /// silent-English failure this must not reintroduce.
+    /// matcher — it is what maps a request for `pt-BR` onto whichever of
+    /// `pt-BR` / `pt` shipped, and `zh-Hans` onto `zh-Hans`. Its result is then
+    /// checked against the requested language, because left alone that API
+    /// answers "en" for a language it cannot match, which would silently show
+    /// English for a language that did ship.
+    ///
+    /// `nil` rather than `Bundle.main` on a miss, so a caller can tell
+    /// "translation genuinely absent" from "wrong table read".
     static func lproj(for language: FocusLanguage) -> Bundle? {
         lock.lock()
         if let cached = lprojCache[language.code] { lock.unlock(); return cached }
@@ -168,8 +119,7 @@ enum FocusLocalization {
         var resolved: Bundle?
         for candidate in candidates {
             guard let path = Bundle.main.path(forResource: candidate, ofType: "lproj"),
-                  let bundle = Bundle(path: path),
-                  bundle !== Bundle.main
+                  let bundle = Bundle(path: path)
             else { continue }
             resolved = bundle
             break
@@ -187,15 +137,57 @@ enum FocusLocalization {
         FocusLanguage.allCases.filter { $0 == .english || lproj(for: $0) != nil }
     }
 
+    /// How `LocalizedStringResource` should be told where to look.
+    private static func bundleDescription(
+        for language: FocusLanguage
+    ) -> LocalizedStringResource.BundleDescription {
+        guard let bundle = lproj(for: language) else { return .main }
+        return .atURL(bundle.bundleURL)
+    }
+
     // MARK: - Context B: copy that has to be a `String`
 
-    /// Look up a key in FocusGlobe's chosen language.
+    /// Resolve a literal — with or without interpolation — in the requested
+    /// language, e.g. `FocusLocalization.localized("\(days) day")`.
+    ///
+    /// This is Foundation's supported mechanism for rendering in a language
+    /// other than the device's: a `LocalizedStringResource` carries its own
+    /// `locale`, and lookup is performed for that locale rather than the
+    /// current one. The bundle is named explicitly as well, so table selection
+    /// and plural-rule selection are both pinned rather than inferred.
+    ///
+    /// It is also the form to use whenever the result depends on a NUMBER: the
+    /// locale picks the plural category, and the catalog carries a `plural`
+    /// variation per language — Russian has four categories and Chinese has
+    /// one, so appending an English "s" is wrong nearly everywhere.
+    ///
+    /// Written as a separate name rather than an overload of `string(_:)`
+    /// because both `String` and `String.LocalizationValue` are expressible by
+    /// string literal, so an overload pair would be ambiguous at every literal
+    /// call site.
+    static func localized(_ value: String.LocalizationValue,
+                          language: FocusLanguage? = nil) -> String {
+        let target = language ?? current
+        return String(localized: LocalizedStringResource(
+            value,
+            locale: Locale(identifier: target.code),
+            bundle: bundleDescription(for: target)))
+    }
+
+    /// Resolve a key that is only known at RUNTIME — a rotating notification
+    /// line picked from a pool, a model's stored English title, a Shield line
+    /// chosen by the day index.
+    ///
+    /// `LocalizedStringResource` cannot serve this: its key is a literal, by
+    /// design. The supported answer for a runtime key is an explicit lookup in
+    /// an explicitly resolved bundle, which is what this is — a specific
+    /// `.lproj`, never a modified `Bundle.main`.
     ///
     /// The key IS the English source string, matching how the String Catalog is
     /// authored, so an untranslated key degrades to readable English rather
     /// than to a token.
     ///
-    /// For a key whose wording depends on a NUMBER, use `localized(_:)` — this
+    /// For a key whose wording depends on a number, use `localized(_:)` — this
     /// returns the raw `.stringsdict` rule for a pluralised key, not a sentence.
     static func string(_ key: String, language: FocusLanguage? = nil) -> String {
         let target = language ?? current
@@ -203,8 +195,9 @@ enum FocusLocalization {
         return bundle.localizedString(forKey: key, value: nil, table: nil)
     }
 
-    /// Interpolating variant. Arguments are positional (`%@`, `%lld`) so a
-    /// translation may reorder them — which several of these languages need.
+    /// Interpolating variant of the runtime-key lookup. Arguments are
+    /// positional (`%@`, `%lld`) so a translation may reorder them — which
+    /// several of these languages need.
     static func string(_ key: String, _ arguments: CVarArg...,
                        language: FocusLanguage? = nil) -> String {
         String(format: string(key, language: language),
@@ -212,49 +205,30 @@ enum FocusLocalization {
                arguments: arguments)
     }
 
-    /// The same lookup for a *literal* with interpolation, e.g.
-    /// `FocusLocalization.localized("\(days) day")`.
-    ///
-    /// Written as a separate name rather than an overload of `string(_:)`: both
-    /// `String` and `String.LocalizationValue` are expressible by string
-    /// literal, so an overload pair would be ambiguous at every literal call
-    /// site.
-    ///
-    /// This is the form to use whenever the result depends on a NUMBER. The
-    /// `locale:` argument is what picks the plural category, and the catalog
-    /// carries a `plural` variation per language — Russian has four categories
-    /// and Chinese has one, so appending an English "s" is wrong nearly
-    /// everywhere.
-    static func localized(_ value: String.LocalizationValue,
-                          language: FocusLanguage? = nil) -> String {
-        let target = language ?? current
-        return String(localized: value,
-                      bundle: lproj(for: target) ?? .main,
-                      locale: Locale(identifier: target.code))
-    }
-
     // MARK: - Proof
 
     #if DEBUG
-    /// Structurally proves the resolver reaches a non-English table.
+    /// Structurally proves the explicit resolver reaches a non-English table.
     ///
     /// A green catalog audit says the translations EXIST; it says nothing about
     /// whether the running app can reach them. This asks the question the
-    /// device asked: for a key that certainly has a Spanish value, does the
-    /// resolver return the Spanish one?
+    /// device asked, for both context-B paths — the runtime-key lookup and the
+    /// `LocalizedStringResource` one.
+    ///
+    /// It does NOT exercise the SwiftUI path: that one is the environment's
+    /// job, and there is no view hierarchy at launch to ask.
     ///
     /// Returns `nil` on success, else the first failure. Never ships UI.
-    static func _selfCheck(key: String = "Continue") -> String? {
-        let english = lproj(for: .english)?
+    static func _selfCheck(key: String = "Welcome to FocusGlobe") -> String? {
+        let english = (lproj(for: .english) ?? .main)
             .localizedString(forKey: key, value: nil, table: nil)
-            ?? Bundle.main.localizedString(forKey: key, value: nil, table: nil)
 
         for language in [FocusLanguage.spanish, .german, .simplifiedChinese, .portuguese] {
-            guard let bundle = lproj(for: language) else {
+            guard lproj(for: language) != nil else {
                 return "[Localization] no .lproj shipped for \(language.code) — "
                      + "the catalog is not being emitted for that language"
             }
-            let value = bundle.localizedString(forKey: key, value: nil, table: nil)
+            let value = string(key, language: language)
             if value == key {
                 return "[Localization] \(language.code) has no entry for \(key.debugDescription)"
             }
@@ -266,25 +240,4 @@ enum FocusLocalization {
         return nil
     }
     #endif
-}
-
-/// `Bundle.main` with its string lookup redirected.
-///
-/// Installed once by `FocusLocalization.activate(_:)` via `object_setClass`.
-/// One override, and it forwards to `super` whenever there is no active
-/// language bundle — so with no selection the app behaves exactly as an
-/// unmodified app would.
-///
-/// It cannot recurse: `FocusLocalization.lproj(for:)` returns `nil` rather than
-/// `Bundle.main` when a localization is missing, so `currentLproj` is never
-/// this object.
-private final class FocusLocalizedMainBundle: Bundle {
-    override func localizedString(forKey key: String,
-                                  value: String?,
-                                  table tableName: String?) -> String {
-        guard let target = FocusLocalization.currentLproj else {
-            return super.localizedString(forKey: key, value: value, table: tableName)
-        }
-        return target.localizedString(forKey: key, value: value, table: tableName)
-    }
 }
