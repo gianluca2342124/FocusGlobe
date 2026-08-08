@@ -247,6 +247,29 @@ struct LandingView: View {
 
     /// Real, properly attributed words — rotated deterministically by streak
     /// length, so the card stays fresh without ever inventing an author.
+    ///
+    /// NOT LOCALIZED, ON PURPOSE. This is the one place FocusGlobe shows
+    /// English under a non-English UI, and it is a decision rather than a gap:
+    ///
+    ///   * These are published quotations by real, named people. A translation
+    ///     of one is a NEW text that still carries that person's name. Writing
+    ///     "Will Durant said X" in Spanish, when Durant never wrote X in
+    ///     Spanish, attributes words to someone who did not say them.
+    ///   * Canonical published translations do exist for several of these in
+    ///     several of these languages. None can be verified from inside this
+    ///     repository, and an unverified one is the same fabrication with extra
+    ///     confidence.
+    ///   * Replacing them with FocusGlobe-authored lines and dropping the
+    ///     attribution would fix the language at the cost of deleting a
+    ///     designed element of the completion moment. That is a product change,
+    ///     not a localization one.
+    ///
+    /// So the quotations stay in their original language and the attribution
+    /// stays truthful. This is reversible in one direction only: supply a
+    /// VERIFIED published translation with its provenance, add the key to a
+    /// tranche, and localize that quotation. Do not machine-translate them, and
+    /// do not let a coverage sweep talk you into it — the audit lists these as
+    /// "sentence-like literals not in a catalog" and they are meant to be there.
     private var streakQuote: (text: String, author: String) {
         let quotes: [(String, String)] = [
             ("We are what we repeatedly do. Excellence, then, is not an act, but a habit.",

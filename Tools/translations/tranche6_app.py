@@ -8,14 +8,16 @@ a commit message, because they are the kind a future translator will re-open:
      named users, and leaving English paragraphs under a Spanish UI would read
      as an oversight. Names are left alone because a name is not copy.
 
-  2. The four LANDING-SCREEN QUOTATIONS (Will Durant, Robert Collier, Horace
-     Mann, A. A. Milne) and their attributions are deliberately NOT in this
-     file. They are published quotations by real, named people; a translation
-     of one is a new text that would still carry that person's name. Canonical
-     published translations exist for some of them in some of these languages,
-     but they cannot be verified from here, so the quotations stay in their
-     original English. This is reversible — supply verified translations and
-     add the keys.
+  2. The five LANDING-SCREEN QUOTATIONS (Will Durant, Robert Collier, Horace
+     Mann, A. A. Milne, Confucius) and their attributions are deliberately NOT
+     in this file. They are published quotations by real, named people; a
+     translation of one is a new text that would still carry that person's
+     name. Canonical published translations exist for some of them in some of
+     these languages, but they cannot be verified from here, so the quotations
+     stay in their original English. This is reversible — supply verified
+     translations and add the keys. The full reasoning, and the reason not to
+     replace them with authored copy instead, is at the use site in
+     `LandingView.swift`.
 """
 
 # key -> [zh-Hans, hi, es, fr, de, ru, pt-BR, it, ro, nl]
