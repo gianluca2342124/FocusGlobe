@@ -27,12 +27,15 @@ struct LocationPickerView: View {
                         let label = countryName(country)
                         Section(label) {
                             ForEach(country.cities) { city in
-                                // The ORIGIN keeps the catalog's English country:
-                                // it is persisted, and re-rendering it in the
-                                // current language is the display layer's job.
+                                // The ORIGIN keeps the catalog's English country
+                                // AND its ISO code: the text is persisted, the
+                                // code is what re-renders it in whichever
+                                // language the pilot switches to next.
                                 cityRow(name: city.name, country: label, code: city.code,
                                         origin: JourneyOrigin(city: city.name, country: country.country,
-                                                              coordinate: city.coordinate, code: city.code))
+                                                              coordinate: city.coordinate, code: city.code,
+                                                              countryCode: country.countryCode
+                                                                  ?? RegionDisplayNames.regionCode(forName: country.country)))
                             }
                         }
                     }
@@ -101,7 +104,13 @@ struct LocationPickerView: View {
     private var currentLocationSubtitle: String {
         switch appModel.locationState {
         case .resolved(let o):
-            let country = localized(o.country)
+            // The geocoder answered in whatever language was selected when the
+            // fix resolved. Its ISO code did not, so it — not the stored words —
+            // is what names the country now.
+            let country = o.countryCode
+                .flatMap { RegionDisplayNames.name(forRegionCode: $0,
+                                                   language: appModel.preferredLanguage) }
+                ?? localized(o.country)
             return "\(o.city)\(country.isEmpty ? "" : ", \(country)")"
         case .resolving:       return "Locating…"
         case .denied:          return "Location access is off"

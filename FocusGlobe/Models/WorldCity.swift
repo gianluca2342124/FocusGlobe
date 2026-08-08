@@ -55,6 +55,13 @@ struct CityEntry: Identifiable, Hashable {
     var id: String { "\(countryCode)|\(city.id)" }
 
     var origin: JourneyOrigin {
-        JourneyOrigin(city: city.name, country: country, coordinate: city.coordinate, code: city.code)
+        // `countryCode` above is an IDENTITY for grouping and `id`, and it has a
+        // last-resort branch that truncates the country name. A truncation is
+        // not an ISO code — "Singapore" would become "SI", which is Slovenia —
+        // so the origin gets its region from the canonical table or gets none
+        // at all, and displays its country text unchanged.
+        JourneyOrigin(city: city.name, country: country, coordinate: city.coordinate,
+                      code: city.code,
+                      countryCode: RegionDisplayNames.regionCode(forName: country))
     }
 }

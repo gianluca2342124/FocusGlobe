@@ -107,22 +107,29 @@ final class LocationService: NSObject, ObservableObject {
         // running FocusGlobe in Spanish on an English phone lands in "Munich,
         // Germany" while every label around it is Spanish. City names have no
         // other locale-aware source, so this is where they have to be asked
-        // for correctly. (The resolved fix is in-memory only; the country is
-        // re-rendered from `RegionDisplayNames` at every display site, so a
-        // language change after the fix still shows the right country name.)
+        // for correctly. (The resolved fix is in-memory only.)
+        //
+        // The country is taken TWICE, and the difference matters. `country` is
+        // the placemark's display text, already in the language we asked for.
+        // `isoCountryCode` is the identity, and it is what survives a language
+        // change: switch to German after the fix resolves and the label can be
+        // re-rendered as "Deutschland" because the origin remembers DE, not
+        // because anyone tried to recognise the word "Alemania".
         geocoder.reverseGeocodeLocation(
             location, preferredLocale: FocusLocalization.currentLocale
         ) { [weak self] placemarks, _ in
             let place = placemarks?.first
             let city = place?.locality ?? place?.subAdministrativeArea ?? place?.administrativeArea
             let country = place?.country
+            let regionCode = place?.isoCountryCode
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 let name = (city?.isEmpty == false) ? city!
                     : FocusLocalization.localized("Current Location")
                 self.state = .resolved(JourneyOrigin(city: name,
                                                      country: country ?? "",
-                                                     coordinate: coordinate))
+                                                     coordinate: coordinate,
+                                                     countryCode: regionCode))
             }
         }
     }

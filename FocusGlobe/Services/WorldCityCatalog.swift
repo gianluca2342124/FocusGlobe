@@ -10,10 +10,20 @@ enum WorldCityCatalog {
     static let countries: [WorldCountry] = loadCountries()
 
     /// All cities flattened with their country.
+    ///
+    /// `countryCode` here is an IDENTITY for grouping and `CityEntry.id`. The
+    /// JSON supplies a real ISO code for every country it ships; the canonical
+    /// table answers for any that does not; and the name truncation is a
+    /// last-resort tiebreaker that keeps `id` unique. That last branch is NOT an
+    /// ISO code — "Singapore" truncates to "SI", which is Slovenia — which is
+    /// why `CityEntry.origin` resolves its region separately instead of trusting
+    /// this field.
     static let allCities: [CityEntry] = countries.flatMap { country in
         country.cities.map {
             CityEntry(city: $0, country: country.country,
-                      countryCode: country.countryCode ?? String(country.country.prefix(2)).uppercased())
+                      countryCode: country.countryCode
+                          ?? CanonicalRegionCodes.code(for: country.country)
+                          ?? String(country.country.prefix(2)).uppercased())
         }
     }
 
@@ -96,8 +106,11 @@ enum WorldCityCatalog {
     private static let fallback: [WorldCountry] = {
         Dictionary(grouping: OriginPresets.all, by: { $0.country })
             .map { country, origins in
+                // The canonical table, never a truncation: this list is only
+                // reached when the JSON failed to load, and shipping "SI" for
+                // Singapore would then mislabel the picker in ten languages.
                 WorldCountry(country: country,
-                             countryCode: String(country.prefix(2)).uppercased(),
+                             countryCode: CanonicalRegionCodes.code(for: country),
                              cities: origins.map {
                                  WorldCity(name: $0.city, code: $0.code,
                                            latitude: $0.coordinate.latitude,

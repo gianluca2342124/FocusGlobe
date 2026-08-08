@@ -15,8 +15,18 @@ import Foundation
 ///     translations of "Germany" would be ten chances to be wrong, would need
 ///     extending for every country added to the JSON, and would duplicate a
 ///     table Apple ships and keeps current. `Locale.localizedString(
-///     forRegionCode:)` is the right source, so this type is only the plumbing
-///     that gets an ISO code out of the data we have.
+///     forRegionCode:)` is the right source — ONCE YOU KNOW THE CODE. Getting
+///     the code is the part that must not be a guess, and it is not one: it
+///     comes from `CanonicalRegionCodes`, a fixed table, or from an ISO code the
+///     data already carries.
+///
+/// WHAT THIS TYPE NO LONGER DOES
+///     It used to derive the code by asking Foundation for every region's name
+///     in all eleven languages and looking the bundled string up in the result.
+///     That made a DISPLAY string the lookup key, so resolution depended on
+///     Apple's wording matching ours exactly — and the first time it did not,
+///     the app refused to launch. Nothing here compares translated text any
+///     more. See `CanonicalRegionCodes` for the full argument.
 ///
 /// WHAT IS *NOT* HANDLED HERE, DELIBERATELY
 ///     * CITIES. "Paris", "Barcelona", "Tokyo" are proper names and stay as
@@ -33,6 +43,9 @@ enum RegionDisplayNames {
 
     /// The name of an ISO 3166-1 region in the FocusGlobe language.
     /// `nil` when the code is not a region Foundation recognises.
+    ///
+    /// The language is FocusGlobe's selected one, never the phone's: a pilot
+    /// running the app in Spanish on an English handset reads "Alemania".
     static func name(forRegionCode code: String,
                      language: FocusLanguage? = nil) -> String? {
         let identifier = code.uppercased()
@@ -43,91 +56,33 @@ enum RegionDisplayNames {
 
     /// The FocusGlobe-language name for a country we only have as text.
     ///
-    /// Returns the input unchanged when it is not a country at all — which is
-    /// the common case, because the same call also runs over region names like
-    /// "Catalonia" that must survive untouched.
+    /// Returns the input unchanged when the name is not one of the countries
+    /// FocusGlobe ships — which is the common case, because the same call also
+    /// runs over subdivision names like "Catalonia" that must survive
+    /// untouched, and over whatever a geocoder happened to say.
     ///
-    /// Matching is done against every language FocusGlobe ships, not only
-    /// English. Most of the data is canonical English, but `LocationService`
-    /// hands back whatever the geocoder said, and that is already localized. A
-    /// pilot who resolves their location in Spanish and then switches to French
-    /// should see "Allemagne", not the "Alemania" that happened to be stored.
+    /// This is the SAFE path in every direction. An unknown value is displayed
+    /// exactly as it was supplied; a known value whose code Foundation cannot
+    /// name is displayed exactly as it was supplied. Nothing here can fail a
+    /// launch, empty a label, or invent a country.
     static func localized(country name: String,
                           language: FocusLanguage? = nil) -> String {
-        let trimmed = name.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return name }
-        guard let code = regionCode(forName: trimmed) else { return name }
+        guard let code = regionCode(forName: name) else {
+            #if DEBUG
+            logUnresolved(name)
+            #endif
+            return name
+        }
         return Self.name(forRegionCode: code, language: language) ?? name
     }
 
-    /// The ISO code behind a country name written in any of our languages.
+    /// The ISO 3166-1 alpha-2 code behind a written country name.
+    ///
+    /// One table lookup against `CanonicalRegionCodes`. No locale is consulted,
+    /// no display string is compared, and the answer is the same on every OS
+    /// version and in every app language — which is the entire point.
     static func regionCode(forName name: String) -> String? {
-        index[fold(name)]
-    }
-
-    // MARK: - The reverse index
-
-    /// `folded name -> ISO code`, built once from Foundation's own tables.
-    ///
-    /// Built for the eleven languages FocusGlobe ships rather than English
-    /// alone, so a name that arrived from the geocoder in one language can
-    /// still be re-rendered in another.
-    ///
-    /// English is inserted LAST and wins ties on purpose: the bundled JSON is
-    /// English, and a collision between an English country name and some other
-    /// language's name for a different country must resolve to the English
-    /// reading of what is in our data.
-    private static let index: [String: String] = {
-        var table: [String: String] = [:]
-        // Two-letter identifiers only. `isoRegions` also carries the numeric
-        // macro-regions ("150" Europe, "001" World), which are not countries
-        // and whose names would collide with nothing useful.
-        let codes = Locale.Region.isoRegions
-            .map(\.identifier)
-            .filter { $0.count == 2 }
-
-        var languages = FocusLanguage.allCases.map(\.code).filter { $0 != "en" }
-        languages.append("en")
-
-        for language in languages {
-            let locale = Locale(identifier: language)
-            for code in codes {
-                guard let name = locale.localizedString(forRegionCode: code)
-                else { continue }
-                table[fold(name)] = code
-            }
-        }
-
-        // Names our data uses that CLDR files under a different primary form.
-        // Kept short on purpose: anything that can be answered by Foundation
-        // must be, and this exists only for the handful it cannot.
-        for (alias, code) in ["turkey": "TR", "holland": "NL",
-                              "czech republic": "CZ", "burma": "MM",
-                              "ivory coast": "CI", "cape verde": "CV",
-                              "swaziland": "SZ", "macedonia": "MK",
-                              "united states of america": "US",
-                              "great britain": "GB", "russian federation": "RU",
-                              "republic of korea": "KR", "uae": "AE"] {
-            table[fold(alias)] = code
-        }
-        return table
-    }()
-
-    /// Case-, accent- and article-insensitive, so "Türkiye", "TURKIYE" and
-    /// "The Bahamas" all reach the same row.
-    private static func fold(_ value: String) -> String {
-        var folded = value.folding(options: [.diacriticInsensitive,
-                                             .caseInsensitive,
-                                             .widthInsensitive],
-                                   locale: Locale(identifier: "en_US_POSIX"))
-        folded = folded.trimmingCharacters(in: .whitespacesAndNewlines)
-        for article in ["the ", "les ", "la ", "le ", "los ", "el "] {
-            if folded.hasPrefix(article) {
-                folded = String(folded.dropFirst(article.count))
-                break
-            }
-        }
-        return folded
+        CanonicalRegionCodes.code(for: name)
     }
 
     // MARK: - Ordering
@@ -148,18 +103,61 @@ enum RegionDisplayNames {
         }
     }
 
-    // MARK: - Proof
+    // MARK: - Diagnostics
 
     #if DEBUG
+    /// Names already reported, so a list that redraws on every keystroke does
+    /// not fill the console with the same line.
+    private static var reportedUnresolved = Set<String>()
+    private static let reportLock = NSLock()
+
+    /// Note, once, that a value reached a country label without a region code.
+    ///
+    /// SUBDIVISIONS APPEAR HERE AND THAT IS CORRECT. "Catalonia", "Lazio" and
+    /// "Hokkaido" are not countries, have no ISO 3166-1 code, and are supposed
+    /// to print exactly as written. The line is worth having anyway, because it
+    /// is also where a country arrives spelled in a way nothing recognises —
+    /// which is the condition that used to be discovered by the app refusing to
+    /// launch. It is a `print`, and only in DEBUG: a country we cannot name is a
+    /// cosmetic problem, and cosmetic problems do not stop launches.
+    private static func logUnresolved(_ name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        reportLock.lock()
+        let isNew = reportedUnresolved.insert(trimmed).inserted
+        reportLock.unlock()
+        guard isNew else { return }
+        print("[Localization] not an ISO region: \"\(trimmed)\" — shown as supplied")
+    }
+
     /// Every country name in the bundled geography that this cannot resolve.
     ///
-    /// Empty is the passing result. A non-empty answer means the JSON gained a
-    /// spelling Foundation does not use, and that country is about to show in
-    /// English on a Spanish phone — the exact defect this type exists to close.
+    /// Empty is the passing result, and after the canonical table it IS empty.
+    /// A non-empty answer means the JSON gained a country nobody added to
+    /// `CanonicalRegionCodes`, and that country is about to show in English on
+    /// a Spanish phone.
+    ///
+    /// It is a REPORT, not an assertion. The startup path logs it; the strict
+    /// version that fails is `Tools/region_audit.py`, which reads the same two
+    /// JSON files and the same table without needing the app to run at all.
     static func _unresolvedCountryNames() -> [String] {
+        bundledCountryNames().filter { regionCode(forName: $0) == nil }.sorted()
+    }
+
+    /// `(total, resolved, unresolved)` — the one line worth printing at launch,
+    /// because "72 of 72" is the fact being claimed.
+    static func _countryCoverage() -> (total: Int, resolved: Int, unresolved: [String]) {
+        let total = bundledCountryNames().count
+        let unresolved = _unresolvedCountryNames()
+        return (total, total - unresolved.count, unresolved)
+    }
+
+    /// Every distinct, non-empty country value FocusGlobe ships.
+    private static func bundledCountryNames() -> Set<String> {
         var names = Set(WorldCityCatalog.countries.map(\.country))
         names.formUnion(TravelNetworkCatalog.allNodes.map(\.country))
-        return names.filter { !$0.isEmpty && regionCode(forName: $0) == nil }.sorted()
+        names = names.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+        return names
     }
     #endif
 }

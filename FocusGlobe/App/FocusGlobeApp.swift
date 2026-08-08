@@ -63,15 +63,32 @@ struct FocusGlobeApp: App {
         if let localizationFailure = FocusLocalization._selfCheck() {
             assertionFailure(localizationFailure)
         }
-        // Country names come from Foundation's region tables, keyed off the
-        // English spelling in the bundled geography JSON. A country added with
-        // a spelling CLDR does not use would silently fall back to English on
-        // a Spanish phone, so the mapping is asserted rather than assumed.
-        let unresolvedRegions = RegionDisplayNames._unresolvedCountryNames()
-        if !unresolvedRegions.isEmpty {
-            assertionFailure("[Localization] no ISO region for "
-                             + unresolvedRegions.joined(separator: ", ")
-                             + " — these will display in English")
+        // Country names are resolved to ISO 3166-1 codes by a fixed table, then
+        // named by Foundation in the selected language. Two things are worth
+        // knowing at launch: that the table is well-formed, and that it still
+        // covers every country in the geography JSON.
+        //
+        // The FIRST is asserted, because a malformed table is a typo in code
+        // that no data can cause and every developer should see immediately.
+        //
+        // The SECOND only LOGS. A country nobody added to the table shows in
+        // English — a cosmetic defect on one label — and a cosmetic defect must
+        // never be the reason FocusGlobe will not open. This assertion used to
+        // exist, and it did exactly that: it took the whole app down over the
+        // word "China". The strict, build-time version of this check now lives
+        // in `Tools/region_audit.py`, which fails loudly where failing loudly
+        // costs nothing.
+        if let regionTableFailure = CanonicalRegionCodes._selfCheck() {
+            assertionFailure(regionTableFailure)
+        }
+        let regionCoverage = RegionDisplayNames._countryCoverage()
+        if regionCoverage.unresolved.isEmpty {
+            print("[Localization] bundled regions resolved: "
+                  + "\(regionCoverage.resolved)/\(regionCoverage.total)")
+        } else {
+            print("[Localization] unresolved bundled regions: "
+                  + regionCoverage.unresolved.joined(separator: ", ")
+                  + " — these will display exactly as the catalog spells them")
         }
         // The general PRO reel alternates categories, including across the loop
         // seam. It is a property of the CATALOG, so adding a cabin item or
