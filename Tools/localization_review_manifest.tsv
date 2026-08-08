@@ -1003,60 +1003,60 @@ app	extracted	or	or	Separator between two sign-in options.	-	-	-	-	-	-	-	-	-	-
 app	store-passport-friends-settings	wants to join your Crew	wants to join your Crew	FriendsView.swift:234	-	-	-	-	-	-	-	-	-	-
 app	online	your room	your room	RoomDetailsView.swift:24	-	-	-	-	-	-	-	-	-	-
 app	extracted	“%@”	“%@”		-	-	-	-	-	-	-	-	-	-
-shield	shield	A distraction is a poor exchange rate.	A distraction is a poor exchange rate.	ShieldConfigurationExtension.swift:139	-	-	-	-	-	-	-	-	-	-
-shield	shield	Close	Close	HomeView.swift:807	-	-	-	-	-	-	-	-	-	-
-shield	shield	Don’t trade your goal	Don’t trade your goal	ShieldConfigurationExtension.swift:138	-	-	-	-	-	-	-	-	-	-
-shield	shield	Finish what you started.	Finish what you started.	ShieldConfigurationExtension.swift:149	-	-	-	-	-	-	-	-	-	-
-shield	shield	Five focused minutes	Five focused minutes	ShieldConfigurationExtension.swift:146	-	-	-	-	-	-	-	-	-	-
-shield	shield	It always does. Stay in the air.	It always does. Stay in the air.	ShieldConfigurationExtension.swift:143	-	-	-	-	-	-	-	-	-	-
-shield	shield	Not worth your momentum	Not worth your momentum	ShieldConfigurationExtension.swift:150	-	-	-	-	-	-	-	-	-	-
-shield	shield	Protect who you’re becoming	Protect who you’re becoming	ShieldConfigurationExtension.swift:140	-	-	-	-	-	-	-	-	-	-
-shield	shield	Return to FocusGlobe	Return to FocusGlobe	ShieldConfigurationExtension.swift:100	-	-	-	-	-	-	-	-	-	-
-shield	shield	So does the hour you already committed.	So does the hour you already committed.	ShieldConfigurationExtension.swift:145	-	-	-	-	-	-	-	-	-	-
-shield	shield	Stay on course	Stay on course	ShieldConfigurationExtension.swift:148	-	-	-	-	-	-	-	-	-	-
-shield	shield	That scroll can wait	That scroll can wait	ShieldConfigurationExtension.swift:136	-	-	-	-	-	-	-	-	-	-
-shield	shield	That’s all it takes to change your day.	That’s all it takes to change your day.	ShieldConfigurationExtension.swift:147	-	-	-	-	-	-	-	-	-	-
-shield	shield	The urge will pass	The urge will pass	ShieldConfigurationExtension.swift:142	-	-	-	-	-	-	-	-	-	-
-shield	shield	This is the part that builds them.	This is the part that builds them.	ShieldConfigurationExtension.swift:141	-	-	-	-	-	-	-	-	-	-
-shield	shield	Your future deserves this	Your future deserves this	ShieldConfigurationExtension.swift:144	-	-	-	-	-	-	-	-	-	-
-shield	shield	Your goal can’t. Keep flying.	Your goal can’t. Keep flying.	ShieldConfigurationExtension.swift:137	-	-	-	-	-	-	-	-	-	-
-shield	shield	You’ve built something. Don’t spend it here.	You’ve built something. Don’t spend it here.	ShieldConfigurationExtension.swift:151	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	%@. %@.	%@. %@.	StreakCompanionWidget.swift:100	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	%lld focus days	%lld focus days | plural: %lld focus days		-	-	-	-	-	-	-	-	-	-
-widgets	widgets	%lld-day streak	%lld-day streak | plural: %lld-day streak		-	-	-	-	-	-	-	-	-	-
-widgets	widgets	%lldh %@m	%lldh %@m	PassportStatsWidget.swift:41	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	%lldm	%lldm	PassportStatsWidget.swift:40	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	A quiet flight is one tap away.	A quiet flight is one tap away.	WidgetGallery.swift:378	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	Badges	Badges	PassportView.swift:532	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	FOCUS NOW	FOCUS NOW	WidgetGallery.swift:220	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	Focus	Focus	AppLogo.swift:52	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	Focus Grid	Focus Grid	WidgetGallery.swift:34	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	Focus Now	Focus Now	WidgetGallery.swift:29	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	Focus to keep it	Focus to keep it	StreakCompanionWidget.swift:40	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	Focus · 6 months	Focus · 6 months	FocusGridWidget.swift:95	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	FocusGlobe Passport	FocusGlobe Passport	PassportStatsWidget.swift:61	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	Focused today	Focused today	StreakCompanionWidget.swift:39	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	IN FLIGHT	IN FLIGHT	FocusNowWidget.swift:109	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	Keep your focus streak alive with your balloon companion.	Keep your focus streak alive with your balloon companion.	StreakCompanionWidget.swift:21	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	Milestone! 🎉	Milestone! 🎉	StreakCompanionWidget.swift:41	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	Passport	Passport	AppShell.swift:44	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	Passport Dashboard	Passport Dashboard	WidgetGallery.swift:38	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	Passport Stats	Passport Stats	PassportStatsWidget.swift:47	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	Ready to focus	Ready to focus	FocusNowWidget.swift:139	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	Resume	Resume	FocusSessionView.swift:863	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	Start	Start	FocusNowWidget.swift:273	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	Start Focus	Start Focus	FocusSessionViewModel.swift:227	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	Start a focus flight, or watch the one you're on.	Start a focus flight, or watch the one you're on.	FocusNowWidget.swift:25	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	Start your streak	Start your streak	StreakCompanionWidget.swift:38	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	Streak Companion	Streak Companion	WidgetGallery.swift:25	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	Unlock with FocusGlobe Pro	Unlock with FocusGlobe Pro	WidgetSupport.swift:210	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	Your flight is ready to continue.	Your flight is ready to continue.	WidgetGallery.swift:377	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	Your journeys, focused time, streaks and badges. FocusGlobe PRO.	Your journeys, focused time, streaks and badges. FocusGlobe PRO.	PassportStatsWidget.swift:26	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	Your last six months of focus days. FocusGlobe PRO.	Your last six months of focus days. FocusGlobe PRO.	FocusGridWidget.swift:82	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	best streak	best streak		-	-	-	-	-	-	-	-	-	-
-widgets	widgets	day streak	day streak	StreakPill.swift:3	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	focus days	focus days		-	-	-	-	-	-	-	-	-	-
-widgets	widgets	focused	focused	FocusConsistency.swift:493	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	journeys	journeys		-	-	-	-	-	-	-	-	-	-
-widgets	widgets	longest	longest	PassportStatsWidget.swift:70	-	-	-	-	-	-	-	-	-	-
-widgets	widgets	streak	streak	AppRouter.swift:211	-	-	-	-	-	-	-	-	-	-
+shield	shield	A distraction is a poor exchange rate.	A distraction is a poor exchange rate.	ShieldConfigurationExtension.swift:139	R	R	R	R	R	R	R	R	R	R
+shield	shield	Close	Close	HomeView.swift:807	R	R	R	R	R	R	R	R	R	R
+shield	shield	Don’t trade your goal	Don’t trade your goal	ShieldConfigurationExtension.swift:138	R	R	R	R	R	R	R	R	R	R
+shield	shield	Finish what you started.	Finish what you started.	ShieldConfigurationExtension.swift:149	R	R	R	R	R	R	R	R	R	R
+shield	shield	Five focused minutes	Five focused minutes	ShieldConfigurationExtension.swift:146	R	R	R	R	R	R	R	R	R	R
+shield	shield	It always does. Stay in the air.	It always does. Stay in the air.	ShieldConfigurationExtension.swift:143	R	R	R	R	R	R	R	R	R	R
+shield	shield	Not worth your momentum	Not worth your momentum	ShieldConfigurationExtension.swift:150	R	R	R	R	R	R	R	R	R	R
+shield	shield	Protect who you’re becoming	Protect who you’re becoming	ShieldConfigurationExtension.swift:140	R	R	R	R	R	R	R	R	R	R
+shield	shield	Return to FocusGlobe	Return to FocusGlobe	ShieldConfigurationExtension.swift:100	R	R	R	R	R	R	R	R	R	R
+shield	shield	So does the hour you already committed.	So does the hour you already committed.	ShieldConfigurationExtension.swift:145	R	R	R	R	R	R	R	R	R	R
+shield	shield	Stay on course	Stay on course	ShieldConfigurationExtension.swift:148	R	R	R	R	R	R	R	R	R	R
+shield	shield	That scroll can wait	That scroll can wait	ShieldConfigurationExtension.swift:136	R	R	R	R	R	R	R	R	R	R
+shield	shield	That’s all it takes to change your day.	That’s all it takes to change your day.	ShieldConfigurationExtension.swift:147	R	R	R	R	R	R	R	R	R	R
+shield	shield	The urge will pass	The urge will pass	ShieldConfigurationExtension.swift:142	R	R	R	R	R	R	R	R	R	R
+shield	shield	This is the part that builds them.	This is the part that builds them.	ShieldConfigurationExtension.swift:141	R	R	R	R	R	R	R	R	R	R
+shield	shield	Your future deserves this	Your future deserves this	ShieldConfigurationExtension.swift:144	R	R	R	R	R	R	R	R	R	R
+shield	shield	Your goal can’t. Keep flying.	Your goal can’t. Keep flying.	ShieldConfigurationExtension.swift:137	R	R	R	R	R	R	R	R	R	R
+shield	shield	You’ve built something. Don’t spend it here.	You’ve built something. Don’t spend it here.	ShieldConfigurationExtension.swift:151	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	%@. %@.	%@. %@.	StreakCompanionWidget.swift:100	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	%lld focus days	%lld focus days | plural: %lld focus days		R	R	R	R	R	R	R	R	R	R
+widgets	widgets	%lld-day streak	%lld-day streak | plural: %lld-day streak		R	R	R	R	R	R	R	R	R	R
+widgets	widgets	%lldh %@m	%lldh %@m	PassportStatsWidget.swift:41	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	%lldm	%lldm	PassportStatsWidget.swift:40	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	A quiet flight is one tap away.	A quiet flight is one tap away.	WidgetGallery.swift:378	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	Badges	Badges	PassportView.swift:532	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	FOCUS NOW	FOCUS NOW	WidgetGallery.swift:220	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	Focus	Focus	AppLogo.swift:52	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	Focus Grid	Focus Grid	WidgetGallery.swift:34	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	Focus Now	Focus Now	WidgetGallery.swift:29	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	Focus to keep it	Focus to keep it	StreakCompanionWidget.swift:40	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	Focus · 6 months	Focus · 6 months	FocusGridWidget.swift:95	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	FocusGlobe Passport	FocusGlobe Passport	PassportStatsWidget.swift:61	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	Focused today	Focused today	StreakCompanionWidget.swift:39	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	IN FLIGHT	IN FLIGHT	FocusNowWidget.swift:109	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	Keep your focus streak alive with your balloon companion.	Keep your focus streak alive with your balloon companion.	StreakCompanionWidget.swift:21	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	Milestone! 🎉	Milestone! 🎉	StreakCompanionWidget.swift:41	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	Passport	Passport	AppShell.swift:44	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	Passport Dashboard	Passport Dashboard	WidgetGallery.swift:38	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	Passport Stats	Passport Stats	PassportStatsWidget.swift:47	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	Ready to focus	Ready to focus	FocusNowWidget.swift:139	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	Resume	Resume	FocusSessionView.swift:863	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	Start	Start	FocusNowWidget.swift:273	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	Start Focus	Start Focus	FocusSessionViewModel.swift:227	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	Start a focus flight, or watch the one you're on.	Start a focus flight, or watch the one you're on.	FocusNowWidget.swift:25	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	Start your streak	Start your streak	StreakCompanionWidget.swift:38	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	Streak Companion	Streak Companion	WidgetGallery.swift:25	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	Unlock with FocusGlobe Pro	Unlock with FocusGlobe Pro	WidgetSupport.swift:210	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	Your flight is ready to continue.	Your flight is ready to continue.	WidgetGallery.swift:377	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	Your journeys, focused time, streaks and badges. FocusGlobe PRO.	Your journeys, focused time, streaks and badges. FocusGlobe PRO.	PassportStatsWidget.swift:26	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	Your last six months of focus days. FocusGlobe PRO.	Your last six months of focus days. FocusGlobe PRO.	FocusGridWidget.swift:82	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	best streak	best streak		R	R	R	R	R	R	R	R	R	R
+widgets	widgets	day streak	day streak	StreakPill.swift:3	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	focus days	focus days		R	R	R	R	R	R	R	R	R	R
+widgets	widgets	focused	focused	FocusConsistency.swift:493	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	journeys	journeys		R	R	R	R	R	R	R	R	R	R
+widgets	widgets	longest	longest	PassportStatsWidget.swift:70	R	R	R	R	R	R	R	R	R	R
+widgets	widgets	streak	streak	AppRouter.swift:211	R	R	R	R	R	R	R	R	R	R

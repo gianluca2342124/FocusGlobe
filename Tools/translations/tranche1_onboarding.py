@@ -191,13 +191,13 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Inizia il tuo primo volo", "Începe primul tău zbor", "Start je eerste vlucht"],
     "Block distracting apps in Focus Shield": [
         "在专注护盾中屏蔽干扰应用", "फ़ोकस शील्ड में ध्यान भटकाने वाले ऐप ब्लॉक करें",
-        "Bloquea apps que distraen en el Escudo de Enfoque",
-        "Bloquez les applis distrayantes dans le Bouclier de Concentration",
+        "Bloquea apps que distraen en el Escudo de Concentración",
+        "Bloquez les applis distrayantes dans le Bouclier de concentration",
         "Ablenkende Apps im Fokus-Schild blockieren",
         "Блокируйте отвлекающие приложения в Щите Фокуса",
         "Bloqueie apps que distraem no Escudo de Foco",
-        "Blocca le app che distraggono nello Scudo Focus",
-        "Blochează aplicațiile care distrag în Scutul de Concentrare",
+        "Blocca le app che distraggono nello Scudo Concentrazione",
+        "Blochează aplicațiile care distrag în Scutul de concentrare",
         "Blokkeer afleidende apps in het Focusschild"],
     "Fly again tomorrow and grow your Streak": [
         "明天再飞一次，延长连续天数", "कल फिर उड़ान भरें और अपनी स्ट्रीक बढ़ाएँ",

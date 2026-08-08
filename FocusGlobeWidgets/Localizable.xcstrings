@@ -378,7 +378,7 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld-Tage-Serie"
+                  "value": "%lld-Tag-Serie"
                 }
               },
               "other": {
@@ -396,25 +396,25 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "серия %lld день"
+                  "value": "%lld день подряд"
                 }
               },
               "few": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "серия %lld дня"
+                  "value": "%lld дня подряд"
                 }
               },
               "many": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "серия %lld дней"
+                  "value": "%lld дней подряд"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "серия %lld дня"
+                  "value": "%lld дня подряд"
                 }
               }
             }
@@ -662,7 +662,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un vol paisible à un geste près."
+            "value": "Un vol paisible en un seul geste."
           }
         },
         "de": {
@@ -780,7 +780,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "सर्वश्रेष्ठ"
+            "value": "बेस्ट स्ट्रीक"
           }
         },
         "es": {
@@ -810,7 +810,7 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "melhor"
+            "value": "recorde"
           }
         },
         "it": {
@@ -1099,7 +1099,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "专注格图"
+            "value": "专注格子"
           }
         },
         "hi": {
@@ -1182,7 +1182,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Focus maintenant"
+            "value": "Concentration immédiate"
           }
         },
         "de": {
@@ -1348,7 +1348,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Focus om hem te behouden"
+            "value": "Focus om je reeks te behouden"
           }
         }
       }
@@ -1371,19 +1371,19 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "concentrado"
+            "value": "concentración"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "concentré"
+            "value": "concentration"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "fokussiert"
+            "value": "Fokuszeit"
           }
         },
         "ru": {
@@ -1395,25 +1395,25 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "focado"
+            "value": "foco"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "concentrato"
+            "value": "concentrazione"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "concentrat"
+            "value": "concentrare"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "gefocust"
+            "value": "focustijd"
           }
         }
       }
@@ -1436,13 +1436,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hoy concentrado"
+            "value": "Concentración hoy"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Concentré aujourd’hui"
+            "value": "Concentration aujourd’hui"
           }
         },
         "de": {
@@ -1460,19 +1460,19 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Focado hoje"
+            "value": "Foco hoje"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Concentrato oggi"
+            "value": "Concentrazione oggi"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Concentrat azi"
+            "value": "Concentrare azi"
           }
         },
         "nl": {
@@ -1702,7 +1702,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gardez votre série de concentration en vie avec votre montgolfière."
+            "value": "Faites vivre votre série de concentration avec votre montgolfière."
           }
         },
         "de": {
@@ -1761,13 +1761,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "más largo"
+            "value": "más larga"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "plus long"
+            "value": "plus longue"
           }
         },
         "de": {
@@ -1785,19 +1785,19 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "mais longo"
+            "value": "mais longa"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "più lungo"
+            "value": "più lunga"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "cel mai lung"
+            "value": "cea mai lungă"
           }
         },
         "nl": {
@@ -1962,7 +1962,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tableau du Passeport"
+            "value": "Tableau de bord Passeport"
           }
         },
         "de": {
@@ -2086,13 +2086,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Listo para concentrarte"
+            "value": "Todo listo"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prêt à vous concentrer"
+            "value": "Tout est prêt"
           }
         },
         "de": {
@@ -2110,13 +2110,13 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pronto para focar"
+            "value": "Tudo pronto"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pronto a concentrarti"
+            "value": "Tutto pronto"
           }
         },
         "ro": {
@@ -2464,7 +2464,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "连续"
+            "value": "连续天数"
           }
         },
         "hi": {
@@ -2571,7 +2571,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Compagno di serie"
+            "value": "Compagno della serie"
           }
         },
         "ro": {
@@ -2624,7 +2624,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Откройте с FocusGlobe Pro"
+            "value": "Разблокируйте с FocusGlobe Pro"
           }
         },
         "pt-BR": {
@@ -2801,49 +2801,49 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tus últimos seis meses de días de concentración. FocusGlobe PRO."
+            "value": "Tus días de concentración de los últimos seis meses. FocusGlobe PRO."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vos six derniers mois de jours de concentration. FocusGlobe PRO."
+            "value": "Vos jours de concentration des six derniers mois. FocusGlobe PRO."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Deine letzten sechs Monate an Fokus-Tagen. FocusGlobe PRO."
+            "value": "Deine Fokus-Tage der letzten sechs Monate. FocusGlobe PRO."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ваши последние шесть месяцев дней фокуса. FocusGlobe PRO."
+            "value": "Ваши дни фокуса за последние полгода. FocusGlobe PRO."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Seus últimos seis meses de dias de foco. FocusGlobe PRO."
+            "value": "Seus dias de foco dos últimos seis meses. FocusGlobe PRO."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "I tuoi ultimi sei mesi di giornate di concentrazione. FocusGlobe PRO."
+            "value": "Le tue giornate di concentrazione degli ultimi sei mesi. FocusGlobe PRO."
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ultimele tale șase luni de zile de concentrare. FocusGlobe PRO."
+            "value": "Zilele tale de concentrare din ultimele șase luni. FocusGlobe PRO."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Je laatste zes maanden aan focusdagen. FocusGlobe PRO."
+            "value": "Je focusdagen van de afgelopen zes maanden. FocusGlobe PRO."
           }
         }
       }

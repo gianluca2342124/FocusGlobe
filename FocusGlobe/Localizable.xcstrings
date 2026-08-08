@@ -10547,13 +10547,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bloquea apps que distraen en el Escudo de Enfoque"
+            "value": "Bloquea apps que distraen en el Escudo de Concentración"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bloquez les applis distrayantes dans le Bouclier de Concentration"
+            "value": "Bloquez les applis distrayantes dans le Bouclier de concentration"
           }
         },
         "de": {
@@ -10577,13 +10577,13 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Blocca le app che distraggono nello Scudo Focus"
+            "value": "Blocca le app che distraggono nello Scudo Concentrazione"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Blochează aplicațiile care distrag în Scutul de Concentrare"
+            "value": "Blochează aplicațiile care distrag în Scutul de concentrare"
           }
         },
         "nl": {
@@ -20710,13 +20710,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Activar el Escudo de Enfoque"
+            "value": "Activar el Escudo de Concentración"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Activer le Bouclier de Concentration"
+            "value": "Activer le Bouclier de concentration"
           }
         },
         "de": {
@@ -20728,7 +20728,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Включить Щит Фокуса"
+            "value": "Включить Щит фокуса"
           }
         },
         "pt-BR": {
@@ -20740,13 +20740,13 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Attiva lo Scudo Focus"
+            "value": "Attiva lo Scudo Concentrazione"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Activează Scutul de Concentrare"
+            "value": "Activează Scutul de concentrare"
           }
         },
         "nl": {
@@ -26516,13 +26516,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Escudo de Enfoque"
+            "value": "Escudo de Concentración"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bouclier de Concentration"
+            "value": "Bouclier de concentration"
           }
         },
         "de": {
@@ -26534,7 +26534,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Щит Фокуса"
+            "value": "Щит фокуса"
           }
         },
         "pt-BR": {
@@ -26546,13 +26546,13 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scudo Focus"
+            "value": "Scudo Concentrazione"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scut de Concentrare"
+            "value": "Scut de concentrare"
           }
         },
         "nl": {
@@ -26646,13 +26646,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Escudo de Enfoque activo"
+            "value": "Escudo de Concentración activo"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bouclier de Concentration actif"
+            "value": "Bouclier de concentration actif"
           }
         },
         "de": {
@@ -26664,7 +26664,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Щит Фокуса активен"
+            "value": "Щит фокуса активен"
           }
         },
         "pt-BR": {
@@ -26676,13 +26676,13 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scudo Focus attivo"
+            "value": "Scudo Concentrazione attivo"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scut de Concentrare activ"
+            "value": "Scut de concentrare activ"
           }
         },
         "nl": {
@@ -26711,13 +26711,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "El Escudo de Enfoque está disponible en iPhone y iPad."
+            "value": "El Escudo de Concentración está disponible en iPhone y iPad."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le Bouclier de Concentration est disponible sur iPhone et iPad."
+            "value": "Le Bouclier de concentration est disponible sur iPhone et iPad."
           }
         },
         "de": {
@@ -26729,7 +26729,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Щит Фокуса доступен на iPhone и iPad."
+            "value": "Щит фокуса доступен на iPhone и iPad."
           }
         },
         "pt-BR": {
@@ -26741,13 +26741,13 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lo Scudo Focus è disponibile su iPhone e iPad."
+            "value": "Lo Scudo Concentrazione è disponibile su iPhone e iPad."
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scutul de Concentrare este disponibil pe iPhone și iPad."
+            "value": "Scutul de concentrare este disponibil pe iPhone și iPad."
           }
         },
         "nl": {
@@ -26776,13 +26776,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "El Escudo de Enfoque es la parte que no sabía que necesitaba. En cuanto empieza un vuelo, el móvil deja de parecer aquello contra lo que peleo."
+            "value": "El Escudo de Concentración es la parte que no sabía que necesitaba. En cuanto empieza un vuelo, el móvil deja de parecer aquello contra lo que peleo."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le Bouclier de Concentration, c’est ce dont j’ignorais avoir besoin. Dès qu’un vol commence, mon téléphone cesse enfin d’être ce que je combats."
+            "value": "Le Bouclier de concentration, c’est ce dont j’ignorais avoir besoin. Dès qu’un vol commence, mon téléphone cesse enfin d’être ce que je combats."
           }
         },
         "de": {
@@ -26794,7 +26794,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Щит Фокуса — то, о необходимости чего я не догадывался. Как только начинается полёт, телефон перестаёт быть тем, с чем я борюсь."
+            "value": "Щит фокуса — то, о необходимости чего я не догадывался. Как только начинается полёт, телефон перестаёт быть тем, с чем я борюсь."
           }
         },
         "pt-BR": {
@@ -26806,13 +26806,13 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lo Scudo Focus è la parte che non sapevo mi servisse. Appena parte un volo, il telefono smette finalmente di sembrare ciò contro cui combatto."
+            "value": "Lo Scudo Concentrazione è la parte che non sapevo mi servisse. Appena parte un volo, il telefono smette finalmente di sembrare ciò contro cui combatto."
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scutul de Concentrare e partea de care nu știam că am nevoie. Odată ce începe un zbor, telefonul încetează în sfârșit să pară dușmanul meu."
+            "value": "Scutul de concentrare e partea de care nu știam că am nevoie. Odată ce începe un zbor, telefonul încetează în sfârșit să pară dușmanul meu."
           }
         },
         "nl": {
@@ -26841,13 +26841,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "El Escudo de Enfoque necesita permiso de Tiempo de uso para bloquear apps que distraen durante tus vuelos de FocusGlobe."
+            "value": "El Escudo de Concentración necesita permiso de Tiempo de uso para bloquear apps que distraen durante tus vuelos de FocusGlobe."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le Bouclier de Concentration a besoin de l’autorisation Temps d’écran pour bloquer les applis distrayantes pendant vos vols FocusGlobe."
+            "value": "Le Bouclier de concentration a besoin de l’autorisation Temps d’écran pour bloquer les applis distrayantes pendant vos vols FocusGlobe."
           }
         },
         "de": {
@@ -26859,7 +26859,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Щиту Фокуса нужно разрешение «Экранное время», чтобы блокировать отвлекающие приложения во время полётов FocusGlobe."
+            "value": "Щиту фокуса нужно разрешение «Экранное время», чтобы блокировать отвлекающие приложения во время полётов FocusGlobe."
           }
         },
         "pt-BR": {
@@ -26871,13 +26871,13 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lo Scudo Focus richiede l’autorizzazione Tempo di utilizzo per bloccare le app che distraggono durante i voli FocusGlobe."
+            "value": "Lo Scudo Concentrazione richiede l’autorizzazione Tempo di utilizzo per bloccare le app che distraggono durante i voli FocusGlobe."
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scutul de Concentrare are nevoie de permisiunea Timp de utilizare ca să blocheze aplicațiile care distrag în timpul zborurilor FocusGlobe."
+            "value": "Scutul de concentrare are nevoie de permisiunea Timp de utilizare ca să blocheze aplicațiile care distrag în timpul zborurilor FocusGlobe."
           }
         },
         "nl": {
@@ -26906,13 +26906,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "El Escudo de Enfoque usa Tiempo de uso, que no está disponible en este dispositivo."
+            "value": "El Escudo de Concentración usa Tiempo de uso, que no está disponible en este dispositivo."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le Bouclier de Concentration utilise Temps d’écran, indisponible sur cet appareil."
+            "value": "Le Bouclier de concentration utilise Temps d’écran, indisponible sur cet appareil."
           }
         },
         "de": {
@@ -26924,7 +26924,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Щит Фокуса использует «Экранное время», недоступное на этом устройстве."
+            "value": "Щит фокуса использует «Экранное время», недоступное на этом устройстве."
           }
         },
         "pt-BR": {
@@ -26936,13 +26936,13 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lo Scudo Focus usa Tempo di utilizzo, non disponibile su questo dispositivo."
+            "value": "Lo Scudo Concentrazione usa Tempo di utilizzo, non disponibile su questo dispositivo."
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scutul de Concentrare folosește Timp de utilizare, indisponibil pe acest dispozitiv."
+            "value": "Scutul de concentrare folosește Timp de utilizare, indisponibil pe acest dispozitiv."
           }
         },
         "nl": {
