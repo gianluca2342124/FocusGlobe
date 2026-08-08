@@ -1475,7 +1475,10 @@ struct CheckInTicketView: View {
     }
 
     private var flightModeSummary: String {
-        let protection = blockApps ? "Protected" : "Open"
+        // "Open" here means "apps not shielded", which is a different sense
+        // from the Open BUTTON that opens a room. Separate key, so a
+        // language can use a separate word.
+        let protection = blockApps ? "Protected" : "Unrestricted"
         let crew: String
         switch OnlineCache.lastFlightMode {
         case .solo:        crew = "Solo"
@@ -1769,7 +1772,7 @@ struct CheckInTicketView: View {
     private func field(_ label: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             fieldLabel(label)
-            Text(value)
+            Text(LocalizedStringKey(value))
                 .font(.system(size: 14, weight: .semibold, design: .monospaced))
                 .foregroundStyle(ink)
                 .lineLimit(1)

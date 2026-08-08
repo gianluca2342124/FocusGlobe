@@ -32,9 +32,11 @@ TRANSLATIONS: dict[str, list[str]] = {
         "直播中", "लाइव", "En directo", "En direct", "Live", "В эфире",
         "Ao vivo", "In diretta", "În direct", "Live",
     ],
+    # The badge on the balloon skin you have EQUIPPED. "In flight" describes
+    # the pilot; this describes the skin, so every language reads "in use".
     "Flying": [
-        "飞行中", "उड़ान में", "En vuelo", "En vol", "Unterwegs", "В полёте",
-        "Em voo", "In volo", "În zbor", "Onderweg",
+        "使用中", "इस्तेमाल में", "En uso", "Utilisée", "Im Einsatz",
+        "Используется", "Em uso", "In uso", "În uz", "In gebruik",
     ],
     "Landed": [
         "已降落", "लैंड हो गया", "Aterrizado", "Atterri", "Gelandet",
@@ -53,8 +55,8 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Cancelado", "Annullato", "Anulat", "Geannuleerd",
     ],
     "Current": [
-        "当前", "मौजूदा", "Actual", "Actuelle", "Aktuell", "Текущая",
-        "Atual", "Attuale", "Curentă", "Huidig",
+        "当前", "मौजूदा", "Actual", "Actuel", "Aktuell", "Текущее",
+        "Atual", "Attuale", "Curent", "Huidig",
     ],
     "Locked": [
         "已锁定", "लॉक", "Bloqueado", "Verrouillé", "Gesperrt", "Заблокировано",
@@ -136,8 +138,8 @@ TRANSLATIONS: dict[str, list[str]] = {
         "PEISAJ SONOR", "GELUIDSSFEER",
     ],
     "RETURN": [
-        "返回", "वापसी", "VUELTA", "RETOUR", "RÜCKFLUG", "ОБРАТНО",
-        "VOLTA", "RITORNO", "RETUR", "TERUG",
+        "回程", "वापसी", "VUELTA", "RETOUR", "RÜCKFLUG", "ОБРАТНО",
+        "VOLTA", "RITORNO", "RETUR", "RETOUR",
     ],
 
     # ---- Actions ----------------------------------------------------------
@@ -526,17 +528,12 @@ PLURALS: dict[str, dict[str, dict[str, str]]] = {
 
 # Translator context for keys whose English is too short to disambiguate.
 COMMENTS: dict[str, str] = {
-    "Landed": "A FocusGlobe focus flight that finished successfully — not an aircraft.",
-    "Flying": "A FocusGlobe focus session that is currently running.",
-    "Open": "Verb on a button that opens a screen. Not the adjective.",
-    "Current": "The streak running right now, as opposed to the all-time best.",
     "Owned": "A Store item the pilot already has in their collection.",
     "Occupied": "A Cabin placement slot that already holds another item.",
     "Coins": "Focus Coins — FocusGlobe's in-app currency. Never real money.",
     "Store": "FocusGlobe's in-app shop for Cabin items and balloon skins.",
     "Globe": "The rotating world on Home, not a lamp.",
     "Infinity": "An open-ended focus flight with no set duration. FocusGlobe PRO.",
-    "RETURN": "The return leg of a boarding pass. Not the keyboard key.",
     "YOU": "Marks the pilot's own balloon among other pilots'.",
     "Block": "Block another pilot in Online, not blocking apps.",
     "Remove": "Remove a friend from the crew list.",
