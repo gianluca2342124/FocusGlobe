@@ -155,7 +155,9 @@ struct WStat: View {
                 .font(.system(size: 19, weight: .heavy, design: .default))
                 .foregroundStyle(tint)
                 .minimumScaleFactor(0.7).lineLimit(1)
-            Text(caption.uppercased())
+            // Already translated by the caller. Uppercasing follows the
+            // resolved language's own casing rules, not the device's.
+            Text(caption.uppercased(with: FocusLocalization.currentLocale))
                 .font(.system(size: 9, weight: .bold, design: .default)).tracking(0.4)
                 .foregroundStyle(WTheme.inkSoft)
                 .lineLimit(1).minimumScaleFactor(0.8)
@@ -205,7 +207,7 @@ struct LockedTeaser: View {
             Text(title)
                 .font(.system(size: 16, weight: .heavy, design: .default))
                 .foregroundStyle(WTheme.ink)
-            Text("Unlock with FocusGlobe Pro")
+            Text(FocusLocalization.string("Unlock with FocusGlobe Pro"))
                 .font(.system(size: 11, weight: .semibold, design: .default))
                 .foregroundStyle(WTheme.inkSoft)
         }
@@ -221,7 +223,9 @@ extension Int {
     var fgGrouped: String {
         let f = NumberFormatter()
         f.numberStyle = .decimal
-        f.groupingSeparator = ","
+        // The separator is the LOCALE's — a hardcoded comma printed "12,022"
+        // to a German pilot, for whom that reads as twelve point zero two two.
+        f.locale = FocusLocalization.currentLocale
         return f.string(from: NSNumber(value: self)) ?? "\(self)"
     }
 }

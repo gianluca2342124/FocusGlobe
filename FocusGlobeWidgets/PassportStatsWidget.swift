@@ -22,8 +22,8 @@ struct PassportStatsWidget: Widget {
                 }
                 .widgetURL(FGLink.url(entry.snapshot.gatedLink("passport")))
         }
-        .configurationDisplayName("Passport Dashboard")
-        .description("Your journeys, focused time, streaks and badges. FocusGlobe PRO.")
+        .configurationDisplayName(Text("Passport Dashboard"))
+        .description(Text("Your journeys, focused time, streaks and badges. FocusGlobe PRO."))
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
         .contentMarginsDisabled()
     }
@@ -35,36 +35,39 @@ struct PassportStatsView: View {
 
     private var focusedTime: String {
         let m = snapshot.totalFocusedMinutes
-        if m < 60 { return "\(m)m" }
-        return "\(m / 60)h \(String(format: "%02d", m % 60))m"
+        // The unit letters are translated ("м" in Russian, "分" in Chinese);
+        // the numbers stay numbers.
+        if m < 60 { return FocusLocalization.string("%lldm", m) }
+        return FocusLocalization.string("%lldh %@m", m / 60,
+                                        String(format: "%02d", m % 60))
     }
 
     var body: some View {
         if !snapshot.isPro {
-            LockedTeaser(icon: "book.closed.fill", title: "Passport Stats", accent: WTheme.indigo)
+            LockedTeaser(icon: "book.closed.fill", title: FocusLocalization.string("Passport Stats"), accent: WTheme.indigo)
                 .padding(14)
         } else if family == .systemSmall {
             VStack(alignment: .leading, spacing: 6) {
-                WHeader(icon: "book.closed.fill", title: "Passport", tint: WTheme.gold)
+                WHeader(icon: "book.closed.fill", title: FocusLocalization.string("Passport"), tint: WTheme.gold)
                 Spacer(minLength: 0)
-                WStat(value: "\(snapshot.landings)", caption: "journeys", tint: WTheme.ink)
-                WStat(value: focusedTime, caption: "focused", tint: WTheme.teal)
-                WStat(value: "\(snapshot.currentStreak)", caption: "day streak", tint: WTheme.coral)
+                WStat(value: "\(snapshot.landings)", caption: FocusLocalization.string("journeys"), tint: WTheme.ink)
+                WStat(value: focusedTime, caption: FocusLocalization.string("focused"), tint: WTheme.teal)
+                WStat(value: "\(snapshot.currentStreak)", caption: FocusLocalization.string("day streak"), tint: WTheme.coral)
             }
             .padding(14)
             .background(passportBackground)
         } else {
             VStack(alignment: .leading, spacing: 10) {
-                WHeader(icon: "book.closed.fill", title: "FocusGlobe Passport", tint: WTheme.gold)
+                WHeader(icon: "book.closed.fill", title: FocusLocalization.string("FocusGlobe Passport"), tint: WTheme.gold)
                 HStack(spacing: 10) {
-                    WStat(value: "\(snapshot.landings)", caption: "journeys", tint: WTheme.ink)
-                    WStat(value: focusedTime, caption: "focused", tint: WTheme.teal)
-                    WStat(value: "\(snapshot.activeFocusDays)", caption: "focus days", tint: WTheme.indigo)
+                    WStat(value: "\(snapshot.landings)", caption: FocusLocalization.string("journeys"), tint: WTheme.ink)
+                    WStat(value: focusedTime, caption: FocusLocalization.string("focused"), tint: WTheme.teal)
+                    WStat(value: "\(snapshot.activeFocusDays)", caption: FocusLocalization.string("focus days"), tint: WTheme.indigo)
                 }
                 HStack(spacing: 10) {
-                    WStat(value: "\(snapshot.currentStreak)", caption: "streak", tint: WTheme.coral)
-                    WStat(value: "\(snapshot.longestStreak)", caption: "best streak", tint: WTheme.coral)
-                    WStat(value: "\(snapshot.bestFocusMinutes)m", caption: "longest", tint: WTheme.gold)
+                    WStat(value: "\(snapshot.currentStreak)", caption: FocusLocalization.string("streak"), tint: WTheme.coral)
+                    WStat(value: "\(snapshot.longestStreak)", caption: FocusLocalization.string("best streak"), tint: WTheme.coral)
+                    WStat(value: FocusLocalization.string("%lldm", snapshot.bestFocusMinutes), caption: FocusLocalization.string("longest"), tint: WTheme.gold)
                 }
                 if family == .systemLarge {
                     Spacer(minLength: 0)
@@ -93,7 +96,7 @@ struct PassportStatsView: View {
     private var badgeRow: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                WHeader(icon: "rosette", title: "Badges", tint: WTheme.gold)
+                WHeader(icon: "rosette", title: FocusLocalization.string("Badges"), tint: WTheme.gold)
                 Spacer()
                 Text("\(snapshot.badgeUnlockedCount)/\(max(snapshot.badgeTotal, snapshot.badges.count))")
                     .font(.system(size: 12, weight: .heavy, design: .default))

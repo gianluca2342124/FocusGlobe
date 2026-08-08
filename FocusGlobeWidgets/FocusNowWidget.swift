@@ -17,8 +17,12 @@ struct FocusNowWidget: Widget {
                 .containerBackground(for: .widget) { Color.black }
                 .widgetURL(FGLink.url(FocusNowView.link(entry.snapshot)))
         }
-        .configurationDisplayName("Focus Now")
-        .description("Start a focus flight, or watch the one you're on.")
+        // The gallery is system UI: it is composed by the widget picker in the
+        // DEVICE language, which is the one surface FocusGlobe's own language
+        // choice cannot reach. Shipping it translated is still right — a Spanish
+        // phone gets a Spanish gallery entry.
+        .configurationDisplayName(Text("Focus Now"))
+        .description(Text("Start a focus flight, or watch the one you're on."))
         .supportedFamilies([.systemMedium, .systemSmall])
         .contentMarginsDisabled()
     }
@@ -102,7 +106,7 @@ struct FocusNowView: View {
     /// where nothing was ever laid out. Shrinking a little is strictly better
     /// than being cut in half.
     private func eyebrow(size: CGFloat) -> some View {
-        Text(snapshot.activeFlight ? "IN FLIGHT" : "FOCUS NOW")
+        Text(FocusLocalization.string(snapshot.activeFlight ? "IN FLIGHT" : "FOCUS NOW"))
             .font(.system(size: size, weight: .heavy, design: .default))
             .tracking(1.0)
             .foregroundStyle(snapshot.activeFlight ? WTheme.teal : WTheme.inkSoft)
@@ -127,13 +131,17 @@ struct FocusNowView: View {
 
     private var displayedSkyName: String {
         if snapshot.activeFlight {
-            return snapshot.activeSkyName ?? snapshot.selectedSkyName ?? "Focus"
+            // Sky names are catalog content, resolved by the app before it
+            // writes the snapshot; only the fallback is a key.
+            return snapshot.activeSkyName ?? snapshot.selectedSkyName
+                ?? FocusLocalization.string("Focus")
         }
-        return snapshot.selectedSkyName ?? "Ready to focus"
+        return snapshot.selectedSkyName ?? FocusLocalization.string("Ready to focus")
     }
 
     private var actionTitle: String {
-        snapshot.activeFlight || snapshot.hasResumable ? "Resume" : "Start Focus"
+        FocusLocalization.string(
+            snapshot.activeFlight || snapshot.hasResumable ? "Resume" : "Start Focus")
     }
 
     private var actionIcon: String {
@@ -217,7 +225,9 @@ struct FocusNowView: View {
                 if snapshot.activeFlight {
                     remainingTime(fontSize: 26)
                 } else {
-                    Text(snapshot.hasResumable ? "Your flight is ready to continue." : "A quiet flight is one tap away.")
+                    Text(FocusLocalization.string(snapshot.hasResumable
+                        ? "Your flight is ready to continue."
+                        : "A quiet flight is one tap away."))
                         .font(.system(size: 11.5, weight: .semibold))
                         .foregroundStyle(WTheme.inkSoft)
                         .lineLimit(2)
@@ -259,7 +269,8 @@ struct FocusNowView: View {
                 .font(.system(size: compact ? 11 : 12, weight: .heavy))
             ViewThatFits(in: .horizontal) {
                 Text(actionTitle)
-                Text(snapshot.activeFlight || snapshot.hasResumable ? "Resume" : "Start")
+                Text(FocusLocalization.string(
+                    snapshot.activeFlight || snapshot.hasResumable ? "Resume" : "Start"))
             }
             .font(.system(size: compact ? 12 : 13, weight: .heavy, design: .default))
             .lineLimit(1)

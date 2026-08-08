@@ -231,19 +231,24 @@ final class NotificationService {
         // they land (this reschedule runs on completion with landedToday == true).
         if state.hasUnfinishedJourney {
             plan(dayOffset: 0, hour: 19, id: ID.today, category: .unfinishedJourney,
-                 title: "Your balloon is still waiting", body: unfinishedBody(state))
+                 title: FocusLocalization.string("Your balloon is still waiting"),
+                 body: unfinishedBody(state))
         } else if state.streak > 0 && !state.landedToday {
             // Streak-at-risk ONLY when a streak actually exists.
             plan(dayOffset: 0, hour: 19, minute: 30, id: ID.today, category: .streakAtRisk,
-                 title: "Your \(state.streak)-day streak is waiting 🔥", body: pick(Self.streakBodies))
+                 title: FocusLocalization.localized(
+                    "Your \(state.streak)-day streak is waiting 🔥"),
+                 body: pick(Self.streakBodies))
         } else if state.dailyGiftAvailable {
             plan(dayOffset: 0, hour: 18, id: ID.today, category: .dailyGiftReady,
-                 title: "A gift is waiting in FocusGlobe",
-                 body: "Open your daily gift before it flies away.")
+                 title: FocusLocalization.string("A gift is waiting in FocusGlobe"),
+                 body: FocusLocalization.string(
+                    "Open your daily gift before it flies away."))
         } else if state.goalsRemaining > 0 && !state.landedToday {
             // Daily-goal reminder ONLY when today's goal is still incomplete.
             plan(dayOffset: 0, hour: 19, minute: 30, id: ID.today, category: .dailyGoalIncomplete,
-                 title: "One calm flight can finish today", body: pick(Self.focusBodies))
+                 title: FocusLocalization.string("One calm flight can finish today"),
+                 body: pick(Self.focusBodies))
         }
 
         // TOMORROW — a calm daily focus / study nudge (alternating, personalised).
@@ -253,11 +258,14 @@ final class NotificationService {
         // REACTIVATION milestones at +3 / +7 / +14 days. Only genuinely inactive
         // users ever reach them — opening the app reschedules and pushes them out.
         plan(dayOffset: 3, hour: 11, id: ID.react3, category: .reactivation,
-             title: "The sky is still here", body: pick(Self.comebackBodies))
+             title: FocusLocalization.string("The sky is still here"),
+             body: pick(Self.comebackBodies))
         plan(dayOffset: 7, hour: 11, id: ID.react7, category: .reactivation,
-             title: "Ready for another quiet flight?", body: pick(Self.comebackBodies, offset: 1))
+             title: FocusLocalization.string("Ready for another quiet flight?"),
+             body: pick(Self.comebackBodies, offset: 1))
         plan(dayOffset: 14, hour: 11, id: ID.react14, category: .reactivation,
-             title: "A new expedition is waiting", body: pick(Self.comebackBodies, offset: 2))
+             title: FocusLocalization.string("A new expedition is waiting"),
+             body: pick(Self.comebackBodies, offset: 2))
 
         log("rescheduled; streak=\(state.streak) landedToday=\(state.landedToday) gift=\(state.dailyGiftAvailable) goals=\(state.goalsRemaining)")
     }
@@ -289,13 +297,17 @@ final class NotificationService {
 
     private func unfinishedBody(_ s: NotificationState) -> String {
         if let o = s.unfinishedOrigin, let d = s.unfinishedDestination {
-            return "Continue your expedition from \(o) to \(d)."
+            // Positional, so a language may name the destination first.
+            return FocusLocalization.string(
+                "Continue your expedition from %@ to %@.", o, d)
         }
-        return "Pick up the route you started whenever you're ready."
+        return FocusLocalization.string(
+            "Pick up the route you started whenever you're ready.")
     }
 
     private func dailyTitle(offset: Int) -> String {
-        Self.dailyTitles[abs(dayIndex() + offset) % Self.dailyTitles.count]
+        FocusLocalization.string(
+            Self.dailyTitles[abs(dayIndex() + offset) % Self.dailyTitles.count])
     }
 
     /// Alternates calm focus copy with light study/work motivation. No location
@@ -303,12 +315,12 @@ final class NotificationService {
     private func dailyBody(_ s: NotificationState, offset: Int) -> String {
         let useFocus = (dayIndex() + offset).isMultiple(of: 2)
         let pool = useFocus ? Self.focusBodies : Self.studyBodies
-        return pool[abs(dayIndex() + offset) % pool.count]
+        return FocusLocalization.string(pool[abs(dayIndex() + offset) % pool.count])
     }
 
     /// Deterministic, day-rotating pick so copy varies without feeling random.
     private func pick(_ options: [String], offset: Int = 0) -> String {
-        options[abs(dayIndex() + offset) % options.count]
+        FocusLocalization.string(options[abs(dayIndex() + offset) % options.count])
     }
 
     private func dayIndex() -> Int {
@@ -317,6 +329,12 @@ final class NotificationService {
 
     // Warm, premium, slightly playful. No guilt, no "you failed", no fake urgency,
     // and never any location data.
+    //
+    // These stay ENGLISH: they are String Catalog keys, and the rotation index
+    // must not change with the language. Every read goes through
+    // `FocusLocalization`, which is what makes a notification scheduled today
+    // arrive days later in the language the pilot chose IN FocusGlobe rather
+    // than the one the phone is set to.
     private static let dailyTitles = [
         "Ready for one focused expedition?",
         "One focused drift before the day ends?",

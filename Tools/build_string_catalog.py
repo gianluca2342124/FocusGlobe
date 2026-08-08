@@ -50,41 +50,62 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 LOCALES = ["zh-Hans", "hi", "es", "fr", "de", "ru", "pt-BR", "it", "ro", "nl"]
 
+# One catalog per TARGET, because a target can only read its own bundle.
+#
+# The widget and shield extensions are separate processes that compile none of
+# the app's files; a string they render has to be in a catalog that ships inside
+# THEIR bundle. A tranche module names its catalog with `CATALOG = "widgets"`;
+# omitting it means the app.
+CATALOGS = {
+    "app": ROOT / "FocusGlobe" / "Localizable.xcstrings",
+    "widgets": ROOT / "FocusGlobeWidgets" / "Localizable.xcstrings",
+    "shield": (ROOT / "FocusGlobeShieldConfigurationExtension"
+               / "Localizable.xcstrings"),
+}
+
 sys.path.insert(0, str(ROOT / "Tools"))
 
 
-def load_tranches() -> tuple[dict[str, list[str]], dict[str, dict[str, dict[str, str]]]]:
-    """Merge every tranche module, in name order.
+def load_tranches() -> dict[str, tuple[dict, dict]]:
+    """Merge every tranche module, in name order, grouped by catalog.
 
-    Returns (simple strings, plural strings). A key defined twice is a mistake
-    — two screens disagreeing about one string — so this raises rather than
-    letting the last definition win.
+    Returns {catalog: (simple strings, plural strings)}. A key defined twice
+    WITHIN one catalog is a mistake — two screens disagreeing about one string —
+    so this raises rather than letting the last definition win. The same key in
+    two different catalogs is fine and expected: "Passport" is rendered by both
+    the app and the widget, and each needs it in its own bundle.
     """
     import translations
 
-    merged: dict[str, list[str]] = {}
-    plurals: dict[str, dict[str, dict[str, str]]] = {}
-    owner: dict[str, str] = {}
+    tables: dict[str, tuple[dict, dict]] = {name: ({}, {}) for name in CATALOGS}
+    owner: dict[tuple[str, str], str] = {}
     for mod in sorted(m.name for m in pkgutil.iter_modules(translations.__path__)):
         module = importlib.import_module(f"translations.{mod}")
+        catalog = getattr(module, "CATALOG", "app")
+        if catalog not in CATALOGS:
+            raise SystemExit(f"{mod} names unknown catalog {catalog!r}")
+        merged, plurals = tables[catalog]
         for key, values in module.TRANSLATIONS.items():
             if key in merged and merged[key] != values:
                 raise SystemExit(
-                    f"duplicate key {key!r} in {mod} (already in {owner[key]}) "
-                    f"with a different translation")
+                    f"duplicate key {key!r} in {mod} "
+                    f"(already in {owner[(catalog, key)]}) with a different "
+                    f"translation")
             merged[key] = values
-            owner.setdefault(key, mod)
+            owner.setdefault((catalog, key), mod)
         for key, forms in getattr(module, "PLURALS", {}).items():
             if key in plurals and plurals[key] != forms:
                 raise SystemExit(
                     f"duplicate plural key {key!r} in {mod} "
-                    f"(already in {owner[key]}) with different forms")
+                    f"(already in {owner[(catalog, key)]}) with different forms")
             plurals[key] = forms
-            owner.setdefault(key, mod)
-    overlap = set(merged) & set(plurals)
-    if overlap:
-        raise SystemExit(f"key(s) declared both simple and plural: {sorted(overlap)}")
-    return merged, plurals
+            owner.setdefault((catalog, key), mod)
+    for catalog, (merged, plurals) in tables.items():
+        overlap = set(merged) & set(plurals)
+        if overlap:
+            raise SystemExit(f"{catalog}: key(s) both simple and plural: "
+                             f"{sorted(overlap)}")
+    return tables
 
 
 def simple_entry(key: str, values: list[str]) -> dict:
@@ -144,4 +165,7 @@ def build(path: pathlib.Path, keys: dict[str, list[str]],
 
 
 if __name__ == "__main__":
-    build(ROOT / "FocusGlobe" / "Localizable.xcstrings", *load_tranches())
+    for name, (keys, plurals) in load_tranches().items():
+        if not keys and not plurals:
+            continue
+        build(CATALOGS[name], keys, plurals)

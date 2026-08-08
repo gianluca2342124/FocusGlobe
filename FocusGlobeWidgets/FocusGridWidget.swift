@@ -78,8 +78,8 @@ struct FocusGridWidget: Widget {
                 }
                 .widgetURL(FGLink.url(entry.snapshot.gatedLink("passport")))
         }
-        .configurationDisplayName("Focus Grid")
-        .description("Your last six months of focus days. FocusGlobe PRO.")
+        .configurationDisplayName(Text("Focus Grid"))
+        .description(Text("Your last six months of focus days. FocusGlobe PRO."))
         .supportedFamilies([.systemMedium, .systemLarge])
         .contentMarginsDisabled()
     }
@@ -92,7 +92,7 @@ struct FocusGridWidgetView: View {
         if snapshot.isPro {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    WHeader(icon: "square.grid.3x3.fill", title: "Focus · 6 months", tint: WTheme.teal)
+                    WHeader(icon: "square.grid.3x3.fill", title: FocusLocalization.string("Focus · 6 months"), tint: WTheme.teal)
                     Spacer()
                     HStack(spacing: 4) {
                         Image(systemName: "flame.fill").font(.system(size: 11, weight: .bold))
@@ -106,7 +106,7 @@ struct FocusGridWidgetView: View {
                            categories: snapshot.activeDayCategories)
                     .frame(maxWidth: .infinity)
                 HStack(spacing: 12) {
-                    Text("\(snapshot.activeFocusDays) focus days")
+                    Text(FocusLocalization.localized("\(snapshot.activeFocusDays) focus days"))
                         .font(.system(size: 10.5, weight: .bold, design: .default))
                         .foregroundStyle(WTheme.inkSoft)
                     Spacer()

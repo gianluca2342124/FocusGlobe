@@ -75,8 +75,12 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
             // background is the only way to avoid the dark tile that used to
             // sit behind it.
             icon: UIImage(named: "FocusShieldGlyph"),
-            title: .init(text: line.title, color: ivory),
-            subtitle: .init(text: line.subtitle, color: ivory.withAlphaComponent(0.74)),
+            // Resolved HERE, not in `ShieldCopy`: the pools stay English so
+            // the deterministic rotation index cannot move when the language
+            // changes, and only the chosen line is translated.
+            title: .init(text: FocusLocalization.string(line.title), color: ivory),
+            subtitle: .init(text: FocusLocalization.string(line.subtitle),
+                            color: ivory.withAlphaComponent(0.74)),
             // The label tracks what the button can actually do on THIS device.
             //
             // `ShieldActionResponse.openParentalControlsApp` — "an instruction
@@ -92,12 +96,14 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
             // Close action instead of two controls that both do the same thing.
             // White plate, black label either way.
             primaryButtonLabel: .init(
-                text: primaryOpensFocusGlobe ? "Return to FocusGlobe" : "Close",
+                text: FocusLocalization.string(
+                    primaryOpensFocusGlobe ? "Return to FocusGlobe" : "Close"),
                 color: .black
             ),
             primaryButtonBackgroundColor: .white,
             secondaryButtonLabel: primaryOpensFocusGlobe
-                ? .init(text: "Close", color: ivory.withAlphaComponent(0.62))
+                ? .init(text: FocusLocalization.string("Close"),
+                        color: ivory.withAlphaComponent(0.62))
                 : nil
         )
     }
@@ -114,6 +120,10 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
 /// something that does not change during a flight: the active journey's start
 /// time from the App Group, or — if no flight is running — the current local
 /// day, which at least holds steady until midnight.
+///
+/// The lines stay ENGLISH here: they are String Catalog keys, and the rotation
+/// index must not shift when the pilot changes language mid-flight. The chosen
+/// line is translated at the point it becomes a `ShieldConfiguration`.
 enum ShieldCopy {
     struct Line {
         let title: String

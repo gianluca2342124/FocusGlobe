@@ -17,8 +17,8 @@ struct StreakCompanionWidget: Widget {
                 .containerBackground(for: .widget) { Color(red: 0.035, green: 0.045, blue: 0.075) }
                 .widgetURL(FGLink.url("streak"))
         }
-        .configurationDisplayName("Streak Companion")
-        .description("Keep your focus streak alive with your balloon companion.")
+        .configurationDisplayName(Text("Streak Companion"))
+        .description(Text("Keep your focus streak alive with your balloon companion."))
         .supportedFamilies([.systemSmall, .accessoryRectangular])
         .contentMarginsDisabled()
     }
@@ -35,10 +35,10 @@ private enum StreakState {
 
     var line: String {
         switch self {
-        case .none:      return "Start your streak"
-        case .focused:   return "Focused today"
-        case .atRisk:    return "Focus to keep it"
-        case .milestone: return "Milestone! 🎉"
+        case .none:      return FocusLocalization.string("Start your streak")
+        case .focused:   return FocusLocalization.string("Focused today")
+        case .atRisk:    return FocusLocalization.string("Focus to keep it")
+        case .milestone: return FocusLocalization.string("Milestone! 🎉")
         }
     }
     var tint: Color {
@@ -63,7 +63,7 @@ struct StreakCompanionView: View {
         if family == .accessoryRectangular {
             HStack(spacing: 8) {
                 Image(systemName: "flame.fill").foregroundStyle(.orange)
-                Text("\(snapshot.currentStreak)-day streak")
+                Text(FocusLocalization.localized("\(snapshot.currentStreak)-day streak"))
                     .font(.system(size: 15, weight: .heavy, design: .default))
                 Spacer()
             }
@@ -96,7 +96,11 @@ struct StreakCompanionView: View {
                         // Optically centred in the bright heart of the flame,
                         // which sits above the tile's geometric centre.
                         .offset(y: -side * 0.06)
-                        .accessibilityLabel("\(snapshot.currentStreak) day streak. \(state.line).")
+                        .accessibilityLabel(FocusLocalization.string(
+                            "%@. %@.",
+                            FocusLocalization.localized(
+                                "\(snapshot.currentStreak)-day streak"),
+                            state.line))
                 }
             }
             .clipped()

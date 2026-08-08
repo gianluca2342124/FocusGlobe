@@ -149,9 +149,31 @@ def locale_values(entry):
             for name, unit in sorted(plural.items())]
 
 
+# A printf conversion is terminated by its CONVERSION CHARACTER. That is what
+# makes "%lldm" one `%lld` followed by a literal "m" — the naive `%[a-zA-Z]+`
+# reading treated the whole thing as a placeholder named "%lldm" and flagged
+# every correct translation of a compact duration.
+SPECIFIER = re.compile(
+    r"%(?:\d+\$)?[-+ #0']*(?:\d+|\*)?(?:\.(?:\d+|\*))?"
+    r"(hh|h|ll|l|q|L|z|t|j)?([@%diouxXeEfFgGaAcsSp])"
+)
+
+
+def specifiers(text):
+    """The printf conversions in `text`, normalised for comparison.
+
+    The positional index is stripped, so a translation may reorder arguments
+    with "%2$@ %1$@" without being reported — several of these languages need
+    to. The length modifier is KEPT: "%lld" and "%d" consume different numbers
+    of bytes, and swapping them is exactly the crash this check exists to catch.
+    """
+    return sorted(f"%{length}{conv}"
+                  for length, conv in SPECIFIER.findall(text)
+                  if conv != "%")
+
+
 def audit_catalogs():
     print("\n== CATALOG INTEGRITY ==")
-    placeholder = re.compile(r"%(?:\d+\$)?[@a-zA-Z]+")
     total_keys = 0
     problems = []
     for path in catalogs():
@@ -165,7 +187,7 @@ def audit_catalogs():
         for key, entry in strings.items():
             loc = entry.get("localizations", {})
             source = key
-            src_ph = sorted(placeholder.findall(source))
+            src_ph = specifiers(source)
             for code in LOCALES:
                 if code == SOURCE_LOCALE:
                     continue
@@ -179,7 +201,7 @@ def audit_catalogs():
                         problems.append((str(path.relative_to(ROOT)), code,
                                          f"EMPTY    {key[:50]!r}{label}"))
                         continue
-                    if sorted(placeholder.findall(value)) != src_ph:
+                    if specifiers(value) != src_ph:
                         problems.append((str(path.relative_to(ROOT)), code,
                                          f"PLACEHOLDER {key[:40]!r}{label} "
                                          f"-> {value[:40]!r}"))
