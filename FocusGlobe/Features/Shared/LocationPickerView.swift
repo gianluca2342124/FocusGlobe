@@ -63,7 +63,7 @@ struct LocationPickerView: View {
                     .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(AppColors.brand.opacity(0.14)))
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Use my current location").foregroundStyle(AppColors.textPrimary)
-                    Text(currentLocationSubtitle).font(AppTypography.caption).foregroundStyle(AppColors.textTertiary)
+                    Text(LocalizedStringKey(currentLocationSubtitle)).font(AppTypography.caption).foregroundStyle(AppColors.textTertiary)
                 }
                 Spacer()
                 if !appModel.canReturnToRealLocation { selectedCheck }

@@ -79,7 +79,7 @@ struct FriendsView: View {
                             Image(systemName: "envelope.badge")
                                 .font(.system(size: 15, weight: .semibold))
                                 .foregroundStyle(AppColors.gold)
-                            Text(message)
+                            Text(LocalizedStringKey(message))
                                 .font(AppTypography.caption)
                                 .foregroundStyle(AppColors.textSecondary)
                             Spacer(minLength: 0)
@@ -369,7 +369,7 @@ struct FriendsView: View {
             Image(systemName: icon)
                 .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(AppColors.gold)
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.system(size: 19, weight: .bold, design: .default))
                 .foregroundStyle(AppColors.textPrimary)
         }
@@ -496,11 +496,11 @@ struct FriendsView: View {
                     Image(systemName: icon)
                         .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(AppColors.gold)
-                    Text(title)
+                    Text(LocalizedStringKey(title))
                         .font(.system(size: 16, weight: .bold, design: .default))
                         .foregroundStyle(AppColors.textPrimary)
                 }
-                Text(subtitle)
+                Text(LocalizedStringKey(subtitle))
                     .font(AppTypography.caption)
                     .foregroundStyle(AppColors.textSecondary)
             }

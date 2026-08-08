@@ -23,13 +23,13 @@ struct ScreenHeader: View {
             }
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     // Modern, bold, clean page titles (SF Rounded) — the serif is
                     // reserved for the Home greeting only.
                     .font(AppTypography.hero)
                     .foregroundStyle(AppColors.textPrimary)
                 if let subtitle {
-                    Text(subtitle)
+                    Text(LocalizedStringKey(subtitle))
                         .font(AppTypography.subhead)
                         .foregroundStyle(AppColors.textSecondary)
                 }
@@ -51,7 +51,7 @@ extension View {
 struct SectionLabel: View {
     let text: String
     var body: some View {
-        Text(text.uppercased())
+        Text(LocalizedStringKey(text)).textCase(.uppercase)
             .font(AppTypography.micro)
             .tracking(0.8)
             .foregroundStyle(AppColors.textTertiary)

@@ -127,7 +127,7 @@ struct StreakDetailsView: View {
             Text("day streak")
                 .font(AppTypography.headline)
                 .foregroundStyle(AppColors.textSecondary)
-            Text(message)
+            Text(LocalizedStringKey(message))
                 .font(AppTypography.callout)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(AppColors.textSecondary)

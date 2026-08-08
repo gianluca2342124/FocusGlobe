@@ -110,6 +110,10 @@ enum Formatters {
 
     private static let mediumDate: DateFormatter = {
         let f = DateFormatter()
+        // Without this the styles resolve against the DEVICE language, so a
+        // pilot running FocusGlobe in German on an English phone saw English
+        // month names in an otherwise German logbook.
+        f.locale = FocusLocalization.currentLocale
         f.dateStyle = .medium
         f.timeStyle = .short
         return f

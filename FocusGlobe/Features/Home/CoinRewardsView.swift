@@ -153,7 +153,7 @@ struct CoinSpinSheet: View {
                 .tracking(0.5)
                 .foregroundStyle(AppColors.gold)
             if let note {
-                Text(note)
+                Text(LocalizedStringKey(note))
                     .font(AppTypography.caption)
                     .foregroundStyle(AppColors.textSecondary)
                     .multilineTextAlignment(.center)

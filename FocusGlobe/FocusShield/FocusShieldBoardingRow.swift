@@ -35,7 +35,7 @@ struct FocusShieldBoardingRow: View {
                             Text("FOCUS SHIELD")
                                 .font(.system(size: 9, weight: .semibold, design: .default)).tracking(0.5)
                                 .foregroundStyle(inkSoft)
-                            Text(valueText)
+                            Text(LocalizedStringKey(valueText))
                                 .font(.system(size: 16, weight: .semibold, design: .default))
                                 .foregroundStyle(isActiveSelection ? ink : inkSoft)
                         }

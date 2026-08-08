@@ -128,7 +128,7 @@ struct InkStamp: View {
     var rotation: Double = -7
 
     var body: some View {
-        Text(text.uppercased())
+        Text(LocalizedStringKey(text)).textCase(.uppercase)
             .font(.system(size: 12.5, weight: .heavy, design: .serif))
             .tracking(1.6)
             .foregroundStyle(color)

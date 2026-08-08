@@ -33,7 +33,7 @@ struct OnlineSignInView: View {
                     .multilineTextAlignment(.center)
 
                 if let errorMessage {
-                    Text(errorMessage)
+                    Text(LocalizedStringKey(errorMessage))
                         .font(AppTypography.caption)
                         .foregroundStyle(AppColors.danger.opacity(0.9))
                         .multilineTextAlignment(.center)

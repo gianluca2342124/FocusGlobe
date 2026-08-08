@@ -339,7 +339,7 @@ private struct ExpeditionPage: View {
 
     private func entry(_ label: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(label)
+            Text(LocalizedStringKey(label))
                 .font(.system(size: 11, weight: .regular, design: .serif)).italic()
                 .foregroundStyle(sepia)
             Text(value)

@@ -57,7 +57,7 @@ struct PilotProfileSheet: View {
                     }
                 }
                 if let note {
-                    Text(note).font(AppTypography.caption).foregroundStyle(AppColors.textSecondary)
+                    Text(LocalizedStringKey(note)).font(AppTypography.caption).foregroundStyle(AppColors.textSecondary)
                 }
                 VStack(spacing: AppSpacing.sm) {
                     if !isSelf {
@@ -72,7 +72,7 @@ struct PilotProfileSheet: View {
                             .glassBackground(cornerRadius: AppSpacing.pillRadius, tintOpacity: 0.14,
                                              shadowRadius: 4, shadowY: 2)
                     } else if let status = online.requestStatus(for: pilot.id) {
-                        Text(status)   // "Crew member" / "Request sent"
+                        Text(LocalizedStringKey(status))   // "Crew member" / "Request sent"
                             .font(.system(size: 15, weight: .bold, design: .default))
                             .foregroundStyle(AppColors.gold)
                             .frame(maxWidth: .infinity).frame(height: 50)
@@ -214,7 +214,7 @@ struct PilotProfileSheet: View {
     private func label(_ text: String, icon: String) -> some View {
         HStack(spacing: 5) {
             Image(systemName: icon).font(.system(size: 11, weight: .bold))
-            Text(text).font(.system(size: 12.5, weight: .semibold, design: .default))
+            Text(LocalizedStringKey(text)).font(.system(size: 12.5, weight: .semibold, design: .default))
         }
         .foregroundStyle(AppColors.textSecondary)
         .padding(.horizontal, 10).padding(.vertical, 6)

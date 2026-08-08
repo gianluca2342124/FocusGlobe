@@ -102,7 +102,7 @@ struct LeaveFlightConfirmation: View {
                     .foregroundStyle(AppColors.textPrimary)
                     .multilineTextAlignment(.center)
 
-                Text(explanation)
+                Text(LocalizedStringKey(explanation))
                     .font(AppTypography.callout)
                     .foregroundStyle(AppColors.textSecondary)
                     .multilineTextAlignment(.center)

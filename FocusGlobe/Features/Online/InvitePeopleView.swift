@@ -206,7 +206,7 @@ struct InvitePeopleView: View {
                 .font(.system(size: 16, weight: .bold, design: .default))
                 .foregroundStyle(AppColors.textPrimary)
                 .multilineTextAlignment(.center)
-            Text(message)
+            Text(LocalizedStringKey(message))
                 .font(AppTypography.caption)
                 .foregroundStyle(AppColors.textSecondary)
                 .multilineTextAlignment(.center)
@@ -322,10 +322,10 @@ struct InviteMethodRow: View {
                 .frame(width: 38, height: 38)
                 .background(Circle().fill(AppColors.gold.opacity(0.14)))
             VStack(alignment: .leading, spacing: 1) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.system(size: 16, weight: .bold, design: .default))
                     .foregroundStyle(AppColors.textPrimary)
-                Text(subtitle)
+                Text(LocalizedStringKey(subtitle))
                     .font(AppTypography.caption)
                     .foregroundStyle(AppColors.textTertiary)
             }
