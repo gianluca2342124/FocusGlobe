@@ -54,10 +54,10 @@ TRANSLATIONS: dict[str, list[str]] = {
         "我们会据此为你安排第一次飞行。", "हम आपकी पहली फ़्लाइट इसी के अनुसार तैयार करेंगे।",
         "Ajustaremos tu primer vuelo a eso.", "Nous adapterons votre premier vol en conséquence.",
         "Wir richten deinen ersten Flug danach aus.",
-        "Мы построим ваш первый полёт вокруг этого.",
-        "Vamos moldar seu primeiro voo em torno disso.",
+        "Мы выстроим ваш первый полёт под это.",
+        "Vamos moldar seu primeiro voo a partir disso.",
         "Modelleremo il tuo primo volo su questo.",
-        "Îți vom construi primul zbor în jurul acestui lucru.",
+        "Îți vom potrivi primul zbor după asta.",
         "We stemmen je eerste vlucht daarop af."],
     "What usually breaks your focus?": [
         "通常是什么打断了你的专注？", "आपका फ़ोकस आमतौर पर किससे टूटता है?",
@@ -78,7 +78,7 @@ TRANSLATIONS: dict[str, list[str]] = {
     "How long can you focus today?": [
         "今天你能专注多久？", "आज आप कितनी देर फ़ोकस कर सकते हैं?",
         "¿Cuánto puedes concentrarte hoy?", "Combien de temps pouvez-vous vous concentrer aujourd’hui ?",
-        "Wie lange kannst du dich heute konzentrieren?", "Сколько вы можете сосредоточиться сегодня?",
+        "Wie lange kannst du dich heute konzentrieren?", "Сколько времени вы можете сегодня сосредоточиться?",
         "Por quanto tempo você consegue focar hoje?", "Quanto riesci a concentrarti oggi?",
         "Cât te poți concentra azi?", "Hoelang kun je je vandaag focussen?"],
     "Turn the dial. You can change it before every take-off.": [
@@ -89,7 +89,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Поверните диск. Вы можете изменить его перед каждым взлётом.",
         "Gire o dial. Você pode mudar antes de cada decolagem.",
         "Ruota la manopola. Puoi cambiarla prima di ogni decollo.",
-        "Rotește discul. Îl poți schimba înainte de fiecare decolare.",
+        "Rotește cadranul. Îl poți schimba înainte de fiecare decolare.",
         "Draai aan de knop. Je kunt dit voor elke start aanpassen."],
     "Which days do you want to focus?": [
         "你想在哪几天专注？", "आप किन दिनों फ़ोकस करना चाहते हैं?",
@@ -171,7 +171,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Pourquoi FocusGlobe", "Warum FocusGlobe", "Почему FocusGlobe",
         "Por que o FocusGlobe", "Perché FocusGlobe", "De ce FocusGlobe",
         "Waarom FocusGlobe"],
-    "Without": ["没有它", "इसके बिना", "Sin ella", "Sans", "Ohne", "Без него",
+    "Without": ["没有它", "इसके बिना", "Sin la app", "Sans", "Ohne", "Без него",
                 "Sem ele", "Senza", "Fără", "Zonder"],
     "With FocusGlobe": [
         "使用 FocusGlobe", "FocusGlobe के साथ", "Con FocusGlobe", "Avec FocusGlobe",
@@ -194,7 +194,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Bloquea apps que distraen en el Escudo de Concentración",
         "Bloquez les applis distrayantes dans le Bouclier de concentration",
         "Ablenkende Apps im Fokus-Schild blockieren",
-        "Блокируйте отвлекающие приложения в Щите Фокуса",
+        "Блокируйте отвлекающие приложения в Щите фокуса",
         "Bloqueie apps que distraem no Escudo de Foco",
         "Blocca le app che distraggono nello Scudo Concentrazione",
         "Blochează aplicațiile care distrag în Scutul de concentrare",
@@ -202,7 +202,7 @@ TRANSLATIONS: dict[str, list[str]] = {
     "Fly again tomorrow and grow your Streak": [
         "明天再飞一次，延长连续天数", "कल फिर उड़ान भरें और अपनी स्ट्रीक बढ़ाएँ",
         "Vuela otra vez mañana y aumenta tu racha",
-        "Revolez demain et faites grandir votre série",
+        "Revenez voler demain et faites grandir votre série",
         "Flieg morgen wieder und baue deine Serie aus",
         "Летите завтра снова и продлите серию",
         "Voe de novo amanhã e aumente sua sequência",
@@ -213,7 +213,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "在护照中查看你的数据与洞察", "पासपोर्ट में अपना डेटा और जानकारी देखें",
         "Consulta tus datos y estadísticas en el Pasaporte",
         "Retrouvez vos données et analyses dans le Passeport",
-        "Deine Daten und Auswertungen im Reisepass",
+        "Hol dir Daten und Auswertungen im Reisepass",
         "Смотрите данные и статистику в Паспорте",
         "Veja seus dados e análises no Passaporte",
         "Trova dati e statistiche nel Passaporto",
@@ -222,10 +222,10 @@ TRANSLATIONS: dict[str, list[str]] = {
 
     # ---- Without / With --------------------------------------------------
     "The phone wins by default": [
-        "手机总是赢", "फ़ोन डिफ़ॉल्ट रूप से जीत जाता है", "El móvil gana por defecto",
+        "手机总是赢", "फ़ोन डिफ़ॉल्ट रूप से जीत जाता है", "El teléfono gana por defecto",
         "Le téléphone gagne par défaut", "Das Handy gewinnt standardmäßig",
         "Телефон побеждает по умолчанию", "O celular vence por padrão",
-        "Il telefono vince per default", "Telefonul câștigă implicit",
+        "Il telefono vince in automatico", "Telefonul câștigă implicit",
         "De telefoon wint standaard"],
     "Sessions blur together": [
         "各段时间混作一团", "सेशन आपस में घुल-मिल जाते हैं", "Las sesiones se confunden entre sí",
@@ -315,7 +315,7 @@ TRANSLATIONS: dict[str, list[str]] = {
                "Ritmo", "Ritmo", "Ritm", "Ritme"],
 
     # ---- Friction options ------------------------------------------------
-    "My phone": ["我的手机", "मेरा फ़ोन", "Mi móvil", "Mon téléphone", "Mein Handy",
+    "My phone": ["我的手机", "मेरा फ़ोन", "Mi teléfono", "Mon téléphone", "Mein Handy",
                  "Мой телефон", "Meu celular", "Il mio telefono", "Telefonul meu",
                  "Mijn telefoon"],
     "Putting it off": [
@@ -326,11 +326,11 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Schwung verlieren", "Потеря темпа", "Perder o ritmo",
         "Perdere lo slancio", "Pierderea avântului", "Momentum verliezen"],
     "Feeling overwhelmed": [
-        "感到不知所措", "अभिभूत महसूस करना", "Sentirme abrumado", "Me sentir dépassé",
-        "Überforderung", "Ощущение перегруза", "Me sentir sobrecarregado",
-        "Sentirmi sopraffatto", "Sentimentul de copleșire", "Overweldigd voelen"],
+        "感到不知所措", "अभिभूत महसूस करना", "La sobrecarga", "La surcharge",
+        "Überforderung", "Ощущение перегруза", "A sobrecarga",
+        "Il sovraccarico", "Sentimentul de copleșire", "Overweldigd voelen"],
     "Getting started": [
-        "开始动手", "शुरुआत करना", "Empezar", "Me lancer", "Der Anfang",
-        "Начать", "Começar", "Iniziare", "Începutul", "Beginnen"],
+        "开始动手", "शुरुआत करना", "Dar el primer paso", "Me lancer", "Der Anfang",
+        "Начать", "Começar", "Iniziare", "Începutul", "Op gang komen"],
 }
 
