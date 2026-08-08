@@ -8082,7 +8082,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Presque arrivé — continuez"
+            "value": "On y est presque — continuez"
           }
         },
         "de": {
@@ -8118,7 +8118,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bijna er — ga door"
+            "value": "Bijna daar — ga door"
           }
         }
       }
@@ -12497,7 +12497,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "FACTURAR"
+            "value": "CHECK-IN"
           }
         },
         "fr": {
@@ -12562,7 +12562,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Registrado."
+            "value": "Check-in hecho."
           }
         },
         "fr": {
@@ -16637,19 +16637,19 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fique aconchegado lá dentro"
+            "value": "Fique à vontade lá dentro"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mettiti comodo dentro"
+            "value": "Sistemati dentro"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fă-te comod înăuntru"
+            "value": "Așază-te comod înăuntru"
           }
         },
         "nl": {
@@ -17133,7 +17133,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vuelo en tripulación"
+            "value": "Vuelo con tripulación"
           }
         },
         "fr": {
@@ -17157,7 +17157,7 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Voo em tripulação"
+            "value": "Voo com tripulação"
           }
         },
         "it": {
@@ -30043,7 +30043,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bon début — revenez demain pour la garder en vie."
+            "value": "Bon début — revenez demain pour la faire vivre."
           }
         },
         "de": {
@@ -30079,7 +30079,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Goede start — kom morgen terug om hem te behouden."
+            "value": "Goede start — kom morgen terug om je reeks te behouden."
           }
         }
       }
@@ -34680,7 +34680,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atterri aujourd’hui — votre série est sauve"
+            "value": "Vol atterri aujourd’hui — votre série est sauve"
           }
         },
         "de": {
@@ -34704,7 +34704,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atterrato oggi: la tua serie è al sicuro"
+            "value": "Volo atterrato oggi: la tua serie è al sicuro"
           }
         },
         "ro": {
@@ -37658,7 +37658,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "मेरा एक्सपीडिशन पेज"
+            "value": "मेरा यात्रा पेज"
           }
         },
         "es": {
@@ -39614,7 +39614,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sin registrar."
+            "value": "Sin check-in."
           }
         },
         "fr": {
@@ -43589,7 +43589,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choisissez un itinéraire. Restez concentré jusqu’à l’atterrissage."
+            "value": "Choisissez un itinéraire. Gardez la concentration jusqu’à l’atterrissage."
           }
         },
         "de": {
@@ -43613,13 +43613,13 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scegli una rotta. Resta concentrato fino all’atterraggio."
+            "value": "Scegli una rotta. Mantieni la concentrazione fino all’atterraggio."
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Alege o rută. Rămâi concentrat până aterizezi."
+            "value": "Alege o rută. Menține concentrarea până aterizezi."
           }
         },
         "nl": {
@@ -47443,13 +47443,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "¿Listo para dejarte llevar?"
+            "value": "¿Te dejas llevar?"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prêt à vous laisser porter ?"
+            "value": "Envie de vous laisser porter ?"
           }
         },
         "de": {
@@ -47467,13 +47467,13 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pronto para flutuar?"
+            "value": "Que tal flutuar?"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pronto a lasciarti andare?"
+            "value": "Ti va di lasciarti andare?"
           }
         },
         "ro": {
@@ -50531,7 +50531,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mettiti comodo e respira"
+            "value": "Sistemati e respira"
           }
         },
         "ro": {
@@ -58889,7 +58889,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tiempo concentrado"
+            "value": "Tiempo de concentración"
           }
         },
         "fr": {
@@ -58901,7 +58901,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fokussierte Zeit"
+            "value": "Fokuszeit"
           }
         },
         "ru": {
@@ -58913,7 +58913,7 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tempo focado"
+            "value": "Tempo de foco"
           }
         },
         "it": {
@@ -58931,7 +58931,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gefocuste tijd"
+            "value": "Focustijd"
           }
         }
       }
@@ -64293,7 +64293,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vous quitterez la salle"
+            "value": "Vous quitterez le salon"
           }
         },
         "de": {
@@ -64417,7 +64417,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Estás cogiendo impulso. Sigue volando a diario."
+            "value": "Estás ganando impulso. Sigue volando a diario."
           }
         },
         "fr": {
@@ -64435,7 +64435,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Вы набираете разгон. Летайте каждый день."
+            "value": "Вы набираете темп. Летайте каждый день."
           }
         },
         "pt-BR": {
