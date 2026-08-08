@@ -10931,7 +10931,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "गुब्बारे पर सवार हों"
+            "value": "ग़ुब्बारे पर सवार हों"
           }
         },
         "es": {
@@ -12432,7 +12432,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Facturación"
+            "value": "Check-in"
           }
         },
         "fr": {
@@ -12964,7 +12964,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wähle eine Startstadt, um loszuerkunden."
+            "value": "Wähle eine Startstadt, um mit dem Erkunden zu beginnen."
           }
         },
         "ru": {
@@ -13882,7 +13882,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Modo limpio"
+            "value": "Modo despejado"
           }
         },
         "fr": {
@@ -13894,19 +13894,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Klarer Modus"
+            "value": "Schlichter Modus"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Чистый режим"
+            "value": "Минимальный режим"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Modo limpo"
+            "value": "Modo minimalista"
           }
         },
         "it": {
@@ -13918,13 +13918,13 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mod curat"
+            "value": "Mod minimal"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Schone modus"
+            "value": "Minimale modus"
           }
         }
       }
@@ -14468,7 +14468,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Impulso de monedas regalado"
+            "value": "Impulso de monedas de regalo"
           }
         },
         "fr": {
@@ -14492,7 +14492,7 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Impulso de moedas presenteado"
+            "value": "Impulso de moedas de presente"
           }
         },
         "it": {
@@ -19540,49 +19540,49 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Duplica tus monedas en tu próxima hora de estudio al equiparlo."
+            "value": "Duplica tus monedas en tu próxima hora de estudio cuando esté en uso."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Doublez vos pièces sur votre prochaine heure d’étude une fois équipé."
+            "value": "Doublez vos pièces sur votre prochaine heure d’étude une fois qu’il est activé."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verdopple deine Münzen in der nächsten Lernstunde, sobald es ausgerüstet ist."
+            "value": "Verdopple deine Münzen in der nächsten Lernstunde, sobald der Boost im Einsatz ist."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Удвойте монеты за следующий час занятий после экипировки."
+            "value": "Удвойте монеты за следующий час занятий, пока буст используется."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dobre suas moedas na próxima hora de estudo depois de equipar."
+            "value": "Dobre suas moedas na próxima hora de estudo enquanto ele estiver em uso."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Raddoppia le monete nella prossima ora di studio una volta equipaggiato."
+            "value": "Raddoppia le monete nella prossima ora di studio quando è in uso."
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dublează-ți monedele în următoarea oră de studiu după echipare."
+            "value": "Dublează-ți monedele în următoarea oră de studiu cât timp e în uz."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verdubbel je munten in je volgende studie-uur zodra het uitgerust is."
+            "value": "Verdubbel je munten in je volgende studie-uur zolang de boost in gebruik is."
           }
         }
       }
@@ -19593,7 +19593,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "双击封印此页并开始远征。"
+            "value": "双击封印此页并开始远征"
           }
         },
         "hi": {
@@ -21703,7 +21703,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Экспедиции для вашего региона прокладываются"
+            "value": "Прокладываем экспедиции для вашего региона"
           }
         },
         "pt-BR": {
@@ -30776,7 +30776,7 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Oculta os controles e mantém um cronômetro pequeno"
+            "value": "Oculta os controles e mantém um timer pequeno"
           }
         },
         "it": {
@@ -34023,13 +34023,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sigue concentrado"
+            "value": "Sigue concentrándote"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Restez concentré"
+            "value": "Poursuivre la concentration"
           }
         },
         "de": {
@@ -34047,19 +34047,19 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Continue focado"
+            "value": "Seguir no foco"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Resta concentrato"
+            "value": "Continua a concentrarti"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rămâi concentrat"
+            "value": "Continuă concentrarea"
           }
         },
         "nl": {
@@ -34088,13 +34088,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Seguir concentrado"
+            "value": "Seguir concentrándote"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rester concentré"
+            "value": "Poursuivre la concentration"
           }
         },
         "de": {
@@ -34112,19 +34112,19 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Continuar focado"
+            "value": "Seguir no foco"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Resta concentrato"
+            "value": "Continua a concentrarti"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rămâi concentrat"
+            "value": "Continuă concentrarea"
           }
         },
         "nl": {
@@ -47508,13 +47508,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Listo para volar"
+            "value": "Todo listo para volar"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prêt à décoller"
+            "value": "Tout est prêt pour décoller"
           }
         },
         "de": {
@@ -47526,19 +47526,19 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Готов к полёту"
+            "value": "Готовы к полёту"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pronto para voar"
+            "value": "Tudo pronto para voar"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pronto al decollo"
+            "value": "Tutto pronto al decollo"
           }
         },
         "ro": {
@@ -50946,7 +50946,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "分享你的专注格图"
+            "value": "分享你的专注格子"
           }
         },
         "hi": {
@@ -54539,7 +54539,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Commencer à se concentrer"
+            "value": "Lancer la concentration"
           }
         },
         "de": {
@@ -60858,7 +60858,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Откройте FocusGlobe PRO"
+            "value": "Разблокируйте FocusGlobe PRO"
           }
         },
         "pt-BR": {
