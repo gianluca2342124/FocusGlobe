@@ -31,10 +31,10 @@ GLOSSARY — the canonical term per language. Chosen once, reused everywhere, so
              pt-BR Passaporte · it Passaporto · ro Pașaport · nl Paspoort
              zh-Hans 护照   · hi पासपोर्ट
     Focus Shield
-             es Escudo de Enfoque · fr Bouclier de Concentration
-             de Fokus-Schild      · ru Щит Фокуса
-             pt-BR Escudo de Foco · it Scudo Focus
-             ro Scut de Concentrare · nl Focusschild
+             es Escudo de Concentración · fr Bouclier de concentration
+             de Fokus-Schild      · ru Щит фокуса
+             pt-BR Escudo de Foco · it Scudo Concentrazione
+             ro Scut de concentrare · nl Focusschild
              zh-Hans 专注护盾      · hi फ़ोकस शील्ड
     Cabin    es cabina     · fr cabine    · de Kabine    · ru кабина
              pt-BR cabine  · it cabina    · ro cabină    · nl cabine

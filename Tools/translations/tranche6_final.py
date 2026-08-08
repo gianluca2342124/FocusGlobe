@@ -22,7 +22,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Focus boven de lagune",
     ],
     "Turquoise calm for deep work": [
-        "松石色的宁静，适合深度工作", "गहरे काम के लिए फ़िरोज़ी शांति",
+        "绿松石色的宁静，适合深度工作", "गहरे काम के लिए फ़िरोज़ी शांति",
         "Calma turquesa para el trabajo profundo",
         "Un calme turquoise pour le travail profond",
         "Türkise Ruhe für tiefe Arbeit", "Бирюзовый покой для глубокой работы",
@@ -105,7 +105,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Focus onder woestijnsterren",
     ],
     "A vast night made for depth": [
-        "为深度而生的辽阔夜色", "गहराई के लिए बना विशाल रात",
+        "为深度而生的辽阔夜色", "गहराई के लिए बनी विशाल रात",
         "Una noche inmensa hecha para la profundidad",
         "Une nuit immense faite pour la profondeur",
         "Eine weite Nacht, gemacht für Tiefe",
@@ -124,7 +124,7 @@ TRANSLATIONS: dict[str, list[str]] = {
     ],
     "Drift through falling starlight": [
         "在流星光下漂流", "गिरती तारों की रोशनी में बहें",
-        "Déjate llevar entre luz de estrellas fugaces",
+        "Déjate llevar entre la luz de las estrellas fugaces",
         "Dérivez dans la lumière des étoiles filantes",
         "Treibe durch fallendes Sternenlicht",
         "Дрейфуйте сквозь падающий звёздный свет",
@@ -137,7 +137,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "在深空中学习", "गहरे अंतरिक्ष में पढ़ें", "Estudia en el espacio profundo",
         "Étudiez dans l’espace lointain", "Lerne im tiefen Weltraum",
         "Учитесь в глубоком космосе", "Estude no espaço profundo",
-        "Studia nello spazio profondo", "Învață în spațiul adânc",
+        "Studia nello spazio profondo", "Învață în spațiul cosmic",
         "Studeer in de diepe ruimte",
     ],
     "Cosmic silence for deep work": [

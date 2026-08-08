@@ -173,13 +173,13 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Essa rolagem pode esperar"
+            "value": "Esse feed pode esperar"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quello scroll può aspettare"
+            "value": "Quel feed può aspettare"
           }
         },
         "ro": {
@@ -273,7 +273,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "अपना लक्ष्य मत बदलिए"
+            "value": "अपना लक्ष्य दाँव पर मत लगाइए"
           }
         },
         "es": {
@@ -374,7 +374,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Una distrazione è un pessimo cambio."
+            "value": "Una distrazione è un pessimo affare."
           }
         },
         "ro": {
@@ -415,13 +415,13 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Protégez celui ou celle que vous devenez"
+            "value": "Protégez la personne que vous devenez"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Schütze, wer du gerade wirst"
+            "value": "Schütze dein künftiges Ich"
           }
         },
         "ru": {
@@ -445,7 +445,7 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Protejează-l pe cel care devii"
+            "value": "Protejează persoana care devii"
           }
         },
         "nl": {
@@ -462,61 +462,61 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "正是这一刻在塑造他。"
+            "value": "正是这一刻在塑造你。"
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "यही वह हिस्सा है जो उसे बनाता है।"
+            "value": "यही वह हिस्सा है जो आपको बनाता है।"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Esta es la parte que lo construye."
+            "value": "Esta es la parte que te construye."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "C’est ce moment qui le construit."
+            "value": "C’est ce moment qui vous construit."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Genau das baut ihn auf."
+            "value": "Genau das baut dich auf."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Именно это его и создаёт."
+            "value": "Именно это вас и создаёт."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "É esta parte que o constrói."
+            "value": "É esta parte que constrói você."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "È questa la parte che lo costruisce."
+            "value": "È questa la parte che ti costruisce."
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aceasta e partea care îl clădește."
+            "value": "Aceasta e partea care te clădește."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dit is het deel dat hem opbouwt."
+            "value": "Dit is het deel dat jou opbouwt."
           }
         }
       }
@@ -539,7 +539,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "El impulso pasará"
+            "value": "Las ganas pasarán"
           }
         },
         "fr": {
@@ -793,7 +793,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "पाँच फ़ोकस्ड मिनट"
+            "value": "पाँच मिनट का फ़ोकस"
           }
         },
         "es": {
@@ -888,7 +888,7 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "É só o que basta para mudar seu dia."
+            "value": "Basta isso para mudar seu dia."
           }
         },
         "it": {
@@ -1059,7 +1059,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "No vale tu impulso"
+            "value": "No merece tu impulso"
           }
         },
         "fr": {
@@ -1077,7 +1077,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Не стоит вашего разгона"
+            "value": "Не стоит набранного темпа"
           }
         },
         "pt-BR": {

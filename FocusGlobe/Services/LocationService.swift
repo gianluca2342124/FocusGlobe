@@ -102,13 +102,24 @@ final class LocationService: NSObject, ObservableObject {
         stopFix()
         let coordinate = GeoCoordinate(latitude: location.coordinate.latitude,
                                        longitude: location.coordinate.longitude)
-        geocoder.reverseGeocodeLocation(location) { [weak self] placemarks, _ in
+        // `preferredLocale` is what stops the DEVICE language deciding this.
+        // Without it the geocoder answers in the phone's language, so a pilot
+        // running FocusGlobe in Spanish on an English phone lands in "Munich,
+        // Germany" while every label around it is Spanish. City names have no
+        // other locale-aware source, so this is where they have to be asked
+        // for correctly. (The resolved fix is in-memory only; the country is
+        // re-rendered from `RegionDisplayNames` at every display site, so a
+        // language change after the fix still shows the right country name.)
+        geocoder.reverseGeocodeLocation(
+            location, preferredLocale: FocusLocalization.currentLocale
+        ) { [weak self] placemarks, _ in
             let place = placemarks?.first
             let city = place?.locality ?? place?.subAdministrativeArea ?? place?.administrativeArea
             let country = place?.country
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                let name = (city?.isEmpty == false) ? city! : "Current Location"
+                let name = (city?.isEmpty == false) ? city!
+                    : FocusLocalization.localized("Current Location")
                 self.state = .resolved(JourneyOrigin(city: name,
                                                      country: country ?? "",
                                                      coordinate: coordinate))

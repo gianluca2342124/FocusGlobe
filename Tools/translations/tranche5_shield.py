@@ -11,6 +11,18 @@ TONE, WHICH THE TRANSLATIONS HAD TO PRESERVE
 
     They are also all FocusGlobe's own words: no quotations, no attribution, no
     borrowed slogans. Nothing in this file may become one in translation.
+
+PERSON
+    "This is the part that builds them" is English singular they, and the them
+    is the reader's own future self from the line above it. Every language had
+    rendered it as a masculine third person — lo, le, ihn, его, îl, hem, उसे,
+    他 — which reads as a line about somebody else, and reads wrong to half the
+    people who see it. All ten now address the reader directly, which is both
+    what the English means and the more natural sentence in each language.
+
+    The deck is otherwise consistent in how it addresses the pilot: tú, você,
+    vous, tu, du, je, вы, tu, 你, आप. Do not mix registers within it — these
+    lines are read one after another over a single flight.
 """
 
 CATALOG = "shield"
@@ -34,8 +46,8 @@ TRANSLATIONS: dict[str, list[str]] = {
     "That scroll can wait": [
         "刷一刷可以等等", "यह स्क्रॉल इंतज़ार कर सकता है", "Ese scroll puede esperar",
         "Ce scroll peut attendre", "Das Scrollen kann warten",
-        "Лента подождёт", "Essa rolagem pode esperar",
-        "Quello scroll può aspettare", "Scrollul mai poate aștepta",
+        "Лента подождёт", "Esse feed pode esperar",
+        "Quel feed può aspettare", "Scrollul mai poate aștepta",
         "Dat scrollen kan wachten",
     ],
     "Your goal can’t. Keep flying.": [
@@ -46,7 +58,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Obiectivul tău, nu. Continuă zborul.", "Je doel niet. Blijf vliegen.",
     ],
     "Don’t trade your goal": [
-        "别拿目标去交换", "अपना लक्ष्य मत बदलिए", "No cambies tu objetivo",
+        "别拿目标去交换", "अपना लक्ष्य दाँव पर मत लगाइए", "No cambies tu objetivo",
         "N’échangez pas votre objectif", "Tausch dein Ziel nicht ein",
         "Не меняйте свою цель", "Não troque seu objetivo",
         "Non barattare il tuo obiettivo", "Nu-ți da obiectivul la schimb",
@@ -59,32 +71,32 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Eine Ablenkung ist ein schlechter Tausch.",
         "Отвлечение — невыгодный обмен.",
         "Uma distração é uma troca ruim.",
-        "Una distrazione è un pessimo cambio.",
+        "Una distrazione è un pessimo affare.",
         "O distragere e un schimb prost.",
         "Een afleiding is een slechte ruil.",
     ],
     "Protect who you’re becoming": [
         "守护正在成为的自己", "आप जो बन रहे हैं, उसकी रक्षा करें",
         "Protege a quien estás llegando a ser",
-        "Protégez celui ou celle que vous devenez",
-        "Schütze, wer du gerade wirst", "Берегите того, кем становитесь",
+        "Protégez la personne que vous devenez",
+        "Schütze dein künftiges Ich", "Берегите того, кем становитесь",
         "Proteja quem você está se tornando",
         "Proteggi la persona che stai diventando",
-        "Protejează-l pe cel care devii",
+        "Protejează persoana care devii",
         "Bescherm wie je aan het worden bent",
     ],
     "This is the part that builds them.": [
-        "正是这一刻在塑造他。", "यही वह हिस्सा है जो उसे बनाता है।",
-        "Esta es la parte que lo construye.",
-        "C’est ce moment qui le construit.",
-        "Genau das baut ihn auf.", "Именно это его и создаёт.",
-        "É esta parte que o constrói.",
-        "È questa la parte che lo costruisce.",
-        "Aceasta e partea care îl clădește.",
-        "Dit is het deel dat hem opbouwt.",
+        "正是这一刻在塑造你。", "यही वह हिस्सा है जो आपको बनाता है।",
+        "Esta es la parte que te construye.",
+        "C’est ce moment qui vous construit.",
+        "Genau das baut dich auf.", "Именно это вас и создаёт.",
+        "É esta parte que constrói você.",
+        "È questa la parte che ti costruisce.",
+        "Aceasta e partea care te clădește.",
+        "Dit is het deel dat jou opbouwt.",
     ],
     "The urge will pass": [
-        "这股冲动会过去", "यह इच्छा गुज़र जाएगी", "El impulso pasará",
+        "这股冲动会过去", "यह इच्छा गुज़र जाएगी", "Las ganas pasarán",
         "L’envie va passer", "Der Drang geht vorbei", "Это желание пройдёт",
         "A vontade vai passar", "L’impulso passerà", "Impulsul va trece",
         "De drang gaat voorbij",
@@ -115,7 +127,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "En het uur dat je er al in stak ook.",
     ],
     "Five focused minutes": [
-        "五分钟的专注", "पाँच फ़ोकस्ड मिनट", "Cinco minutos de concentración",
+        "五分钟的专注", "पाँच मिनट का फ़ोकस", "Cinco minutos de concentración",
         "Cinq minutes de concentration", "Fünf fokussierte Minuten",
         "Пять минут фокуса", "Cinco minutos de foco",
         "Cinque minuti di concentrazione", "Cinci minute de concentrare",
@@ -127,7 +139,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "C’est tout ce qu’il faut pour changer votre journée.",
         "Mehr braucht es nicht, um deinen Tag zu ändern.",
         "Этого достаточно, чтобы изменить день.",
-        "É só o que basta para mudar seu dia.",
+        "Basta isso para mudar seu dia.",
         "È tutto ciò che serve per cambiare la giornata.",
         "Atât e nevoie ca să-ți schimbi ziua.",
         "Meer heb je niet nodig om je dag te veranderen.",
@@ -146,8 +158,8 @@ TRANSLATIONS: dict[str, list[str]] = {
     ],
     "Not worth your momentum": [
         "不值得你的势头", "आपकी रफ़्तार इसके लायक नहीं",
-        "No vale tu impulso", "Ça ne vaut pas votre élan",
-        "Deinen Schwung nicht wert", "Не стоит вашего разгона",
+        "No merece tu impulso", "Ça ne vaut pas votre élan",
+        "Deinen Schwung nicht wert", "Не стоит набранного темпа",
         "Não vale seu impulso", "Non vale il tuo slancio",
         "Nu merită avântul tău", "Je vaart niet waard",
     ],

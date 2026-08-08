@@ -51,7 +51,7 @@ TRANSLATIONS: dict[str, list[str]] = {
     # `Equip` is an action, `Equipped` a state — different words in every
     # language that inflects, which is most of them.
     "Equip": [
-        "装备", "लगाएँ", "Usar", "Utiliser", "Verwenden", "Использовать",
+        "使用", "इस्तेमाल करें", "Usar", "Utiliser", "Verwenden", "Использовать",
         "Usar", "Usa", "Folosește", "Gebruiken",
     ],
     "Equipped": [
@@ -63,7 +63,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Куплено.", "Adquirido.", "Acquistato.", "Achiziționat.", "Gekocht.",
     ],
     "Move": [
-        "移动", "हटाएँ", "Mover", "Déplacer", "Verschieben", "Переместить",
+        "移动", "जगह बदलें", "Mover", "Déplacer", "Verschieben", "Переместить",
         "Mover", "Sposta", "Mută", "Verplaatsen",
     ],
     "Place": [
@@ -97,12 +97,12 @@ TRANSLATIONS: dict[str, list[str]] = {
         "DATA", "DATA", "DATA", "DATUM",
     ],
     "MINUTE": [
-        "分钟", "मिनट", "MINUTO", "MINUTE", "MINUTE", "МИНУТА",
-        "MINUTO", "MINUTO", "MINUT", "MINUUT",
+        "分钟", "मिनट", "MINUTO", "MINUTE", "MINUTE", "МИН",
+        "MINUTO", "MINUTO", "MIN", "MINUUT",
     ],
     "MINUTES": [
-        "分钟", "मिनट", "MINUTOS", "MINUTES", "MINUTEN", "МИНУТ",
-        "MINUTOS", "MINUTI", "MINUTE", "MINUTEN",
+        "分钟", "मिनट", "MINUTOS", "MINUTES", "MINUTEN", "МИН",
+        "MINUTOS", "MINUTI", "MIN", "MINUTEN",
     ],
     "ENDLESS": [
         "无限", "अनंत", "SIN FIN", "SANS FIN", "ENDLOS", "БЕЗ КОНЦА",

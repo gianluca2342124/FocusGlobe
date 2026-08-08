@@ -4107,7 +4107,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "1 hora concentrado"
+            "value": "1 hora de concentración"
           }
         },
         "fr": {
@@ -4131,7 +4131,7 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "1 hora focado"
+            "value": "1 hora de foco"
           }
         },
         "it": {
@@ -7095,7 +7095,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "गहराई के लिए बना विशाल रात"
+            "value": "गहराई के लिए बनी विशाल रात"
           }
         },
         "es": {
@@ -7905,7 +7905,7 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tudo pronto"
+            "value": "Tudo feito"
           }
         },
         "it": {
@@ -7917,7 +7917,7 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gata tot"
+            "value": "Totul e gata"
           }
         },
         "nl": {
@@ -8082,7 +8082,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Presque arrivé — continuez"
+            "value": "On y est presque — continuez"
           }
         },
         "de": {
@@ -8118,7 +8118,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bijna er — ga door"
+            "value": "Bijna daar — ga door"
           }
         }
       }
@@ -8443,7 +8443,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Amberkalmte zonder vlam"
+            "value": "Amberkleurige rust zonder vlam"
           }
         }
       }
@@ -8768,7 +8768,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Applaudisseer deze piloot"
+            "value": "Applaudisseer voor deze piloot"
           }
         }
       }
@@ -9004,7 +9004,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Дирижабль «Аврора»"
+            "value": "Дирижабль-аврора"
           }
         },
         "pt-BR": {
@@ -9743,7 +9743,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bank · Links"
+            "value": "Bank · links"
           }
         }
       }
@@ -10547,13 +10547,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bloquea apps que distraen en el Escudo de Enfoque"
+            "value": "Bloquea apps que distraen en el Escudo de Concentración"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bloquez les applis distrayantes dans le Bouclier de Concentration"
+            "value": "Bloquez les applis distrayantes dans le Bouclier de concentration"
           }
         },
         "de": {
@@ -10565,7 +10565,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Блокируйте отвлекающие приложения в Щите Фокуса"
+            "value": "Блокируйте отвлекающие приложения в Щите фокуса"
           }
         },
         "pt-BR": {
@@ -10577,13 +10577,13 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Blocca le app che distraggono nello Scudo Focus"
+            "value": "Blocca le app che distraggono nello Scudo Concentrazione"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Blochează aplicațiile care distrag în Scutul de Concentrare"
+            "value": "Blochează aplicațiile care distrag în Scutul de concentrare"
           }
         },
         "nl": {
@@ -10931,7 +10931,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "गुब्बारे पर सवार हों"
+            "value": "ग़ुब्बारे पर सवार हों"
           }
         },
         "es": {
@@ -12432,7 +12432,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Facturación"
+            "value": "Check-in"
           }
         },
         "fr": {
@@ -12497,7 +12497,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "FACTURAR"
+            "value": "CHECK-IN"
           }
         },
         "fr": {
@@ -12562,7 +12562,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Registrado."
+            "value": "Check-in hecho."
           }
         },
         "fr": {
@@ -12881,7 +12881,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "आकार चुनें, फिर «विजेट जोड़ें» दबाएँ।"
+            "value": "आकार चुनें, फिर “विजेट जोड़ें” दबाएँ।"
           }
         },
         "es": {
@@ -12964,7 +12964,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wähle eine Startstadt, um loszuerkunden."
+            "value": "Wähle eine Startstadt, um mit dem Erkunden zu beginnen."
           }
         },
         "ru": {
@@ -13882,7 +13882,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Modo limpio"
+            "value": "Modo despejado"
           }
         },
         "fr": {
@@ -13894,19 +13894,19 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Klarer Modus"
+            "value": "Schlichter Modus"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Чистый режим"
+            "value": "Минимальный режим"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Modo limpo"
+            "value": "Modo minimalista"
           }
         },
         "it": {
@@ -13918,13 +13918,13 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mod curat"
+            "value": "Mod minimal"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Schone modus"
+            "value": "Minimale modus"
           }
         }
       }
@@ -14012,7 +14012,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Portátil cerrado"
+            "value": "Laptop cerrado"
           }
         },
         "fr": {
@@ -14468,7 +14468,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Impulso de monedas regalado"
+            "value": "Impulso de monedas de regalo"
           }
         },
         "fr": {
@@ -14492,7 +14492,7 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Impulso de moedas presenteado"
+            "value": "Impulso de moedas de presente"
           }
         },
         "it": {
@@ -14681,7 +14681,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Возвращайтесь за спокойным путешествием фокуса."
+            "value": "Возвращайтесь за спокойным полётом."
           }
         },
         "pt-BR": {
@@ -15136,7 +15136,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Завершите одну экспедицию сегодня и сохраните разгон."
+            "value": "Завершите одну экспедицию сегодня и сохраните набранный темп."
           }
         },
         "pt-BR": {
@@ -15987,19 +15987,19 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Continuar sozinho"
+            "value": "Continuar em solo"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Continua da solo"
+            "value": "Continua in solo"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Continuă singur"
+            "value": "Continuă solo"
           }
         },
         "nl": {
@@ -16111,7 +16111,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Продолжите путешествие из %@ в %@."
+            "value": "Продолжите маршрут %@ — %@."
           }
         },
         "pt-BR": {
@@ -16637,19 +16637,19 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fique aconchegado lá dentro"
+            "value": "Fique à vontade lá dentro"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mettiti comodo dentro"
+            "value": "Sistemati dentro"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fă-te comod înăuntru"
+            "value": "Așază-te comod înăuntru"
           }
         },
         "nl": {
@@ -16678,13 +16678,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Crear"
+            "value": "Creación"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Créer"
+            "value": "Création"
           }
         },
         "de": {
@@ -16702,13 +16702,13 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Criar"
+            "value": "Criação"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Creare"
+            "value": "Creazione"
           }
         },
         "ro": {
@@ -16879,7 +16879,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Créer une salle"
+            "value": "Créer un salon"
           }
         },
         "de": {
@@ -17133,7 +17133,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vuelo en tripulación"
+            "value": "Vuelo con tripulación"
           }
         },
         "fr": {
@@ -17157,7 +17157,7 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Voo em tripulação"
+            "value": "Voo com tripulação"
           }
         },
         "it": {
@@ -18080,7 +18080,7 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Spațiul adânc"
+            "value": "Spațiul cosmic"
           }
         },
         "nl": {
@@ -19085,7 +19085,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reloj digital de solapas"
+            "value": "Reloj digital de paletas"
           }
         },
         "fr": {
@@ -19109,7 +19109,7 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Relógio digital de folhas"
+            "value": "Relógio digital flip"
           }
         },
         "it": {
@@ -19540,49 +19540,49 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Duplica tus monedas en tu próxima hora de estudio al equiparlo."
+            "value": "Duplica tus monedas en tu próxima hora de estudio cuando esté en uso."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Doublez vos pièces sur votre prochaine heure d’étude une fois équipé."
+            "value": "Doublez vos pièces sur votre prochaine heure d’étude une fois qu’il est activé."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verdopple deine Münzen in der nächsten Lernstunde, sobald es ausgerüstet ist."
+            "value": "Verdopple deine Münzen in der nächsten Lernstunde, sobald der Boost im Einsatz ist."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Удвойте монеты за следующий час занятий после экипировки."
+            "value": "Удвойте монеты за следующий час занятий, пока буст используется."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dobre suas moedas na próxima hora de estudo depois de equipar."
+            "value": "Dobre suas moedas na próxima hora de estudo enquanto ele estiver em uso."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Raddoppia le monete nella prossima ora di studio una volta equipaggiato."
+            "value": "Raddoppia le monete nella prossima ora di studio quando è in uso."
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dublează-ți monedele în următoarea oră de studiu după echipare."
+            "value": "Dublează-ți monedele în următoarea oră de studiu cât timp e în uz."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verdubbel je munten in je volgende studie-uur zodra het uitgerust is."
+            "value": "Verdubbel je munten in je volgende studie-uur zolang de boost in gebruik is."
           }
         }
       }
@@ -19593,7 +19593,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "双击封印此页并开始远征。"
+            "value": "双击封印此页并开始远征"
           }
         },
         "hi": {
@@ -19670,7 +19670,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Déjate llevar entre luz de estrellas fugaces"
+            "value": "Déjate llevar entre la luz de las estrellas fugaces"
           }
         },
         "fr": {
@@ -19883,7 +19883,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Каждая ссылка впускает одного нового пилота и истекает — отправляйте новую каждому другу. «Скопировать ссылку» есть в меню share."
+            "value": "Каждая ссылка впускает одного нового пилота и истекает — отправляйте новую каждому другу. «Скопировать ссылку» есть в меню «Поделиться»."
           }
         },
         "pt-BR": {
@@ -19930,7 +19930,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Madrugador"
+            "value": "Ave madrugadora"
           }
         },
         "fr": {
@@ -19954,7 +19954,7 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Madrugador"
+            "value": "Ave madrugadora"
           }
         },
         "it": {
@@ -19966,7 +19966,7 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Matinal"
+            "value": "Pasăre matinală"
           }
         },
         "nl": {
@@ -19983,61 +19983,61 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "赚取 2× 金币"
+            "value": "金币翻倍"
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "2× सिक्के कमाएँ"
+            "value": "दोगुने सिक्के कमाएँ"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gana 2× monedas"
+            "value": "Gana el doble de monedas"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gagnez 2× de pièces"
+            "value": "Gagnez deux fois plus de pièces"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verdiene 2× Münzen"
+            "value": "Doppelte Münzen verdienen"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Получайте 2× монет"
+            "value": "Получайте вдвое больше монет"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ganhe 2× moedas"
+            "value": "Ganhe o dobro de moedas"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Guadagna 2× monete"
+            "value": "Guadagna il doppio delle monete"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Câștigă 2× monede"
+            "value": "Câștigă monede duble"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verdien 2× munten"
+            "value": "Verdien dubbele munten"
           }
         }
       }
@@ -20710,13 +20710,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Activar el Escudo de Enfoque"
+            "value": "Activar el Escudo de Concentración"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Activer le Bouclier de Concentration"
+            "value": "Activer le Bouclier de concentration"
           }
         },
         "de": {
@@ -20728,7 +20728,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Включить Щит Фокуса"
+            "value": "Включить Щит фокуса"
           }
         },
         "pt-BR": {
@@ -20740,13 +20740,13 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Attiva lo Scudo Focus"
+            "value": "Attiva lo Scudo Concentrazione"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Activează Scutul de Concentrare"
+            "value": "Activează Scutul de concentrare"
           }
         },
         "nl": {
@@ -21703,7 +21703,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Экспедиции для вашего региона прокладываются"
+            "value": "Прокладываем экспедиции для вашего региона"
           }
         },
         "pt-BR": {
@@ -21768,7 +21768,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Впечатления"
+            "value": "Ощущения"
           }
         },
         "pt-BR": {
@@ -21809,7 +21809,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "विशेष आकाश देखें"
+            "value": "विशेष आकाश खोजें"
           }
         },
         "es": {
@@ -22010,13 +22010,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sentirme abrumado"
+            "value": "La sobrecarga"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Me sentir dépassé"
+            "value": "La surcharge"
           }
         },
         "de": {
@@ -22034,13 +22034,13 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Me sentir sobrecarregado"
+            "value": "A sobrecarga"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sentirmi sopraffatto"
+            "value": "Il sovraccarico"
           }
         },
         "ro": {
@@ -22182,7 +22182,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Feestelijke ornament"
+            "value": "Feestelijk ornament"
           }
         }
       }
@@ -23517,7 +23517,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Boden · Rechts"
+            "value": "Boden · rechts"
           }
         },
         "ru": {
@@ -23570,13 +23570,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Volar"
+            "value": "Vuelo"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Voler"
+            "value": "Vol"
           }
         },
         "de": {
@@ -23594,13 +23594,13 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Voar"
+            "value": "Voo"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Volare"
+            "value": "Volo"
           }
         },
         "ro": {
@@ -23623,7 +23623,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "随时可飞%@。"
+            "value": "随时在%@中飞行。"
           }
         },
         "hi": {
@@ -23635,7 +23635,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vuela %@ cuando quieras."
+            "value": "Vuela en %@ cuando quieras."
           }
         },
         "fr": {
@@ -23647,7 +23647,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flieg %@ jederzeit."
+            "value": "Flieg jederzeit in %@."
           }
         },
         "ru": {
@@ -23677,7 +23677,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vlieg %@ wanneer je wilt."
+            "value": "Vlieg in %@ wanneer je wilt."
           }
         }
       }
@@ -23771,7 +23771,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Revolez demain et faites grandir votre série"
+            "value": "Revenez voler demain et faites grandir votre série"
           }
         },
         "de": {
@@ -23895,7 +23895,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Volad juntos este viaje"
+            "value": "Este viaje, juntos"
           }
         },
         "fr": {
@@ -23960,7 +23960,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Volad juntos"
+            "value": "Vuela en compañía"
           }
         },
         "fr": {
@@ -23984,19 +23984,19 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Voem juntos"
+            "value": "Voe acompanhado"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Volate insieme"
+            "value": "Vola in compagnia"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zburați împreună"
+            "value": "Zboară împreună"
           }
         },
         "nl": {
@@ -24049,19 +24049,19 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Voem juntos — ganhe 2×"
+            "value": "Voe junto — ganhe 2×"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Volate insieme — guadagna 2×"
+            "value": "Vola insieme — guadagna 2×"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zburați împreună — câștigi 2×"
+            "value": "Zburați împreună — câștigați 2×"
           }
         },
         "nl": {
@@ -24102,7 +24102,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fliege mit einer Freundin oder einem Freund für 2× Fokus-Münzen."
+            "value": "Fliege zu zweit für 2× Fokus-Münzen."
           }
         },
         "ru": {
@@ -25216,7 +25216,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Concentrarse sienta mejor en el cielo. Tu móvil se convierte en un vuelo en globo."
+            "value": "Concentrarse sienta mejor en el cielo. Tu teléfono se convierte en un vuelo en globo."
           }
         },
         "fr": {
@@ -25399,7 +25399,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "专注格图"
+            "value": "专注格子"
           }
         },
         "hi": {
@@ -25464,7 +25464,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "专注格图"
+            "value": "专注格子"
           }
         },
         "hi": {
@@ -25742,7 +25742,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Focus maintenant"
+            "value": "Concentration immédiate"
           }
         },
         "de": {
@@ -25801,13 +25801,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "CONCENTRACIÓN AHORA"
+            "value": "CONCÉNTRATE"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "CONCENTRATION MAINTENANT"
+            "value": "CONCENTREZ-VOUS"
           }
         },
         "de": {
@@ -25819,25 +25819,25 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "ФОКУС СЕЙЧАС"
+            "value": "ФОКУС"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "FOCO AGORA"
+            "value": "FOQUE AGORA"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "CONCENTRAZIONE ORA"
+            "value": "CONCENTRATI"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "CONCENTRARE ACUM"
+            "value": "CONCENTREAZĂ-TE"
           }
         },
         "nl": {
@@ -25860,25 +25860,25 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "फ़ोकस नाउ, मध्यम आकार पूर्वावलोकन"
+            "value": "अभी फ़ोकस, मध्यम आकार पूर्वावलोकन"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Concentración ahora, vista previa de tamaño mediano"
+            "value": "Concéntrate ya, vista previa de tamaño mediano"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Concentration maintenant, aperçu taille moyenne"
+            "value": "Concentration immédiate, aperçu taille moyenne"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Jetzt Fokus, mittlere Vorschau"
+            "value": "Jetzt fokussieren, mittlere Vorschau"
           }
         },
         "ru": {
@@ -26162,7 +26162,7 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Concentrează-te o dată pe cerul Spațiul adânc."
+            "value": "Concentrează-te o dată pe cerul Spațiul cosmic."
           }
         },
         "nl": {
@@ -26516,13 +26516,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Escudo de Enfoque"
+            "value": "Escudo de Concentración"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bouclier de Concentration"
+            "value": "Bouclier de concentration"
           }
         },
         "de": {
@@ -26534,7 +26534,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Щит Фокуса"
+            "value": "Щит фокуса"
           }
         },
         "pt-BR": {
@@ -26546,13 +26546,13 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scudo Focus"
+            "value": "Scudo Concentrazione"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scut de Concentrare"
+            "value": "Scut de concentrare"
           }
         },
         "nl": {
@@ -26581,7 +26581,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "ESCUDO DE ENFOQUE"
+            "value": "ESCUDO DE CONCENTRACIÓN"
           }
         },
         "fr": {
@@ -26611,7 +26611,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "SCUDO FOCUS"
+            "value": "SCUDO CONCENTRAZIONE"
           }
         },
         "ro": {
@@ -26646,13 +26646,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Escudo de Enfoque activo"
+            "value": "Escudo de Concentración activo"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bouclier de Concentration actif"
+            "value": "Bouclier de concentration actif"
           }
         },
         "de": {
@@ -26664,7 +26664,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Щит Фокуса активен"
+            "value": "Щит фокуса активен"
           }
         },
         "pt-BR": {
@@ -26676,13 +26676,13 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scudo Focus attivo"
+            "value": "Scudo Concentrazione attivo"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scut de Concentrare activ"
+            "value": "Scut de concentrare activ"
           }
         },
         "nl": {
@@ -26711,13 +26711,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "El Escudo de Enfoque está disponible en iPhone y iPad."
+            "value": "El Escudo de Concentración está disponible en iPhone y iPad."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le Bouclier de Concentration est disponible sur iPhone et iPad."
+            "value": "Le Bouclier de concentration est disponible sur iPhone et iPad."
           }
         },
         "de": {
@@ -26729,7 +26729,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Щит Фокуса доступен на iPhone и iPad."
+            "value": "Щит фокуса доступен на iPhone и iPad."
           }
         },
         "pt-BR": {
@@ -26741,13 +26741,13 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lo Scudo Focus è disponibile su iPhone e iPad."
+            "value": "Lo Scudo Concentrazione è disponibile su iPhone e iPad."
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scutul de Concentrare este disponibil pe iPhone și iPad."
+            "value": "Scutul de concentrare este disponibil pe iPhone și iPad."
           }
         },
         "nl": {
@@ -26776,13 +26776,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "El Escudo de Enfoque es la parte que no sabía que necesitaba. En cuanto empieza un vuelo, el móvil deja de parecer aquello contra lo que peleo."
+            "value": "El Escudo de Concentración es la parte que no sabía que necesitaba. En cuanto empieza un vuelo, el móvil deja de parecer aquello contra lo que peleo."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le Bouclier de Concentration, c’est ce dont j’ignorais avoir besoin. Dès qu’un vol commence, mon téléphone cesse enfin d’être ce que je combats."
+            "value": "Le Bouclier de concentration, c’est ce dont j’ignorais avoir besoin. Dès qu’un vol commence, mon téléphone cesse enfin d’être ce que je combats."
           }
         },
         "de": {
@@ -26794,7 +26794,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Щит Фокуса — то, о необходимости чего я не догадывался. Как только начинается полёт, телефон перестаёт быть тем, с чем я борюсь."
+            "value": "Щит фокуса — то, о необходимости чего я не догадывался. Как только начинается полёт, телефон перестаёт быть тем, с чем я борюсь."
           }
         },
         "pt-BR": {
@@ -26806,13 +26806,13 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lo Scudo Focus è la parte che non sapevo mi servisse. Appena parte un volo, il telefono smette finalmente di sembrare ciò contro cui combatto."
+            "value": "Lo Scudo Concentrazione è la parte che non sapevo mi servisse. Appena parte un volo, il telefono smette finalmente di sembrare ciò contro cui combatto."
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scutul de Concentrare e partea de care nu știam că am nevoie. Odată ce începe un zbor, telefonul încetează în sfârșit să pară dușmanul meu."
+            "value": "Scutul de concentrare e partea de care nu știam că am nevoie. Odată ce începe un zbor, telefonul încetează în sfârșit să pară dușmanul meu."
           }
         },
         "nl": {
@@ -26841,13 +26841,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "El Escudo de Enfoque necesita permiso de Tiempo de uso para bloquear apps que distraen durante tus vuelos de FocusGlobe."
+            "value": "El Escudo de Concentración necesita permiso de Tiempo de uso para bloquear apps que distraen durante tus vuelos de FocusGlobe."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le Bouclier de Concentration a besoin de l’autorisation Temps d’écran pour bloquer les applis distrayantes pendant vos vols FocusGlobe."
+            "value": "Le Bouclier de concentration a besoin de l’autorisation Temps d’écran pour bloquer les applis distrayantes pendant vos vols FocusGlobe."
           }
         },
         "de": {
@@ -26859,7 +26859,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Щиту Фокуса нужно разрешение «Экранное время», чтобы блокировать отвлекающие приложения во время полётов FocusGlobe."
+            "value": "Щиту фокуса нужно разрешение «Экранное время», чтобы блокировать отвлекающие приложения во время полётов FocusGlobe."
           }
         },
         "pt-BR": {
@@ -26871,13 +26871,13 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lo Scudo Focus richiede l’autorizzazione Tempo di utilizzo per bloccare le app che distraggono durante i voli FocusGlobe."
+            "value": "Lo Scudo Concentrazione richiede l’autorizzazione Tempo di utilizzo per bloccare le app che distraggono durante i voli FocusGlobe."
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scutul de Concentrare are nevoie de permisiunea Timp de utilizare ca să blocheze aplicațiile care distrag în timpul zborurilor FocusGlobe."
+            "value": "Scutul de concentrare are nevoie de permisiunea Timp de utilizare ca să blocheze aplicațiile care distrag în timpul zborurilor FocusGlobe."
           }
         },
         "nl": {
@@ -26906,13 +26906,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "El Escudo de Enfoque usa Tiempo de uso, que no está disponible en este dispositivo."
+            "value": "El Escudo de Concentración usa Tiempo de uso, que no está disponible en este dispositivo."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le Bouclier de Concentration utilise Temps d’écran, indisponible sur cet appareil."
+            "value": "Le Bouclier de concentration utilise Temps d’écran, indisponible sur cet appareil."
           }
         },
         "de": {
@@ -26924,7 +26924,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Щит Фокуса использует «Экранное время», недоступное на этом устройстве."
+            "value": "Щит фокуса использует «Экранное время», недоступное на этом устройстве."
           }
         },
         "pt-BR": {
@@ -26936,13 +26936,13 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lo Scudo Focus usa Tempo di utilizzo, non disponibile su questo dispositivo."
+            "value": "Lo Scudo Concentrazione usa Tempo di utilizzo, non disponibile su questo dispositivo."
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scutul de Concentrare folosește Timp de utilizare, indisponibil pe acest dispozitiv."
+            "value": "Scutul de concentrare folosește Timp de utilizare, indisponibil pe acest dispozitiv."
           }
         },
         "nl": {
@@ -27101,7 +27101,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Concentraos juntos"
+            "value": "Concentrarse juntos"
           }
         },
         "fr": {
@@ -27125,19 +27125,19 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Foquem juntos"
+            "value": "Focar em conjunto"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Concentratevi insieme"
+            "value": "Concentrarsi insieme"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Concentrați-vă împreună"
+            "value": "Concentrare împreună"
           }
         },
         "nl": {
@@ -28338,7 +28338,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "फ़्रेम किया पोस्टर"
+            "value": "फ़्रेम किया हुआ पोस्टर"
           }
         },
         "es": {
@@ -29398,7 +29398,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Deine Daten und Auswertungen im Reisepass"
+            "value": "Hol dir Daten und Auswertungen im Reisepass"
           }
         },
         "ru": {
@@ -29451,7 +29451,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Empezar"
+            "value": "Dar el primer paso"
           }
         },
         "fr": {
@@ -29493,7 +29493,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Beginnen"
+            "value": "Op gang komen"
           }
         }
       }
@@ -30043,7 +30043,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bon début — revenez demain pour la garder en vie."
+            "value": "Bon début — revenez demain pour la faire vivre."
           }
         },
         "de": {
@@ -30079,7 +30079,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Goede start — kom morgen terug om hem te behouden."
+            "value": "Goede start — kom morgen terug om je reeks te behouden."
           }
         }
       }
@@ -30179,7 +30179,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hängend · Links"
+            "value": "Hängend · links"
           }
         },
         "ru": {
@@ -30244,7 +30244,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hängend · Rechts"
+            "value": "Hängend · rechts"
           }
         },
         "ru": {
@@ -30776,7 +30776,7 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Oculta os controles e mantém um cronômetro pequeno"
+            "value": "Oculta os controles e mantém um timer pequeno"
           }
         },
         "it": {
@@ -31349,7 +31349,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haken · Links"
+            "value": "Haken · links"
           }
         },
         "ru": {
@@ -31414,7 +31414,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haken · Rechts"
+            "value": "Haken · rechts"
           }
         },
         "ru": {
@@ -31550,7 +31550,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Сколько вы можете сосредоточиться сегодня?"
+            "value": "Сколько времени вы можете сегодня сосредоточиться?"
           }
         },
         "pt-BR": {
@@ -32129,7 +32129,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eis-Latte"
+            "value": "Iced Latte"
           }
         },
         "ru": {
@@ -32147,7 +32147,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Latte freddo"
+            "value": "Iced latte"
           }
         },
         "ro": {
@@ -32159,7 +32159,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "IJskoffie latte"
+            "value": "IJslatte"
           }
         }
       }
@@ -33190,7 +33190,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lade eine Freundin oder einen Freund ein – dein nächster Flug wird weniger einsam."
+            "value": "Lade jemanden ein – dein nächster Flug wird weniger einsam."
           }
         },
         "ru": {
@@ -34023,13 +34023,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sigue concentrado"
+            "value": "Sigue concentrándote"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Restez concentré"
+            "value": "Poursuivre la concentration"
           }
         },
         "de": {
@@ -34047,19 +34047,19 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Continue focado"
+            "value": "Seguir no foco"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Resta concentrato"
+            "value": "Continua a concentrarti"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rămâi concentrat"
+            "value": "Continuă concentrarea"
           }
         },
         "nl": {
@@ -34088,13 +34088,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Seguir concentrado"
+            "value": "Seguir concentrándote"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rester concentré"
+            "value": "Poursuivre la concentration"
           }
         },
         "de": {
@@ -34112,19 +34112,19 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Continuar focado"
+            "value": "Seguir no foco"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Resta concentrato"
+            "value": "Continua a concentrarti"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rămâi concentrat"
+            "value": "Continuă concentrarea"
           }
         },
         "nl": {
@@ -34680,7 +34680,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atterri aujourd’hui — votre série est sauve"
+            "value": "Vol atterri aujourd’hui — votre série est sauve"
           }
         },
         "de": {
@@ -34704,7 +34704,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atterrato oggi: la tua serie è al sicuro"
+            "value": "Volo atterrato oggi: la tua serie è al sicuro"
           }
         },
         "ro": {
@@ -35253,7 +35253,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "ऑनलाइन फ़ोकस करते समय अन्य पायलटों को अपना गुब्बारा दिखने दें।"
+            "value": "ऑनलाइन फ़ोकस करते समय अन्य पायलटों को अपना ग़ुब्बारा दिखने दें।"
           }
         },
         "es": {
@@ -36400,13 +36400,13 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fă fiecare zbor al tău"
+            "value": "Fă din fiecare zbor al tău"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Maak elke vlucht van jou"
+            "value": "Maak elke vlucht de jouwe"
           }
         }
       }
@@ -36465,13 +36465,13 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fă cabina a ta"
+            "value": "Cabina, exact pe gustul tău"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Maak de cabine van jou"
+            "value": "Maak de cabine de jouwe"
           }
         }
       }
@@ -36559,7 +36559,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gestionar la suscripción"
+            "value": "Gestionar suscripción"
           }
         },
         "fr": {
@@ -36754,13 +36754,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Meditar"
+            "value": "Meditación"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Méditer"
+            "value": "Méditation"
           }
         },
         "de": {
@@ -36778,13 +36778,13 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Meditar"
+            "value": "Meditação"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Meditare"
+            "value": "Meditazione"
           }
         },
         "ro": {
@@ -37658,7 +37658,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "मेरा एक्सपीडिशन पेज"
+            "value": "मेरा यात्रा पेज"
           }
         },
         "es": {
@@ -37794,7 +37794,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mi móvil"
+            "value": "Mi teléfono"
           }
         },
         "fr": {
@@ -39614,7 +39614,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sin registrar."
+            "value": "Sin check-in."
           }
         },
         "fr": {
@@ -39744,13 +39744,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sin preparar"
+            "value": "Sin confirmar"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pas prêt"
+            "value": "En attente"
           }
         },
         "de": {
@@ -39762,25 +39762,25 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Не готов"
+            "value": "Ожидает"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sem preparo"
+            "value": "Sem confirmação"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Non pronto"
+            "value": "In attesa"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nepregătit"
+            "value": "În așteptare"
           }
         },
         "nl": {
@@ -41033,25 +41033,25 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在今天结束前，来一次专注的漂流？"
+            "value": "在今天结束前，来一次专注的飞行？"
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "दिन ख़त्म होने से पहले एक फ़ोकस्ड उड़ान?"
+            "value": "दिन ख़त्म होने से पहले एक फ़ोकस वाली उड़ान?"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "¿Una deriva concentrada antes de que acabe el día?"
+            "value": "¿Un vuelo concentrado antes de que acabe el día?"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Une dérive concentrée avant la fin de la journée ?"
+            "value": "Un vol concentré avant la fin de la journée ?"
           }
         },
         "de": {
@@ -41075,13 +41075,13 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Una planata concentrata prima che finisca il giorno?"
+            "value": "Un volo concentrato prima che finisca la giornata?"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "O plutire concentrată înainte să se termine ziua?"
+            "value": "Un zbor concentrat înainte să se termine ziua?"
           }
         },
         "nl": {
@@ -41098,13 +41098,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在分心占上风前，来一次专注的专注。"
+            "value": "在分心占上风前，来一段专注时间。"
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "ध्यान भटकने से पहले एक फ़ोकस्ड सत्र।"
+            "value": "ध्यान भटकने से पहले एक फ़ोकस सेशन।"
           }
         },
         "es": {
@@ -41376,7 +41376,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Une courte expédition garde votre série de concentration en vie."
+            "value": "Une courte expédition fait vivre votre série de concentration."
           }
         },
         "de": {
@@ -41624,7 +41624,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "ऑनलाइन फ़्लाइट «Sign in with Apple» वाले निजी FocusGlobe अकाउंट का इस्तेमाल करती हैं — आप सिर्फ़ एक गुमनाम उपनाम के रूप में दिखते हैं।"
+            "value": "ऑनलाइन फ़्लाइट «Apple से साइन इन» वाले निजी FocusGlobe अकाउंट का इस्तेमाल करती हैं — आप सिर्फ़ एक गुमनाम उपनाम के रूप में दिखते हैं।"
           }
         },
         "es": {
@@ -41648,13 +41648,13 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Онлайн-полёты используют приватный аккаунт FocusGlobe через «Вход с Apple» — вы отображаетесь только под анонимным псевдонимом."
+            "value": "Онлайн-полёты используют приватный аккаунт FocusGlobe через «Войти через Apple» — вы отображаетесь только под анонимным псевдонимом."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Os voos Online usam uma conta privada do FocusGlobe com Iniciar Sessão com a Apple — você aparece apenas com um apelido anônimo."
+            "value": "Os voos Online usam uma conta privada do FocusGlobe com Entrar com a Apple — você aparece apenas com um apelido anônimo."
           }
         },
         "it": {
@@ -41666,13 +41666,13 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zborurile online folosesc un cont FocusGlobe privat cu Conectare cu Apple — apari doar sub un alias anonim."
+            "value": "Zborurile online folosesc un cont FocusGlobe privat cu Autentificare cu Apple — apari doar sub un alias anonim."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Onlinevluchten gebruiken een privé FocusGlobe-account met Log in met Apple — je verschijnt alleen onder een anoniem alias."
+            "value": "Onlinevluchten gebruiken een privé FocusGlobe-account met Inloggen met Apple — je verschijnt alleen onder een anoniem alias."
           }
         }
       }
@@ -42275,7 +42275,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "ओपन फ़ोकस"
+            "value": "खुला फ़ोकस"
           }
         },
         "es": {
@@ -42411,7 +42411,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Abre tu regalo diario antes de que se vuele."
+            "value": "Abre tu regalo diario antes de que salga volando."
           }
         },
         "fr": {
@@ -42714,7 +42714,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bezit minstens één cabinedecoratie uit de Store."
+            "value": "Bezit minstens één cabinedecoratie uit de Winkel."
           }
         }
       }
@@ -43199,7 +43199,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tableau du Passeport"
+            "value": "Tableau de bord Passeport"
           }
         },
         "de": {
@@ -43554,7 +43554,7 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Alege o destinație și dăruiește-ți 25 de minute."
+            "value": "Alege o destinație și acordă-ți 25 de minute."
           }
         },
         "nl": {
@@ -43589,7 +43589,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choisissez un itinéraire. Restez concentré jusqu’à l’atterrissage."
+            "value": "Choisissez un itinéraire. Gardez la concentration jusqu’à l’atterrissage."
           }
         },
         "de": {
@@ -43613,13 +43613,13 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scegli una rotta. Resta concentrato fino all’atterraggio."
+            "value": "Scegli una rotta. Mantieni la concentrazione fino all’atterraggio."
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Alege o rută. Rămâi concentrat până aterizezi."
+            "value": "Alege o rută. Menține concentrarea până aterizezi."
           }
         },
         "nl": {
@@ -43642,7 +43642,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "जब तैयार हों, शुरू किया रास्ता फिर से पकड़ें।"
+            "value": "जब तैयार हों, शुरू किया हुआ रास्ता फिर से पकड़ें।"
           }
         },
         "es": {
@@ -46848,7 +46848,7 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Erreiche eine %1$lld-Tage-Serie oder hol dir FocusGlobe PRO, um %2$@ freizuschalten."
+                  "value": "Erreiche eine %1$lld-Tag-Serie oder hol dir FocusGlobe PRO, um %2$@ freizuschalten."
                 }
               },
               "other": {
@@ -47183,13 +47183,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "¿Listo para otro vuelo tranquilo?"
+            "value": "¿Te apetece otro vuelo tranquilo?"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prêt pour un autre vol paisible ?"
+            "value": "Envie d’un autre vol paisible ?"
           }
         },
         "de": {
@@ -47207,13 +47207,13 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pronto para outro voo tranquilo?"
+            "value": "Que tal outro voo tranquilo?"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pronto per un altro volo tranquillo?"
+            "value": "Ti va un altro volo tranquillo?"
           }
         },
         "ro": {
@@ -47242,19 +47242,19 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "एक फ़ोकस्ड यात्रा के लिए तैयार?"
+            "value": "एक फ़ोकस वाली यात्रा के लिए तैयार?"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "¿Listo para una expedición concentrada?"
+            "value": "¿Una expedición para concentrarte?"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prêt pour une expédition concentrée ?"
+            "value": "Une expédition pour vous concentrer ?"
           }
         },
         "de": {
@@ -47272,13 +47272,13 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pronto para uma expedição focada?"
+            "value": "Uma expedição para focar?"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pronto per una spedizione concentrata?"
+            "value": "Una spedizione per concentrarti?"
           }
         },
         "ro": {
@@ -47313,13 +47313,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Listo para despegar"
+            "value": "Todo listo para despegar"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prêt au décollage"
+            "value": "Tout est prêt pour décoller"
           }
         },
         "de": {
@@ -47331,19 +47331,19 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Готов к взлёту"
+            "value": "Готовы к взлёту"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pronto para decolar"
+            "value": "Tudo pronto para decolar"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pronto al decollo"
+            "value": "Tutto pronto al decollo"
           }
         },
         "ro": {
@@ -47443,13 +47443,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "¿Listo para dejarte llevar?"
+            "value": "¿Te dejas llevar?"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prêt à vous laisser porter ?"
+            "value": "Envie de vous laisser porter ?"
           }
         },
         "de": {
@@ -47467,13 +47467,13 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pronto para flutuar?"
+            "value": "Que tal flutuar?"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pronto a lasciarti andare?"
+            "value": "Ti va di lasciarti andare?"
           }
         },
         "ro": {
@@ -47508,13 +47508,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Listo para volar"
+            "value": "Todo listo para volar"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prêt à décoller"
+            "value": "Tout est prêt pour décoller"
           }
         },
         "de": {
@@ -47526,19 +47526,19 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Готов к полёту"
+            "value": "Готовы к полёту"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pronto para voar"
+            "value": "Tudo pronto para voar"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pronto al decollo"
+            "value": "Tutto pronto al decollo"
           }
         },
         "ro": {
@@ -47869,7 +47869,7 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mementouri"
+            "value": "Memento-uri"
           }
         },
         "nl": {
@@ -48066,7 +48066,7 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Îl scoți din echipaj?"
+            "value": "Scoți pilotul din echipaj?"
           }
         },
         "nl": {
@@ -49780,7 +49780,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "«FocusGlobe» खोजें।"
+            "value": "“FocusGlobe” खोजें।"
           }
         },
         "es": {
@@ -50058,7 +50058,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Schick FocusGlobe an eine Freundin oder einen Freund – tippe dann im Flug auf Freunde einladen."
+            "value": "Schick FocusGlobe an jemanden – tippe dann im Flug auf Freunde einladen."
           }
         },
         "ru": {
@@ -50123,7 +50123,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sende einer Freundin oder einem Freund einen privaten Fluglink."
+            "value": "Sende jemandem einen privaten Fluglink."
           }
         },
         "ru": {
@@ -50359,25 +50359,25 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "出发一次短暂的专注，延续你的连续天数。"
+            "value": "来一段短暂的专注，延续你的连续天数。"
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "एक छोटा सत्र शुरू करें और अपनी स्ट्रीक बनाए रखें।"
+            "value": "एक छोटा सेशन शुरू करें और अपनी स्ट्रीक बनाए रखें।"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sal a una sesión corta y mantén viva tu racha."
+            "value": "Haz una sesión corta y mantén viva tu racha."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Partez pour une courte session et gardez votre série en vie."
+            "value": "Partez pour une courte session et faites vivre votre série."
           }
         },
         "de": {
@@ -50395,7 +50395,7 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Saia para uma sessão curta e mantenha sua sequência viva."
+            "value": "Faça uma sessão curta e mantenha sua sequência viva."
           }
         },
         "it": {
@@ -50531,7 +50531,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mettiti comodo e respira"
+            "value": "Sistemati e respira"
           }
         },
         "ro": {
@@ -50946,7 +50946,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "分享你的专注格图"
+            "value": "分享你的专注格子"
           }
         },
         "hi": {
@@ -53162,7 +53162,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "नींद में कैपिबारा सॉफ़्ट टॉय"
+            "value": "नींद में डूबा कैपिबारा सॉफ़्ट टॉय"
           }
         },
         "es": {
@@ -53180,7 +53180,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verschlafenes Wasserschwein-Plüschtier"
+            "value": "Verschlafenes Capybara-Plüschtier"
           }
         },
         "ru": {
@@ -53204,7 +53204,7 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Plușul capibara adormită"
+            "value": "Capibara adormită din pluș"
           }
         },
         "nl": {
@@ -53511,7 +53511,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Мягкий кремовый • спокойный по умолчанию"
+            "value": "Мягкий кремовый • спокойный вариант по умолчанию"
           }
         },
         "pt-BR": {
@@ -54468,7 +54468,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Empieza una racha nueva después de que acabara una más larga."
+            "value": "Empieza una racha nueva después de que termine una más larga."
           }
         },
         "fr": {
@@ -54539,7 +54539,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Commencer à se concentrer"
+            "value": "Lancer la concentration"
           }
         },
         "de": {
@@ -55084,7 +55084,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Compagno di serie"
+            "value": "Compagno della serie"
           }
         },
         "ro": {
@@ -55480,7 +55480,7 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Învață în spațiul adânc"
+            "value": "Învață în spațiul cosmic"
           }
         },
         "nl": {
@@ -56041,7 +56041,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tisch · Links"
+            "value": "Tisch · links"
           }
         },
         "ru": {
@@ -56106,7 +56106,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tisch · Rechts"
+            "value": "Tisch · rechts"
           }
         },
         "ru": {
@@ -56283,13 +56283,13 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "«हो गया» दबाएँ — आपका विजेट होम स्क्रीन पर है।"
+            "value": "“हो गया” दबाएँ — आपका विजेट होम स्क्रीन पर है।"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Toca Aceptar: tu widget ya está en la pantalla de inicio."
+            "value": "Toca Listo: tu widget ya está en la pantalla de inicio."
           }
         },
         "fr": {
@@ -57589,7 +57589,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "El móvil gana por defecto"
+            "value": "El teléfono gana por defecto"
           }
         },
         "fr": {
@@ -57619,7 +57619,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Il telefono vince per default"
+            "value": "Il telefono vince in automatico"
           }
         },
         "ro": {
@@ -57855,19 +57855,19 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Il accepte et apparaît dans votre salon."
+            "value": "Cette personne accepte et apparaît dans votre salon."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Er oder sie nimmt an und erscheint in deiner Lobby."
+            "value": "Die Person nimmt an und erscheint in deiner Lobby."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Он принимает и появляется в вашем лобби."
+            "value": "Пилот принимает приглашение и появляется в вашем лобби."
           }
         },
         "pt-BR": {
@@ -58245,7 +58245,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cette salle de concentration est complète."
+            "value": "Ce salon de concentration est complet."
           }
         },
         "de": {
@@ -58310,7 +58310,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cette salle de concentration n’est plus disponible."
+            "value": "Ce salon de concentration n’est plus disponible."
           }
         },
         "de": {
@@ -58688,7 +58688,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "यह पायलट अनुरोध स्वीकार नहीं कर रहा।"
+            "value": "यह पायलट अनुरोध स्वीकार नहीं कर रहे।"
           }
         },
         "es": {
@@ -58889,7 +58889,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tiempo concentrado"
+            "value": "Tiempo de concentración"
           }
         },
         "fr": {
@@ -58901,7 +58901,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fokussierte Zeit"
+            "value": "Fokuszeit"
           }
         },
         "ru": {
@@ -58913,7 +58913,7 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tempo focado"
+            "value": "Tempo de foco"
           }
         },
         "it": {
@@ -58931,7 +58931,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gefocuste tijd"
+            "value": "Focustijd"
           }
         }
       }
@@ -59752,7 +59752,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Дата окончания пробного периода"
+            "value": "Конец пробного периода"
           }
         },
         "pt-BR": {
@@ -60047,13 +60047,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "以 %@ 试用"
+            "value": "试用 %@"
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ में आज़माएँ"
+            "value": "%@ के लिए आज़माएँ"
           }
         },
         "es": {
@@ -60065,7 +60065,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Essayer pour %@"
+            "value": "Essayer pendant %@"
           }
         },
         "de": {
@@ -60089,7 +60089,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prova a %@"
+            "value": "Prova per %@"
           }
         },
         "ro": {
@@ -60290,7 +60290,7 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rotește discul. Îl poți schimba înainte de fiecare decolare."
+            "value": "Rotește cadranul. Îl poți schimba înainte de fiecare decolare."
           }
         },
         "nl": {
@@ -60372,7 +60372,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "宁静潟湖上空的松石色空气，柔和的岛屿在远处漂移。"
+            "value": "宁静潟湖上空的绿松石色空气，柔和的岛屿在远处漂移。"
           }
         },
         "hi": {
@@ -60437,7 +60437,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "松石色的宁静，适合深度工作"
+            "value": "绿松石色的宁静，适合深度工作"
           }
         },
         "hi": {
@@ -60793,7 +60793,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Откройте FocusGlobe"
+            "value": "Разблокируйте FocusGlobe"
           }
         },
         "pt-BR": {
@@ -60858,7 +60858,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Откройте FocusGlobe PRO"
+            "value": "Разблокируйте FocusGlobe PRO"
           }
         },
         "pt-BR": {
@@ -61857,7 +61857,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wand · Links"
+            "value": "Wand · links"
           }
         }
       }
@@ -61922,7 +61922,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wand · Rechts"
+            "value": "Wand · rechts"
           }
         }
       }
@@ -61939,7 +61939,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "आपके क्रू में शामिल होना चाहता है"
+            "value": "आपके क्रू में शामिल होना चाहते हैं"
           }
         },
         "es": {
@@ -62483,13 +62483,13 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Мы построим ваш первый полёт вокруг этого."
+            "value": "Мы выстроим ваш первый полёт под это."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vamos moldar seu primeiro voo em torno disso."
+            "value": "Vamos moldar seu primeiro voo a partir disso."
           }
         },
         "it": {
@@ -62501,7 +62501,7 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Îți vom construi primul zbor în jurul acestui lucru."
+            "value": "Îți vom potrivi primul zbor după asta."
           }
         },
         "nl": {
@@ -62595,7 +62595,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bienvenido de nuevo: tus monedas de concentración están listas."
+            "value": "Nos alegra verte de nuevo: tus monedas de concentración están listas."
           }
         },
         "fr": {
@@ -62625,7 +62625,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bentornato: le tue monete di concentrazione sono pronte."
+            "value": "È bello riaverti: le tue monete di concentrazione sono pronte."
           }
         },
         "ro": {
@@ -63440,7 +63440,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sin ella"
+            "value": "Sin la app"
           }
         },
         "fr": {
@@ -63968,7 +63968,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vous ne pouvez pas rejoindre cette salle de concentration."
+            "value": "Vous ne pouvez pas rejoindre ce salon de concentration."
           }
         },
         "de": {
@@ -64063,13 +64063,13 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "L-ai aplaudat recent pe acest pilot."
+            "value": "Ai aplaudat recent acest pilot."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Je hebt deze piloot onlangs geapplaudisseerd."
+            "value": "Je hebt onlangs voor deze piloot geapplaudisseerd."
           }
         }
       }
@@ -64157,13 +64157,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "No os veréis en los cielos públicos y no podrá enviarte solicitudes ni unirse a tus salas."
+            "value": "No se verán en los cielos públicos y no podrá enviarte solicitudes ni unirse a tus salas."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vous ne vous verrez plus dans les ciels publics, et il ne pourra plus vous envoyer de demandes ni rejoindre vos salons."
+            "value": "Vous ne vous verrez plus dans les ciels publics, et cette personne ne pourra plus vous envoyer de demandes ni rejoindre vos salons."
           }
         },
         "de": {
@@ -64175,7 +64175,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Вы не увидите друг друга в публичных небесах, и он не сможет отправлять запросы или входить в ваши комнаты."
+            "value": "Вы не увидите друг друга в публичных небесах, и этот пилот не сможет отправлять запросы или входить в ваши комнаты."
           }
         },
         "pt-BR": {
@@ -64193,7 +64193,7 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nu vă veți vedea în cerurile publice, iar el nu îți poate trimite cereri sau intra în camerele tale."
+            "value": "Nu vă veți vedea în cerurile publice, iar pilotul nu îți mai poate trimite cereri sau intra în camerele tale."
           }
         },
         "nl": {
@@ -64293,7 +64293,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vous quitterez la salle"
+            "value": "Vous quitterez le salon"
           }
         },
         "de": {
@@ -64352,7 +64352,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ya sois amigos."
+            "value": "Ya son amigos."
           }
         },
         "fr": {
@@ -64417,7 +64417,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Estás cogiendo impulso. Sigue volando a diario."
+            "value": "Estás ganando impulso. Sigue volando a diario."
           }
         },
         "fr": {
@@ -64435,7 +64435,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Вы набираете разгон. Летайте каждый день."
+            "value": "Вы набираете темп. Летайте каждый день."
           }
         },
         "pt-BR": {
@@ -64622,7 +64622,7 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Deine %lld-Tage-Serie wartet 🔥"
+                  "value": "Deine %lld-Tag-Serie wartet 🔥"
                 }
               },
               "other": {
@@ -65666,7 +65666,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "आपकी डायरी में आज की मुहर बाक़ी है।"
+            "value": "आपकी डायरी में आज की मुहर नहीं लगी है।"
           }
         },
         "es": {
@@ -66086,7 +66086,7 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Seu próximo bloco de trabalho profundo espera"
+            "value": "Seu próximo bloco de trabalho profundo te espera"
           }
         },
         "it": {
@@ -66458,7 +66458,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "votre salle"
+            "value": "votre salon"
           }
         },
         "de": {
@@ -66574,13 +66574,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "装备"
+            "value": "使用"
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "लगाएँ"
+            "value": "इस्तेमाल करें"
           }
         },
         "es": {
@@ -66777,7 +66777,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "हटाएँ"
+            "value": "जगह बदलें"
           }
         },
         "es": {
@@ -67259,7 +67259,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "МИНУТА"
+            "value": "МИН"
           }
         },
         "pt-BR": {
@@ -67277,7 +67277,7 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "MINUT"
+            "value": "MIN"
           }
         },
         "nl": {
@@ -67324,7 +67324,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "МИНУТ"
+            "value": "МИН"
           }
         },
         "pt-BR": {
@@ -67342,7 +67342,7 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "MINUTE"
+            "value": "MIN"
           }
         },
         "nl": {

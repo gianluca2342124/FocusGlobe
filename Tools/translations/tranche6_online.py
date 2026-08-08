@@ -87,7 +87,7 @@ TRANSLATIONS: dict[str, list[str]] = {
     "This Focus Room is no longer available.": [
         "该专注房间已不可用。", "यह फ़ोकस रूम अब उपलब्ध नहीं है।",
         "Esta sala de concentración ya no está disponible.",
-        "Cette salle de concentration n’est plus disponible.",
+        "Ce salon de concentration n’est plus disponible.",
         "Dieser Fokus-Raum ist nicht mehr verfügbar.",
         "Эта комната фокуса больше недоступна.",
         "Esta sala de foco não está mais disponível.",
@@ -98,7 +98,7 @@ TRANSLATIONS: dict[str, list[str]] = {
     "This Focus Room is full.": [
         "该专注房间已满。", "यह फ़ोकस रूम भर चुका है।",
         "Esta sala de concentración está llena.",
-        "Cette salle de concentration est complète.",
+        "Ce salon de concentration est complet.",
         "Dieser Fokus-Raum ist voll.", "Эта комната фокуса заполнена.",
         "Esta sala de foco está cheia.", "Questa stanza di concentrazione è piena.",
         "Această cameră de concentrare e plină.", "Deze focusruimte zit vol.",
@@ -129,7 +129,7 @@ TRANSLATIONS: dict[str, list[str]] = {
     "You can't join this Focus Room.": [
         "你无法加入该专注房间。", "आप इस फ़ोकस रूम में शामिल नहीं हो सकते।",
         "No puedes unirte a esta sala de concentración.",
-        "Vous ne pouvez pas rejoindre cette salle de concentration.",
+        "Vous ne pouvez pas rejoindre ce salon de concentration.",
         "Du kannst diesem Fokus-Raum nicht beitreten.",
         "Вы не можете присоединиться к этой комнате фокуса.",
         "Você não pode entrar nesta sala de foco.",
@@ -311,15 +311,15 @@ TRANSLATIONS: dict[str, list[str]] = {
     ],
     "Online Flights use a private FocusGlobe account with Sign in with Apple — you appear only as an anonymous alias.": [
         "在线飞行使用通过「通过 Apple 登录」创建的私密 FocusGlobe 账户——你只会以匿名代号出现。",
-        "ऑनलाइन फ़्लाइट «Sign in with Apple» वाले निजी FocusGlobe अकाउंट का इस्तेमाल करती हैं — आप सिर्फ़ एक गुमनाम उपनाम के रूप में दिखते हैं।",
+        "ऑनलाइन फ़्लाइट «Apple से साइन इन» वाले निजी FocusGlobe अकाउंट का इस्तेमाल करती हैं — आप सिर्फ़ एक गुमनाम उपनाम के रूप में दिखते हैं।",
         "Los vuelos Online usan una cuenta privada de FocusGlobe con Iniciar sesión con Apple: solo apareces con un alias anónimo.",
         "Les vols en ligne utilisent un compte FocusGlobe privé via Se connecter avec Apple — vous n’apparaissez que sous un alias anonyme.",
         "Online-Flüge nutzen ein privates FocusGlobe-Konto mit „Mit Apple anmelden“ — du erscheinst nur unter einem anonymen Alias.",
-        "Онлайн-полёты используют приватный аккаунт FocusGlobe через «Вход с Apple» — вы отображаетесь только под анонимным псевдонимом.",
-        "Os voos Online usam uma conta privada do FocusGlobe com Iniciar Sessão com a Apple — você aparece apenas com um apelido anônimo.",
+        "Онлайн-полёты используют приватный аккаунт FocusGlobe через «Войти через Apple» — вы отображаетесь только под анонимным псевдонимом.",
+        "Os voos Online usam uma conta privada do FocusGlobe com Entrar com a Apple — você aparece apenas com um apelido anônimo.",
         "I voli online usano un account FocusGlobe privato con Accedi con Apple: appari solo con uno pseudonimo anonimo.",
-        "Zborurile online folosesc un cont FocusGlobe privat cu Conectare cu Apple — apari doar sub un alias anonim.",
-        "Onlinevluchten gebruiken een privé FocusGlobe-account met Log in met Apple — je verschijnt alleen onder een anoniem alias.",
+        "Zborurile online folosesc un cont FocusGlobe privat cu Autentificare cu Apple — apari doar sub un alias anonim.",
+        "Onlinevluchten gebruiken een privé FocusGlobe-account met Inloggen met Apple — je verschijnt alleen onder een anoniem alias.",
     ],
     "Reconnect to fly with other pilots.": [
         "重新连接即可与其他飞行员同飞。",
@@ -383,12 +383,12 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Volo infinito", "Zbor infinit", "Oneindige vlucht",
     ],
     "Not ready": [
-        "尚未就绪", "तैयार नहीं", "Sin preparar", "Pas prêt",
-        "Nicht bereit", "Не готов", "Sem preparo", "Non pronto",
-        "Nepregătit", "Niet klaar",
+        "尚未就绪", "तैयार नहीं", "Sin confirmar", "En attente",
+        "Nicht bereit", "Ожидает", "Sem confirmação", "In attesa",
+        "În așteptare", "Niet klaar",
     ],
     "your room": [
-        "你的房间", "आपका रूम", "tu sala", "votre salle", "dein Raum",
+        "你的房间", "आपका रूम", "tu sala", "votre salon", "dein Raum",
         "ваша комната", "sua sala", "la tua stanza", "camera ta", "jouw ruimte",
     ],
     "in flight": [
@@ -407,7 +407,7 @@ TRANSLATIONS: dict[str, list[str]] = {
 
     # ---- Rooms and invites ------------------------------------------------
     "Create Room": [
-        "创建房间", "रूम बनाएँ", "Crear sala", "Créer une salle",
+        "创建房间", "रूम बनाएँ", "Crear sala", "Créer un salon",
         "Raum erstellen", "Создать комнату", "Criar sala", "Crea stanza",
         "Creează cameră", "Ruimte maken",
     ],
@@ -469,7 +469,7 @@ TRANSLATIONS: dict[str, list[str]] = {
     "Focus feels better in the sky. Your phone becomes a focus balloon flight.": [
         "在天空中专注更舒服。你的手机会变成一次专注的热气球飞行。",
         "आकाश में फ़ोकस बेहतर लगता है। आपका फ़ोन एक फ़ोकस बलून फ़्लाइट बन जाता है।",
-        "Concentrarse sienta mejor en el cielo. Tu móvil se convierte en un vuelo en globo.",
+        "Concentrarse sienta mejor en el cielo. Tu teléfono se convierte en un vuelo en globo.",
         "La concentration est plus douce dans le ciel. Votre téléphone devient un vol en montgolfière.",
         "Fokus fühlt sich am Himmel besser an. Dein Handy wird zu einem Ballonflug.",
         "В небе фокус даётся легче. Ваш телефон становится полётом на воздушном шаре.",
@@ -480,7 +480,7 @@ TRANSLATIONS: dict[str, list[str]] = {
     ],
     "Fly this journey together": [
         "一起飞完这段旅程", "यह यात्रा साथ मिलकर करें",
-        "Volad juntos este viaje", "Faites ce voyage ensemble",
+        "Este viaje, juntos", "Faites ce voyage ensemble",
         "Fliegt diese Reise gemeinsam", "Пролетите этот маршрут вместе",
         "Voem esta viagem juntos", "Volate insieme questo viaggio",
         "Zburați împreună această călătorie", "Vlieg deze reis samen",
@@ -547,7 +547,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Applaudir ce pilote", "Diesem Piloten applaudieren",
         "Поаплодировать пилоту", "Aplauda este piloto",
         "Applaudi questo pilota", "Aplaudă acest pilot",
-        "Applaudisseer deze piloot",
+        "Applaudisseer voor deze piloot",
     ],
     "Already applauded": [
         "已鼓过掌", "पहले ही सराह चुके हैं", "Ya aplaudido", "Déjà applaudi",
@@ -563,8 +563,8 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Вы недавно уже аплодировали этому пилоту.",
         "Você aplaudiu este piloto recentemente.",
         "Hai applaudito questo pilota di recente.",
-        "L-ai aplaudat recent pe acest pilot.",
-        "Je hebt deze piloot onlangs geapplaudisseerd.",
+        "Ai aplaudat recent acest pilot.",
+        "Je hebt onlangs voor deze piloot geapplaudisseerd.",
     ],
     "Pilot is no longer flying.": [
         "该飞行员已不在飞行中。", "यह पायलट अब उड़ान में नहीं है।",
@@ -604,7 +604,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Cererea a fost deja trimisă.", "Verzoek is al verzonden.",
     ],
     "This pilot isn't accepting requests.": [
-        "该飞行员不接受请求。", "यह पायलट अनुरोध स्वीकार नहीं कर रहा।",
+        "该飞行员不接受请求。", "यह पायलट अनुरोध स्वीकार नहीं कर रहे।",
         "Este piloto no acepta solicitudes.",
         "Ce pilote n’accepte pas les demandes.",
         "Dieser Pilot nimmt keine Anfragen an.",
@@ -624,7 +624,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Nu poți adăuga acest pilot.", "Je kunt deze piloot niet toevoegen.",
     ],
     "You're already friends.": [
-        "你们已经是好友了。", "आप पहले से दोस्त हैं।", "Ya sois amigos.",
+        "你们已经是好友了。", "आप पहले से दोस्त हैं।", "Ya son amigos.",
         "Vous êtes déjà amis.", "Ihr seid schon Freunde.", "Вы уже друзья.",
         "Vocês já são amigos.", "Siete già amici.", "Sunteți deja prieteni.",
         "Jullie zijn al vrienden.",

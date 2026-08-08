@@ -23,7 +23,7 @@ TRANSLATIONS: dict[str, list[str]] = {
 
     # ---- Widget gallery ---------------------------------------------------
     "Focus Now": [
-        "立即专注", "अभी फ़ोकस", "Concéntrate ya", "Focus maintenant",
+        "立即专注", "अभी फ़ोकस", "Concéntrate ya", "Concentration immédiate",
         "Jetzt fokussieren", "Фокус сейчас", "Foco agora", "Concentrati ora",
         "Concentrare acum", "Nu focussen",
     ],
@@ -40,7 +40,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Start een focusvlucht of volg de vlucht waarin je zit.",
     ],
     "Focus Grid": [
-        "专注格图", "फ़ोकस ग्रिड", "Cuadrícula de concentración",
+        "专注格子", "फ़ोकस ग्रिड", "Cuadrícula de concentración",
         "Grille de concentration", "Fokus-Raster", "Сетка фокуса",
         "Grade de foco", "Griglia di concentrazione", "Grilă de concentrare",
         "Focusraster",
@@ -48,18 +48,18 @@ TRANSLATIONS: dict[str, list[str]] = {
     "Your last six months of focus days. FocusGlobe PRO.": [
         "你最近六个月的专注日。FocusGlobe PRO。",
         "आपके पिछले छह महीनों के फ़ोकस दिन। FocusGlobe PRO।",
-        "Tus últimos seis meses de días de concentración. FocusGlobe PRO.",
-        "Vos six derniers mois de jours de concentration. FocusGlobe PRO.",
-        "Deine letzten sechs Monate an Fokus-Tagen. FocusGlobe PRO.",
-        "Ваши последние шесть месяцев дней фокуса. FocusGlobe PRO.",
-        "Seus últimos seis meses de dias de foco. FocusGlobe PRO.",
-        "I tuoi ultimi sei mesi di giornate di concentrazione. FocusGlobe PRO.",
-        "Ultimele tale șase luni de zile de concentrare. FocusGlobe PRO.",
-        "Je laatste zes maanden aan focusdagen. FocusGlobe PRO.",
+        "Tus días de concentración de los últimos seis meses. FocusGlobe PRO.",
+        "Vos jours de concentration des six derniers mois. FocusGlobe PRO.",
+        "Deine Fokus-Tage der letzten sechs Monate. FocusGlobe PRO.",
+        "Ваши дни фокуса за последние полгода. FocusGlobe PRO.",
+        "Seus dias de foco dos últimos seis meses. FocusGlobe PRO.",
+        "Le tue giornate di concentrazione degli ultimi sei mesi. FocusGlobe PRO.",
+        "Zilele tale de concentrare din ultimele șase luni. FocusGlobe PRO.",
+        "Je focusdagen van de afgelopen zes maanden. FocusGlobe PRO.",
     ],
     "Passport Dashboard": [
         "护照总览", "पासपोर्ट डैशबोर्ड", "Panel del Pasaporte",
-        "Tableau du Passeport", "Reisepass-Übersicht", "Панель Паспорта",
+        "Tableau de bord Passeport", "Reisepass-Übersicht", "Панель Паспорта",
         "Painel do Passaporte", "Pannello Passaporto", "Panoul Pașaportului",
         "Paspoortoverzicht",
     ],
@@ -78,14 +78,14 @@ TRANSLATIONS: dict[str, list[str]] = {
     "Streak Companion": [
         "连续天数伙伴", "स्ट्रीक साथी", "Compañero de racha",
         "Compagnon de série", "Serien-Begleiter", "Спутник серии",
-        "Companheiro de sequência", "Compagno di serie", "Însoțitorul seriei",
+        "Companheiro de sequência", "Compagno della serie", "Însoțitorul seriei",
         "Reeksmaatje",
     ],
     "Keep your focus streak alive with your balloon companion.": [
         "和你的热气球伙伴一起延续专注连续天数。",
         "अपने ग़ुब्बारा साथी के साथ फ़ोकस स्ट्रीक बनाए रखें।",
         "Mantén viva tu racha de concentración con tu globo compañero.",
-        "Gardez votre série de concentration en vie avec votre montgolfière.",
+        "Faites vivre votre série de concentration avec votre montgolfière.",
         "Halte deine Fokus-Serie mit deinem Ballon-Begleiter am Leben.",
         "Поддерживайте серию фокуса вместе со своим шаром-спутником.",
         "Mantenha sua sequência de foco viva com seu balão companheiro.",
@@ -109,9 +109,9 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Foco", "Concentrazione", "Concentrare", "Focus",
     ],
     "Ready to focus": [
-        "准备专注", "फ़ोकस के लिए तैयार", "Listo para concentrarte",
-        "Prêt à vous concentrer", "Bereit für den Fokus", "Готовы к фокусу",
-        "Pronto para focar", "Pronto a concentrarti", "Gata de concentrare",
+        "准备专注", "फ़ोकस के लिए तैयार", "Todo listo",
+        "Tout est prêt", "Bereit für den Fokus", "Готовы к фокусу",
+        "Tudo pronto", "Tutto pronto", "Gata de concentrare",
         "Klaar om te focussen",
     ],
     "Resume": [
@@ -135,7 +135,7 @@ TRANSLATIONS: dict[str, list[str]] = {
     ],
     "A quiet flight is one tap away.": [
         "一次轻点，开启宁静飞行。", "एक टैप में शांत फ़्लाइट।",
-        "Un vuelo tranquilo a un toque.", "Un vol paisible à un geste près.",
+        "Un vuelo tranquilo a un toque.", "Un vol paisible en un seul geste.",
         "Ein ruhiger Flug ist einen Tipp entfernt.",
         "Тихий полёт — в одно касание.", "Um voo tranquilo a um toque.",
         "Un volo tranquillo a un tocco.", "Un zbor liniștit la o atingere.",
@@ -178,8 +178,8 @@ TRANSLATIONS: dict[str, list[str]] = {
         "viagens", "viaggi", "călătorii", "reizen",
     ],
     "focused": [
-        "专注时长", "फ़ोकस", "concentrado", "concentré", "fokussiert",
-        "фокус", "focado", "concentrato", "concentrat", "gefocust",
+        "专注时长", "फ़ोकस", "concentración", "concentration", "Fokuszeit",
+        "фокус", "foco", "concentrazione", "concentrare", "focustijd",
     ],
     "day streak": [
         "连续天数", "दिन स्ट्रीक", "racha", "série", "Serie", "серия",
@@ -190,16 +190,16 @@ TRANSLATIONS: dict[str, list[str]] = {
         "dias", "giorni", "zile", "dagen",
     ],
     "streak": [
-        "连续", "स्ट्रीक", "racha", "série", "Serie", "серия",
+        "连续天数", "स्ट्रीक", "racha", "série", "Serie", "серия",
         "sequência", "serie", "serie", "reeks",
     ],
     "best streak": [
-        "最佳连续", "सर्वश्रेष्ठ", "mejor racha", "meilleure série",
-        "Beste Serie", "рекорд", "melhor", "record", "record", "beste reeks",
+        "最佳连续", "बेस्ट स्ट्रीक", "mejor racha", "meilleure série",
+        "Beste Serie", "рекорд", "recorde", "record", "record", "beste reeks",
     ],
     "longest": [
-        "最长", "सबसे लंबा", "más largo", "plus long", "längste", "дольше всего",
-        "mais longo", "più lungo", "cel mai lung", "langste",
+        "最长", "सबसे लंबा", "más larga", "plus longue", "längste", "дольше всего",
+        "mais longa", "più lunga", "cea mai lungă", "langste",
     ],
     # Compact durations. The digits are the number; only the unit is translated.
     "%lldm": [
@@ -220,16 +220,16 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Begin je reeks",
     ],
     "Focused today": [
-        "今天已专注", "आज फ़ोकस किया", "Hoy concentrado",
-        "Concentré aujourd’hui", "Heute fokussiert", "Сегодня в фокусе",
-        "Focado hoje", "Concentrato oggi", "Concentrat azi", "Vandaag gefocust",
+        "今天已专注", "आज फ़ोकस किया", "Concentración hoy",
+        "Concentration aujourd’hui", "Heute fokussiert", "Сегодня в фокусе",
+        "Foco hoje", "Concentrazione oggi", "Concentrare azi", "Vandaag gefocust",
     ],
     "Focus to keep it": [
         "专注以保持", "बनाए रखने के लिए फ़ोकस करें", "Concéntrate para mantenerla",
         "Concentrez-vous pour la garder", "Fokussiere, um sie zu halten",
         "Сфокусируйтесь, чтобы сохранить", "Foque para mantê-la",
         "Concentrati per mantenerla", "Concentrează-te ca s-o păstrezi",
-        "Focus om hem te behouden",
+        "Focus om je reeks te behouden",
     ],
     "Milestone! 🎉": [
         "里程碑！🎉", "मील का पत्थर! 🎉", "¡Hito! 🎉", "Cap franchi ! 🎉",
@@ -246,7 +246,7 @@ TRANSLATIONS: dict[str, list[str]] = {
     "Unlock with FocusGlobe Pro": [
         "使用 FocusGlobe Pro 解锁", "FocusGlobe Pro से अनलॉक करें",
         "Desbloquea con FocusGlobe Pro", "Débloquez avec FocusGlobe Pro",
-        "Mit FocusGlobe Pro freischalten", "Откройте с FocusGlobe Pro",
+        "Mit FocusGlobe Pro freischalten", "Разблокируйте с FocusGlobe Pro",
         "Desbloqueie com o FocusGlobe Pro", "Sblocca con FocusGlobe Pro",
         "Deblochează cu FocusGlobe Pro", "Ontgrendel met FocusGlobe Pro",
     ],
@@ -280,9 +280,9 @@ PLURALS: dict[str, dict[str, dict[str, str]]] = {
         "hi":      {"one": "%lld दिन की स्ट्रीक", "other": "%lld दिन की स्ट्रीक"},
         "es":      {"one": "racha de %lld día", "other": "racha de %lld días"},
         "fr":      {"one": "série de %lld jour", "other": "série de %lld jours"},
-        "de":      {"one": "%lld-Tage-Serie", "other": "%lld-Tage-Serie"},
-        "ru":      {"one": "серия %lld день", "few": "серия %lld дня",
-                    "many": "серия %lld дней", "other": "серия %lld дня"},
+        "de":      {"one": "%lld-Tag-Serie", "other": "%lld-Tage-Serie"},
+        "ru":      {"one": "%lld день подряд", "few": "%lld дня подряд",
+                    "many": "%lld дней подряд", "other": "%lld дня подряд"},
         "pt-BR":   {"one": "sequência de %lld dia",
                     "other": "sequência de %lld dias"},
         "it":      {"one": "serie di %lld giorno", "other": "serie di %lld giorni"},

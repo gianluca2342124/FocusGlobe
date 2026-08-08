@@ -8,14 +8,16 @@ a commit message, because they are the kind a future translator will re-open:
      named users, and leaving English paragraphs under a Spanish UI would read
      as an oversight. Names are left alone because a name is not copy.
 
-  2. The four LANDING-SCREEN QUOTATIONS (Will Durant, Robert Collier, Horace
-     Mann, A. A. Milne) and their attributions are deliberately NOT in this
-     file. They are published quotations by real, named people; a translation
-     of one is a new text that would still carry that person's name. Canonical
-     published translations exist for some of them in some of these languages,
-     but they cannot be verified from here, so the quotations stay in their
-     original English. This is reversible — supply verified translations and
-     add the keys.
+  2. The five LANDING-SCREEN QUOTATIONS (Will Durant, Robert Collier, Horace
+     Mann, A. A. Milne, Confucius) and their attributions are deliberately NOT
+     in this file. They are published quotations by real, named people; a
+     translation of one is a new text that would still carry that person's
+     name. Canonical published translations exist for some of them in some of
+     these languages, but they cannot be verified from here, so the quotations
+     stay in their original English. This is reversible — supply verified
+     translations and add the keys. The full reasoning, and the reason not to
+     replace them with authored copy instead, is at the use site in
+     `LandingView.swift`.
 """
 
 # key -> [zh-Hans, hi, es, fr, de, ru, pt-BR, it, ro, nl]
@@ -245,13 +247,13 @@ TRANSLATIONS: dict[str, list[str]] = {
     "Focus Shield is the part I didn't know I needed. Once a flight starts, my phone finally stops feeling like the thing I'm fighting against.": [
         "专注护盾是我原本不知道自己需要的部分。飞行一开始，手机终于不再像是我要对抗的东西。",
         "फ़ोकस शील्ड वह हिस्सा है जिसकी ज़रूरत मुझे पता ही नहीं थी। फ़्लाइट शुरू होते ही मेरा फ़ोन आख़िरकार दुश्मन जैसा लगना बंद कर देता है।",
-        "El Escudo de Enfoque es la parte que no sabía que necesitaba. En cuanto empieza un vuelo, el móvil deja de parecer aquello contra lo que peleo.",
-        "Le Bouclier de Concentration, c’est ce dont j’ignorais avoir besoin. Dès qu’un vol commence, mon téléphone cesse enfin d’être ce que je combats.",
+        "El Escudo de Concentración es la parte que no sabía que necesitaba. En cuanto empieza un vuelo, el móvil deja de parecer aquello contra lo que peleo.",
+        "Le Bouclier de concentration, c’est ce dont j’ignorais avoir besoin. Dès qu’un vol commence, mon téléphone cesse enfin d’être ce que je combats.",
         "Das Fokus-Schild ist der Teil, von dem ich nicht wusste, dass ich ihn brauche. Sobald ein Flug startet, fühlt sich mein Handy endlich nicht mehr wie mein Gegner an.",
-        "Щит Фокуса — то, о необходимости чего я не догадывался. Как только начинается полёт, телефон перестаёт быть тем, с чем я борюсь.",
+        "Щит фокуса — то, о необходимости чего я не догадывался. Как только начинается полёт, телефон перестаёт быть тем, с чем я борюсь.",
         "O Escudo de Foco é a parte que eu não sabia que precisava. Assim que um voo começa, meu celular finalmente para de parecer aquilo contra o que eu luto.",
-        "Lo Scudo Focus è la parte che non sapevo mi servisse. Appena parte un volo, il telefono smette finalmente di sembrare ciò contro cui combatto.",
-        "Scutul de Concentrare e partea de care nu știam că am nevoie. Odată ce începe un zbor, telefonul încetează în sfârșit să pară dușmanul meu.",
+        "Lo Scudo Concentrazione è la parte che non sapevo mi servisse. Appena parte un volo, il telefono smette finalmente di sembrare ciò contro cui combatto.",
+        "Scutul de concentrare e partea de care nu știam că am nevoie. Odată ce începe un zbor, telefonul încetează în sfârșit să pară dușmanul meu.",
         "Het Focusschild is het deel waarvan ik niet wist dat ik het nodig had. Zodra een vlucht start, voelt mijn telefoon eindelijk niet meer als iets waartegen ik vecht.",
     ],
     "I've tried a lot of focus timers. This is the first one that feels like a place I actually want to come back to every day.": [
@@ -411,10 +413,10 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Activează în Setări", "Inschakelen in Instellingen",
     ],
     "Focus Shield active": [
-        "专注护盾已启用", "फ़ोकस शील्ड चालू", "Escudo de Enfoque activo",
-        "Bouclier de Concentration actif", "Fokus-Schild aktiv",
-        "Щит Фокуса активен", "Escudo de Foco ativo", "Scudo Focus attivo",
-        "Scut de Concentrare activ", "Focusschild actief",
+        "专注护盾已启用", "फ़ोकस शील्ड चालू", "Escudo de Concentración activo",
+        "Bouclier de concentration actif", "Fokus-Schild aktiv",
+        "Щит фокуса активен", "Escudo de Foco ativo", "Scudo Concentrazione attivo",
+        "Scut de concentrare activ", "Focusschild actief",
     ],
     "Block apps until landing": [
         "在降落前屏蔽 App", "लैंडिंग तक ऐप ब्लॉक करें",

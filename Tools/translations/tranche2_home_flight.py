@@ -34,21 +34,21 @@ TRANSLATIONS: dict[str, list[str]] = {
     "You won": ["你赢得了", "आपने जीते", "Ganaste", "Vous avez gagné", "Du hast gewonnen",
                 "Вы выиграли", "Você ganhou", "Hai vinto", "Ai câștigat", "Je hebt gewonnen"],
     "Coins Boost Gifted": [
-        "已赠送金币加成", "कॉइन बूस्ट उपहार में मिला", "Impulso de monedas regalado",
+        "已赠送金币加成", "कॉइन बूस्ट उपहार में मिला", "Impulso de monedas de regalo",
         "Bonus de pièces offert", "Münzen-Boost geschenkt", "Подарен бустер монет",
-        "Impulso de moedas presenteado", "Boost monete regalato",
+        "Impulso de moedas de presente", "Boost monete regalato",
         "Impuls de monede oferit", "Muntenboost cadeau"],
     "Double your Coins for your next study hour once equipped.": [
         "装备后，下一小时学习的金币翻倍。",
         "लैस करने पर आपके अगले अध्ययन घंटे के सिक्के दोगुने।",
-        "Duplica tus monedas en tu próxima hora de estudio al equiparlo.",
-        "Doublez vos pièces sur votre prochaine heure d’étude une fois équipé.",
-        "Verdopple deine Münzen in der nächsten Lernstunde, sobald es ausgerüstet ist.",
-        "Удвойте монеты за следующий час занятий после экипировки.",
-        "Dobre suas moedas na próxima hora de estudo depois de equipar.",
-        "Raddoppia le monete nella prossima ora di studio una volta equipaggiato.",
-        "Dublează-ți monedele în următoarea oră de studiu după echipare.",
-        "Verdubbel je munten in je volgende studie-uur zodra het uitgerust is."],
+        "Duplica tus monedas en tu próxima hora de estudio cuando esté en uso.",
+        "Doublez vos pièces sur votre prochaine heure d’étude une fois qu’il est activé.",
+        "Verdopple deine Münzen in der nächsten Lernstunde, sobald der Boost im Einsatz ist.",
+        "Удвойте монеты за следующий час занятий, пока буст используется.",
+        "Dobre suas moedas na próxima hora de estudo enquanto ele estiver em uso.",
+        "Raddoppia le monete nella prossima ora di studio quando è in uso.",
+        "Dublează-ți monedele în următoarea oră de studiu cât timp e în uz.",
+        "Verdubbel je munten in je volgende studie-uur zolang de boost in gebruik is."],
     "Awesome, thanks": [
         "太好了，谢谢", "बढ़िया, धन्यवाद", "Genial, gracias", "Super, merci",
         "Super, danke", "Отлично, спасибо", "Ótimo, obrigado", "Fantastico, grazie",
@@ -76,7 +76,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "SUA JORNADA DE FOCO", "IL TUO PERCORSO DI CONCENTRAZIONE",
         "CĂLĂTORIA TA DE CONCENTRARE", "JOUW FOCUSREIS"],
     "Share your focus grid": [
-        "分享你的专注格图", "अपना फ़ोकस ग्रिड शेयर करें", "Comparte tu cuadrícula de concentración",
+        "分享你的专注格子", "अपना फ़ोकस ग्रिड शेयर करें", "Comparte tu cuadrícula de concentración",
         "Partagez votre grille de concentration", "Teile dein Fokus-Raster",
         "Поделиться сеткой фокуса", "Compartilhe sua grade de foco",
         "Condividi la tua griglia di concentrazione", "Distribuie grila ta de concentrare",
@@ -106,7 +106,7 @@ TRANSLATIONS: dict[str, list[str]] = {
 
     # ---- Home: primary controls -----------------------------------------
     "Start Focus": [
-        "开始专注", "फ़ोकस शुरू करें", "Empezar a concentrarte", "Commencer à se concentrer",
+        "开始专注", "फ़ोकस शुरू करें", "Empezar a concentrarte", "Lancer la concentration",
         "Fokus starten", "Начать фокус", "Começar a focar", "Inizia a concentrarti",
         "Începe concentrarea", "Start focus"],
     "Checking PRO access…": [
@@ -148,13 +148,13 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Começar um novo foco", "Inizia una nuova concentrazione",
         "Începe o concentrare nouă", "Nieuwe focus starten"],
     "Keep focusing": [
-        "继续专注", "फ़ोकस बनाए रखें", "Sigue concentrado", "Restez concentré",
-        "Bleib fokussiert", "Продолжайте фокус", "Continue focado",
-        "Resta concentrato", "Rămâi concentrat", "Blijf gefocust"],
+        "继续专注", "फ़ोकस बनाए रखें", "Sigue concentrándote", "Poursuivre la concentration",
+        "Bleib fokussiert", "Продолжайте фокус", "Seguir no foco",
+        "Continua a concentrarti", "Continuă concentrarea", "Blijf gefocust"],
     "Unlock FocusGlobe PRO": [
         "解锁 FocusGlobe PRO", "FocusGlobe PRO अनलॉक करें", "Desbloquea FocusGlobe PRO",
         "Débloquez FocusGlobe PRO", "FocusGlobe PRO freischalten",
-        "Откройте FocusGlobe PRO", "Desbloqueie o FocusGlobe PRO",
+        "Разблокируйте FocusGlobe PRO", "Desbloqueie o FocusGlobe PRO",
         "Sblocca FocusGlobe PRO", "Deblochează FocusGlobe PRO", "Ontgrendel FocusGlobe PRO"],
     "Maybe later": [
         "以后再说", "बाद में", "Quizá más tarde", "Peut-être plus tard",
@@ -194,9 +194,9 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Sair deste voo?", "Uscire da questo volo?", "Părăsești acest zbor?",
         "Deze vlucht verlaten?"],
     "Keep Focusing": [
-        "继续专注", "फ़ोकस बनाए रखें", "Seguir concentrado", "Rester concentré",
-        "Fokussiert bleiben", "Продолжить фокус", "Continuar focado",
-        "Resta concentrato", "Rămâi concentrat", "Blijf gefocust"],
+        "继续专注", "फ़ोकस बनाए रखें", "Seguir concentrándote", "Poursuivre la concentration",
+        "Fokussiert bleiben", "Продолжить фокус", "Seguir no foco",
+        "Continua a concentrarti", "Continuă concentrarea", "Blijf gefocust"],
     "Ends this flight now. Its progress and rewards are not kept.": [
         "立即结束本次飞行。其进度与奖励不会保留。",
         "यह फ़्लाइट अभी समाप्त होगी। इसकी प्रगति और इनाम सुरक्षित नहीं रहेंगे।",
@@ -228,15 +228,15 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Показывать имена пилотов", "Mostrar nomes dos pilotos",
         "Mostra i nomi dei piloti", "Afișează numele piloților", "Pilootlabels tonen"],
     "Clean mode": [
-        "简洁模式", "क्लीन मोड", "Modo limpio", "Mode épuré", "Klarer Modus",
-        "Чистый режим", "Modo limpo", "Modalità essenziale", "Mod curat", "Schone modus"],
+        "简洁模式", "क्लीन मोड", "Modo despejado", "Mode épuré", "Schlichter Modus",
+        "Минимальный режим", "Modo minimalista", "Modalità essenziale", "Mod minimal", "Minimale modus"],
     "Hide controls, keep a tiny timer": [
         "隐藏控件，仅保留小计时器", "कंट्रोल छिपाएँ, छोटा टाइमर रखें",
         "Oculta los controles y deja un temporizador pequeño",
         "Masque les commandes, garde un minuteur discret",
         "Bedienelemente ausblenden, kleinen Timer behalten",
         "Скрыть элементы управления, оставить маленький таймер",
-        "Oculta os controles e mantém um cronômetro pequeno",
+        "Oculta os controles e mantém um timer pequeno",
         "Nascondi i comandi, lascia un piccolo timer",
         "Ascunde comenzile, păstrează un cronometru mic",
         "Verberg bediening, houd een kleine timer"],
@@ -297,11 +297,11 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Strappa il codice a barre per imbarcarti",
         "Rupe codul de bare ca să te îmbarci",
         "Scheur de streepjescode door om in te stappen"],
-    "Check in": ["办理登机", "चेक इन", "Facturación", "Enregistrement", "Check-in",
+    "Check in": ["办理登机", "चेक इन", "Check-in", "Enregistrement", "Check-in",
                  "Регистрация", "Check-in", "Check-in", "Check-in", "Inchecken"],
     "Ready to fly": [
-        "准备起飞", "उड़ान के लिए तैयार", "Listo para volar", "Prêt à décoller",
-        "Startbereit", "Готов к полёту", "Pronto para voar", "Pronto al decollo",
+        "准备起飞", "उड़ान के लिए तैयार", "Todo listo para volar", "Tout est prêt pour décoller",
+        "Startbereit", "Готовы к полёту", "Tudo pronto para voar", "Tutto pronto al decollo",
         "Gata de zbor", "Klaar om te vliegen"],
     "What are you bringing aboard?": [
         "你要带什么上机？", "आप क्या साथ ले जा रहे हैं?", "¿Qué llevas a bordo?",
@@ -313,7 +313,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Wird an Bord gebracht", "Берём на борт", "Levando a bordo",
         "Portando a bordo", "Se ia la bord", "Aan boord brengen"],
     "Board the balloon": [
-        "登上热气球", "गुब्बारे पर सवार हों", "Sube al globo", "Montez dans la montgolfière",
+        "登上热气球", "ग़ुब्बारे पर सवार हों", "Sube al globo", "Montez dans la montgolfière",
         "Steig in den Ballon", "Поднимитесь на борт шара", "Embarque no balão",
         "Sali sulla mongolfiera", "Urcă în balon", "Stap in de ballon"],
     "Set Off": ["出发", "प्रस्थान करें", "Partir", "Partir", "Losfliegen",
@@ -324,7 +324,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Selo de cera — partir", "Sigillo di cera — parti", "Sigiliu de ceară — pornește",
         "Lakzegel — vertrekken"],
     "Double-tap to seal the page and begin the expedition": [
-        "双击封印此页并开始远征。", "पेज पर मुहर लगाकर अभियान शुरू करने के लिए डबल-टैप करें",
+        "双击封印此页并开始远征", "पेज पर मुहर लगाकर अभियान शुरू करने के लिए डबल-टैप करें",
         "Toca dos veces para sellar la página y empezar la expedición",
         "Touchez deux fois pour sceller la page et commencer l’expédition",
         "Doppeltippen, um die Seite zu siegeln und die Expedition zu starten",
@@ -386,7 +386,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Se están trazando expediciones para tu región",
         "Des expéditions sont en préparation pour votre région",
         "Expeditionen für deine Region werden geplant",
-        "Экспедиции для вашего региона прокладываются",
+        "Прокладываем экспедиции для вашего региона",
         "Expedições estão sendo traçadas para sua região",
         "Stiamo tracciando spedizioni per la tua regione",
         "Se trasează expediții pentru regiunea ta",
@@ -395,7 +395,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "选择一个出发城市开始探索。", "खोज शुरू करने के लिए एक प्रारंभिक शहर चुनें।",
         "Elige una ciudad de partida para empezar a explorar.",
         "Choisissez une ville de départ pour commencer à explorer.",
-        "Wähle eine Startstadt, um loszuerkunden.",
+        "Wähle eine Startstadt, um mit dem Erkunden zu beginnen.",
         "Выберите город отправления, чтобы начать исследовать.",
         "Escolha uma cidade de partida para começar a explorar.",
         "Scegli una città di partenza per iniziare a esplorare.",

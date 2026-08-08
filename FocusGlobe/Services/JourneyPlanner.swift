@@ -21,7 +21,18 @@ struct PlannedJourney: Identifiable, Hashable {
     var mood: RouteMood { node.mood }
     var theme: RouteTheme { node.theme }
     var landmark: Landmark { node.landmark }
-    var subtitle: String { node.region ?? node.country }
+    /// The line under the destination name: its region, or its country when the
+    /// catalog has no region for it.
+    ///
+    /// Passed through the region-name resolver because the RETURN journey puts
+    /// a COUNTRY in the `region` slot (`returnJourney(from:to:)`), so "Spain"
+    /// reaches this label and has to read "España" in Spanish. A true
+    /// subdivision — "Catalonia", "Lazio" — is not a region Foundation knows
+    /// and comes back unchanged, which is the intended answer for a proper
+    /// name we have no locale-aware source for.
+    var subtitle: String {
+        RegionDisplayNames.localized(country: node.region ?? node.country)
+    }
 }
 
 /// The universal, flight-style destination engine.

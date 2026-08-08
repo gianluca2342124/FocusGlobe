@@ -70,20 +70,20 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Leitura", "Lettura", "Citit", "Lezen",
     ],
     "Create": [
-        "创作", "रचना", "Crear", "Créer", "Erschaffen", "Творчество",
-        "Criar", "Creare", "Creație", "Creëren",
+        "创作", "रचना", "Creación", "Création", "Erschaffen", "Творчество",
+        "Criação", "Creazione", "Creație", "Creëren",
     ],
     "Meditate": [
-        "冥想", "ध्यान", "Meditar", "Méditer", "Meditieren", "Медитация",
-        "Meditar", "Meditare", "Meditație", "Mediteren",
+        "冥想", "ध्यान", "Meditación", "Méditation", "Meditieren", "Медитация",
+        "Meditação", "Meditazione", "Meditație", "Mediteren",
     ],
     "Exercise": [
         "运动", "व्यायाम", "Ejercicio", "Sport", "Bewegung", "Тренировка",
         "Exercício", "Esercizio", "Mișcare", "Beweging",
     ],
     "Fly": [
-        "飞行", "उड़ान", "Volar", "Voler", "Fliegen", "Полёт",
-        "Voar", "Volare", "Zbor", "Vliegen",
+        "飞行", "उड़ान", "Vuelo", "Vol", "Fliegen", "Полёт",
+        "Voo", "Volo", "Zbor", "Vliegen",
     ],
 
     # ---- Balloon skins and vehicles ---------------------------------------
@@ -150,7 +150,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Conta", "Account", "Cont", "Account",
     ],
     "Experience": [
-        "体验", "अनुभव", "Experiencia", "Expérience", "Erlebnis", "Впечатления",
+        "体验", "अनुभव", "Experiencia", "Expérience", "Erlebnis", "Ощущения",
         "Experiência", "Esperienza", "Experiență", "Beleving",
     ],
     "Sound": [
@@ -164,7 +164,7 @@ TRANSLATIONS: dict[str, list[str]] = {
     ],
     "Reminders": [
         "提醒", "रिमाइंडर", "Recordatorios", "Rappels", "Erinnerungen",
-        "Напоминания", "Lembretes", "Promemoria", "Mementouri", "Herinneringen",
+        "Напоминания", "Lembretes", "Promemoria", "Memento-uri", "Herinneringen",
     ],
     "Developer": [
         "开发者", "डेवलपर", "Desarrollador", "Développeur", "Entwickler",
@@ -201,26 +201,26 @@ TRANSLATIONS: dict[str, list[str]] = {
 
     # ---- Widget gallery entries, app side ---------------------------------
     "Focus Now": [
-        "立即专注", "अभी फ़ोकस", "Concéntrate ya", "Focus maintenant",
+        "立即专注", "अभी फ़ोकस", "Concéntrate ya", "Concentration immédiate",
         "Jetzt fokussieren", "Фокус сейчас", "Foco agora", "Concentrati ora",
         "Concentrare acum", "Nu focussen",
     ],
     "Focus Grid": [
-        "专注格图", "फ़ोकस ग्रिड", "Cuadrícula de concentración",
+        "专注格子", "फ़ोकस ग्रिड", "Cuadrícula de concentración",
         "Grille de concentration", "Fokus-Raster", "Сетка фокуса",
         "Grade de foco", "Griglia di concentrazione", "Grilă de concentrare",
         "Focusraster",
     ],
     "Passport Dashboard": [
         "护照总览", "पासपोर्ट डैशबोर्ड", "Panel del Pasaporte",
-        "Tableau du Passeport", "Reisepass-Übersicht", "Панель Паспорта",
+        "Tableau de bord Passeport", "Reisepass-Übersicht", "Панель Паспорта",
         "Painel do Passaporte", "Pannello Passaporto", "Panoul Pașaportului",
         "Paspoortoverzicht",
     ],
     "Streak Companion": [
         "连续天数伙伴", "स्ट्रीक साथी", "Compañero de racha",
         "Compagnon de série", "Serien-Begleiter", "Спутник серии",
-        "Companheiro de sequência", "Compagno di serie", "Însoțitorul seriei",
+        "Companheiro de sequência", "Compagno della serie", "Însoțitorul seriei",
         "Reeksmaatje",
     ],
 
@@ -253,11 +253,11 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Ga naar FocusGlobe PRO om %@ te ontgrendelen.",
     ],
     "Fly %@ any time.": [
-        "随时可飞%@。", "%@ में कभी भी उड़ें।", "Vuela %@ cuando quieras.",
-        "Volez dans %@ quand vous voulez.", "Flieg %@ jederzeit.",
+        "随时在%@中飞行。", "%@ में कभी भी उड़ें।", "Vuela en %@ cuando quieras.",
+        "Volez dans %@ quand vous voulez.", "Flieg jederzeit in %@.",
         "Летайте в небе «%@» в любое время.", "Voe em %@ quando quiser.",
         "Vola in %@ quando vuoi.", "Zboară în %@ oricând.",
-        "Vlieg %@ wanneer je wilt.",
+        "Vlieg in %@ wanneer je wilt.",
     ],
 }
 
@@ -329,7 +329,7 @@ PLURALS: dict[str, dict[str, dict[str, str]]] = {
                "other": "Consigue una racha de %1$lld días o pásate a FocusGlobe PRO para desbloquear %2$@."},
         "fr": {"one": "Atteignez une série de %1$lld jour ou passez à FocusGlobe PRO pour débloquer %2$@.",
                "other": "Atteignez une série de %1$lld jours ou passez à FocusGlobe PRO pour débloquer %2$@."},
-        "de": {"one": "Erreiche eine %1$lld-Tage-Serie oder hol dir FocusGlobe PRO, um %2$@ freizuschalten.",
+        "de": {"one": "Erreiche eine %1$lld-Tag-Serie oder hol dir FocusGlobe PRO, um %2$@ freizuschalten.",
                "other": "Erreiche eine %1$lld-Tage-Serie oder hol dir FocusGlobe PRO, um %2$@ freizuschalten."},
         "ru": {"one": "Достигните серии в %1$lld день или оформите FocusGlobe PRO, чтобы открыть «%2$@».",
                "few": "Достигните серии в %1$lld дня или оформите FocusGlobe PRO, чтобы открыть «%2$@».",

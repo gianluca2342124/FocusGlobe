@@ -63,6 +63,16 @@ struct FocusGlobeApp: App {
         if let localizationFailure = FocusLocalization._selfCheck() {
             assertionFailure(localizationFailure)
         }
+        // Country names come from Foundation's region tables, keyed off the
+        // English spelling in the bundled geography JSON. A country added with
+        // a spelling CLDR does not use would silently fall back to English on
+        // a Spanish phone, so the mapping is asserted rather than assumed.
+        let unresolvedRegions = RegionDisplayNames._unresolvedCountryNames()
+        if !unresolvedRegions.isEmpty {
+            assertionFailure("[Localization] no ISO region for "
+                             + unresolvedRegions.joined(separator: ", ")
+                             + " — these will display in English")
+        }
         // The general PRO reel alternates categories, including across the loop
         // seam. It is a property of the CATALOG, so adding a cabin item or
         // retiring a Sky is exactly what would silently reintroduce a run of
