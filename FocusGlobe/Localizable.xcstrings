@@ -7095,7 +7095,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "गहराई के लिए बना विशाल रात"
+            "value": "गहराई के लिए बनी विशाल रात"
           }
         },
         "es": {
@@ -8443,7 +8443,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Amberkalmte zonder vlam"
+            "value": "Amberkleurige rust zonder vlam"
           }
         }
       }
@@ -14012,7 +14012,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Portátil cerrado"
+            "value": "Laptop cerrado"
           }
         },
         "fr": {
@@ -19085,7 +19085,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reloj digital de solapas"
+            "value": "Reloj digital de paletas"
           }
         },
         "fr": {
@@ -19109,7 +19109,7 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Relógio digital de folhas"
+            "value": "Relógio digital flip"
           }
         },
         "it": {
@@ -19670,7 +19670,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Déjate llevar entre luz de estrellas fugaces"
+            "value": "Déjate llevar entre la luz de las estrellas fugaces"
           }
         },
         "fr": {
@@ -22182,7 +22182,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Feestelijke ornament"
+            "value": "Feestelijk ornament"
           }
         }
       }
@@ -28338,7 +28338,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "फ़्रेम किया पोस्टर"
+            "value": "फ़्रेम किया हुआ पोस्टर"
           }
         },
         "es": {
@@ -32129,7 +32129,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eis-Latte"
+            "value": "Iced Latte"
           }
         },
         "ru": {
@@ -32147,7 +32147,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Latte freddo"
+            "value": "Iced latte"
           }
         },
         "ro": {
@@ -32159,7 +32159,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "IJskoffie latte"
+            "value": "IJslatte"
           }
         }
       }
@@ -53162,7 +53162,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "नींद में कैपिबारा सॉफ़्ट टॉय"
+            "value": "नींद में डूबा कैपिबारा सॉफ़्ट टॉय"
           }
         },
         "es": {
@@ -53180,7 +53180,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verschlafenes Wasserschwein-Plüschtier"
+            "value": "Verschlafenes Capybara-Plüschtier"
           }
         },
         "ru": {
@@ -53204,7 +53204,7 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Plușul capibara adormită"
+            "value": "Capibara adormită din pluș"
           }
         },
         "nl": {
@@ -55480,7 +55480,7 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Învață în spațiul adânc"
+            "value": "Învață în spațiul cosmic"
           }
         },
         "nl": {
@@ -60437,7 +60437,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "松石色的宁静，适合深度工作"
+            "value": "绿松石色的宁静，适合深度工作"
           }
         },
         "hi": {
@@ -66574,13 +66574,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "装备"
+            "value": "使用"
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "लगाएँ"
+            "value": "इस्तेमाल करें"
           }
         },
         "es": {
@@ -66777,7 +66777,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "हटाएँ"
+            "value": "जगह बदलें"
           }
         },
         "es": {
@@ -67259,7 +67259,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "МИНУТА"
+            "value": "МИН"
           }
         },
         "pt-BR": {
@@ -67277,7 +67277,7 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "MINUT"
+            "value": "MIN"
           }
         },
         "nl": {
@@ -67324,7 +67324,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "МИНУТ"
+            "value": "МИН"
           }
         },
         "pt-BR": {
@@ -67342,7 +67342,7 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "MINUTE"
+            "value": "MIN"
           }
         },
         "nl": {

@@ -13,9 +13,9 @@ Glossary: Cabin keeps the word chosen in tranche 1.
 TRANSLATIONS: dict[str, list[str]] = {
 
     "Iced Latte": [
-        "冰拿铁", "आइस्ड लाटे", "Latte helado", "Latte glacé", "Eis-Latte",
-        "Айс-латте", "Latte gelado", "Latte freddo", "Latte cu gheață",
-        "IJskoffie latte",
+        "冰拿铁", "आइस्ड लाटे", "Latte helado", "Latte glacé", "Iced Latte",
+        "Айс-латте", "Latte gelado", "Iced latte", "Latte cu gheață",
+        "IJslatte",
     ],
     "A cool companion for long flights": [
         "长途飞行的清凉伙伴", "लंबी फ़्लाइट के लिए ठंडा साथी",
@@ -43,7 +43,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Zak weg in diepe focus",
     ],
     "Framed Poster": [
-        "装裱海报", "फ़्रेम किया पोस्टर", "Póster enmarcado", "Affiche encadrée",
+        "装裱海报", "फ़्रेम किया हुआ पोस्टर", "Póster enmarcado", "Affiche encadrée",
         "Gerahmtes Poster", "Постер в рамке", "Pôster emoldurado",
         "Poster incorniciato", "Poster înrămat", "Ingelijste poster",
     ],
@@ -56,7 +56,7 @@ TRANSLATIONS: dict[str, list[str]] = {
     "Festive Ornament": [
         "节日挂饰", "उत्सव सजावट", "Adorno festivo", "Décoration de fête",
         "Festlicher Anhänger", "Праздничное украшение", "Enfeite festivo",
-        "Decorazione festiva", "Ornament de sărbătoare", "Feestelijke ornament",
+        "Decorazione festiva", "Ornament de sărbătoare", "Feestelijk ornament",
     ],
     "A little seasonal cheer": [
         "一点节令的欢欣", "थोड़ी मौसमी ख़ुशी", "Un poco de alegría de temporada",
@@ -66,7 +66,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Een vleugje seizoensvreugde",
     ],
     "Closed Laptop": [
-        "合上的笔记本电脑", "बंद लैपटॉप", "Portátil cerrado", "Ordinateur portable fermé",
+        "合上的笔记本电脑", "बंद लैपटॉप", "Laptop cerrado", "Ordinateur portable fermé",
         "Geschlossener Laptop", "Закрытый ноутбук", "Notebook fechado",
         "Portatile chiuso", "Laptop închis", "Dichtgeklapte laptop",
     ],
@@ -163,7 +163,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Calma ámbar sin llama", "Un calme ambré sans flamme",
         "Bernsteinruhe ohne Flamme", "Янтарный покой без огня",
         "Calma âmbar sem chama", "Calma ambrata senza fiamma",
-        "Liniște chihlimbarie fără flacără", "Amberkalmte zonder vlam",
+        "Liniște chihlimbarie fără flacără", "Amberkleurige rust zonder vlam",
     ],
     "Mushroom Lamp": [
         "蘑菇灯", "मशरूम लैंप", "Lámpara seta", "Lampe champignon",
@@ -192,9 +192,9 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Atmosferă caldă la cerere", "Warme sfeer wanneer je wilt",
     ],
     "Digital Flip Clock": [
-        "数字翻页钟", "डिजिटल फ़्लिप क्लॉक", "Reloj digital de solapas",
+        "数字翻页钟", "डिजिटल फ़्लिप क्लॉक", "Reloj digital de paletas",
         "Horloge à volets numérique", "Digitale Fallblattuhr",
-        "Цифровые перекидные часы", "Relógio digital de folhas",
+        "Цифровые перекидные часы", "Relógio digital flip",
         "Orologio digitale a palette", "Ceas digital cu clapete",
         "Digitale klapklok",
     ],
@@ -224,10 +224,10 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Trage grooves voor diepe focus",
     ],
     "Sleepy Capybara Plush": [
-        "瞌睡水豚玩偶", "नींद में कैपिबारा सॉफ़्ट टॉय", "Peluche de capibara dormilón",
-        "Peluche capybara endormi", "Verschlafenes Wasserschwein-Plüschtier",
+        "瞌睡水豚玩偶", "नींद में डूबा कैपिबारा सॉफ़्ट टॉय", "Peluche de capibara dormilón",
+        "Peluche capybara endormi", "Verschlafenes Capybara-Plüschtier",
         "Плюшевая сонная капибара", "Pelúcia de capivara sonolenta",
-        "Peluche di capibara assonnato", "Plușul capibara adormită",
+        "Peluche di capibara assonnato", "Capibara adormită din pluș",
         "Slaperige capibara-knuffel",
     ],
     "The calmest co-pilot": [
