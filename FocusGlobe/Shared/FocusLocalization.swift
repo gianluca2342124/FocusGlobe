@@ -104,4 +104,25 @@ enum FocusLocalization {
                locale: Locale(identifier: (language ?? current).code),
                arguments: arguments)
     }
+
+    /// The same lookup for a *literal* with interpolation, e.g.
+    /// `FocusLocalization.localized("\(days) day")`.
+    ///
+    /// Written as a separate name rather than an overload of `string(_:)`: both
+    /// `String` and `String.LocalizationValue` are expressible by string
+    /// literal, so an overload pair would be ambiguous at every literal call
+    /// site.
+    ///
+    /// This is the form to use whenever the result depends on a NUMBER. The
+    /// `locale:` argument is what picks the plural category, and the catalog
+    /// carries a `plural` variation per language — Russian has four categories
+    /// and Chinese has one, so appending an English "s" is wrong nearly
+    /// everywhere.
+    static func localized(_ value: String.LocalizationValue,
+                          language: FocusLanguage? = nil) -> String {
+        let target = language ?? current
+        return String(localized: value,
+                      bundle: bundle(for: target),
+                      locale: Locale(identifier: target.code))
+    }
 }

@@ -63,9 +63,19 @@ struct IntroductoryOffer: Equatable {
     let periodUnit: String           // "day" | "week" | "month" | "year"
 
     /// "3 days", "1 week" — for sentences.
+    ///
+    /// Pluralised through the String Catalog rather than by appending an "s".
+    /// That rule is English-only: Russian needs four plural forms, Romanian
+    /// three, and Chinese none, so the old `"\(unit)s"` produced "3 дняs" on a
+    /// Russian storefront. The number still comes from StoreKit — only the word
+    /// around it is translated.
     var localizedDuration: String {
-        let unit = periodValue == 1 ? periodUnit : "\(periodUnit)s"
-        return "\(periodValue) \(unit)"
+        switch periodUnit {
+        case "week":  return FocusLocalization.localized("\(periodValue) week")
+        case "month": return FocusLocalization.localized("\(periodValue) month")
+        case "year":  return FocusLocalization.localized("\(periodValue) year")
+        default:      return FocusLocalization.localized("\(periodValue) day")
+        }
     }
 
     /// The offer expressed in DAYS.

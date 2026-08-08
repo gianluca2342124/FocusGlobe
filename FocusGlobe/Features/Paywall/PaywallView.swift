@@ -98,13 +98,18 @@ struct PaywallView: View {
     /// Anything less than all four — offer withdrawn, account ineligible,
     /// eligibility still resolving, offerings still loading — falls back to a
     /// claim that is true in every one of those cases.
-    private var benefitCTATitle: String {
+    private var benefitCTATitle: LocalizedStringKey {
         guard let zero = trialOfferPlan?.localizedZeroPrice else { return "See PRO Plans" }
         return "Try for \(zero)"
     }
 
+    /// The trial length as words. Falls back to a *localised* three days rather
+    /// than the literal "3 days", which was the only English string on this
+    /// screen a translator could not reach.
     private var trialDuration: String {
-        effectivePlan?.introOffer?.localizedDuration ?? "3 days"
+        if let stated = effectivePlan?.introOffer?.localizedDuration { return stated }
+        let days = 3
+        return FocusLocalization.localized("\(days) day")
     }
 
     var body: some View {
@@ -152,7 +157,7 @@ struct PaywallView: View {
                     FocusGlobePROBrand(size: .compact)
 
                     VStack(spacing: 7) {
-                        Text(context.benefitTitle)
+                        Text(LocalizedStringKey(context.benefitTitle))
                             .font(.system(
                                 size: viewport.isWide ? 43 : (viewport.isCompact ? 31 : 37),
                                 weight: .bold
@@ -162,7 +167,7 @@ struct PaywallView: View {
                             .lineLimit(2)
                             .minimumScaleFactor(0.75)
 
-                        Text(context.supportingCopy)
+                        Text(LocalizedStringKey(context.supportingCopy))
                             .font(.system(size: viewport.bodySize, weight: .medium))
                             .foregroundStyle(.white.opacity(0.68))
                             .multilineTextAlignment(.center)
@@ -313,12 +318,9 @@ struct PaywallView: View {
     private var trialTitle: some View {
         Group {
             if trialOfferAvailable {
-                Text("We’ll remind you")
-                + Text(" 2 days").foregroundStyle(ProBrand.softGradient)
-                + Text("\nbefore your trial ends")
+                emphasised(trialHeadline, emphasis: trialHeadlineEmphasis)
             } else {
-                Text("Unlock\n")
-                + Text("FocusGlobe PRO").foregroundStyle(ProBrand.softGradient)
+                emphasised(unlockHeadline, emphasis: "FocusGlobe PRO")
             }
         }
         .font(.system(
@@ -330,9 +332,45 @@ struct PaywallView: View {
         .lineSpacing(2)
         .minimumScaleFactor(0.75)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(trialOfferAvailable
-                            ? "We’ll remind you 2 days before your trial ends"
-                            : "Unlock FocusGlobe PRO")
+        .accessibilityLabel(
+            (trialOfferAvailable ? trialHeadline : unlockHeadline)
+                .replacingOccurrences(of: "\n", with: " ")
+        )
+    }
+
+    /// The two headlines, each ONE catalog key.
+    ///
+    /// They used to be assembled from three `Text` fragments so the middle run
+    /// could carry the gradient. That fixes English word order into the layout:
+    /// German puts the time expression last and Russian inflects it, and neither
+    /// can be expressed by translating "We’ll remind you" and "before your trial
+    /// ends" separately. The sentence is now whole and the emphasis is found
+    /// inside it.
+    private var trialHeadline: String {
+        FocusLocalization.localized("We’ll remind you 2 days\nbefore your trial ends")
+    }
+
+    /// Which words inside `trialHeadline` carry the gradient. A separate key so
+    /// each language marks whichever run actually holds the meaning — and the
+    /// value MUST appear verbatim in the headline above.
+    private var trialHeadlineEmphasis: String {
+        FocusLocalization.localized("2 days")
+    }
+
+    private var unlockHeadline: String {
+        FocusLocalization.localized("Unlock\nFocusGlobe PRO")
+    }
+
+    /// `sentence` rendered with `emphasis` in the PRO gradient.
+    ///
+    /// Falls back to the plain sentence when the emphasis is not found, so a
+    /// translation that rephrases past the marker loses a gradient rather than
+    /// the headline.
+    private func emphasised(_ sentence: String, emphasis: String) -> Text {
+        guard let range = sentence.range(of: emphasis) else { return Text(sentence) }
+        return Text(String(sentence[sentence.startIndex..<range.lowerBound]))
+            + Text(String(sentence[range])).foregroundStyle(ProBrand.softGradient)
+            + Text(String(sentence[range.upperBound...]))
     }
 
     /// The onboarding offer: ONE annual plan, stated plainly. No selector, so the
@@ -347,22 +385,23 @@ struct PaywallView: View {
                 .foregroundStyle(.white.opacity(0.72))
 
             if let plan, plan.available {
-                // The annual billing price is the prominent number.
-                Text(plan.localizedPrice + "/year")
+                // The annual billing price is the prominent number. The price
+                // itself is the storefront's own formatted string; only the
+                // "/year" around it is translated, and it is a format so a
+                // language that puts the period first can do so.
+                Text("\(plan.localizedPrice)/year")
                     .font(.system(size: viewport.isCompact ? 26 : 30, weight: .heavy))
                     .foregroundStyle(.white)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
 
-                Text(showsTrialCopy
-                     ? "after the \(trialDuration) free trial"
-                     : "billed immediately")
+                Text(annualBillingNote)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.66))
 
                 if let monthly = plan.monthlyEquivalent {
                     // Secondary, and deliberately quieter than the annual price.
-                    Text("Only " + monthly)
+                    Text("Only \(monthly)")
                         .font(.system(size: 12.5, weight: .medium))
                         .foregroundStyle(.white.opacity(0.5))
                 }
@@ -389,6 +428,12 @@ struct PaywallView: View {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .strokeBorder(ProBrand.borderGradient, lineWidth: 2)
         )
+    }
+
+    /// Typed as `LocalizedStringKey` so the ternary cannot silently resolve to
+    /// the plain-`String` `Text` initialiser, which does no lookup at all.
+    private var annualBillingNote: LocalizedStringKey {
+        showsTrialCopy ? "after the \(trialDuration) free trial" : "billed immediately"
     }
 
     private var purchaseFooter: some View {
@@ -449,7 +494,7 @@ struct PaywallView: View {
     /// Free-trial wording appears only for a plan that genuinely carries a
     /// free-trial introductory offer this account is eligible for — which today
     /// is annual only, and only for an eligible Apple ID.
-    private func planSubtitle(_ kind: PlanKind, plan: PlanOption?) -> String {
+    private func planSubtitle(_ kind: PlanKind, plan: PlanOption?) -> LocalizedStringKey {
         guard let plan, plan.available else { return "Unavailable" }
         switch kind {
         case .annual:
@@ -463,7 +508,8 @@ struct PaywallView: View {
             // run through THAT product's own formatter, so the currency, symbol
             // placement and separators are the storefront's, never assembled
             // here. Nothing about it is hardcoded.
-            return plan.monthlyEquivalent.map { "Only \($0)" } ?? "Billed yearly"
+            guard let monthly = plan.monthlyEquivalent else { return "Billed yearly" }
+            return "Only \(monthly)"
         case .monthly:
             return "Billed immediately. Cancel anytime."
         case .lifetime:
@@ -489,7 +535,9 @@ struct PaywallView: View {
 
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 7) {
-                        Text(kind.title)
+                        // `PlanKind` lives in the service layer and holds the
+                        // English key; the lookup belongs here, in the view.
+                        Text(LocalizedStringKey(kind.title))
                             .font(.system(size: 17, weight: .bold))
                             .foregroundStyle(.white)
                         if kind == .annual {
@@ -639,7 +687,7 @@ struct PaywallView: View {
 
     /// The CTA names the product it will charge for, and only says "free trial"
     /// when there genuinely is one for this account.
-    private var purchaseButtonTitle: String {
+    private var purchaseButtonTitle: LocalizedStringKey {
         guard let kind = effectiveKind else { return "Products unavailable" }
         switch kind {
         case .annual:
@@ -656,22 +704,28 @@ struct PaywallView: View {
     }
 
     /// The disclosure under the CTA, matched to the SAME product.
-    private var trialDisclosure: String {
+    private var trialDisclosure: LocalizedStringKey {
         guard let plan = effectivePlan else {
             return "Subscriptions renew automatically. Cancel anytime."
         }
-        let price = plan.localizedPrice + perPeriodSuffix(plan.kind)
+        let price = pricePerPeriod(plan)
         if showsTrialCopy {
-            return "No charge today. Then " + price + ". Cancel anytime."
+            return "No charge today. Then \(price). Cancel anytime."
         }
-        return price + ", billed immediately. Cancel anytime."
+        return "\(price), billed immediately. Cancel anytime."
     }
 
-    private func perPeriodSuffix(_ kind: PlanKind) -> String {
-        switch kind {
-        case .annual:   return "/year"
-        case .monthly:  return "/month"
-        case .lifetime: return ""
+    /// The storefront's price with its billing period, e.g. "18,99 €/year".
+    ///
+    /// The number, currency and separators are always StoreKit's own formatted
+    /// string — nothing here assembles a price. Only the period is translated,
+    /// and as a format rather than a suffix, so a language that writes the
+    /// period before the amount can.
+    private func pricePerPeriod(_ plan: PlanOption) -> String {
+        switch plan.kind {
+        case .annual:   return FocusLocalization.localized("\(plan.localizedPrice)/year")
+        case .monthly:  return FocusLocalization.localized("\(plan.localizedPrice)/month")
+        case .lifetime: return plan.localizedPrice
         }
     }
 
@@ -890,7 +944,7 @@ private struct PaywallCollectibleCarousel: View {
                     // Decoration: VoiceOver reads the collectible's NAME below,
                     // not a nameless moving image.
                     .accessibilityHidden(true)
-                Text(item.title)
+                Text(LocalizedStringKey(item.title))
                     .font(.system(size: prominence > 0.55 ? 16 : 14, weight: .bold))
                     .foregroundStyle(.white.opacity(0.72 + prominence * 0.28))
                     .lineLimit(1)
@@ -1165,12 +1219,12 @@ struct PaywallShowcaseCarousel: View {
 
             VStack(spacing: 1) {
                 Spacer(minLength: 0)
-                Text(slide.kicker)
+                Text(LocalizedStringKey(slide.kicker))
                     .font(.system(size: 9.5, weight: .heavy))
                     .tracking(1.1)
                     .foregroundStyle(.white.opacity(0.42 + prominence * 0.30))
                     .lineLimit(1)
-                Text(slide.title)
+                Text(LocalizedStringKey(slide.title))
                     .font(.system(size: prominence > 0.55 ? 16 : 14, weight: .bold))
                     .foregroundStyle(.white)
                     .lineLimit(1)
@@ -1345,10 +1399,10 @@ private struct TrialTimeline: View {
                     }
 
                     VStack(alignment: .leading, spacing: compact ? 3 : 5) {
-                        Text(step.title)
+                        Text(LocalizedStringKey(step.title))
                             .font(.system(size: compact ? 17 : 19, weight: .bold))
                             .foregroundStyle(.white)
-                        Text(step.detail)
+                        Text(LocalizedStringKey(step.detail))
                             .font(.system(size: compact ? 13 : 14.5, weight: .regular))
                             .foregroundStyle(.white.opacity(0.66))
                             .fixedSize(horizontal: false, vertical: true)
@@ -1431,9 +1485,12 @@ struct PaywallComparisonTable: View {
 
     private func row(_ item: Row) -> some View {
         let title = item.title
+        // `highlighted` is compared against the English key, never the
+        // translation, so a caller's highlight cannot come loose in another
+        // language.
         let isHighlighted = title == highlighted
         return HStack(spacing: 0) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.system(size: viewport.isCompact ? 14.5 : 16.5,
                               weight: isHighlighted ? .bold : .semibold))
                 .foregroundStyle(isHighlighted
@@ -1458,6 +1515,13 @@ struct PaywallComparisonTable: View {
         }
         .frame(height: viewport.isCompact ? 39 : 44)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(item.inFree ? "\(title). Free and PRO." : "\(title). PRO only.")
+        .accessibilityLabel(rowLabel(for: item))
+    }
+
+    /// VoiceOver reads the TRANSLATED benefit name inside a translated sentence,
+    /// so the label never mixes two languages.
+    private func rowLabel(for item: Row) -> Text {
+        let name = FocusLocalization.string(item.title)
+        return item.inFree ? Text("\(name). Free and PRO.") : Text("\(name). PRO only.")
     }
 }

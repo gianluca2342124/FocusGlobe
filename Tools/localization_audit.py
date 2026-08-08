@@ -126,6 +126,29 @@ def audit_coverage(catalog_keys):
     return missing_display
 
 
+def locale_values(entry):
+    """Every translated string one locale holds for one key.
+
+    A key is either simple (one `stringUnit`) or pluralised (a `stringUnit` per
+    CLDR category under `variations.plural`). Both shapes are checked the same
+    way — a placeholder mismatch inside the "few" form of a Russian plural is
+    exactly as much of a production crash as one in a simple string.
+
+    Returns `None` when the locale is absent, else a list of (label, value).
+    A pluralised locale MUST carry `other`: it is the category iOS falls back
+    to for any it cannot find.
+    """
+    if "stringUnit" in entry:
+        return [("", entry["stringUnit"].get("value", ""))]
+    plural = entry.get("variations", {}).get("plural")
+    if not plural:
+        return None
+    if "other" not in plural:
+        return [("[no 'other' category]", "")]
+    return [(f"[{name}]", unit.get("stringUnit", {}).get("value", ""))
+            for name, unit in sorted(plural.items())]
+
+
 def audit_catalogs():
     print("\n== CATALOG INTEGRITY ==")
     placeholder = re.compile(r"%(?:\d+\$)?[@a-zA-Z]+")
@@ -146,19 +169,20 @@ def audit_catalogs():
             for code in LOCALES:
                 if code == SOURCE_LOCALE:
                     continue
-                unit = loc.get(code, {}).get("stringUnit", {})
-                value = unit.get("value")
-                if value is None:
+                values = locale_values(loc.get(code, {}))
+                if values is None:
                     problems.append((str(path.relative_to(ROOT)), code,
                                      f"MISSING  {key[:50]!r}"))
                     continue
-                if not value.strip():
-                    problems.append((str(path.relative_to(ROOT)), code,
-                                     f"EMPTY    {key[:50]!r}"))
-                    continue
-                if sorted(placeholder.findall(value)) != src_ph:
-                    problems.append((str(path.relative_to(ROOT)), code,
-                                     f"PLACEHOLDER {key[:40]!r} -> {value[:40]!r}"))
+                for label, value in values:
+                    if not value.strip():
+                        problems.append((str(path.relative_to(ROOT)), code,
+                                         f"EMPTY    {key[:50]!r}{label}"))
+                        continue
+                    if sorted(placeholder.findall(value)) != src_ph:
+                        problems.append((str(path.relative_to(ROOT)), code,
+                                         f"PLACEHOLDER {key[:40]!r}{label} "
+                                         f"-> {value[:40]!r}"))
     print(f"  catalogs           : {len(list(catalogs()))}")
     print(f"  total keys         : {total_keys}")
     print(f"  expected entries   : {total_keys * (len(LOCALES) - 1)}")

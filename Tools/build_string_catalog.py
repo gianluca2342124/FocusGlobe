@@ -53,47 +53,95 @@ LOCALES = ["zh-Hans", "hi", "es", "fr", "de", "ru", "pt-BR", "it", "ro", "nl"]
 sys.path.insert(0, str(ROOT / "Tools"))
 
 
-def load_tranches() -> dict[str, list[str]]:
+def load_tranches() -> tuple[dict[str, list[str]], dict[str, dict[str, dict[str, str]]]]:
     """Merge every tranche module, in name order.
 
-    A key defined twice is a mistake — two screens disagreeing about one
-    string — so this raises rather than letting the last definition win.
+    Returns (simple strings, plural strings). A key defined twice is a mistake
+    — two screens disagreeing about one string — so this raises rather than
+    letting the last definition win.
     """
     import translations
 
     merged: dict[str, list[str]] = {}
+    plurals: dict[str, dict[str, dict[str, str]]] = {}
     owner: dict[str, str] = {}
     for mod in sorted(m.name for m in pkgutil.iter_modules(translations.__path__)):
-        table = importlib.import_module(f"translations.{mod}").TRANSLATIONS
-        for key, values in table.items():
+        module = importlib.import_module(f"translations.{mod}")
+        for key, values in module.TRANSLATIONS.items():
             if key in merged and merged[key] != values:
                 raise SystemExit(
                     f"duplicate key {key!r} in {mod} (already in {owner[key]}) "
                     f"with a different translation")
             merged[key] = values
             owner.setdefault(key, mod)
-    return merged
+        for key, forms in getattr(module, "PLURALS", {}).items():
+            if key in plurals and plurals[key] != forms:
+                raise SystemExit(
+                    f"duplicate plural key {key!r} in {mod} "
+                    f"(already in {owner[key]}) with different forms")
+            plurals[key] = forms
+            owner.setdefault(key, mod)
+    overlap = set(merged) & set(plurals)
+    if overlap:
+        raise SystemExit(f"key(s) declared both simple and plural: {sorted(overlap)}")
+    return merged, plurals
 
 
-def build(path: pathlib.Path, keys: dict[str, list[str]]) -> None:
-    strings = {}
-    for key, values in keys.items():
-        assert len(values) == len(LOCALES), f"{key!r} has {len(values)} translations"
-        for code, value in zip(LOCALES, values):
-            assert value.strip(), f"{key!r} has an empty {code} translation"
-        strings[key] = {
-            "extractionState": "manual",
-            "localizations": {
-                code: {"stringUnit": {"state": "translated", "value": value}}
-                for code, value in zip(LOCALES, values)
-            },
+def simple_entry(key: str, values: list[str]) -> dict:
+    assert len(values) == len(LOCALES), f"{key!r} has {len(values)} translations"
+    for code, value in zip(LOCALES, values):
+        assert value.strip(), f"{key!r} has an empty {code} translation"
+    return {
+        "extractionState": "manual",
+        "localizations": {
+            code: {"stringUnit": {"state": "translated", "value": value}}
+            for code, value in zip(LOCALES, values)
+        },
+    }
+
+
+def plural_entry(key: str, forms: dict[str, dict[str, str]]) -> dict:
+    """A key whose wording depends on a number.
+
+    English pluralises by appending "s"; Russian has four CLDR categories,
+    Romanian three and Chinese one, so the rule cannot be shared. Each language
+    supplies the categories it actually uses — a category iOS asks for and does
+    not find falls back to `other`, which is why `other` is mandatory here and
+    the rest are not.
+
+    The SOURCE language needs its own variations too: without an `en` entry the
+    catalog falls back to the key string itself, which would print "3 day".
+    """
+    localizations = {}
+    for code in ["en"] + LOCALES:
+        categories = forms.get(code)
+        assert categories, f"{key!r} has no {code} plural forms"
+        assert "other" in categories, f"{key!r} {code} is missing the 'other' category"
+        for name, value in categories.items():
+            assert value.strip(), f"{key!r} has an empty {code}/{name} form"
+        localizations[code] = {
+            "variations": {
+                "plural": {
+                    name: {"stringUnit": {"state": "translated", "value": value}}
+                    for name, value in categories.items()
+                }
+            }
         }
+    return {"extractionState": "manual", "localizations": localizations}
+
+
+def build(path: pathlib.Path, keys: dict[str, list[str]],
+          plurals: dict[str, dict[str, dict[str, str]]]) -> None:
+    strings = {key: simple_entry(key, values) for key, values in keys.items()}
+    for key, forms in plurals.items():
+        strings[key] = plural_entry(key, forms)
     catalog = {"sourceLanguage": "en", "strings": strings, "version": "1.0"}
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(catalog, ensure_ascii=False, indent=2) + "\n")
-    print(f"  wrote {path.relative_to(ROOT)}  ({len(strings)} keys "
-          f"x {len(LOCALES)} locales = {len(strings) * len(LOCALES)} translations)")
+    print(f"  wrote {path.relative_to(ROOT)}  ({len(keys)} keys + {len(plurals)} "
+          f"pluralised x {len(LOCALES)} locales = "
+          f"{len(strings) * len(LOCALES)} translations)")
 
 
 if __name__ == "__main__":
-    build(ROOT / "FocusGlobe" / "Localizable.xcstrings", load_tranches())
+    build(ROOT / "FocusGlobe" / "Localizable.xcstrings", *load_tranches())
