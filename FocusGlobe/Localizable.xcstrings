@@ -7905,7 +7905,7 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tudo pronto"
+            "value": "Tudo feito"
           }
         },
         "it": {
@@ -7917,7 +7917,7 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gata tot"
+            "value": "Totul e gata"
           }
         },
         "nl": {
@@ -15987,19 +15987,19 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Continuar sozinho"
+            "value": "Continuar em solo"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Continua da solo"
+            "value": "Continua in solo"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Continuă singur"
+            "value": "Continuă solo"
           }
         },
         "nl": {
@@ -19883,7 +19883,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Каждая ссылка впускает одного нового пилота и истекает — отправляйте новую каждому другу. «Скопировать ссылку» есть в меню share."
+            "value": "Каждая ссылка впускает одного нового пилота и истекает — отправляйте новую каждому другу. «Скопировать ссылку» есть в меню «Поделиться»."
           }
         },
         "pt-BR": {
@@ -24049,19 +24049,19 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Voem juntos — ganhe 2×"
+            "value": "Voe junto — ganhe 2×"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Volate insieme — guadagna 2×"
+            "value": "Vola insieme — guadagna 2×"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zburați împreună — câștigi 2×"
+            "value": "Zburați împreună — câștigați 2×"
           }
         },
         "nl": {
@@ -24102,7 +24102,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fliege mit einer Freundin oder einem Freund für 2× Fokus-Münzen."
+            "value": "Fliege zu zweit für 2× Fokus-Münzen."
           }
         },
         "ru": {
@@ -25464,7 +25464,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "专注格图"
+            "value": "专注格子"
           }
         },
         "hi": {
@@ -25801,13 +25801,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "CONCENTRACIÓN AHORA"
+            "value": "CONCÉNTRATE"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "CONCENTRATION MAINTENANT"
+            "value": "CONCENTREZ-VOUS"
           }
         },
         "de": {
@@ -25819,25 +25819,25 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "ФОКУС СЕЙЧАС"
+            "value": "ФОКУС"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "FOCO AGORA"
+            "value": "FOQUE AGORA"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "CONCENTRAZIONE ORA"
+            "value": "CONCENTRATI"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "CONCENTRARE ACUM"
+            "value": "CONCENTREAZĂ-TE"
           }
         },
         "nl": {
@@ -25860,25 +25860,25 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "फ़ोकस नाउ, मध्यम आकार पूर्वावलोकन"
+            "value": "अभी फ़ोकस, मध्यम आकार पूर्वावलोकन"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Concentración ahora, vista previa de tamaño mediano"
+            "value": "Concéntrate ya, vista previa de tamaño mediano"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Concentration maintenant, aperçu taille moyenne"
+            "value": "Concentration immédiate, aperçu taille moyenne"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Jetzt Fokus, mittlere Vorschau"
+            "value": "Jetzt fokussieren, mittlere Vorschau"
           }
         },
         "ru": {
@@ -26581,7 +26581,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "ESCUDO DE ENFOQUE"
+            "value": "ESCUDO DE CONCENTRACIÓN"
           }
         },
         "fr": {
@@ -26611,7 +26611,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "SCUDO FOCUS"
+            "value": "SCUDO CONCENTRAZIONE"
           }
         },
         "ro": {
@@ -27101,7 +27101,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Concentraos juntos"
+            "value": "Concentrarse juntos"
           }
         },
         "fr": {
@@ -27125,19 +27125,19 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Foquem juntos"
+            "value": "Focar em conjunto"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Concentratevi insieme"
+            "value": "Concentrarsi insieme"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Concentrați-vă împreună"
+            "value": "Concentrare împreună"
           }
         },
         "nl": {
@@ -33190,7 +33190,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lade eine Freundin oder einen Freund ein – dein nächster Flug wird weniger einsam."
+            "value": "Lade jemanden ein – dein nächster Flug wird weniger einsam."
           }
         },
         "ru": {
@@ -35253,7 +35253,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "ऑनलाइन फ़ोकस करते समय अन्य पायलटों को अपना गुब्बारा दिखने दें।"
+            "value": "ऑनलाइन फ़ोकस करते समय अन्य पायलटों को अपना ग़ुब्बारा दिखने दें।"
           }
         },
         "es": {
@@ -36559,7 +36559,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gestionar la suscripción"
+            "value": "Gestionar suscripción"
           }
         },
         "fr": {
@@ -48066,7 +48066,7 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Îl scoți din echipaj?"
+            "value": "Scoți pilotul din echipaj?"
           }
         },
         "nl": {
@@ -50058,7 +50058,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Schick FocusGlobe an eine Freundin oder einen Freund – tippe dann im Flug auf Freunde einladen."
+            "value": "Schick FocusGlobe an jemanden – tippe dann im Flug auf Freunde einladen."
           }
         },
         "ru": {
@@ -50123,7 +50123,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sende einer Freundin oder einem Freund einen privaten Fluglink."
+            "value": "Sende jemandem einen privaten Fluglink."
           }
         },
         "ru": {
@@ -57855,19 +57855,19 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Il accepte et apparaît dans votre salon."
+            "value": "Cette personne accepte et apparaît dans votre salon."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Er oder sie nimmt an und erscheint in deiner Lobby."
+            "value": "Die Person nimmt an und erscheint in deiner Lobby."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Он принимает и появляется в вашем лобби."
+            "value": "Пилот принимает приглашение и появляется в вашем лобби."
           }
         },
         "pt-BR": {
@@ -61939,7 +61939,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "आपके क्रू में शामिल होना चाहता है"
+            "value": "आपके क्रू में शामिल होना चाहते हैं"
           }
         },
         "es": {
@@ -62595,7 +62595,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bienvenido de nuevo: tus monedas de concentración están listas."
+            "value": "Nos alegra verte de nuevo: tus monedas de concentración están listas."
           }
         },
         "fr": {
@@ -62625,7 +62625,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bentornato: le tue monete di concentrazione sono pronte."
+            "value": "È bello riaverti: le tue monete di concentrazione sono pronte."
           }
         },
         "ro": {
@@ -64157,13 +64157,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "No os veréis en los cielos públicos y no podrá enviarte solicitudes ni unirse a tus salas."
+            "value": "No se verán en los cielos públicos y no podrá enviarte solicitudes ni unirse a tus salas."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vous ne vous verrez plus dans les ciels publics, et il ne pourra plus vous envoyer de demandes ni rejoindre vos salons."
+            "value": "Vous ne vous verrez plus dans les ciels publics, et cette personne ne pourra plus vous envoyer de demandes ni rejoindre vos salons."
           }
         },
         "de": {
@@ -64175,7 +64175,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Вы не увидите друг друга в публичных небесах, и он не сможет отправлять запросы или входить в ваши комнаты."
+            "value": "Вы не увидите друг друга в публичных небесах, и этот пилот не сможет отправлять запросы или входить в ваши комнаты."
           }
         },
         "pt-BR": {
@@ -64193,7 +64193,7 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nu vă veți vedea în cerurile publice, iar el nu îți poate trimite cereri sau intra în camerele tale."
+            "value": "Nu vă veți vedea în cerurile publice, iar pilotul nu îți mai poate trimite cereri sau intra în camerele tale."
           }
         },
         "nl": {
