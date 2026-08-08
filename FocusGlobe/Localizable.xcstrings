@@ -8768,7 +8768,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Applaudisseer deze piloot"
+            "value": "Applaudisseer voor deze piloot"
           }
         }
       }
@@ -16879,7 +16879,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Créer une salle"
+            "value": "Créer un salon"
           }
         },
         "de": {
@@ -23895,7 +23895,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Volad juntos este viaje"
+            "value": "Este viaje, juntos"
           }
         },
         "fr": {
@@ -25216,7 +25216,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Concentrarse sienta mejor en el cielo. Tu móvil se convierte en un vuelo en globo."
+            "value": "Concentrarse sienta mejor en el cielo. Tu teléfono se convierte en un vuelo en globo."
           }
         },
         "fr": {
@@ -39744,13 +39744,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sin preparar"
+            "value": "Sin confirmar"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pas prêt"
+            "value": "En attente"
           }
         },
         "de": {
@@ -39762,25 +39762,25 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Не готов"
+            "value": "Ожидает"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sem preparo"
+            "value": "Sem confirmação"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Non pronto"
+            "value": "In attesa"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nepregătit"
+            "value": "În așteptare"
           }
         },
         "nl": {
@@ -41624,7 +41624,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "ऑनलाइन फ़्लाइट «Sign in with Apple» वाले निजी FocusGlobe अकाउंट का इस्तेमाल करती हैं — आप सिर्फ़ एक गुमनाम उपनाम के रूप में दिखते हैं।"
+            "value": "ऑनलाइन फ़्लाइट «Apple से साइन इन» वाले निजी FocusGlobe अकाउंट का इस्तेमाल करती हैं — आप सिर्फ़ एक गुमनाम उपनाम के रूप में दिखते हैं।"
           }
         },
         "es": {
@@ -41648,13 +41648,13 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Онлайн-полёты используют приватный аккаунт FocusGlobe через «Вход с Apple» — вы отображаетесь только под анонимным псевдонимом."
+            "value": "Онлайн-полёты используют приватный аккаунт FocusGlobe через «Войти через Apple» — вы отображаетесь только под анонимным псевдонимом."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Os voos Online usam uma conta privada do FocusGlobe com Iniciar Sessão com a Apple — você aparece apenas com um apelido anônimo."
+            "value": "Os voos Online usam uma conta privada do FocusGlobe com Entrar com a Apple — você aparece apenas com um apelido anônimo."
           }
         },
         "it": {
@@ -41666,13 +41666,13 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zborurile online folosesc un cont FocusGlobe privat cu Conectare cu Apple — apari doar sub un alias anonim."
+            "value": "Zborurile online folosesc un cont FocusGlobe privat cu Autentificare cu Apple — apari doar sub un alias anonim."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Onlinevluchten gebruiken een privé FocusGlobe-account met Log in met Apple — je verschijnt alleen onder een anoniem alias."
+            "value": "Onlinevluchten gebruiken een privé FocusGlobe-account met Inloggen met Apple — je verschijnt alleen onder een anoniem alias."
           }
         }
       }
@@ -58245,7 +58245,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cette salle de concentration est complète."
+            "value": "Ce salon de concentration est complet."
           }
         },
         "de": {
@@ -58310,7 +58310,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cette salle de concentration n’est plus disponible."
+            "value": "Ce salon de concentration n’est plus disponible."
           }
         },
         "de": {
@@ -58688,7 +58688,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "यह पायलट अनुरोध स्वीकार नहीं कर रहा।"
+            "value": "यह पायलट अनुरोध स्वीकार नहीं कर रहे।"
           }
         },
         "es": {
@@ -63968,7 +63968,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vous ne pouvez pas rejoindre cette salle de concentration."
+            "value": "Vous ne pouvez pas rejoindre ce salon de concentration."
           }
         },
         "de": {
@@ -64063,13 +64063,13 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "L-ai aplaudat recent pe acest pilot."
+            "value": "Ai aplaudat recent acest pilot."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Je hebt deze piloot onlangs geapplaudisseerd."
+            "value": "Je hebt onlangs voor deze piloot geapplaudisseerd."
           }
         }
       }
@@ -64352,7 +64352,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ya sois amigos."
+            "value": "Ya son amigos."
           }
         },
         "fr": {
@@ -66458,7 +66458,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "votre salle"
+            "value": "votre salon"
           }
         },
         "de": {
