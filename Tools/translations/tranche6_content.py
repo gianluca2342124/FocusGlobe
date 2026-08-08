@@ -110,7 +110,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Een weidse, stille woestijnnacht onder een sterrenrijke hemel.",
     ],
     "Turquoise air over a quiet lagoon, soft islands drifting far below.": [
-        "宁静潟湖上空的松石色空气，柔和的岛屿在远处漂移。",
+        "宁静潟湖上空的绿松石色空气，柔和的岛屿在远处漂移。",
         "शांत लैगून के ऊपर फ़िरोज़ी हवा, नीचे दूर बहते कोमल द्वीप।",
         "Aire turquesa sobre una laguna tranquila, con islas suaves a lo lejos.",
         "Un air turquoise au-dessus d’un lagon paisible, des îles douces au loin.",
@@ -271,7 +271,7 @@ TRANSLATIONS: dict[str, list[str]] = {
     "Soft cream • the calm default": [
         "柔和奶油色 • 沉静的默认款", "सॉफ़्ट क्रीम • शांत डिफ़ॉल्ट",
         "Crema suave • el clásico sereno", "Crème doux • le classique paisible",
-        "Sanftes Creme • der ruhige Standard", "Мягкий кремовый • спокойный по умолчанию",
+        "Sanftes Creme • der ruhige Standard", "Мягкий кремовый • спокойный вариант по умолчанию",
         "Creme suave • o padrão calmo", "Crema tenue • il classico tranquillo",
         "Crem blând • varianta calmă implicită", "Zacht crème • de rustige standaard",
     ],
@@ -297,7 +297,7 @@ TRANSLATIONS: dict[str, list[str]] = {
     ],
     "Aurora Airship": [
         "极光飞艇", "अरोरा एयरशिप", "Aeronave aurora", "Dirigeable aurore",
-        "Aurora-Luftschiff", "Дирижабль «Аврора»", "Dirigível aurora",
+        "Aurora-Luftschiff", "Дирижабль-аврора", "Dirigível aurora",
         "Dirigibile aurora", "Dirijabil aurora", "Aurora-luchtschip",
     ],
     "Shimmering hull": [
@@ -325,7 +325,7 @@ TRANSLATIONS: dict[str, list[str]] = {
     # ---- Cabin item placement: labels ------------------------------------
     "Table · Left": [
         "桌面 · 左", "मेज़ · बाएँ", "Mesa · izquierda", "Table · gauche",
-        "Tisch · Links", "Стол · слева", "Mesa · esquerda", "Tavolo · sinistra",
+        "Tisch · links", "Стол · слева", "Mesa · esquerda", "Tavolo · sinistra",
         "Masă · stânga", "Tafel · links",
     ],
     "Table · Center": [
@@ -335,13 +335,13 @@ TRANSLATIONS: dict[str, list[str]] = {
     ],
     "Table · Right": [
         "桌面 · 右", "मेज़ · दाएँ", "Mesa · derecha", "Table · droite",
-        "Tisch · Rechts", "Стол · справа", "Mesa · direita", "Tavolo · destra",
+        "Tisch · rechts", "Стол · справа", "Mesa · direita", "Tavolo · destra",
         "Masă · dreapta", "Tafel · rechts",
     ],
     "Bench · Left": [
         "长椅 · 左", "बेंच · बाएँ", "Banco · izquierda", "Banc · gauche",
         "Bank · links", "Скамья · слева", "Banco · esquerda", "Panca · sinistra",
-        "Bancă · stânga", "Bank · Links",
+        "Bancă · stânga", "Bank · links",
     ],
     "Bench · Center": [
         "长椅 · 中", "बेंच · बीच", "Banco · centro", "Banc · centre",
@@ -351,36 +351,36 @@ TRANSLATIONS: dict[str, list[str]] = {
     "Wall · Left": [
         "墙面 · 左", "दीवार · बाएँ", "Pared · izquierda", "Mur · gauche",
         "Wand · links", "Стена · слева", "Parede · esquerda", "Parete · sinistra",
-        "Perete · stânga", "Wand · Links",
+        "Perete · stânga", "Wand · links",
     ],
     "Wall · Right": [
         "墙面 · 右", "दीवार · दाएँ", "Pared · derecha", "Mur · droite",
         "Wand · rechts", "Стена · справа", "Parede · direita", "Parete · destra",
-        "Perete · dreapta", "Wand · Rechts",
+        "Perete · dreapta", "Wand · rechts",
     ],
     "Hook · Left": [
         "挂钩 · 左", "हुक · बाएँ", "Gancho · izquierda", "Crochet · gauche",
-        "Haken · Links", "Крючок · слева", "Gancho · esquerda", "Gancio · sinistra",
+        "Haken · links", "Крючок · слева", "Gancho · esquerda", "Gancio · sinistra",
         "Cârlig · stânga", "Haak · links",
     ],
     "Hook · Right": [
         "挂钩 · 右", "हुक · दाएँ", "Gancho · derecha", "Crochet · droite",
-        "Haken · Rechts", "Крючок · справа", "Gancho · direita", "Gancio · destra",
+        "Haken · rechts", "Крючок · справа", "Gancho · direita", "Gancio · destra",
         "Cârlig · dreapta", "Haak · rechts",
     ],
     "Hanging · Left": [
         "悬挂 · 左", "लटका · बाएँ", "Colgado · izquierda", "Suspendu · gauche",
-        "Hängend · Links", "Подвес · слева", "Pendurado · esquerda",
+        "Hängend · links", "Подвес · слева", "Pendurado · esquerda",
         "Appeso · sinistra", "Suspendat · stânga", "Hangend · links",
     ],
     "Hanging · Right": [
         "悬挂 · 右", "लटका · दाएँ", "Colgado · derecha", "Suspendu · droite",
-        "Hängend · Rechts", "Подвес · справа", "Pendurado · direita",
+        "Hängend · rechts", "Подвес · справа", "Pendurado · direita",
         "Appeso · destra", "Suspendat · dreapta", "Hangend · rechts",
     ],
     "Floor · Right": [
         "地面 · 右", "फ़र्श · दाएँ", "Suelo · derecha", "Sol · droite",
-        "Boden · Rechts", "Пол · справа", "Chão · direita", "Pavimento · destra",
+        "Boden · rechts", "Пол · справа", "Chão · direita", "Pavimento · destra",
         "Podea · dreapta", "Vloer · rechts",
     ],
 

@@ -9004,7 +9004,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Дирижабль «Аврора»"
+            "value": "Дирижабль-аврора"
           }
         },
         "pt-BR": {
@@ -9743,7 +9743,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bank · Links"
+            "value": "Bank · links"
           }
         }
       }
@@ -23517,7 +23517,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Boden · Rechts"
+            "value": "Boden · rechts"
           }
         },
         "ru": {
@@ -30179,7 +30179,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hängend · Links"
+            "value": "Hängend · links"
           }
         },
         "ru": {
@@ -30244,7 +30244,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hängend · Rechts"
+            "value": "Hängend · rechts"
           }
         },
         "ru": {
@@ -31349,7 +31349,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haken · Links"
+            "value": "Haken · links"
           }
         },
         "ru": {
@@ -31414,7 +31414,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haken · Rechts"
+            "value": "Haken · rechts"
           }
         },
         "ru": {
@@ -53511,7 +53511,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Мягкий кремовый • спокойный по умолчанию"
+            "value": "Мягкий кремовый • спокойный вариант по умолчанию"
           }
         },
         "pt-BR": {
@@ -56041,7 +56041,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tisch · Links"
+            "value": "Tisch · links"
           }
         },
         "ru": {
@@ -56106,7 +56106,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tisch · Rechts"
+            "value": "Tisch · rechts"
           }
         },
         "ru": {
@@ -60372,7 +60372,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "宁静潟湖上空的松石色空气，柔和的岛屿在远处漂移。"
+            "value": "宁静潟湖上空的绿松石色空气，柔和的岛屿在远处漂移。"
           }
         },
         "hi": {
@@ -61857,7 +61857,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wand · Links"
+            "value": "Wand · links"
           }
         }
       }
@@ -61922,7 +61922,7 @@
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wand · Rechts"
+            "value": "Wand · rechts"
           }
         }
       }
