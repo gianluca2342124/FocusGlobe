@@ -24,7 +24,7 @@ enum Formatters {
     static func flightClock(_ seconds: Int) -> String {
         let s = max(0, seconds)
         if s < 3600 { return String(format: "%d:%02d", s / 60, s % 60) }
-        return String(format: "%dh %02dm", s / 3600, (s % 3600) / 60)
+        return FocusLocalization.string("%lldh %02lldm", s / 3600, (s % 3600) / 60)
     }
 
     /// Remaining time, human first: "1h 12m" → "33 min" → "59s". Rounds minutes
@@ -32,7 +32,7 @@ enum Formatters {
     /// counts down live in seconds.
     static func flightTimeRemaining(_ seconds: Int) -> String {
         let s = max(0, seconds)
-        if s >= 3600 { return String(format: "%dh %02dm", s / 3600, (s % 3600) / 60) }
+        if s >= 3600 { return FocusLocalization.string("%lldh %02lldm", s / 3600, (s % 3600) / 60) }
         if s >= 60 { return "\((s + 59) / 60) min" }
         return "\(s)s"
     }
@@ -41,7 +41,7 @@ enum Formatters {
     /// **down**, and the opening minute counts up live in seconds.
     static func flightTimeElapsed(_ seconds: Int) -> String {
         let s = max(0, seconds)
-        if s >= 3600 { return String(format: "%dh %02dm", s / 3600, (s % 3600) / 60) }
+        if s >= 3600 { return FocusLocalization.string("%lldh %02lldm", s / 3600, (s % 3600) / 60) }
         if s >= 60 { return "\(s / 60) min" }
         return "\(s)s"
     }
@@ -50,7 +50,7 @@ enum Formatters {
     /// one decimal only while under a single kilometre ("0.4 km").
     static func flightDistanceKm(_ km: Double) -> String {
         let v = max(0, km)
-        if v < 1 { return String(format: "%.1f km", v) }
+        if v < 1 { return FocusLocalization.string("%.1f km", v) }
         let n = NSNumber(value: v.rounded())
         return (grouping.string(from: n) ?? "\(Int(v))") + " km"
     }
@@ -85,7 +85,7 @@ enum Formatters {
     /// Distance in kilometres, e.g. "1,240 km". Shows one decimal under 10 km.
     static func distance(km: Double) -> String {
         if km < 10 {
-            return String(format: "%.1f km", km)
+            return FocusLocalization.string("%.1f km", km)
         }
         let n = NSNumber(value: km.rounded())
         return (grouping.string(from: n) ?? "\(Int(km))") + " km"
@@ -95,7 +95,7 @@ enum Formatters {
     /// moves with every timer tick ("73.8 km"); grouped whole km beyond.
     static func flightKm(_ km: Double) -> String {
         if km < 100 {
-            return String(format: "%.1f km", max(0, km))
+            return FocusLocalization.string("%.1f km", max(0, km))
         }
         let n = NSNumber(value: km.rounded())
         return (grouping.string(from: n) ?? "\(Int(km))") + " km"

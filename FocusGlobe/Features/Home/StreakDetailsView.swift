@@ -274,7 +274,7 @@ struct StreakDetailsView: View {
                 .foregroundStyle(mission.isComplete ? AppColors.success : AppColors.textTertiary)
                 .frame(width: 22)
             VStack(alignment: .leading, spacing: 4) {
-                Text(mission.title)
+                Text(LocalizedStringKey(mission.title))
                     .font(.system(size: 13, weight: .semibold, design: .default))
                     .foregroundStyle(AppColors.textPrimary)
                 GeometryReader { g in

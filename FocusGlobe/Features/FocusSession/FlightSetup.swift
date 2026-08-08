@@ -660,7 +660,7 @@ struct DurationDialView: View {
                     minutes = p.minutes
                     index = DurationScale.index(forMinutes: p.minutes, infinite: p.infinite)
                 } label: {
-                    Text(p.label)
+                    Text(LocalizedStringKey(p.label))
                         .font(.system(size: proLocked ? 18 : 15, weight: .bold, design: .default))
                         .foregroundStyle(selected ? AnyShapeStyle(Color(hex: 0x14120E))
                                          : (proLocked ? AnyShapeStyle(ProBrand.softGradient)
@@ -1010,7 +1010,7 @@ struct PackFocusView: View {
             Image(systemName: preset.systemImage)
                 .font(.system(size: Layout.pad(19, 24), weight: .bold))
                 .foregroundStyle(.white)
-            Text(preset.title)
+            Text(LocalizedStringKey(preset.title))
                 .font(.system(size: Layout.pad(12, 15), weight: .bold, design: .default))
                 .foregroundStyle(.white)
                 .lineLimit(1).minimumScaleFactor(0.7)

@@ -637,7 +637,7 @@ private struct AchievementBadge: View {
                         .font(.system(size: 19, weight: .bold))
                         .foregroundStyle(badge.earned ? badge.accent : AppColors.textTertiary)
                 }
-                Text(badge.title)
+                Text(LocalizedStringKey(badge.title))
                     .font(AppTypography.micro)
                     .foregroundStyle(badge.earned ? AppColors.textPrimary : AppColors.textTertiary)
                     .lineLimit(1)
@@ -686,7 +686,7 @@ private struct BadgeDetailSheet: View {
             .frame(width: 100, height: 100)
 
             VStack(spacing: 8) {
-                Text(badge.title)
+                Text(LocalizedStringKey(badge.title))
                     .font(AppTypography.serifTitle2)
                     .foregroundStyle(AppColors.textPrimary)
                     .multilineTextAlignment(.center)
@@ -697,7 +697,7 @@ private struct BadgeDetailSheet: View {
                     .background(Capsule().fill((badge.earned ? badge.accent : AppColors.textTertiary).opacity(0.15)))
             }
 
-            Text(badge.detail)
+            Text(LocalizedStringKey(badge.detail))
                 .font(AppTypography.subhead)
                 .foregroundStyle(AppColors.textSecondary)
                 .multilineTextAlignment(.center)
@@ -776,7 +776,7 @@ private struct MissionObjectiveCard: View {
             }
             VStack(alignment: .leading, spacing: 7) {
                 HStack {
-                    Text(mission.title)
+                    Text(LocalizedStringKey(mission.title))
                         .font(.system(size: 15, weight: .semibold, design: .default))
                         .foregroundStyle(AppColors.textPrimary)
                         .lineLimit(1)

@@ -590,7 +590,7 @@ struct HomeView: View {
         VStack(spacing: AppSpacing.md) {
             VStack(spacing: 10) {
                 HStack(spacing: 8) {
-                    Text(currentSky.name)
+                    Text(LocalizedStringKey(currentSky.name))
                         .font(.system(size: viewport.titleSize - 3, weight: .semibold, design: .serif))
                         .foregroundStyle(AppColors.gold)
                         .lineLimit(1).minimumScaleFactor(0.6)
@@ -813,7 +813,7 @@ private struct SkyPreviewFlightView: View {
             .padding(.horizontal, AppSpacing.screen)
             .padding(.top, AppSpacing.sm)
 
-            Text(headlines[min(headlineIndex, headlines.count - 1)])
+            Text(LocalizedStringKey(headlines[min(headlineIndex, headlines.count - 1)]))
                 .font(.system(size: Layout.pad(28, 38), weight: .semibold, design: .serif))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
@@ -956,6 +956,8 @@ private struct SkyPreviewFlightView: View {
     }
 
     // Rotating headline copy — three lines, adapted to the Sky.
+    /// English keys. Rendered through `LocalizedStringKey` at the Text below,
+    /// so the rotation index stays tied to the Sky rather than to a language.
     private var headlines: [String] {
         switch sky.id {
         case "fiji-lagoon":      return ["Focus above the lagoon", "Turquoise calm for deep work", "Unlock this Sky to fly here"]
@@ -966,22 +968,34 @@ private struct SkyPreviewFlightView: View {
         case "sahara-night":     return ["Focus under desert stars", "A vast night made for depth", "Unlock this Sky to fly here"]
         case "galaxy-drift":     return ["Focus among the stars", "Drift through falling starlight", "Unlock this Sky to fly here"]
         case "deep-space":       return ["Study in deep space", "Cosmic silence for deep work", "Unlock this Sky to fly here"]
-        default:                 return ["Focus in \(sky.name)", "A Sky made for deep work", "Unlock this Sky to fly here"]
+        default:
+            return [FocusLocalization.string("Focus in %@",
+                                             FocusLocalization.string(sky.name)),
+                    "A Sky made for deep work",
+                    "Unlock this Sky to fly here"]
         }
     }
 
+    /// The Sky name is translated before it goes into the sentence, and the
+    /// friend count is pluralised by the catalog rather than by appending "s" —
+    /// which was English-only and wrong in nine of the eleven languages.
     private var subtitle: String {
+        let name = FocusLocalization.string(sky.name)
         switch sky.unlockRequirement {
         case .premium:
-            return "Upgrade to FocusGlobe PRO to unlock \(sky.name)."
+            return FocusLocalization.string(
+                "Upgrade to FocusGlobe PRO to unlock %@.", name)
         case .invite(let n):
-            return "Invite \(n) friend\(n == 1 ? "" : "s") or upgrade to FocusGlobe PRO to unlock \(sky.name)."
+            return FocusLocalization.localized(
+                "Invite \(n) friends or upgrade to FocusGlobe PRO to unlock \(name).")
         case .focusMinutes(let n):
-            return "Focus \(n.formatted()) minutes to unlock \(sky.name) — free, just keep flying."
+            return FocusLocalization.localized(
+                "Focus \(n) minutes to unlock \(name) — free, just keep flying.")
         case .streakDays(let n):
-            return "Reach a \(n)-day streak or upgrade to FocusGlobe PRO to unlock \(sky.name)."
+            return FocusLocalization.localized(
+                "Reach a \(n)-day streak or upgrade to FocusGlobe PRO to unlock \(name).")
         case .free:
-            return "Fly \(sky.name) any time."
+            return FocusLocalization.string("Fly %@ any time.", name)
         }
     }
 }

@@ -35,7 +35,9 @@ struct AppRouteCard: View {
         }
         .buttonStyle(SoftPressStyle(scale: 0.98))
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(route.name), \(route.durationLabel), \(route.distanceLabel)\(isLocked ? ", premium" : "")")
+        .accessibilityLabel(Text(isLocked
+            ? "\(route.name), \(route.durationLabel), \(route.distanceLabel), premium"
+            : "\(route.name), \(route.durationLabel), \(route.distanceLabel)"))
     }
 
     // MARK: - Banner

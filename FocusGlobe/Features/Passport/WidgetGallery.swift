@@ -85,8 +85,7 @@ struct WidgetsGallerySection: View {
                         .buttonStyle(SoftPressStyle(scale: 0.98))
                         // The name is no longer drawn on the tile, so carry the full
                         // identity + lock state as the VoiceOver label.
-                        .accessibilityLabel(
-                            "\(item.name)\(item.isPro ? ", FocusGlobe PRO" : ", free")\(locked(item) ? ", locked" : "")")
+                        .accessibilityLabel(galleryLabel(item))
                         .accessibilityHint("Opens preview and how to add")
                     }
                 }
@@ -98,6 +97,19 @@ struct WidgetsGallerySection: View {
                 .environmentObject(appModel)
                 .environmentObject(router)
         }
+    }
+
+    /// The tile shows only artwork, so VoiceOver carries the whole identity.
+    ///
+    /// Assembled as ONE sentence per state rather than a name with English
+    /// suffixes appended, which is what made ", locked" unreachable to a
+    /// translator and forced trailing word order on every language.
+    private func galleryLabel(_ item: WidgetGalleryItem) -> Text {
+        // Resolved to a String first: LocalizedStringKey interpolation takes a
+        // value to substitute, not another key to resolve.
+        let name = FocusLocalization.string(item.name)
+        if locked(item) { return Text("\(name), FocusGlobe PRO, locked") }
+        return item.isPro ? Text("\(name), FocusGlobe PRO") : Text("\(name), free")
     }
 }
 
@@ -425,9 +437,9 @@ private struct WidgetDetailSheet: View {
                             .environmentObject(appModel)
                     }
                     VStack(spacing: 6) {
-                        Text(item.name)
+                        Text(LocalizedStringKey(item.name))
                             .font(AppTypography.title2).foregroundStyle(AppColors.textPrimary)
-                        Text(item.blurb)
+                        Text(LocalizedStringKey(item.blurb))
                             .font(AppTypography.callout).foregroundStyle(AppColors.textSecondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, AppSpacing.md)

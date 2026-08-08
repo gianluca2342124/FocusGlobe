@@ -106,7 +106,9 @@ struct StreakWeekStrip: View {
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
         let landedDays = Set(history.filter { $0.completed }.map { cal.startOfDay(for: $0.date) })
-        let fmt = DateFormatter(); fmt.dateFormat = "EEEEE"   // single-letter weekday
+        let fmt = DateFormatter()
+        fmt.locale = FocusLocalization.currentLocale
+        fmt.dateFormat = "EEEEE"   // single-letter weekday, in that language
         let startOfWeek = cal.dateInterval(of: .weekOfYear, for: today)?.start ?? today
         return (0..<7).map { offset in
             let d = cal.startOfDay(for: cal.date(byAdding: .day, value: offset, to: startOfWeek) ?? today)

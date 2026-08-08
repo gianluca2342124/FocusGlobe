@@ -60,7 +60,10 @@ struct VisitedPlace: Identifiable, Hashable {
     }
 
     static let dateFmt: DateFormatter = {
-        let f = DateFormatter(); f.dateFormat = "d MMM yyyy"; return f
+        let f = DateFormatter()
+        f.locale = FocusLocalization.currentLocale
+        f.setLocalizedDateFormatFromTemplate("dMMMyyyy")
+        return f
     }()
 }
 

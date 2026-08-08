@@ -402,7 +402,7 @@ struct OnboardingResultsStep: View {
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(.white.opacity(0.52))
                             .frame(width: 22)
-                        Text(row.label)
+                        Text(LocalizedStringKey(row.label))
                             .font(AppTypography.callout)
                             .foregroundStyle(.white.opacity(0.66))
                         Spacer(minLength: AppSpacing.xs)
@@ -481,7 +481,7 @@ struct OnboardingResultsStep: View {
                                 .foregroundStyle(step.tint)
                         }
                         .frame(width: 36, height: 36)
-                        Text(step.title)
+                        Text(LocalizedStringKey(step.title))
                             .font(.system(size: 15.5, weight: .semibold))
                             .foregroundStyle(.white)
                             .fixedSize(horizontal: false, vertical: true)

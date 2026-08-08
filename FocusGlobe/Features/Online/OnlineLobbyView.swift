@@ -69,7 +69,7 @@ struct OnlineLobbyView: View {
                     appModel.tapFeedback(); dismiss()
                 }
             }
-            Text(sky.name)
+            Text(LocalizedStringKey(sky.name))
                 .font(.system(size: 26, weight: .bold, design: .default))
                 .foregroundStyle(.white)
             HStack(spacing: 8) {

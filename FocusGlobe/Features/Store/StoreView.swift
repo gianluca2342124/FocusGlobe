@@ -250,7 +250,7 @@ struct StoreView: View {
         let equipped = appModel.selectedSkin.id == skin.id
         return HStack(spacing: AppSpacing.sm) {
             VStack(alignment: .leading, spacing: 1) {
-                Text(skin.name)
+                Text(LocalizedStringKey(skin.name))
                     .font(.system(size: 17, weight: .bold, design: .default))
                     .foregroundStyle(.white)
                     .lineLimit(1).minimumScaleFactor(0.8)
@@ -285,7 +285,7 @@ struct StoreView: View {
             let blocked = owned && item.kind == .cabinDecoration && !placed && appModel.isCabinFull
             HStack(spacing: AppSpacing.sm) {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(item.name)
+                    Text(LocalizedStringKey(item.name))
                         .font(.system(size: 17, weight: .bold, design: .default))
                         .foregroundStyle(.white)
                         .lineLimit(1).minimumScaleFactor(0.8)
@@ -687,7 +687,7 @@ private struct CabinPlacementSheet: View {
                             HStack(spacing: 8) {
                                 Image(systemName: replacementID == candidate.id
                                       ? "checkmark.circle.fill" : "circle")
-                                Text(candidate.name).lineLimit(1)
+                                Text(LocalizedStringKey(candidate.name)).lineLimit(1)
                             }
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(replacementID == candidate.id
@@ -745,7 +745,7 @@ private struct CabinPlacementSheet: View {
                     Text(slot.displayName)
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(AppColors.textPrimary)
-                    Text(slot.placementHint)
+                    Text(LocalizedStringKey(slot.placementHint))
                         .font(AppTypography.caption)
                         .foregroundStyle(AppColors.textSecondary)
                 }
@@ -834,7 +834,7 @@ private struct StoreItemCard: View {
         Button(action: onSelect) {
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 art
-                Text(item.name)
+                Text(LocalizedStringKey(item.name))
                     .font(.system(size: 14, weight: .bold, design: .default))
                     .foregroundStyle(AppColors.textPrimary)
                     .lineLimit(1).minimumScaleFactor(0.75)
@@ -982,7 +982,7 @@ private struct SkinCard: View {
                 }
                 .frame(height: viewport.isWide ? 164 : (viewport.isCompact ? 104 : 142))
                 VStack(spacing: 1) {
-                    Text(skin.name)
+                    Text(LocalizedStringKey(skin.name))
                         .font(.system(size: 14.5, weight: .bold, design: .default))
                         .foregroundStyle(AppColors.textPrimary)
                         .lineLimit(1).minimumScaleFactor(0.8)

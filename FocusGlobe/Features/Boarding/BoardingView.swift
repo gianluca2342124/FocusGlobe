@@ -352,7 +352,11 @@ private struct ExpeditionPage: View {
 
     static let dateText: String = {
         let f = DateFormatter()
-        f.dateFormat = "d MMM yyyy"
+        // Template, not pattern: "d MMM yyyy" is English order with English
+        // month names. This asks for the same three fields in the chosen
+        // language's own order — "8 ago 2026", "2026年8月8日".
+        f.locale = FocusLocalization.currentLocale
+        f.setLocalizedDateFormatFromTemplate("dMMMyyyy")
         return f.string(from: Date())
     }()
 }

@@ -313,7 +313,7 @@ final class FocusSessionViewModel: ObservableObject {
     var remainingMinutesText: String {
         let totalMinutes = max(0, Int((Double(remainingSeconds) / 60).rounded(.up)))
         if totalMinutes < 60 { return "\(totalMinutes) min" }
-        return String(format: "%dh %02dm", totalMinutes / 60, totalMinutes % 60)
+        return FocusLocalization.string("%lldh %02lldm", totalMinutes / 60, totalMinutes % 60)
     }
 
     var remainingDistanceKm: Double { journeyDistanceKm * (1 - progress) }

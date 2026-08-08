@@ -1026,7 +1026,7 @@ private struct PaywallSkyCarousel: View {
 
                 VStack {
                     Spacer()
-                    Text(sky.name)
+                    Text(LocalizedStringKey(sky.name))
                         .font(.system(size: prominence > 0.55 ? 16 : 14, weight: .bold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
