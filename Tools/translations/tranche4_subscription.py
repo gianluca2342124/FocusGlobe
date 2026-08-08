@@ -24,12 +24,12 @@ TRANSLATIONS: dict[str, list[str]] = {
     # ---- Page one: the benefit pitch -------------------------------------
     "Unlock FocusGlobe": [
         "解锁 FocusGlobe", "FocusGlobe अनलॉक करें", "Desbloquea FocusGlobe",
-        "Débloquez FocusGlobe", "FocusGlobe freischalten", "Откройте FocusGlobe",
+        "Débloquez FocusGlobe", "FocusGlobe freischalten", "Разблокируйте FocusGlobe",
         "Desbloqueie o FocusGlobe", "Sblocca FocusGlobe", "Deblochează FocusGlobe",
         "Ontgrendel FocusGlobe",
     ],
     "Explore Exclusive Skies": [
-        "探索专属天空", "विशेष आकाश देखें", "Explora cielos exclusivos",
+        "探索专属天空", "विशेष आकाश खोजें", "Explora cielos exclusivos",
         "Explorez des ciels exclusifs", "Exklusive Himmel entdecken",
         "Откройте эксклюзивные небеса", "Explore céus exclusivos",
         "Esplora cieli esclusivi", "Explorează ceruri exclusive",
@@ -39,14 +39,14 @@ TRANSLATIONS: dict[str, list[str]] = {
         "让每次飞行都独一无二", "हर फ़्लाइट को अपना बनाएँ", "Haz tuyo cada vuelo",
         "Faites de chaque vol le vôtre", "Mach jeden Flug zu deinem",
         "Сделайте каждый полёт своим", "Faça de cada voo o seu",
-        "Rendi tuo ogni volo", "Fă fiecare zbor al tău",
-        "Maak elke vlucht van jou",
+        "Rendi tuo ogni volo", "Fă din fiecare zbor al tău",
+        "Maak elke vlucht de jouwe",
     ],
     "Make Your Cabin Yours": [
         "打造专属座舱", "अपना केबिन अपने जैसा बनाएँ", "Haz tuya la cabina",
         "Faites de la cabine la vôtre", "Mach die Kabine zu deiner",
         "Сделайте кабину своей", "Faça da cabine a sua",
-        "Rendi tua la cabina", "Fă cabina a ta", "Maak de cabine van jou",
+        "Rendi tua la cabina", "Cabina, exact pe gustul tău", "Maak de cabine de jouwe",
     ],
     "Find Your Focus Sound": [
         "找到你的专注声音", "अपनी फ़ोकस ध्वनि चुनें", "Encuentra tu sonido de concentración",
@@ -63,10 +63,11 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Focus in één oogopslag",
     ],
     "Earn 2× Coins": [
-        "赚取 2× 金币", "2× सिक्के कमाएँ", "Gana 2× monedas",
-        "Gagnez 2× de pièces", "Verdiene 2× Münzen", "Получайте 2× монет",
-        "Ganhe 2× moedas", "Guadagna 2× monete", "Câștigă 2× monede",
-        "Verdien 2× munten",
+        "金币翻倍", "दोगुने सिक्के कमाएँ", "Gana el doble de monedas",
+        "Gagnez deux fois plus de pièces", "Doppelte Münzen verdienen",
+        "Получайте вдвое больше монет",
+        "Ganhe o dobro de moedas", "Guadagna il doppio delle monete",
+        "Câștigă monede duble", "Verdien dubbele munten",
     ],
     "Focus Without Interruptions": [
         "专注不被打断", "बिना रुकावट फ़ोकस", "Concéntrate sin interrupciones",
@@ -76,9 +77,9 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Focus zonder onderbrekingen",
     ],
     "Fly Together": [
-        "一起飞行", "साथ उड़ें", "Volad juntos", "Volez ensemble",
-        "Gemeinsam fliegen", "Летайте вместе", "Voem juntos",
-        "Volate insieme", "Zburați împreună", "Vlieg samen",
+        "一起飞行", "साथ उड़ें", "Vuela en compañía", "Volez ensemble",
+        "Gemeinsam fliegen", "Летайте вместе", "Voe acompanhado",
+        "Vola in compagnia", "Zboară împreună", "Vlieg samen",
     ],
     "Bring Your Crew": [
         "带上你的伙伴", "अपने साथियों को लाएँ", "Trae a tu tripulación",
@@ -277,9 +278,9 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Vedi i piani PRO", "Vezi planurile PRO", "Bekijk PRO-abonnementen",
     ],
     "Try for %@": [
-        "以 %@ 试用", "%@ में आज़माएँ", "Prueba por %@", "Essayer pour %@",
+        "试用 %@", "%@ के लिए आज़माएँ", "Prueba por %@", "Essayer pendant %@",
         "Für %@ testen", "Попробовать за %@", "Experimente por %@",
-        "Prova a %@", "Încearcă pentru %@", "Probeer voor %@",
+        "Prova per %@", "Încearcă pentru %@", "Probeer voor %@",
     ],
     "Shows trial timing and subscription options. No purchase is made.": [
         "显示试用时间与订阅选项。不会进行任何购买。",
@@ -545,7 +546,7 @@ TRANSLATIONS: dict[str, list[str]] = {
     ],
     "Trial end date": [
         "试用结束日", "ट्रायल की अंतिम तिथि", "Fin de la prueba",
-        "Fin de l’essai", "Ende der Testphase", "Дата окончания пробного периода",
+        "Fin de l’essai", "Ende der Testphase", "Конец пробного периода",
         "Fim do teste", "Fine della prova", "Data de final a probei",
         "Einddatum proefperiode",
     ],

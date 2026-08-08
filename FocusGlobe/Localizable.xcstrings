@@ -19983,61 +19983,61 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "赚取 2× 金币"
+            "value": "金币翻倍"
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "2× सिक्के कमाएँ"
+            "value": "दोगुने सिक्के कमाएँ"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gana 2× monedas"
+            "value": "Gana el doble de monedas"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gagnez 2× de pièces"
+            "value": "Gagnez deux fois plus de pièces"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verdiene 2× Münzen"
+            "value": "Doppelte Münzen verdienen"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Получайте 2× монет"
+            "value": "Получайте вдвое больше монет"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ganhe 2× moedas"
+            "value": "Ganhe o dobro de moedas"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Guadagna 2× monete"
+            "value": "Guadagna il doppio delle monete"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Câștigă 2× monede"
+            "value": "Câștigă monede duble"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verdien 2× munten"
+            "value": "Verdien dubbele munten"
           }
         }
       }
@@ -21809,7 +21809,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "विशेष आकाश देखें"
+            "value": "विशेष आकाश खोजें"
           }
         },
         "es": {
@@ -23960,7 +23960,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Volad juntos"
+            "value": "Vuela en compañía"
           }
         },
         "fr": {
@@ -23984,19 +23984,19 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Voem juntos"
+            "value": "Voe acompanhado"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Volate insieme"
+            "value": "Vola in compagnia"
           }
         },
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zburați împreună"
+            "value": "Zboară împreună"
           }
         },
         "nl": {
@@ -36400,13 +36400,13 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fă fiecare zbor al tău"
+            "value": "Fă din fiecare zbor al tău"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Maak elke vlucht van jou"
+            "value": "Maak elke vlucht de jouwe"
           }
         }
       }
@@ -36465,13 +36465,13 @@
         "ro": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fă cabina a ta"
+            "value": "Cabina, exact pe gustul tău"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Maak de cabine van jou"
+            "value": "Maak de cabine de jouwe"
           }
         }
       }
@@ -59752,7 +59752,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Дата окончания пробного периода"
+            "value": "Конец пробного периода"
           }
         },
         "pt-BR": {
@@ -60047,13 +60047,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "以 %@ 试用"
+            "value": "试用 %@"
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ में आज़माएँ"
+            "value": "%@ के लिए आज़माएँ"
           }
         },
         "es": {
@@ -60065,7 +60065,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Essayer pour %@"
+            "value": "Essayer pendant %@"
           }
         },
         "de": {
@@ -60089,7 +60089,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prova a %@"
+            "value": "Prova per %@"
           }
         },
         "ro": {
@@ -60793,7 +60793,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Откройте FocusGlobe"
+            "value": "Разблокируйте FocusGlobe"
           }
         },
         "pt-BR": {
