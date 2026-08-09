@@ -12,8 +12,6 @@
 	<true/>
 	<key>com.apple.developer.family-controls.app-and-website-usage</key>
 	<true/>
-	<key>com.apple.developer.usernotifications.communication</key>
-	<true/>
 	<key>com.apple.security.application-groups</key>
 	<array>
 		<string>group.com.focusglobe.app</string>
