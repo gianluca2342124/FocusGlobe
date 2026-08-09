@@ -15,14 +15,11 @@ struct HomeView: View {
     @Environment(\.focusViewport) private var viewport
     @StateObject private var viewModel = HomeViewModel()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The iOS 17 review API. A `RequestReviewAction` from the environment,
+    /// never `SKStoreReviewController` — and calling it is an OPPORTUNITY, not a
+    /// presentation: the system decides whether anything appears and reports
+    /// nothing back.
     @Environment(\.requestReview) private var requestReview
-    /// Non-invasive review-prompt tracking (persisted in UserDefaults): every 3rd
-    /// genuine return to Home we may ask Apple to show its review prompt.
-    @AppStorage("home.visitCount") private var homeVisitCount = 0
-    @AppStorage("home.lastReviewPromptAt") private var lastReviewPromptAt = 0.0
-    /// The app version FocusGlobe last ASKED on — never "has reviewed", which
-    /// the system does not report and the app must not pretend to know.
-    @AppStorage("home.lastReviewPromptVersion") private var lastReviewPromptVersion = ""
 
     @State private var showSetup = false
     @State private var showPreview = false
@@ -395,47 +392,76 @@ struct HomeView: View {
         }
     }
 
-    /// Ask StoreKit to CONSIDER the system rating prompt, when returning to Home
-    /// from a section the pilot went and looked at — the Store, Friends or the
-    /// Passport. Never after a flight: that moment belongs to the landing.
+    /// Ask StoreKit to CONSIDER the system rating prompt, at a positive break.
     ///
-    /// Every condition lives in `ReviewRequestPolicy`, which is a pure function
-    /// of state so it can be reasoned about without running the app. That
-    /// matters here because the real behaviour is close to invisible: StoreKit
-    /// decides whether a prompt actually appears, reports nothing back, and does
-    /// not show it in TestFlight builds at all.
+    /// TWO MOMENTS, and this method's only job is to name which one happened.
+    /// The stronger is a landing: a flight that banked its five minutes, its
+    /// rewards seen, the pilot back on Home. The other is returning from a
+    /// section they went and looked at — the Store, Friends, the Passport —
+    /// which is calm and interrupts nothing. Everything else lives in
+    /// `ReviewRequestPolicy`, which is a pure function of state so the ladder
+    /// can be reasoned about without running the app. That matters here
+    /// because the real behaviour is close to invisible: StoreKit decides
+    /// whether a prompt actually appears, reports nothing back, and does not
+    /// show it in TestFlight builds at all.
     ///
-    /// What is recorded is only ever "FocusGlobe asked, on this version, at this
-    /// time". There is no hasReviewed flag, because the system never says.
+    /// The landing moment is CONSUMED whether or not the policy then agrees.
+    /// It is one flight's opportunity; spending it on a decision that came back
+    /// "cooldown" is correct, because the alternative is re-asking the same
+    /// question on every Home appearance until it finally says yes.
+    ///
+    /// What is recorded is only ever "FocusGlobe asked, at this time, at this
+    /// flight count". There is no hasReviewed flag, because the system never
+    /// says.
     private func maybeRequestReview() {
-        homeVisitCount += 1
+        let landed = appModel.consumeLandingReviewMoment()
+        let moment: ReviewRequestPolicy.Moment?
+        if landed {
+            moment = .landingSettled
+        } else if let from = router.previousTab,
+                  ReviewRequestPolicy.qualifyingOrigins.contains(from) {
+            moment = .calmReturn
+        } else {
+            moment = nil
+        }
+        guard moment != nil else { return }
+
+        let now = Date().timeIntervalSince1970
+        let flights = appModel.progress.landings
         let context = ReviewRequestPolicy.Context(
-            cameFrom: router.previousTab,
-            completedJourneys: appModel.progress.landings,
-            lifetimeFocusedMinutes: appModel.lifetimeFocusMinutes,
-            lastRequestedVersion: lastReviewPromptVersion.isEmpty ? nil : lastReviewPromptVersion,
-            lastRequestedAt: lastReviewPromptAt,
-            currentVersion: ReviewRequestPolicy.currentVersion,
-            now: Date().timeIntervalSince1970,
+            moment: moment,
+            completedFlights: flights,
+            distinctFocusDays: ReviewRequestPolicy.distinctFocusDays(history: appModel.history),
+            currentStreak: appModel.progress.currentStreak,
+            lastFlightWasSuccessful: ReviewRequestPolicy.lastFlightWasSuccessful(history: appModel.history),
+            hadRecentFailure: appModel.hadRecentNegativeMoment,
+            hasAttemptedFirstMilestone: appModel.reviewDidAttemptFirstMilestone,
+            flightsAtLastAttempt: appModel.reviewFlightsAtLastAttempt,
+            lastAttemptAt: appModel.reviewLastAttemptAt,
+            now: now,
             // Anything that would make a rating prompt an interruption: a live or
-            // resumable flight, the paywall, an in-flight purchase, or any
-            // coordinated modal (invite preview, gifts, sign-in).
-            isBusy: router.activeJourney != nil
-                || router.showPaywall
-                || router.activeModal != nil
-                || appModel.hasResumableJourney
-                || appModel.subscriptions.isPurchasing,
+            // resumable flight, the paywall, an in-flight purchase, any
+            // coordinated modal (invite preview, gifts, sign-in) — and the same
+            // presentation check the notification ask uses, so the two system
+            // dialogs can never be raised over each other.
+            isBusy: !isPresentationSafe || appModel.hasResumableJourney,
             hasOnboarded: !appModel.needsOnboarding
         )
         let decision = ReviewRequestPolicy.decide(context)
         ReviewRequestPolicy.log(decision, context: context)
         guard decision.isRequest else { return }
 
-        lastReviewPromptAt = context.now
-        lastReviewPromptVersion = context.currentVersion
-        // A short beat so Home has settled — never straight off a tap, and never
-        // over a transition.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) { requestReview() }
+        // Recorded BEFORE the call, and before the delay. StoreKit tells us
+        // nothing afterwards, and a crash inside the beat below must not leave
+        // the ladder thinking it never asked.
+        appModel.recordReviewRequestAttempt(at: now, completedFlights: flights)
+        // A short beat so Home has settled — never straight off a tap, never
+        // over a transition, and never on top of the landing animation the
+        // pilot is still watching.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
+            guard isPresentationSafe else { return }
+            requestReview()
+        }
     }
 
     /// Home auto-presents AT MOST ONE popup per appearance, decided in a single

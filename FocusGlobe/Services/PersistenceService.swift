@@ -18,23 +18,34 @@ final class PersistenceService {
         case resumableJourney = "fg.resumableJourney"
         case profile = "fg.profile"
         case pendingNotificationPrompt = "fg.pendingPostOnboardingNotificationPrompt"
+        /// What FocusGlobe has ASKED StoreKit to consider, and when. Never
+        /// whether a prompt appeared or a review was left — the system reports
+        /// neither. See `ReviewRequestPolicy`.
+        case reviewLastAttemptAt = "fg.review.lastAttemptAt"
+        case reviewFlightsAtLastAttempt = "fg.review.flightsAtLastAttempt"
+        case reviewDidAttemptFirstMilestone = "fg.review.didAttemptFirstMilestone"
 
         /// Keys that live in `UserDefaults` instead of the account-scoped
         /// snapshot, because what they describe belongs to the DEVICE rather
         /// than to whoever happens to be signed in.
         ///
-        /// Two things qualify. An App Store entitlement is granted to an Apple
-        /// ID and RevenueCat stays authoritative over it. And iOS grants exactly
-        /// one chance to ask for notification permission per install — a pending
-        /// ask that followed an account into a different profile, or vanished
-        /// when one was activated, would be asking about the wrong device.
+        /// Three things qualify. An App Store entitlement is granted to an Apple
+        /// ID and RevenueCat stays authoritative over it. iOS grants exactly one
+        /// chance to ask for notification permission per install — a pending ask
+        /// that followed an account into a different profile, or vanished when
+        /// one was activated, would be asking about the wrong device. And the
+        /// rating-request history is about how often THIS device has been asked:
+        /// letting it reset with an account switch would let FocusGlobe ask
+        /// twice in a week, which is the one thing the policy exists to prevent.
         ///
-        /// They are `Bool`-only by construction: `bool(for:)` / `setBool(_:for:)`
-        /// are the only accessors that reach them, and `save`/`load`/`remove`
-        /// route around the snapshot for them entirely.
+        /// All of them are primitives, reached only by `bool`/`double`/`integer`
+        /// and their setters; `save`/`load`/`remove` route around the snapshot
+        /// for them entirely.
         var isDeviceScoped: Bool {
             switch self {
-            case .isPro, .pendingNotificationPrompt: return true
+            case .isPro, .pendingNotificationPrompt,
+                 .reviewLastAttemptAt, .reviewFlightsAtLastAttempt,
+                 .reviewDidAttemptFirstMilestone: return true
             case .settings, .progress, .history, .resumableJourney, .profile: return false
             }
         }
@@ -98,7 +109,9 @@ final class PersistenceService {
             case .history: return history
             case .profile: return profile
             case .resumableJourney: return resumableJourney
-            case .isPro, .pendingNotificationPrompt: return nil
+            case .isPro, .pendingNotificationPrompt,
+                 .reviewLastAttemptAt, .reviewFlightsAtLastAttempt,
+                 .reviewDidAttemptFirstMilestone: return nil
             }
         }
 
@@ -109,7 +122,9 @@ final class PersistenceService {
             case .history: history = data
             case .profile: profile = data
             case .resumableJourney: resumableJourney = data
-            case .isPro, .pendingNotificationPrompt: break
+            case .isPro, .pendingNotificationPrompt,
+                 .reviewLastAttemptAt, .reviewFlightsAtLastAttempt,
+                 .reviewDidAttemptFirstMilestone: break
             }
         }
     }
@@ -335,6 +350,28 @@ final class PersistenceService {
     }
 
     func setBool(_ value: Bool, for key: Key) {
+        defaults.set(value, forKey: key.rawValue)
+    }
+
+    /// The same device-scoped store as `bool(for:)`, for the two review-attempt
+    /// values that are not flags. Kept here rather than as loose `@AppStorage`
+    /// in a view so `AppModel` remains the one owner of persisted state — the
+    /// rating policy has to be readable in one place to be reasoned about.
+    /// Both return the UserDefaults zero (`0`) when never written, which the
+    /// policy reads as "never asked".
+    func double(for key: Key) -> Double {
+        defaults.double(forKey: key.rawValue)
+    }
+
+    func setDouble(_ value: Double, for key: Key) {
+        defaults.set(value, forKey: key.rawValue)
+    }
+
+    func integer(for key: Key) -> Int {
+        defaults.integer(forKey: key.rawValue)
+    }
+
+    func setInteger(_ value: Int, for key: Key) {
         defaults.set(value, forKey: key.rawValue)
     }
 

@@ -1292,6 +1292,9 @@ final class AppModel: ObservableObject {
             // set previously exactly as it was.
             if case .asked(let granted) = outcome, !granted {
                 notifications.setEnabled(false)
+                // A refusal is a small negative beat. Not a reason to do
+                // anything else — but not the minute to ask for five stars.
+                noteNegativeMoment()
             }
 
             // Cleared only now: the status has been checked and, where the
@@ -1301,6 +1304,70 @@ final class AppModel: ObservableObject {
             persistence.setBool(false, for: .pendingNotificationPrompt)
             refreshNotifications()
         }
+    }
+
+    // MARK: - Rating opportunities
+
+    /// A qualifying flight has landed and its rewards have been shown; the next
+    /// stable Home appearance is the moment to consider a rating.
+    ///
+    /// IN MEMORY ONLY, unlike the notification ask, and that asymmetry is
+    /// deliberate. The permission is a one-per-install grant that must survive a
+    /// termination or it is lost forever. A rating opportunity is the opposite:
+    /// there will be another one on the next landing, and an opportunity that a
+    /// force quit swallowed is an opportunity correctly forgotten.
+    private var pendingLandingReviewMoment = false
+
+    /// When something visibly went wrong. `nil` until it does.
+    private var lastNegativeMomentAt: Date?
+
+    /// How long a failure keeps the rating prompt away. Long enough to cover
+    /// the rest of the session the failure happened in; short enough that one
+    /// bad afternoon does not silence the ask for a week.
+    private static let negativeMomentSuppression: TimeInterval = 10 * 60
+
+    /// Record that the pilot just saw something fail.
+    ///
+    /// Called where FocusGlobe already knows: a flight that ended below the
+    /// qualifying five minutes, and a declined notification permission. A
+    /// failed purchase, a dropped Online room or a Screen Time error should
+    /// call this too — the hook is here for them — but those live in code this
+    /// change is not permitted to touch.
+    func noteNegativeMoment() {
+        lastNegativeMomentAt = Date()
+    }
+
+    var hadRecentNegativeMoment: Bool {
+        guard let at = lastNegativeMomentAt else { return false }
+        return Date().timeIntervalSince(at) < Self.negativeMomentSuppression
+    }
+
+    /// One-shot: `true` at most once per landing.
+    func consumeLandingReviewMoment() -> Bool {
+        defer { pendingLandingReviewMoment = false }
+        return pendingLandingReviewMoment
+    }
+
+    /// What FocusGlobe has asked StoreKit to consider, and when — never whether
+    /// a prompt appeared, which the system does not report.
+    var reviewDidAttemptFirstMilestone: Bool {
+        persistence.bool(for: .reviewDidAttemptFirstMilestone)
+    }
+    var reviewFlightsAtLastAttempt: Int {
+        persistence.integer(for: .reviewFlightsAtLastAttempt)
+    }
+    var reviewLastAttemptAt: TimeInterval {
+        persistence.double(for: .reviewLastAttemptAt)
+    }
+
+    /// Written the instant FocusGlobe calls `requestReview`, before StoreKit has
+    /// done anything. That is the honest thing to record: the app made an
+    /// attempt. Whether a prompt followed is the system's business and is never
+    /// reported back, so recording anything more would be recording a guess.
+    func recordReviewRequestAttempt(at now: TimeInterval, completedFlights: Int) {
+        persistence.setDouble(now, for: .reviewLastAttemptAt)
+        persistence.setInteger(completedFlights, for: .reviewFlightsAtLastAttempt)
+        persistence.setBool(true, for: .reviewDidAttemptFirstMilestone)
     }
 
     /// Whether the manual starting-city picker should be offered. It appears only
@@ -1945,6 +2012,15 @@ final class AppModel: ObservableObject {
             settings.previousOrigin = origin
             arrive(at: JourneyOrigin(city: route.destinationName, country: "",
                                      coordinate: route.destination, code: route.destinationCode))
+        }
+
+        // The one positive break FocusGlobe owns, and the one negative one.
+        // Neither changes anything about the flight; both are read later, by
+        // Home, when deciding whether a rating opportunity exists.
+        if qualifies {
+            pendingLandingReviewMoment = true
+        } else {
+            noteNegativeMoment()
         }
 
         persistAll()
