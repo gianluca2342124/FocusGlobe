@@ -1042,24 +1042,24 @@ app	store-passport-friends-settings	wants to join your Crew	wants to join your C
 app	onboarding-runtime	work	work	Goal-sentence slot (%2$@): work.	R	R	R	R	R	R	R	R	R	R
 app	online	your room	your room	RoomDetailsView.swift:24	R	R	R	R	R	R	R	R	R	R
 app	extracted	“%@”	“%@”		R	R	R	R	R	R	R	R	R	R
-shield	shield	A distraction is a poor exchange rate.	A distraction is a poor exchange rate.	ShieldConfigurationExtension.swift:139	R	R	R	R	R	R	R	R	R	R
+shield	shield	A distraction is a poor exchange rate.	A distraction is a poor exchange rate.	ShieldConfigurationExtension.swift:204	R	R	R	R	R	R	R	R	R	R
 shield	shield	Close	Close	HomeView.swift:807	R	R	R	R	R	R	R	R	R	R
-shield	shield	Don’t trade your goal	Don’t trade your goal	ShieldConfigurationExtension.swift:138	R	R	R	R	R	R	R	R	R	R
-shield	shield	Finish what you started.	Finish what you started.	ShieldConfigurationExtension.swift:149	R	R	R	R	R	R	R	R	R	R
-shield	shield	Five focused minutes	Five focused minutes	ShieldConfigurationExtension.swift:146	R	R	R	R	R	R	R	R	R	R
-shield	shield	It always does. Stay in the air.	It always does. Stay in the air.	ShieldConfigurationExtension.swift:143	R	R	R	R	R	R	R	R	R	R
-shield	shield	Not worth your momentum	Not worth your momentum	ShieldConfigurationExtension.swift:150	R	R	R	R	R	R	R	R	R	R
-shield	shield	Protect who you’re becoming	Protect who you’re becoming	ShieldConfigurationExtension.swift:140	R	R	R	R	R	R	R	R	R	R
-shield	shield	Return to FocusGlobe	Return to FocusGlobe	ShieldConfigurationExtension.swift:100	R	R	R	R	R	R	R	R	R	R
-shield	shield	So does the hour you already committed.	So does the hour you already committed.	ShieldConfigurationExtension.swift:145	R	R	R	R	R	R	R	R	R	R
-shield	shield	Stay on course	Stay on course	ShieldConfigurationExtension.swift:148	R	R	R	R	R	R	R	R	R	R
-shield	shield	That scroll can wait	That scroll can wait	ShieldConfigurationExtension.swift:136	R	R	R	R	R	R	R	R	R	R
-shield	shield	That’s all it takes to change your day.	That’s all it takes to change your day.	ShieldConfigurationExtension.swift:147	R	R	R	R	R	R	R	R	R	R
-shield	shield	The urge will pass	The urge will pass	ShieldConfigurationExtension.swift:142	R	R	R	R	R	R	R	R	R	R
-shield	shield	This is the part that builds them.	This is the part that builds them.	ShieldConfigurationExtension.swift:141	R	R	R	R	R	R	R	R	R	R
-shield	shield	Your future deserves this	Your future deserves this	ShieldConfigurationExtension.swift:144	R	R	R	R	R	R	R	R	R	R
-shield	shield	Your goal can’t. Keep flying.	Your goal can’t. Keep flying.	ShieldConfigurationExtension.swift:137	R	R	R	R	R	R	R	R	R	R
-shield	shield	You’ve built something. Don’t spend it here.	You’ve built something. Don’t spend it here.	ShieldConfigurationExtension.swift:151	R	R	R	R	R	R	R	R	R	R
+shield	shield	Don’t trade your goal	Don’t trade your goal	ShieldConfigurationExtension.swift:203	R	R	R	R	R	R	R	R	R	R
+shield	shield	Finish what you started.	Finish what you started.	ShieldConfigurationExtension.swift:214	R	R	R	R	R	R	R	R	R	R
+shield	shield	Five focused minutes	Five focused minutes	ShieldConfigurationExtension.swift:211	R	R	R	R	R	R	R	R	R	R
+shield	shield	It always does. Stay in the air.	It always does. Stay in the air.	ShieldConfigurationExtension.swift:208	R	R	R	R	R	R	R	R	R	R
+shield	shield	Not worth your momentum	Not worth your momentum	ShieldConfigurationExtension.swift:215	R	R	R	R	R	R	R	R	R	R
+shield	shield	Protect who you’re becoming	Protect who you’re becoming	ShieldConfigurationExtension.swift:205	R	R	R	R	R	R	R	R	R	R
+shield	shield	Return to FocusGlobe	Return to FocusGlobe	ShieldConfigurationExtension.swift:166	R	R	R	R	R	R	R	R	R	R
+shield	shield	So does the hour you already committed.	So does the hour you already committed.	ShieldConfigurationExtension.swift:210	R	R	R	R	R	R	R	R	R	R
+shield	shield	Stay on course	Stay on course	ShieldConfigurationExtension.swift:213	R	R	R	R	R	R	R	R	R	R
+shield	shield	That scroll can wait	That scroll can wait	ShieldConfigurationExtension.swift:201	R	R	R	R	R	R	R	R	R	R
+shield	shield	That’s all it takes to change your day.	That’s all it takes to change your day.	ShieldConfigurationExtension.swift:212	R	R	R	R	R	R	R	R	R	R
+shield	shield	The urge will pass	The urge will pass	ShieldConfigurationExtension.swift:207	R	R	R	R	R	R	R	R	R	R
+shield	shield	This is the part that builds them.	This is the part that builds them.	ShieldConfigurationExtension.swift:206	R	R	R	R	R	R	R	R	R	R
+shield	shield	Your future deserves this	Your future deserves this	ShieldConfigurationExtension.swift:209	R	R	R	R	R	R	R	R	R	R
+shield	shield	Your goal can’t. Keep flying.	Your goal can’t. Keep flying.	ShieldConfigurationExtension.swift:202	R	R	R	R	R	R	R	R	R	R
+shield	shield	You’ve built something. Don’t spend it here.	You’ve built something. Don’t spend it here.	ShieldConfigurationExtension.swift:216	R	R	R	R	R	R	R	R	R	R
 widgets	widgets	%@. %@.	%@. %@.	StreakCompanionWidget.swift:100	R	R	R	R	R	R	R	R	R	R
 widgets	widgets	%lld focus days	%lld focus days | plural: %lld focus days		R	R	R	R	R	R	R	R	R	R
 widgets	widgets	%lld-day streak	%lld-day streak | plural: %lld-day streak		R	R	R	R	R	R	R	R	R	R

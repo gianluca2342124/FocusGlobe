@@ -136,7 +136,7 @@ TRANSLATIONS: dict[str, list[str]] = {
     "That’s all it takes to change your day.": [
         "就足以改变你的一天。", "आपका दिन बदलने के लिए बस इतना ही काफ़ी है।",
         "Es todo lo que hace falta para cambiar tu día.",
-        "C’est tout ce qu’il faut pour changer votre journée.",
+        "Assez pour changer votre journée.",
         "Mehr braucht es nicht, um deinen Tag zu ändern.",
         "Этого достаточно, чтобы изменить день.",
         "Basta isso para mudar seu dia.",
@@ -167,7 +167,7 @@ TRANSLATIONS: dict[str, list[str]] = {
         "你已经积累了一些。别花在这里。",
         "आपने कुछ बनाया है। इसे यहाँ ख़र्च मत कीजिए।",
         "Has construido algo. No lo gastes aquí.",
-        "Vous avez construit quelque chose. Ne le dépensez pas ici.",
+        "Ne gâchez pas ce que vous avez construit.",
         "Du hast dir etwas aufgebaut. Gib es nicht hier aus.",
         "Вы кое-что построили. Не тратьте это здесь.",
         "Você construiu algo. Não gaste isso aqui.",

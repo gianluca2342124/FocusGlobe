@@ -870,7 +870,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "C’est tout ce qu’il faut pour changer votre journée."
+            "value": "Assez pour changer votre journée."
           }
         },
         "de": {
@@ -1130,7 +1130,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vous avez construit quelque chose. Ne le dépensez pas ici."
+            "value": "Ne gâchez pas ce que vous avez construit."
           }
         },
         "de": {
