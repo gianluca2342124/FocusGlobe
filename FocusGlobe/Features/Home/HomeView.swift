@@ -410,6 +410,15 @@ struct HomeView: View {
     /// "cooldown" is correct, because the alternative is re-asking the same
     /// question on every Home appearance until it finally says yes.
     ///
+    /// THE ATTEMPT IS RECORDED LAST, and that ordering is the invariant this
+    /// whole method is built around: **a persisted attempt means FocusGlobe
+    /// genuinely invoked `RequestReviewAction`.** Recording it before the settle
+    /// delay looked safer — a crash inside the beat could not then lose it — but
+    /// it bought that against the wrong risk. The final safety check can fail,
+    /// and an attempt written before it would start a 14- or 21-day cooldown for
+    /// a prompt that was never even offered to StoreKit. Losing an opportunity
+    /// costs one landing; a phantom cooldown costs three weeks.
+    ///
     /// What is recorded is only ever "FocusGlobe asked, at this time, at this
     /// flight count". There is no hasReviewed flag, because the system never
     /// says.
@@ -448,19 +457,33 @@ struct HomeView: View {
             hasOnboarded: !appModel.needsOnboarding
         )
         let decision = ReviewRequestPolicy.decide(context)
-        ReviewRequestPolicy.log(decision, context: context)
+        ReviewRequestPolicy.logDecision(decision, context: context)
         guard decision.isRequest else { return }
 
-        // Recorded BEFORE the call, and before the delay. StoreKit tells us
-        // nothing afterwards, and a crash inside the beat below must not leave
-        // the ladder thinking it never asked.
-        appModel.recordReviewRequestAttempt(at: now, completedFlights: flights)
         // A short beat so Home has settled — never straight off a tap, never
         // over a transition, and never on top of the landing animation the
         // pilot is still watching.
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
-            guard isPresentationSafe else { return }
+            // Re-checked because the beat is long enough for something to have
+            // arrived in it. Nothing has been written yet, so abandoning here
+            // costs exactly this opportunity and starts no cooldown: the next
+            // landing, or the next calm return, evaluates the same ladder from
+            // the same state.
+            guard isPresentationSafe else {
+                #if DEBUG
+                print("[Review] opportunity abandoned: presentation unsafe — no attempt recorded")
+                #endif
+                return
+            }
+            // These two lines are the attempt. They run together, on the main
+            // queue, with no suspension point between them, so the record and
+            // the call cannot come apart — which is the entire point of moving
+            // them here. The timestamp is taken now rather than reused from the
+            // decision above, because now is when it happened.
+            appModel.recordReviewRequestAttempt(at: Date().timeIntervalSince1970,
+                                                completedFlights: flights)
             requestReview()
+            ReviewRequestPolicy.logSubmitted(context: context)
         }
     }
 

@@ -197,19 +197,35 @@ enum ReviewRequestPolicy {
     /// DEBUG-only. Deliberately never surfaced in the UI — a rating prompt that
     /// explains itself on screen is a rating prompt nobody wants.
     ///
-    /// It says "opportunity submitted", never "prompt shown": StoreKit does not
-    /// report the second, and a log line that claims it would be a lie the next
-    /// reader believes.
-    static func log(_ decision: Decision, context c: Context) {
+    /// THREE LINES, and which one prints is load-bearing. Eligibility, the
+    /// settle delay and the actual call are three separate events, and a log
+    /// that collapses them tells the next reader that FocusGlobe asked when it
+    /// may only have been about to. `logDecision` is the ladder's answer;
+    /// `logSubmitted` is the only line that may be read as "we called StoreKit",
+    /// and it is printed from the same statement list as the call itself.
+    ///
+    /// None of them says "prompt shown". StoreKit does not report that, and a
+    /// log line claiming it would be a lie the next reader believes.
+    static func logDecision(_ decision: Decision, context c: Context) {
         #if DEBUG
         if decision.isRequest {
-            print("[Review] requestReview opportunity submitted — "
+            print("[Review] eligible — "
                   + "moment: \(c.moment.map(String.init(describing:)) ?? "nil"), "
                   + "flights: \(c.completedFlights), days: \(c.distinctFocusDays), "
-                  + "streak: \(c.currentStreak)")
+                  + "streak: \(c.currentStreak) — waiting for a stable screen")
         } else {
             print("[Review] skipped: \(decision.reason)")
         }
+        #endif
+    }
+
+    /// Printed only where `RequestReviewAction` was genuinely invoked. Whether
+    /// anything appeared remains Apple's business and is never reported back.
+    static func logSubmitted(context c: Context) {
+        #if DEBUG
+        print("[Review] requestReview opportunity submitted — "
+              + "moment: \(c.moment.map(String.init(describing:)) ?? "nil"), "
+              + "flights: \(c.completedFlights)")
         #endif
     }
 }
