@@ -583,6 +583,26 @@ TRANSLATIONS: dict[str, list[str]] = {
         "Onlinegegevens verwijderen",
     ],
 
+    # ---- Settings: language -----------------------------------------------
+    # Settings → Experience → Language. The row's supporting line, kept in the
+    # same register as its neighbours ("Ambient audio during your flights",
+    # "Streak, focus & goal nudges") — a short noun phrase, not a sentence.
+    "The language FocusGlobe uses": [
+        "FocusGlobe 使用的语言", "FocusGlobe की भाषा",
+        "El idioma de FocusGlobe", "La langue de FocusGlobe",
+        "Die Sprache von FocusGlobe", "Язык FocusGlobe",
+        "O idioma do FocusGlobe", "La lingua di FocusGlobe",
+        "Limba folosită de FocusGlobe", "De taal van FocusGlobe",
+    ],
+    # Spoken only. VoiceOver reads the row as "Español, seleccionado", so this
+    # is the state of a LANGUAGE row and takes the masculine/neutral form each
+    # platform uses for a selected element.
+    "Selected": [
+        "已选择", "चुना गया", "Seleccionado", "Sélectionné",
+        "Ausgewählt", "Выбрано", "Selecionado", "Selezionato",
+        "Selectat", "Geselecteerd",
+    ],
+
     # ---- Location picker --------------------------------------------------
     "Starting city": [
         "起始城市", "शुरुआती शहर", "Ciudad de partida", "Ville de départ",
@@ -754,4 +774,11 @@ COMMENTS: dict[str, str] = {
     "Your launch-ready Home": "Setup-checklist line. 'Home' is FocusGlobe's "
                               "Home TAB — use the same word the tab uses, not "
                               "the word for a residence.",
+    "The language FocusGlobe uses": "Supporting line under the Language row in "
+                                    "Settings. A short noun phrase, like the "
+                                    "Sound and Reminders lines beside it.",
+    "Selected": "VoiceOver only, never drawn. The state of a language row in "
+                "the Settings language list: 'Español, <this>'. Agree with a "
+                "language name, or use your platform's standard wording for a "
+                "selected element.",
 }

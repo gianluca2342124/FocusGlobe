@@ -19,6 +19,7 @@ struct SettingsView: View {
     @State private var nameStatus: NameStatus?
     @FocusState private var nameFieldFocused: Bool
     @State private var showManageOnlineData = false
+    @State private var showLanguagePicker = false
     /// Account section state (free, always available — never Debug-only).
     @State private var showAccountSignOutConfirm = false
     @State private var accountError: String?
@@ -86,6 +87,11 @@ struct SettingsView: View {
             // Calm moment to ask for notification permission (provisional, no
             // prompt) — never after a journey, never at first launch.
             appModel.requestNotificationPermissionForEngagement()
+        }
+        .sheet(isPresented: $showLanguagePicker) {
+            LanguagePickerView()
+                .environmentObject(appModel)
+                .presentationDragIndicator(.visible)
         }
         #if canImport(RevenueCatUI)
         .sheet(isPresented: $showCustomerCenter) { CustomerCenterView() }
@@ -285,6 +291,31 @@ struct SettingsView: View {
     private var experienceSection: some View {
         SettingsCard(title: "Experience") {
             VStack(spacing: 0) {
+                // Language leads the section. It is an app-wide preference like
+                // the three below it, and it is the one a pilot goes looking
+                // for — the Welcome screen offered it once and then it was
+                // gone. Not in the profile block: a flag beside the pilot's
+                // name would read as a nationality, which it is not.
+                Button {
+                    appModel.tapFeedback()
+                    showLanguagePicker = true
+                } label: {
+                    SettingsRow(systemImage: "globe", title: "Language",
+                                subtitle: "The language FocusGlobe uses",
+                                trailing: AnyView(HStack(spacing: 6) {
+                                    Text(appModel.preferredLanguage.badge)
+                                        .font(AppTypography.callout)
+                                        .foregroundStyle(AppColors.textSecondary)
+                                        .lineLimit(1)
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(AppColors.textTertiary)
+                                }))
+                }
+                .buttonStyle(SoftPressStyle())
+                .accessibilityLabel(Text("Language"))
+                .accessibilityValue(appModel.preferredLanguage.nativeName)
+                RowDivider()
                 ToggleRow(systemImage: "speaker.wave.2.fill", title: "Sound",
                           subtitle: "Ambient audio during your flights",
                           isOn: boolBinding(\.soundEnabled))
@@ -548,6 +579,96 @@ struct SettingsView: View {
 }
 
 // MARK: - Manage Online Data
+
+/// Settings → Experience → Language.
+///
+/// The SAME preference the Welcome screen writes, exposed a second time rather
+/// than reimplemented: the list is `FocusLanguage.allCases` in its declared
+/// order, the current value is `appModel.preferredLanguage`, and choosing a row
+/// assigns to that same property. There is no array of eleven languages here,
+/// no second `UserDefaults` key and no `@AppStorage` — the setter already
+/// persists through `AppSettings`, mirrors the code into the App Group for the
+/// widgets and the Shield extensions, and republishes.
+///
+/// IT DOES NOT DISMISS ON SELECTION, deliberately. This screen is where the
+/// pilot is choosing a language, quite possibly one they are not fluent in, and
+/// the honest way to confirm the choice is to watch this screen become that
+/// language under their finger. Tap Español and the header reads Idioma; tap
+/// Deutsch and it reads Sprache. Closing the sheet the instant they tap would
+/// hide the only feedback that matters.
+///
+/// The locale is restated on this view's own body for the same reason
+/// `LocalizedRoot` restates it on the app's: a sheet is hosted separately, and
+/// this view observes `appModel`, so re-reading `preferredLocale` here is what
+/// guarantees the switch lands on THIS screen and not only on the one behind it.
+private struct LanguagePickerView: View {
+    @EnvironmentObject private var appModel: AppModel
+
+    var body: some View {
+        ZStack {
+            AppBackground().ignoresSafeArea()
+            ScrollView {
+                VStack(alignment: .leading, spacing: AppSpacing.lg) {
+                    ScreenHeader(title: "Language", showsBack: false)
+                    AppGlassCard(padding: AppSpacing.md) {
+                        VStack(spacing: 0) {
+                            ForEach(Array(FocusLanguage.allCases.enumerated()), id: \.element) { index, language in
+                                if index > 0 { RowDivider() }
+                                row(language)
+                            }
+                        }
+                    }
+                }
+                .padding(AppSpacing.screen)
+                .padding(.top, AppSpacing.xs)
+                .padding(.bottom, AppSpacing.xxl)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .settingsMaxWidth()
+            }
+        }
+        .environment(\.locale, appModel.preferredLocale)
+    }
+
+    private func row(_ language: FocusLanguage) -> some View {
+        let isSelected = appModel.preferredLanguage == language
+        return Button {
+            // Writing on every tap, including a tap on the language already
+            // showing, is the same deliberate choice the Welcome capsule makes:
+            // it turns "the device happens to be French" into "this pilot chose
+            // French", which then survives the phone changing.
+            appModel.tapFeedback()
+            appModel.preferredLanguage = language
+        } label: {
+            HStack(spacing: AppSpacing.sm) {
+                Text(language.badge)
+                    .font(AppTypography.callout)
+                    .foregroundStyle(AppColors.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: AppSpacing.xs)
+                Image(systemName: "checkmark")
+                    .font(.system(size: 13, weight: .heavy))
+                    .foregroundStyle(AppColors.selectionGold)
+                    .opacity(isSelected ? 1 : 0)
+            }
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(SoftPressStyle(scale: 0.99))
+        // "Español, seleccionado" — the endonym, never the code, and the state
+        // in FocusGlobe's language rather than the phone's.
+        //
+        // The checkmark is a drawn glyph, not a system control, so its state
+        // has to be spoken by this value or not at all. `.isSelected` is
+        // deliberately NOT added on top: VoiceOver speaks that trait itself, in
+        // the DEVICE language, and the row would announce its state twice in
+        // two different languages.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(language.nativeName)
+        .accessibilityValue(isSelected ? Text("Selected") : Text(verbatim: ""))
+        .accessibilityAddTraits(.isButton)
+    }
+}
 
 /// The pushed detail behind Settings → Privacy & Data → Manage Online Data.
 /// Lists exactly what is deleted from FocusGlobe Online, then offers a

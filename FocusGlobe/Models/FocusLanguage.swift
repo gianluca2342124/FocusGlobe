@@ -90,6 +90,19 @@ enum FocusLanguage: String, CaseIterable, Identifiable, Codable {
         }
     }
 
+    /// Flag and endonym as one string — "🇪🇸  Español".
+    ///
+    /// The form a language is NAMED in when it is being offered or reported: the
+    /// Settings row's value, and every row of the Settings picker. It is a
+    /// property rather than an interpolation at each call site so the two can
+    /// never disagree about the spacing, the order or which of the two comes
+    /// first.
+    ///
+    /// Deliberately NOT localized. A flag is a flag, and an endonym is already
+    /// in its own language — translating "Español" into German would be the
+    /// exact mistake `nativeName` exists to prevent.
+    var badge: String { "\(flag)  \(nativeName)" }
+
     /// The fallback for everything: an unknown stored code, an unmatched device
     /// language, a corrupted preference.
     static let fallback: FocusLanguage = .english
