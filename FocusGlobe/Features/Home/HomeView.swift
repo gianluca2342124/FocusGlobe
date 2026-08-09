@@ -238,12 +238,11 @@ struct HomeView: View {
                 skyIndex = FocusSky.all.firstIndex(of: appModel.selectedSky) ?? 0
                 didInitSky = true
             }
-            // The first arrival after onboarding, and only then. Safe to call on
-            // every appearance: the pending flag is persisted and one-shot, it
-            // is cleared only once iOS has actually been consulted, and the
-            // system is asked at all only while the status is `.notDetermined`.
-            appModel.consumeNotificationPromptIfNeeded()
+            // ORDER MATTERS. `presentHomeAutoPopup` decides synchronously
+            // whether a paywall or a gift is about to be raised, so it runs
+            // first and the permission ask can see the answer.
             presentHomeAutoPopup()
+            requestPostOnboardingNotificationsIfReady()
             maybeRequestReview()
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 3.4).repeatForever(autoreverses: true)) { balloonFloat = -10 }
@@ -338,6 +337,61 @@ struct HomeView: View {
         router.raiseTakeoffCurtain(skyID: FocusSky.matching(routeID: journey.route.id)?.id)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
             router.activeJourney = journey
+        }
+    }
+
+    // MARK: Post-onboarding notification permission
+
+    /// Nothing of FocusGlobe's own is on top of Home right now.
+    ///
+    /// The one predicate behind BOTH system prompts. An Apple dialog raised
+    /// under a sheet, over a transition, or beside another Apple dialog is the
+    /// failure mode neither of them can recover from — iOS spends the ask
+    /// either way.
+    private var isPresentationSafe: Bool {
+        router.activeJourney == nil
+            && !router.showPaywall
+            && router.activeModal == nil
+            && !showSetup
+            && !showPreview
+            && !handingOff
+            && !appModel.subscriptions.isPurchasing
+    }
+
+    /// The native notification permission sheet, on the first Home after
+    /// onboarding.
+    ///
+    /// Everything underneath already existed and is unchanged:
+    /// `completeOnboarding` sets a DURABLE, device-scoped pending flag, and
+    /// `consumeNotificationPromptIfNeeded` asks iOS only while the status is
+    /// `.notDetermined`, clears the flag only once iOS has genuinely been
+    /// consulted, and guards its own re-entry. What this adds is the two things
+    /// that were missing at the call site.
+    ///
+    /// A BEAT. It used to fire inside `onAppear`, which puts a system dialog on
+    /// screen while Home is still assembling and while the pilot is still
+    /// reading "your first flight is ready". A second is enough to feel like
+    /// arrival rather than a toll gate.
+    ///
+    /// AND A SECOND LOOK. The delay is not a hope that Home settles — the
+    /// safety predicate is re-evaluated at fire time, because the launch
+    /// paywall and the Coins Boost gift are both scheduled from this same
+    /// `onAppear` and land inside the same window. If anything is up, this
+    /// simply returns: the flag is durable, so the ask happens on the next
+    /// clean Home appearance instead. Nothing is lost by declining to ask now.
+    private func requestPostOnboardingNotificationsIfReady() {
+        guard appModel.hasPendingNotificationPrompt else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            guard appModel.hasPendingNotificationPrompt, isPresentationSafe else {
+                #if DEBUG
+                print("[Notifications] deferred: Home is not presentation-safe")
+                #endif
+                return
+            }
+            #if DEBUG
+            print("[Notifications] requesting post-onboarding authorization")
+            #endif
+            appModel.consumeNotificationPromptIfNeeded()
         }
     }
 
