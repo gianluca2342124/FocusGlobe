@@ -43,6 +43,15 @@ actor SupabaseAuthService {
         return session.user.id.uuidString.lowercased()
     }
 
+    /// Canonical authenticated email for gating internal developer tools. This
+    /// value never leaves the in-memory auth model and is never shown in UI.
+    var currentUserEmail: String? {
+        guard let session = client?.auth.currentSession, !session.isExpired else { return nil }
+        return session.user.email?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+    }
+
     /// Restore + refresh the stored session. Returns the user id, or nil when
     /// signed out. Throws only on transport-level failures so the caller can
     /// distinguish "no account" from "can't reach the backend".

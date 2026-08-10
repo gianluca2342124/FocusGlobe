@@ -26,9 +26,7 @@ struct SettingsView: View {
     #if canImport(RevenueCatUI)
     @State private var showCustomerCenter = false
     #endif
-    #if DEBUG
     @State private var showResetConfirm = false
-    #endif
 
     var body: some View {
         ZStack {
@@ -58,9 +56,9 @@ struct SettingsView: View {
                     FocusShieldSettingsSection(service: appModel.focusShield)
                     ultraSection
                     privacyDataSection
-                    #if DEBUG
-                    debugSection
-                    #endif
+                    if isOwnerDeveloperAccount {
+                        debugSection
+                    }
                     versionFooter
                 }
                 // Padding INSIDE the stretch, not outside it. The other order —
@@ -511,9 +509,14 @@ struct SettingsView: View {
             .foregroundStyle(AppColors.textTertiary)
     }
 
-    #if DEBUG
-    // Developer-only (never compiled into release builds): a full local data
-    // reset so fresh-user onboarding can be re-tested without reinstalling.
+    private var isOwnerDeveloperAccount: Bool {
+        online.authenticatedEmail?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased() == "gianlucacrous@gmail.com"
+    }
+
+    // Owner-only local reset. The section is absent unless the canonical
+    // authenticated Supabase email matches the owner account exactly.
     private var debugSection: some View {
         SettingsCard(title: "Developer") {
             VStack(spacing: 0) {
@@ -547,14 +550,13 @@ struct SettingsView: View {
                             isPresented: $showResetConfirm,
                             titleVisibility: .visible) {
             Button("Erase everything", role: .destructive) {
-                appModel.debugResetAllData()
+                appModel.resetAllLocalDataForOwner()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Deletes flights, coins, streaks, unlocks and your profile on this device. The app returns to first launch.")
         }
     }
-    #endif
 
     private var versionFooter: some View {
         Text("Version \(appVersion)")

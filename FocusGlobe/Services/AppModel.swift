@@ -573,13 +573,12 @@ final class AppModel: ObservableObject {
         registerAcceptedInvite(forSkyID: skyID)
         haptics.tap()
     }
+    #endif
 
-    /// DEBUG-only: wipe every piece of local data and return the app to a true
-    /// first-launch state — onboarding shows again on the spot, no reinstall
-    /// needed. Disk keys are removed first; the assignments reset the published
-    /// state (settings/profile/isPro re-persist via their own `didSet`, the
-    /// rest simply load as empty next launch). Never compiled into release.
-    func debugResetAllData() {
+    /// Owner-only local reset used to replay first launch without reinstalling.
+    /// Settings exposes it solely when the canonical authenticated account email
+    /// matches the owner; this does not replace the normal Online-data deletion.
+    func resetAllLocalDataForOwner() {
         persistence.wipeAll()
         UserDefaults.standard.removeObject(forKey: "fg.notifications.enabled")
         settings = .default
@@ -591,7 +590,6 @@ final class AppModel: ObservableObject {
         syncWidgets()
         haptics.tap()
     }
-    #endif
 
     // MARK: - Focus Coins + Store
 

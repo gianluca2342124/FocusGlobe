@@ -107,6 +107,10 @@ final class FocusOnlineModel: ObservableObject {
     /// happened to change in the same breath — true today, but not a guarantee.
     @Published private(set) var isAuthenticated = false
 
+    /// Authenticated Supabase email used only to gate the local developer reset.
+    /// It is never displayed and is cleared with the canonical auth session.
+    @Published private(set) var authenticatedEmail: String?
+
     /// Both operands are now `@Published`, so every consumer re-renders the moment
     /// a session is restored, Sign in with Apple succeeds, the pilot signs out, or
     /// the account switches.
@@ -295,6 +299,7 @@ final class FocusOnlineModel: ObservableObject {
         do {
             if let userID = try await authService.restoreSession() {
                 myUserID = userID
+                await refreshDeveloperAccountEmail()
                 // Never declare `.ready` until a profile row is confirmed — a
                 // cached profile for THIS user counts, otherwise the
                 // server-guaranteed ensure must succeed first.
@@ -308,6 +313,7 @@ final class FocusOnlineModel: ObservableObject {
                 }
             } else {
                 myUserID = nil
+                authenticatedEmail = nil
                 availability = .signedOut
             }
         } catch {
@@ -409,6 +415,7 @@ final class FocusOnlineModel: ObservableObject {
                 // owner FK. If profile setup fails we stay authenticated but not
                 // ready and surface a retryable message.
                 myUserID = userID
+                await refreshDeveloperAccountEmail()
                 if await ensureIdentityAndProfile() {
                     availability = .ready
                     await consumePendingInviteIfAny()
@@ -424,6 +431,7 @@ final class FocusOnlineModel: ObservableObject {
                 // second tap.
                 if let recovered = try? await authService.restoreSession() {
                     myUserID = recovered
+                    await refreshDeveloperAccountEmail()
                     if await ensureIdentityAndProfile() {
                         availability = .ready
                         await consumePendingInviteIfAny()
@@ -448,6 +456,7 @@ final class FocusOnlineModel: ObservableObject {
         await realtimeService.teardown()
         await authService.signOut()
         myUserID = nil
+        authenticatedEmail = nil
         resetSocialState()
         availability = .signedOut
         nameConflict = nil
@@ -455,6 +464,10 @@ final class FocusOnlineModel: ObservableObject {
         // guarantee is "a name always exists", and an anonymous pilot needs one
         // just as much as an authenticated one.
         appModel?.ensureCanonicalNameExists()
+    }
+
+    private func refreshDeveloperAccountEmail() async {
+        authenticatedEmail = await authService.currentUserEmail
     }
 
     private func resetSocialState() {
