@@ -302,6 +302,18 @@ struct CabinItemAnchor: Hashable {
     static let bottomCenter = CabinItemAnchor(x: 0.5, y: 1)
 }
 
+/// Normalized alpha-content bounds inside an item's untouched source image.
+/// Values are measured once from the production PNGs and kept with the visual
+/// tuning metadata; rendering never scans or decodes pixels per frame.
+struct CabinItemVisibleBounds: Hashable {
+    let x: Double
+    let y: Double
+    let width: Double
+    let height: Double
+
+    static let full = CabinItemVisibleBounds(x: 0, y: 0, width: 1, height: 1)
+}
+
 struct StoreItem: Identifiable, Hashable {
     enum Kind: String { case charm, trail, cabinDecoration }
 
@@ -324,6 +336,10 @@ struct StoreItem: Identifiable, Hashable {
     var footprint: CabinItemFootprint = .medium
     /// Scale relative to the semantic slot's responsive base size.
     var normalizedScale: Double = 1
+    /// Visible alpha bounds inside the source PNG. Cabin sizing is based on the
+    /// collectible itself rather than transparent canvas, while Store cards keep
+    /// using the untouched production asset.
+    var visibleBounds: CabinItemVisibleBounds = .full
     /// Asset anchor metadata (kept normalized and independent of screen size).
     /// Nil inherits the physical anchor declared by the selected Cabin slot.
     var anchorPoint: CabinItemAnchor? = nil
@@ -345,7 +361,8 @@ struct StoreItem: Identifiable, Hashable {
          isPremium: Bool, systemImage: String, tintHex: UInt,
          imageName: String? = nil, allowedSlots: [CabinSlot] = [],
          preferredSlot: CabinSlot? = nil, footprint: CabinItemFootprint = .medium,
-         normalizedScale: Double = 1, anchorPoint: CabinItemAnchor? = nil,
+         normalizedScale: Double = 1, visibleBounds: CabinItemVisibleBounds = .full,
+         anchorPoint: CabinItemAnchor? = nil,
          offsetAdjustment: CabinItemAnchor = .zero,
          zIndex: Double = 0, rotationDegrees: Double = 0,
          perspectivePitchDegrees: Double = 0, clippedBottomFraction: Double = 0,
@@ -363,6 +380,7 @@ struct StoreItem: Identifiable, Hashable {
         self.preferredSlot = preferredSlot
         self.footprint = footprint
         self.normalizedScale = normalizedScale
+        self.visibleBounds = visibleBounds
         self.anchorPoint = anchorPoint
         self.offsetAdjustment = offsetAdjustment
         self.zIndex = zIndex
@@ -422,48 +440,55 @@ struct StoreItem: Identifiable, Hashable {
                   kind: .cabinDecoration, price: 60, isPremium: false, systemImage: "cup.and.saucer.fill",
                   tintHex: 0xC9A27A, imageName: "iced-latte",
                   allowedSlots: [.tableLeft, .tableCenter, .tableRight], preferredSlot: .tableLeft,
-                  footprint: .compact, normalizedScale: 0.72),
+                  footprint: .compact, normalizedScale: 0.57,
+                  visibleBounds: .init(x: 0.237, y: 0.001, width: 0.526, height: 0.998)),
         StoreItem(id: "notebook", name: "Notebook", subtitle: "For your best ideas",
                   kind: .cabinDecoration, price: 40, isPremium: false, systemImage: "book.closed.fill",
                   tintHex: 0xB0783E, imageName: "notebook",
                   allowedSlots: [.tableLeft, .tableCenter, .tableRight, .benchLeft, .benchCenter],
-                  preferredSlot: .tableCenter, footprint: .wide, normalizedScale: 0.76,
+                  preferredSlot: .tableCenter, footprint: .wide, normalizedScale: 0.69,
+                  visibleBounds: .init(x: 0.166, y: 0.001, width: 0.670, height: 0.999),
                   rotationDegrees: -3, perspectivePitchDegrees: 58),
         StoreItem(id: "headphones", name: "Headphones", subtitle: "Sink into deep focus",
                   kind: .cabinDecoration, price: 0, isPremium: true, systemImage: "headphones",
                   tintHex: 0x8FA6D8, imageName: "headphones",
                   allowedSlots: [.hookLeft, .hookRight, .tableLeft, .tableRight, .benchLeft],
-                  preferredSlot: .hookLeft, footprint: .medium, normalizedScale: 0.70,
+                  preferredSlot: .hookLeft, footprint: .medium, normalizedScale: 0.57,
+                  visibleBounds: .init(x: 0.221, y: 0.001, width: 0.560, height: 0.999),
                   clippedBottomFraction: 0.26),
         StoreItem(id: "framed-poster", name: "Framed Poster", subtitle: "A view for the wall",
                   kind: .cabinDecoration, price: 340, isPremium: false, systemImage: "photo.fill",
                   tintHex: 0xE0A46A, imageName: "framed-poster",
                   allowedSlots: [.wallLeft, .wallRight], preferredSlot: .wallLeft,
-                  footprint: .tall, normalizedScale: 0.72),
+                  footprint: .tall, normalizedScale: 0.62,
+                  visibleBounds: .init(x: 0.185, y: 0.002, width: 0.632, height: 0.998)),
         StoreItem(id: "christmas-ornament", name: "Festive Ornament", subtitle: "A little seasonal cheer",
                   kind: .cabinDecoration, price: 280, isPremium: false, systemImage: "sparkles",
                   tintHex: 0xE8654B, imageName: "christmas-ornament",
                   allowedSlots: [.hangingLeft, .hangingRight], preferredSlot: .hangingRight,
-                  footprint: .tall, normalizedScale: 0.66),
+                  footprint: .tall, normalizedScale: 0.40,
+                  visibleBounds: .init(x: 0.311, y: 0.062, width: 0.380, height: 0.700)),
         StoreItem(id: "closed-laptop", name: "Closed Laptop", subtitle: "Work set aside for the climb",
                   kind: .cabinDecoration, price: 460, isPremium: false, systemImage: "laptopcomputer",
                   tintHex: 0x9AA7B4, imageName: "closed-laptop",
                   allowedSlots: [.tableCenter, .tableLeft, .tableRight, .benchLeft, .benchCenter],
-                  preferredSlot: .tableCenter, footprint: .wide, normalizedScale: 0.78,
+                  preferredSlot: .tableCenter, footprint: .wide, normalizedScale: 1.00,
+                  visibleBounds: .init(x: 0.001, y: 0.238, width: 0.997, height: 0.522),
                   rotationDegrees: -3, perspectivePitchDegrees: 56),
         StoreItem(id: "sleeping-cat", name: "Sleeping Cat", subtitle: "A calm co-pilot",
                   kind: .cabinDecoration, price: 560, isPremium: false, systemImage: "cat.fill",
                   tintHex: 0xD8C0A0, imageName: "sleeping-cat",
                   allowedSlots: [.benchLeft, .benchCenter, .floorRight], preferredSlot: .benchLeft,
-                  footprint: .soft, normalizedScale: 0.95),
+                  footprint: .soft, normalizedScale: 1.08,
+                  visibleBounds: .init(x: 0.002, y: 0.194, width: 0.997, height: 0.616)),
         StoreItem(id: "cabin-plant", name: "Tiny Fern", subtitle: "A cabin companion",
                   kind: .cabinDecoration, price: 90, isPremium: false, systemImage: "leaf.fill",
                   tintHex: 0x6FD8B8, allowedSlots: [.tableLeft, .tableRight],
-                  preferredSlot: .tableRight, footprint: .compact, normalizedScale: 0.67),
+                  preferredSlot: .tableRight, footprint: .compact, normalizedScale: 0.92),
         StoreItem(id: "cabin-teapot", name: "Ceramic Teapot", subtitle: "For longer flights",
                   kind: .cabinDecoration, price: 130, isPremium: false, systemImage: "mug.fill",
                   tintHex: 0xE9C07A, allowedSlots: [.tableLeft, .tableCenter, .tableRight],
-                  preferredSlot: .tableRight, footprint: .compact, normalizedScale: 0.72),
+                  preferredSlot: .tableRight, footprint: .compact, normalizedScale: 0.96),
 
         // Curated first Cabin drop — premium stylized transparent artwork.
         StoreItem(id: "strawberry-matcha-latte", name: "Strawberry Matcha Latte",
@@ -471,73 +496,87 @@ struct StoreItem: Identifiable, Hashable {
                   isPremium: false, systemImage: "cup.and.saucer.fill", tintHex: 0xE89AA8,
                   imageName: "Cabin_StrawberryMatcha",
                   allowedSlots: [.tableLeft, .tableCenter, .tableRight], preferredSlot: .tableLeft,
-                  footprint: .compact, normalizedScale: 0.70),
+                  footprint: .compact, normalizedScale: 0.66,
+                  visibleBounds: .init(x: 0.176, y: 0.053, width: 0.646, height: 0.891)),
         StoreItem(id: "heart-straw-boba", name: "Heart Straw Boba Tea",
                   subtitle: "Sweet focus energy", kind: .cabinDecoration, price: 210,
                   isPremium: false, systemImage: "heart.fill", tintHex: 0xE8A5B5,
                   imageName: "Cabin_HeartBoba",
                   allowedSlots: [.tableLeft, .tableCenter, .tableRight], preferredSlot: .tableRight,
-                  footprint: .compact, normalizedScale: 0.66),
+                  footprint: .compact, normalizedScale: 0.53,
+                  visibleBounds: .init(x: 0.234, y: 0.008, width: 0.531, height: 0.978)),
         StoreItem(id: "pastel-tumbler", name: "Pastel Insulated Tumbler",
                   subtitle: "Hydration for the long route", kind: .cabinDecoration, price: 0,
                   isPremium: true, systemImage: "waterbottle.fill", tintHex: 0xC9A6DA,
                   imageName: "Cabin_PastelTumbler",
                   allowedSlots: [.tableLeft, .tableCenter, .tableRight], preferredSlot: .tableLeft,
-                  footprint: .tall, normalizedScale: 0.64),
+                  footprint: .tall, normalizedScale: 0.52,
+                  visibleBounds: .init(x: 0.279, y: 0.034, width: 0.523, height: 0.922)),
         StoreItem(id: "candle-warmer", name: "Candle Warmer Lamp",
                   subtitle: "Amber calm without a flame", kind: .cabinDecoration, price: 340,
                   isPremium: false, systemImage: "lamp.table.fill", tintHex: 0xE7B66D,
                   imageName: "Cabin_CandleWarmer",
                   allowedSlots: [.tableLeft, .tableCenter, .tableRight], preferredSlot: .tableRight,
-                  footprint: .tall, normalizedScale: 0.74),
+                  footprint: .tall, normalizedScale: 0.57,
+                  visibleBounds: .init(x: 0.236, y: 0.042, width: 0.529, height: 0.908)),
         StoreItem(id: "mushroom-lamp", name: "Mushroom Lamp",
                   subtitle: "A cozy pool of light", kind: .cabinDecoration, price: 320,
                   isPremium: false, systemImage: "lamp.table.fill", tintHex: 0xD9793F,
                   imageName: "Cabin_MushroomLamp",
                   allowedSlots: [.tableLeft, .tableCenter, .tableRight], preferredSlot: .tableLeft,
-                  footprint: .medium, normalizedScale: 0.74),
+                  footprint: .medium, normalizedScale: 0.75,
+                  visibleBounds: .init(x: 0.128, y: 0.052, width: 0.745, height: 0.905)),
         StoreItem(id: "sunset-projector", name: "Mini Sunset Projector",
                   subtitle: "Warm atmosphere on demand", kind: .cabinDecoration, price: 390,
                   isPremium: false, systemImage: "sun.max.fill", tintHex: 0xEF8D53,
                   imageName: "Cabin_SunsetProjector",
                   allowedSlots: [.tableLeft, .tableRight, .floorRight], preferredSlot: .floorRight,
-                  footprint: .medium, normalizedScale: 0.72),
+                  footprint: .medium, normalizedScale: 0.65,
+                  visibleBounds: .init(x: 0.180, y: 0.065, width: 0.621, height: 0.852)),
         StoreItem(id: "flip-clock", name: "Digital Flip Clock",
                   subtitle: "Time, quietly kept", kind: .cabinDecoration, price: 280,
                   isPremium: false, systemImage: "clock.fill", tintHex: 0x8B6348,
                   imageName: "Cabin_FlipClock",
                   allowedSlots: [.tableLeft, .tableCenter, .tableRight], preferredSlot: .tableCenter,
-                  footprint: .wide, normalizedScale: 0.78, perspectivePitchDegrees: 44),
+                  footprint: .wide, normalizedScale: 0.89,
+                  visibleBounds: .init(x: 0.079, y: 0.147, width: 0.848, height: 0.701),
+                  perspectivePitchDegrees: 44),
         StoreItem(id: "vinyl-player", name: "Mini Vinyl Record Player",
                   subtitle: "Slow grooves for deep focus", kind: .cabinDecoration, price: 460,
                   isPremium: false, systemImage: "record.circle.fill", tintHex: 0x9B6D4A,
                   imageName: "Cabin_VinylPlayer",
                   allowedSlots: [.tableCenter, .tableLeft, .tableRight], preferredSlot: .tableCenter,
-                  footprint: .wide, normalizedScale: 0.84, perspectivePitchDegrees: 48),
+                  footprint: .wide, normalizedScale: 0.79,
+                  visibleBounds: .init(x: 0.160, y: 0.039, width: 0.693, height: 0.883),
+                  perspectivePitchDegrees: 48),
         StoreItem(id: "capybara-plush", name: "Sleepy Capybara Plush",
                   subtitle: "The calmest co-pilot", kind: .cabinDecoration, price: 0,
                   isPremium: true, systemImage: "pawprint.fill", tintHex: 0xC78C52,
                   imageName: "Cabin_CapybaraPlush",
                   allowedSlots: [.benchLeft, .benchCenter, .floorRight], preferredSlot: .benchLeft,
-                  footprint: .soft, normalizedScale: 0.95),
+                  footprint: .soft, normalizedScale: 0.92,
+                  visibleBounds: .init(x: 0.139, y: 0.065, width: 0.716, height: 0.858)),
         StoreItem(id: "cloud-pillow", name: "Cloud Pillow",
                   subtitle: "A softer place to land", kind: .cabinDecoration, price: 260,
                   isPremium: false, systemImage: "cloud.fill", tintHex: 0xEFE7D7,
                   imageName: "Cabin_CloudPillow",
                   allowedSlots: [.benchLeft, .benchCenter], preferredSlot: .benchCenter,
-                  footprint: .soft, normalizedScale: 0.90),
+                  footprint: .soft, normalizedScale: 1.02,
+                  visibleBounds: .init(x: 0.035, y: 0.188, width: 0.931, height: 0.591)),
         StoreItem(id: "mini-disco-ball", name: "Mini Disco Ball",
                   subtitle: "A restrained glint overhead", kind: .cabinDecoration, price: 320,
                   isPremium: false, systemImage: "circle.hexagongrid.fill", tintHex: 0xB5B5C8,
                   imageName: "Cabin_DiscoBall",
                   allowedSlots: [.hangingLeft, .hangingRight], preferredSlot: .hangingLeft,
-                  footprint: .tall, normalizedScale: 0.68),
+                  footprint: .tall, normalizedScale: 0.46,
+                  visibleBounds: .init(x: 0.275, y: 0.036, width: 0.451, height: 0.853)),
         StoreItem(id: "moon-stars-mobile", name: "Moon and Stars Mobile",
                   subtitle: "Celestial calm above you", kind: .cabinDecoration, price: 380,
                   isPremium: false, systemImage: "moon.stars.fill", tintHex: 0xD7B46A,
                   imageName: "Cabin_MoonStarsMobile",
                   allowedSlots: [.hangingLeft, .hangingRight], preferredSlot: .hangingRight,
-                  footprint: .tall, normalizedScale: 0.70),
+                  footprint: .tall, normalizedScale: 0.43,
+                  visibleBounds: .init(x: 0.298, y: 0.021, width: 0.401, height: 0.932)),
     ]
 
     /// Every cabin object, in catalog order. The Cabin arranges from THIS order,

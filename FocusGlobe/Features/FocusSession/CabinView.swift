@@ -289,14 +289,24 @@ struct CabinView: View {
             // Sizes are a fraction of the ARTWORK's width, so an object keeps
             // the same size relative to the furniture it stands on however the
             // picture is cropped into the window.
-            let width = min(art.width(layout.defaultScale * item.normalizedScale),
-                            art.width(layout.maximumFootprint))
+            let visibleWidth = min(art.width(layout.defaultScale * item.normalizedScale),
+                                   art.width(layout.maximumFootprint))
+            let bounds = item.visibleBounds
+            // `normalizedScale` describes the collectible's visible alpha
+            // content, not its often-generous square PNG canvas. Expanding the
+            // frame by the measured bounds keeps thin drinks and hanging pieces
+            // noticeable without stretching or editing their source artwork.
+            let width = visibleWidth / CGFloat(max(0.05, bounds.width))
             let height = width / Self.assetAspectRatio(for: item)
             let anchor = item.anchorPoint ?? layout.anchor
+            let frameAnchor = UnitPoint(
+                x: bounds.x + bounds.width * anchor.x,
+                y: bounds.y + bounds.height * anchor.y
+            )
             let x = art.x(layout.contact.x + item.offsetAdjustment.x)
-                + (0.5 - anchor.x) * width
+                + (0.5 - frameAnchor.x) * width
             let y = art.y(layout.contact.y + item.offsetAdjustment.y)
-                + (0.5 - anchor.y) * height
+                + (0.5 - frameAnchor.y) * height
             cabinItemImage(item, t: t)
                 .frame(width: width, height: height)
                 .mask(alignment: .top) {
@@ -307,10 +317,11 @@ struct CabinView: View {
                 .rotation3DEffect(
                     .degrees(item.perspectivePitchDegrees),
                     axis: (x: 1, y: 0, z: 0),
-                    anchor: UnitPoint(x: anchor.x, y: anchor.y),
+                    anchor: frameAnchor,
                     perspective: 0.45
                 )
-                .rotationEffect(.degrees(layout.rotationDegrees + item.rotationDegrees))
+                .rotationEffect(.degrees(layout.rotationDegrees + item.rotationDegrees),
+                                anchor: frameAnchor)
                 .position(x: x, y: y)
                 .zIndex(layout.zIndex + item.zIndex)
         }
