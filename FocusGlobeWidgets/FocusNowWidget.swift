@@ -23,7 +23,7 @@ struct FocusNowWidget: Widget {
         // phone gets a Spanish gallery entry.
         .configurationDisplayName(Text("Focus Now"))
         .description(Text("Start a focus flight, or watch the one you're on."))
-        .supportedFamilies([.systemMedium, .systemSmall])
+        .supportedFamilies([.systemMedium])
         .contentMarginsDisabled()
     }
 }

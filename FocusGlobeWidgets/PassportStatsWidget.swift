@@ -24,7 +24,7 @@ struct PassportStatsWidget: Widget {
         }
         .configurationDisplayName(Text("Passport Dashboard"))
         .description(Text("Your journeys, focused time, streaks and badges. FocusGlobe PRO."))
-        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        .supportedFamilies([.systemSmall, .systemMedium])
         .contentMarginsDisabled()
     }
 }

@@ -67,6 +67,52 @@ struct WFocusGrid: View {
     }
 }
 
+/// The same 182-day history arranged as a compact square matrix for the small
+/// widget. Thirteen columns by fourteen rows keeps every day while avoiding the
+/// illegible 26-column table used by the horizontal presentation.
+private struct WCompactFocusGrid: View {
+    let activeOrdinals: Set<Int>
+
+    private let columns = 13
+    private let rows = 14
+    private let spacing: CGFloat = 2
+
+    var body: some View {
+        GeometryReader { geo in
+            let side = min(
+                (geo.size.width - CGFloat(columns - 1) * spacing) / CGFloat(columns),
+                (geo.size.height - CGFloat(rows - 1) * spacing) / CGFloat(rows)
+            )
+            let totalWidth = side * CGFloat(columns) + spacing * CGFloat(columns - 1)
+            let totalHeight = side * CGFloat(rows) + spacing * CGFloat(rows - 1)
+            let todayOrd = WFocusGrid.ordinal(Calendar.current.startOfDay(for: Date()))
+
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.fixed(side), spacing: spacing), count: columns),
+                alignment: .center,
+                spacing: spacing
+            ) {
+                ForEach(0..<(columns * rows), id: \.self) { index in
+                    let daysBack = columns * rows - 1 - index
+                    let ord = todayOrd - daysBack
+                    let active = activeOrdinals.contains(ord)
+                    let isToday = daysBack == 0
+                    RoundedRectangle(cornerRadius: max(1.2, side * 0.24), style: .continuous)
+                        .fill(active ? (isToday ? WTheme.gold : WTheme.teal.opacity(0.76))
+                                     : Color.white.opacity(0.075))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: max(1.2, side * 0.24), style: .continuous)
+                                .strokeBorder(WTheme.ink.opacity(isToday ? 0.9 : 0), lineWidth: 0.8)
+                        }
+                        .frame(width: side, height: side)
+                }
+            }
+            .frame(width: totalWidth, height: totalHeight)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        }
+    }
+}
+
 // MARK: - Focus Grid widget (PRO)
 
 struct FocusGridWidget: Widget {
@@ -80,16 +126,54 @@ struct FocusGridWidget: Widget {
         }
         .configurationDisplayName(Text("Focus Grid"))
         .description(Text("Your last six months of focus days. FocusGlobe PRO."))
-        .supportedFamilies([.systemMedium, .systemLarge])
+        .supportedFamilies([.systemSmall, .systemMedium])
         .contentMarginsDisabled()
     }
 }
 
 struct FocusGridWidgetView: View {
     let snapshot: WidgetSnapshot
+    @Environment(\.widgetFamily) private var family
 
     var body: some View {
         if snapshot.isPro {
+            if family == .systemSmall {
+                compactLayout
+            } else {
+                horizontalLayout
+            }
+        } else {
+            LockedTeaser(icon: "square.grid.3x3.fill", title: "Focus Grid", accent: WTheme.teal)
+        }
+    }
+
+    private var compactLayout: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                WHeader(icon: "square.grid.3x3.fill", title: FocusLocalization.string("Focus Grid"), tint: WTheme.teal)
+                Spacer(minLength: 2)
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(WTheme.coral)
+                Text("\(snapshot.currentStreak)")
+                    .font(.system(size: 11, weight: .heavy))
+                    .foregroundStyle(WTheme.ink)
+            }
+
+            WCompactFocusGrid(activeOrdinals: Set(snapshot.activeDayOrdinals))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            Text(FocusLocalization.localized("\(snapshot.activeFocusDays) focus days"))
+                .font(.system(size: 9.5, weight: .bold))
+                .foregroundStyle(WTheme.inkSoft)
+                .lineLimit(1)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Color(red: 0.055, green: 0.058, blue: 0.066))
+    }
+
+    private var horizontalLayout: some View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     WHeader(icon: "square.grid.3x3.fill", title: FocusLocalization.string("Focus · 6 months"), tint: WTheme.teal)
@@ -115,8 +199,5 @@ struct FocusGridWidgetView: View {
             .padding(14)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(Color(red: 0.055, green: 0.058, blue: 0.066))
-        } else {
-            LockedTeaser(icon: "square.grid.3x3.fill", title: "Focus Grid", accent: WTheme.teal)
-        }
     }
 }
