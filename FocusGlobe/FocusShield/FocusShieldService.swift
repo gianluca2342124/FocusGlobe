@@ -16,13 +16,8 @@ import FamilyControls
 #if canImport(ManagedSettings)
 import ManagedSettings
 #endif
-#if canImport(DeviceActivity)
-import DeviceActivity
-#endif
-
 /// Coordinates FocusGlobe's app-blocking "Focus Shield" with Apple's Screen Time
-/// APIs. Owns authorization, applies/clears shields around a journey, and starts
-/// a DeviceActivity backstop so shields are removed even if the app is killed.
+/// APIs. Owns authorization and applies/clears shields around a journey.
 ///
 /// The public surface is available on every platform; on unsupported ones (Mac
 /// "Designed for iPad", or anywhere FamilyControls is missing) every method is a
@@ -127,13 +122,13 @@ final class FocusShieldService: ObservableObject {
     func setEnabled(_ on: Bool) {
         isEnabled = on
         FocusShieldShared.isEnabled = on
+        if !on { clear(reason: .userDisabled) }
     }
 
     // MARK: - Journey lifecycle
 
-    /// Apply shields for a starting journey and arm the DeviceActivity backstop
-    /// for its duration. No-op unless supported, enabled, authorized and the
-    /// selection is non-empty.
+    /// Apply shields for a starting journey. No-op unless supported, enabled,
+    /// authorized and the selection is non-empty.
     func applyForJourney(durationSeconds: Int) {
         #if canImport(FamilyControls) && canImport(ManagedSettings)
         guard isSupported, isEnabled else { return }
@@ -151,18 +146,16 @@ final class FocusShieldService: ObservableObject {
         FocusShieldShared.startedAt = now
         FocusShieldShared.endsAt = now.addingTimeInterval(TimeInterval(durationSeconds))
         isShieldActive = true
-        startMonitoring(durationSeconds: durationSeconds)
         #endif
     }
 
-    /// Clear every FocusGlobe shield and stop monitoring. Idempotent; only logs
-    /// when a shield was actually active.
+    /// Clear every FocusGlobe shield. Idempotent; only logs when a shield was
+    /// actually active.
     func clear(reason: ClearReason) {
         #if canImport(FamilyControls) && canImport(ManagedSettings)
         guard isSupported else { return }
         guard FocusShieldShared.isShieldActive else { isShieldActive = false; return }
         FocusShieldEngine.clear()
-        stopMonitoring()
         FocusShieldShared.isShieldActive = false
         FocusShieldShared.startedAt = nil
         FocusShieldShared.endsAt = nil
@@ -194,37 +187,6 @@ final class FocusShieldService: ObservableObject {
         #endif
     }
 
-    // MARK: - DeviceActivity monitoring (kill-safe backstop)
-
-    private func startMonitoring(durationSeconds: Int) {
-        #if canImport(DeviceActivity)
-        let center = DeviceActivityCenter()
-        let calendar = Calendar.current
-        let now = Date()
-        // Apple requires intervals ≥ 15 min; shorter journeys still clear precisely
-        // in-app on landing — this is only the kill-safe ceiling.
-        let minSeconds = FocusShieldShared.minMonitoringMinutes * 60
-        let endDate = now.addingTimeInterval(TimeInterval(max(durationSeconds, minSeconds)))
-        let startComponents = calendar.dateComponents([.hour, .minute, .second], from: now)
-        let endComponents = calendar.dateComponents([.hour, .minute, .second], from: endDate)
-        let schedule = DeviceActivitySchedule(intervalStart: startComponents,
-                                              intervalEnd: endComponents,
-                                              repeats: false)
-        do {
-            try center.startMonitoring(DeviceActivityName(FocusShieldShared.activityName), during: schedule)
-            FocusShieldLog.event("focus_shield_device_activity_started")
-        } catch {
-            FocusShieldLog.event("focus_shield_device_activity_failed")
-        }
-        #endif
-    }
-
-    private func stopMonitoring() {
-        #if canImport(DeviceActivity)
-        DeviceActivityCenter().stopMonitoring([DeviceActivityName(FocusShieldShared.activityName)])
-        FocusShieldLog.event("focus_shield_device_activity_ended")
-        #endif
-    }
 }
 
 #else
